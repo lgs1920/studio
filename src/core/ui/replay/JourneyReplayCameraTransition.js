@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,7 +28,7 @@ import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
-    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, rollCameraUp, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForAngle, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
+    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, rollCameraUp, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForAngle, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
@@ -753,6 +753,7 @@ export const applyDeterministicCameraFollower = (mode, {
         return call.applyCameraFrame(frame)
     }
 
+/** Build a Replay entry frame from its configured pose without borrowing the map's range. */
 export const cameraRecenterFrame = (mode, {
                                 sample,
                                 heading,
@@ -766,15 +767,10 @@ export const cameraRecenterFrame = (mode, {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
-        const camera = replayCameraFor(mode)
         const targetHeight = finiteNumber(call.markerRenderHeightForSample(sample))
                             ?? finiteNumber(sample?.altitude ?? sample?.height)
                             ?? 0
         const target = call.markerRenderCartesianForSample(sample)
-        const cameraPosition = camera?.positionWC ?? camera?.position
-        const fallbackRange = cameraPosition && target
-                              ? Cartesian3.distance(cameraPosition, target)
-                              : replayCameraRangeFromPitch(call.cameraAltitudeForSample(sample, cameraSettings), pitch)
         if (!viewer || !target) {
             return null
         }
@@ -790,25 +786,20 @@ export const cameraRecenterFrame = (mode, {
         // In ground-offset mode the marker-relative value is authoritative;
         // an explicit height may belong to a previous camera transition.
         const requestedCameraHeight = groundOffsetCameraHeight ?? explicitCameraHeight
-        const currentHeight = requestedCameraHeight !== null
-                              ? Math.max(targetHeight, requestedCameraHeight)
-                              : replayCameraRecenterHeight(
-                    camera?.positionCartographic?.height,
-                    call.cameraAltitudeForSample(sample, cameraSettings),
-                )
-        const horizontalDistance = replayCameraRecenterHorizontalDistance({
-                                                                                  cameraHeight: currentHeight,
-                                                                                  targetHeight,
-                                                                                  pitchRadians: safePitch,
-                                                                                  fallbackRange,
-                                                                              })
+            ?? finiteNumber(call.cameraAltitudeForSample(sample, cameraSettings)) ?? targetHeight
+        // An absolute altitude below the target cannot form the requested downward
+        // view. Apply terrain clearance before deriving range, preserving pitch and
+        // leaving the persisted configuration independent of normal map navigation.
+        const currentHeight = Math.max(targetHeight + CAMERA_REDIRECT_TERRAIN_CLEARANCE_METERS, requestedCameraHeight)
+        const configuredRange = replayCameraRangeFromPitch(currentHeight - targetHeight, safePitch)
+        const horizontalDistance = Math.cos(Math.abs(safePitch)) * configuredRange
         const explicitCameraRange = finiteNumber(cameraRange)
         const rangeForPose = explicitCameraRange !== null && explicitCameraRange > 0
             ? explicitCameraRange
             : null
         const poseHorizontalDistance = rangeForPose === null
             ? horizontalDistance
-            : Math.max(1, Math.cos(Math.abs(safePitch)) * rangeForPose)
+            : Math.cos(Math.abs(safePitch)) * rangeForPose
         const heightDelta = rangeForPose === null
             ? currentHeight - targetHeight
             : Math.max(0, Math.sin(Math.abs(safePitch)) * rangeForPose)

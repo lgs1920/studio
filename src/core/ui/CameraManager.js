@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-08
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,6 +33,7 @@ import { Cartesian3, HeadingPitchRange, Matrix4 } from "cesium";
 import { snapshot } from "valtio";
 import { deepClone } from "valtio/utils";
 import { Journey } from "../Journey";
+import {isCameraOwnedByReplay, replayCameraOwnershipRevision} from "./replay/ReplayCameraOwnership"
 
 const finiteNumber = (value) => {
   if (value === null || value === undefined || value === "") {
@@ -225,21 +226,23 @@ export class CameraManager {
     return {};
   };
 
+  /** Read the normal map pose only while Replay has released its camera. */
   syncPositionInformation = (options = this.getCurrentUpdateOptions()) => {
-    const data = this.proxy.updatePositionInformationSync?.(null, options);
+    if (isCameraOwnedByReplay(lgs.camera ?? lgs.viewer?.camera)) return null
+    const data = this.proxy.updatePositionInformationSync?.(null, options)
     if (!data) {
-      return null;
+      return null
     }
 
-    this.settings = data;
-    this.clone();
+    this.settings = data
+    this.clone()
 
     if (lgs.theJourney) {
-      lgs.theJourney.camera = snapshot(this.store);
+      lgs.theJourney.camera = snapshot(this.store)
     }
 
-    return data;
-  };
+    return data
+  }
 
   /**
    * Save camera information
@@ -248,34 +251,35 @@ export class CameraManager {
    *
    */
   saveInformation = async (last, { sync = true } = {}) => {
+    if (isCameraOwnedByReplay(lgs.camera ?? lgs.viewer?.camera)) return
     if (sync) {
-      this.syncPositionInformation();
+      this.syncPositionInformation()
     }
 
     if (Date.now() - last >= lgs.configuration.db.IDBDelay * MILLIS) {
-      clearInterval(this.saveTimer);
-      this.saveTimer = null;
+      clearInterval(this.saveTimer)
+      this.saveTimer = null
     }
-    const currentCamera = snapshot(this.store);
+    const currentCamera = snapshot(this.store)
     if (!hasMapCoordinates(currentCamera.target) || !hasCameraCoordinates(currentCamera.position)) {
-      return;
+      return
     }
 
-    writeLocalCamera(currentCamera);
+    writeLocalCamera(currentCamera)
 
     const writes = [
       lgs.db.lgs1920.put(CURRENT_CAMERA, currentCamera, CURRENT_STORE),
-    ];
+    ]
     if (lgs.theJourney) {
-      lgs.theJourney.camera = currentCamera;
+      lgs.theJourney.camera = currentCamera
       writes.push(lgs.db.lgs1920.put(
         lgs.theJourney.slug,
         Journey.unproxify(snapshot(lgs.theJourney)),
         JOURNEYS_STORE
-      ));
+      ))
     }
-    await Promise.all(writes);
-  };
+    await Promise.all(writes)
+  }
 
   /**
    * Start watching camera information in order to save it.
@@ -358,21 +362,26 @@ export class CameraManager {
    * @return {Promise<void>}
    */
   updatePositionInformation = async (options = {}) => {
-    const data = await this.proxy.updatePositionInformation(null, options);
+    const camera = lgs.camera ?? lgs.viewer?.camera
+    if (isCameraOwnedByReplay(camera)) return
+    const revision = replayCameraOwnershipRevision(camera)
+    const data = await this.proxy.updatePositionInformation(null, options)
+    // Reject reads that overlap a Replay camera lease, even after handback.
+    if (isCameraOwnedByReplay(camera) || revision !== replayCameraOwnershipRevision(camera)) return
     // Update Camera Manager information
     if (data) {
-      this.settings = data;
+      this.settings = data
     } else {
-      this.resetCameraInformation();
+      this.resetCameraInformation()
     }
     // Update camera proxy
-    this.clone();
+    this.clone()
 
     // Update Journey Camera if needed
     if (lgs.theJourney) {
-      lgs.theJourney.camera = snapshot(lgs.stores.main.components.camera);
+      lgs.theJourney.camera = snapshot(lgs.stores.main.components.camera)
     }
-  };
+  }
 
   /**
    * Clone the position

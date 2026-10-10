@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -184,7 +184,7 @@ export const currentReplayClipCameraState = (mode, {initial = false, sample = nu
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera
-        const saved = initial ? state.savedCameraState : null
+        const saved = initial ? state.replayEntryCameraState : null
         return {
             sample: sample ? {...sample} : null,
             heading: finiteNumber(saved?.orientation?.heading)
@@ -852,8 +852,8 @@ export const placeCameraAtPlaybackStart = (mode, sample, progress = 0) => {
             return false
         }
 
-        const liveHeight = finiteNumber((call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera?.positionCartographic?.height)
-        if (liveHeight === null) {
+        const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera
+        if (!camera) {
             return false
         }
 
@@ -1085,63 +1085,17 @@ export const cancelActiveCameraFlight = (mode) => {
         state.cameraFlightActive = false
     }
 
-    /**
-     * Recenter the current journey after the replay ends or is stopped.
-     * The optional snapDistance keeps the transition instantaneous when the camera is already close.
-     */
+/** Restore journey visibility without competing with normal camera handback. */
 
-export const focusJourneyAfterPlayback = (mode, {snapDistance = 50000} = {}) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+export const focusJourneyAfterPlayback = mode => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
-        const journey = globalThis.lgs?.theJourney
-        if (!journey) {
-            return Promise.resolve()
-        }
-
+    const journey = globalThis.lgs?.theJourney
+    if (journey) {
         journey.visible = true
         journey.updateVisibility?.(true)
-        if (globalThis.lgs?.viewer?.dataSources) {
-            TrackUtils.updatePOIsVisibility(journey, true)
-        }
-        state.cameraFlightActive = false
-        const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
-        viewer?.camera?.cancelFlight?.()
-        return new Promise(resolve => {
-            let settled = false
-        const finish = () => {
-                if (settled) {
-                    return
-                }
-                settled = true
-                call.hideGloballyHiddenPOIs()
-                call.restoreCurrentJourneyVisibility()
-                resolve()
-            }
-
-            if (typeof journey.focus === 'function') {
-                const focusResult = journey.focus({
-                    resetCamera: true,
-                    rotate:       false,
-                    snapDistance,
-                    callback:     finish,
-                })
-                void Promise.resolve(focusResult).finally(finish)
-                return
-            }
-
-            const focusResult = globalThis.__?.ui?.sceneManager?.focusOnJourney?.({
-                journey,
-                target:      journey,
-                resetCamera: true,
-                rotate:      false,
-                snapDistance,
-                callback:    finish,
-            })
-            if (focusResult !== undefined) {
-                void Promise.resolve(focusResult).finally(finish)
-                return
-            }
-            finish()
-        })
     }
+    // Handback restores the captured view directly. A journey focus flight
+    // would compete with that view and could move a newer Replay session.
+    call.hideGloballyHiddenPOIs()
+    return Promise.resolve()
+}

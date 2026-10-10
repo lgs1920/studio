@@ -8,11 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
+import {acquireReplayCameraOwnership} from '@Core/ui/replay/ReplayCameraOwnership'
+
 
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
@@ -30,7 +33,7 @@ import {REPLAY_EVENT_UPDATE} from '@Core/ui/replay/JourneyReplayPlaybackControll
 import {beginReplaySessionOwnership} from '@Core/ui/replay/ReplaySessionOwnership'
 import {
     abortPlaybackAfterListenerError, bindRenderer, captureCameraState, restoreCameraState, restorePlaybackScene, restorePlaybackSceneInternal,
-    setReplayPreparationPivot,
+    setReplayPreparationPivot, restorePlaybackCameraSettings,
 } from '@Core/ui/replay/JourneyReplaySessionSceneController'
 
 const makeMode = () => {
@@ -205,6 +208,45 @@ describe('JourneyReplaySessionSceneController', () => {
         expect(state.replayEntryCameraState).toBeNull()
     })
 
+    it('keeps newer preparation edits when the previous playback cleanup finishes', async () => {
+        let finishCleanup
+        const cleanupFinished = new Promise(resolve => { finishCleanup = resolve })
+        const preparedCamera = {altitude: 2630, pitch: -23, altitudeMode: 'constant'}
+        const state = {
+            renderer: {clear: vi.fn()},
+            playbackStartCameraSettings: {altitude: 539, pitch: -5, altitudeMode: 'constant'},
+            sceneRestorePromise: null,
+            deferPlaybackCameraRestore: true,
+        }
+        const call = {
+            removeToleranceZoneOverlay: vi.fn(),
+            restoreOtherJourneysVisibility: vi.fn(),
+            restoreCurrentJourneyVisibility: vi.fn(),
+            setJourneyReplayOrbitAllowed: vi.fn(),
+            setToleranceZoneOverlayVisible: vi.fn(),
+            restoreJourneyToolbarVisibility: vi.fn(),
+            restoreJourneyReplayDrawerAfterPlayback: vi.fn(),
+            restoreMainUI: vi.fn(),
+            restoreNearbyPOIsAfterPlayback: vi.fn(() => Promise.resolve()),
+            resetCameraController: vi.fn(),
+            focusJourneyAfterPlayback: () => cleanupFinished,
+            restoreCameraState: vi.fn(),
+            persistCameraSettings: vi.fn(camera => { lgs.stores.replay.camera = camera }),
+        }
+        const mode = {[JOURNEY_REPLAY_INTERNAL_CALL]: call, [JOURNEY_REPLAY_INTERNAL_STATE]: state}
+        call.restorePlaybackCameraSettings = options => restorePlaybackCameraSettings(mode, options)
+        globalThis.lgs = {stores: {replay: {camera: state.playbackStartCameraSettings}, ui: {video: {editing: false}}}}
+        const restoring = restorePlaybackSceneInternal(mode)
+        lgs.stores.replay.simplePreparationActive = true
+        lgs.stores.ui.video.editing = true
+        lgs.stores.replay.camera = preparedCamera
+        finishCleanup()
+        await restoring
+        expect(lgs.stores.replay.camera).toMatchObject({altitude: 2630, pitch: -23})
+        expect(call.persistCameraSettings).not.toHaveBeenCalled()
+        expect(state.playbackStartCameraSettings).toBeNull()
+    })
+
     it('keeps the internal restore finalizer active through the public restore wrapper', async () => {
         const state = {
             renderer: {
@@ -280,6 +322,7 @@ describe('JourneyReplaySessionSceneController', () => {
             viewer: {camera},
         }
 
+        acquireReplayCameraOwnership(mode, camera, state.savedCameraState)
         expect(restoreCameraState(mode, {
             clear:       false,
             cameraState: replayEntryCameraState,
@@ -333,19 +376,26 @@ describe('JourneyReplaySessionSceneController', () => {
             const captured = captureCameraState(mode)
             expect(captured.pivot).toEqual(pivot)
 
+            camera.heading = 1.2
+            camera.pitch = -0.3
+            camera.positionCartographic = {height: 1200, latitude: 0.9, longitude: 0.04}
             cameraManager.target = {longitude: 9, latitude: 9, height: 9}
             globalThis.lgs.stores.main.components.camera.target = {longitude: 9, latitude: 9, height: 9}
+            mode[JOURNEY_REPLAY_INTERNAL_STATE].savedCameraState = null
             expect(restoreCameraState(mode)).toBe(true)
 
             expect(cameraManager.target).toEqual(pivot)
             expect(globalThis.lgs.stores.main.components.camera.target).toEqual(pivot)
+            expect(camera.setView).toHaveBeenCalledWith(expect.objectContaining({
+                orientation: {heading: 0.4, pitch: -0.8, roll: 0},
+            }))
         }
         finally {
             delete globalThis.__
         }
     })
 
-    it('forces the preparation pivot to the departure sample', () => {
+    it('resolves the preparation anchor without overwriting the normal pivot', () => {
         const cameraManager = {target: {longitude: 9, latitude: 9, height: 9}}
         const cameraStore = {target: {longitude: 9, latitude: 9, height: 9}}
         const mode = {
@@ -372,16 +422,8 @@ describe('JourneyReplaySessionSceneController', () => {
             latitude: 48.1,
             longitude: 2.1,
         })
-        expect(cameraManager.target).toEqual({
-            height:    125,
-            latitude: 48.1,
-            longitude: 2.1,
-        })
-        expect(cameraStore.target).toEqual({
-            height:    125,
-            latitude: 48.1,
-            longitude: 2.1,
-        })
+        expect(cameraManager.target).toEqual({longitude: 9, latitude: 9, height: 9})
+        expect(cameraStore.target).toEqual({longitude: 9, latitude: 9, height: 9})
     })
 
     it('reapplies the active replay camera when an obsolete focus settles late', async () => {

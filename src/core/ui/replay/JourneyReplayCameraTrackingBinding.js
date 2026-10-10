@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-03
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,6 +19,7 @@
  */
 
 import {currentJourneyReplayCameraSettings, finiteNumber} from './JourneyReplayRuntime'
+import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
 import {
     replayAdaptiveTrackingTiming,
     replayCameraFrameLeadSeconds,
@@ -541,10 +542,13 @@ export const updateCamera = (mode, {
     }
 
     const settings = getJourneyReplaySettings()
+    // Simple playback owns its Navigation policy, independent of the Expert marker mode.
     const markerSettings = normalizeJourneyReplayMarker(
-        globalThis.lgs?.settings?.ui?.replay?.marker
-        ?? globalThis.lgs?.stores?.replay?.marker
-        ?? settings.marker,
+        isJourneyReplayBasicMode()
+            ? settings.marker
+            : globalThis.lgs?.settings?.ui?.replay?.marker
+              ?? globalThis.lgs?.stores?.replay?.marker
+              ?? settings.marker,
     )
     if (markerSettings.mode === REPLAY_MARKER_MODE_TRACE && source !== 'refresh' && source !== 'drawer') {
         state.cameraMode = markerSettings.mode

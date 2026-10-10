@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@
  */
 
 
-import {Cartesian3} from 'cesium'
+import {Cartesian3, Matrix4} from 'cesium'
 import {
     replayCesiumCameraDestinationAboveTerrain,
     replayCesiumCameraFrameAboveTerrain,
@@ -140,6 +140,7 @@ export const recenterCameraToSample = (mode, {
                 frame,
                 scene: call.cesiumScene?.(),
             })
+            camera.lookAtTransform?.(Matrix4.IDENTITY)
             camera.setView?.({
                                         destination: safeFrame.destination,
                                         orientation: {
@@ -351,7 +352,8 @@ export const bindMarkerInteractions = (mode) => {
         }
 
         const cameraChanged = () => {
-            // Keep live Cesium edits visible in the drawer during FT; only suppress echoes from our own writes.
+            // Explicit preparation gestures may update pitch. Automatic camera
+            // writes and ordinary map navigation remain outside Replay settings.
             if (state.suppressPlaybackCameraSync) {
                 return
             }
@@ -365,7 +367,7 @@ export const bindMarkerInteractions = (mode) => {
         }
         const refreshToleranceCameraAfterManualMove = () => {
             const replay = replayStore()
-            if (!isJourneyReplayCameraActive(replay) && !state.sampler) {
+            if (!isJourneyReplayCameraActive(replay)) {
                 return
             }
             const settings = getJourneyReplaySettings()
@@ -375,6 +377,12 @@ export const bindMarkerInteractions = (mode) => {
             }
         }
         const manualStart = ({pointer = false} = {}) => {
+            const preparation = globalThis.lgs?.stores?.ui?.video?.editing === true
+                && !isJourneyReplayCameraActive(replayStore())
+            if (!preparation && !isJourneyReplayCameraActive(replayStore())) return
+            if (preparation && pointer && !state.cameraPointerActive) {
+                state.preparationPointerPitch = finiteNumber(camera.pitch)
+            }
             if (state.suppressPlaybackCameraSync) {
                 if (!pointer) {
                     return
@@ -413,6 +421,13 @@ export const bindMarkerInteractions = (mode) => {
                 state.cameraUserAdjusting = false
                 return
             }
+            // Flush an intentional preparation tilt before Record can consume it,
+            // even when Cesium has not emitted its throttled changed event yet.
+            const preparation = globalThis.lgs?.stores?.ui?.video?.editing === true
+                && !isJourneyReplayCameraActive(replayStore())
+            if (preparation) {
+                call.updateCameraFromCesiumControls({userInteraction: true})
+            }
             state.cameraPointerActive = false
             if (state.cameraManualInteractionTimer !== null) {
                 clearTimeout(state.cameraManualInteractionTimer)
@@ -421,10 +436,11 @@ export const bindMarkerInteractions = (mode) => {
                 state.cameraManualInteractionTimer = null
                 state.cameraUserAdjusting = false
                 call.updateCameraFromCesiumControls({userInteraction: true})
+                state.preparationPointerPitch = null
                 refreshToleranceCameraAfterManualMove()
                 call.stopCameraLiveSyncLoop()
             }
-            if (immediate) {
+            if (immediate || preparation) {
                 finish()
                 return
             }
@@ -441,7 +457,7 @@ export const bindMarkerInteractions = (mode) => {
                 return
             }
             const replay = replayStore()
-            const replayCameraActive = isJourneyReplayCameraActive(replay) || state.sampler
+            const replayCameraActive = isJourneyReplayCameraActive(replay)
             if (!state.suppressPlaybackCameraSync
                 && replayCameraActive
                 && !state.cameraUserAdjusting

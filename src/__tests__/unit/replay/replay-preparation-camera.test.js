@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-26
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -121,6 +121,7 @@ describe('replay preparation camera', () => {
             cancelActiveCameraFlight: vi.fn(),
             captureJourneyReplayDrawerStateBeforePlayback: vi.fn(),
             capturePlaybackCameraSettings: vi.fn(),
+            captureCameraState: vi.fn(),
             clipListForSlot: vi.fn(slot => slot === 'pre-replay' ? [clip] : []),
             configure: vi.fn(() => sampler),
             currentReplayClipCameraState: vi.fn(() => ({sample})),
@@ -162,10 +163,11 @@ describe('replay preparation camera', () => {
         expect(controller.start).toHaveBeenCalledWith({progress: 0})
     })
 
-    it('locks Cesium navigation to the replay anchor', () => {
+    it('locks Cesium navigation to the Replay pose instead of standard camera framing', () => {
         const target = Cartesian3.fromDegrees(2, 48, 120)
         const destination = Cartesian3.add(target, new Cartesian3(500, 500, 500), new Cartesian3())
         const camera = {
+            positionWC: Cartesian3.fromDegrees(2.01, 48.01, 8500),
             lookAtTransform: vi.fn(),
         }
         const exportCamera = {
@@ -195,7 +197,8 @@ describe('replay preparation camera', () => {
                                                sample: {longitude: 2, latitude: 48, altitude: 120},
                                                heading: 0.4,
                                                pitch:   -0.8,
-                                               cameraPosition: Cartesian3.add(target, new Cartesian3(1000, -500, 300), new Cartesian3()),
+                                               cameraSettings: {cameraAngle: 70, altitude: 1200},
+                                               cameraHeight: 1200,
                                            })).toBe(true)
         expect(camera.lookAtTransform).toHaveBeenCalledTimes(2)
         expect(exportCamera.lookAtTransform).not.toHaveBeenCalled()
@@ -203,16 +206,22 @@ describe('replay preparation camera', () => {
         expect(camera.lookAtTransform.mock.calls[1][0]).not.toBe(Matrix4.IDENTITY)
         expect(camera.lookAtTransform.mock.calls[1][1].heading).toBe(0.4)
         expect(camera.lookAtTransform.mock.calls[1][1].pitch).toBe(-0.8)
-        expect(mode[JOURNEY_REPLAY_INTERNAL_CALL].cameraRecenterFrame.mock.calls[0][0].heading).toBe(0.4)
+        expect(mode[JOURNEY_REPLAY_INTERNAL_CALL].cameraRecenterFrame).toHaveBeenCalledWith(expect.objectContaining({
+            cameraHeight: 1200,
+            cameraRange:  expect.closeTo(1080 / Math.sin(0.8)),
+            heading:      0.4,
+            pitch:        -0.8,
+        }))
     })
 
-    it('stops active orbit and panorama before preparing the first replay sample', async () => {
+    it('preserves standard camera navigation while preparing Replay', async () => {
         const settings = defaultJourneyReplaySettings()
         const sample = {longitude: 2, latitude: 48, altitude: 120, progress: 0}
         const call = {
             cancelActiveCameraFlight: vi.fn(),
             cesiumScene:              () => ({requestRender: vi.fn()}),
             configure:                vi.fn(() => ({atProgress: () => sample})),
+            persistCameraSettings:    vi.fn(),
             cameraViewForSample:      vi.fn(() => ({
                 sample,
                 heading:     0,
@@ -258,23 +267,17 @@ describe('replay preparation camera', () => {
         }
 
         await expect(prepareReplayCamera(mode, {journey: globalThis.lgs.theJourney})).resolves.toBe(true)
-        expect(stopPanoramic).toHaveBeenCalledOnce()
-        expect(isRotating).toHaveBeenCalledOnce()
-        expect(stopRotate).toHaveBeenCalledOnce()
-        expect(globalThis.lgs.camera.cancelFlight).toHaveBeenCalledOnce()
-        expect(call.configure).toHaveBeenCalledWith({journey: globalThis.lgs.theJourney, progress: 0})
-        expect(call.recenterCameraToSample).not.toHaveBeenCalled()
-        expect(call.lockReplayCameraToAnchor).toHaveBeenCalledOnce()
-        expect(call.setReplayPreparationPivot).toHaveBeenCalledWith(sample)
-        expect(call.lockReplayCameraToAnchor.mock.calls[0][0].cameraPosition).toEqual(
-            globalThis.lgs.camera.positionWC,
-        )
-        expect(call.updateCameraSettingsFromCesiumControls).toHaveBeenCalledWith(sample, {
-            altitudeMode: settings.camera.altitudeMode,
-        })
+        expect(stopPanoramic).not.toHaveBeenCalled()
+        expect(stopRotate).not.toHaveBeenCalled()
+        expect(globalThis.lgs.camera.cancelFlight).not.toHaveBeenCalled()
+        expect(call.lockReplayCameraToAnchor).not.toHaveBeenCalled()
+        expect(call.setReplayPreparationPivot).not.toHaveBeenCalled()
+        expect(call.updateCameraSettingsFromCesiumControls).not.toHaveBeenCalled()
+        expect(mode[JOURNEY_REPLAY_INTERNAL_STATE].savedCameraState).toBeUndefined()
+
     })
 
-    it('keeps keyboard camera changes locked to the departure pivot', () => {
+    it('updates prepared Replay settings without moving the normal camera', () => {
         const settings = defaultJourneyReplaySettings()
         const departure = {longitude: 2, latitude: 48, altitude: 120, progress: 0}
         const laterSample = {longitude: 2.1, latitude: 48.1, altitude: 120, progress: 0.7}
@@ -288,6 +291,7 @@ describe('replay preparation camera', () => {
             })),
             configure: vi.fn(() => ({atProgress: () => departure})),
             lockReplayCameraToAnchor: vi.fn(() => true),
+            persistCameraSettings: vi.fn(),
             now: vi.fn(() => 1000),
             updateCamera: vi.fn(),
         }
@@ -321,15 +325,19 @@ describe('replay preparation camera', () => {
             sample:   departure,
             source:   'keyboard',
         }))
-        expect(call.lockReplayCameraToAnchor).toHaveBeenCalledWith(expect.objectContaining({
-            sample: departure,
-        }))
+        expect(call.lockReplayCameraToAnchor).not.toHaveBeenCalled()
+        expect(call.persistCameraSettings).toHaveBeenCalledWith(expect.objectContaining({pitch: settings.camera.pitch}))
         expect(call.updateCamera).not.toHaveBeenCalled()
     })
 
     it('waits for scene restoration before rebuilding the canonical preparation view', async () => {
         const settings = defaultJourneyReplaySettings()
         const sample = {longitude: 2, latitude: 48, altitude: 120, progress: 0}
+        const frame = {
+            destination: Cartesian3.fromDegrees(2, 47.99, 1200),
+            direction: new Cartesian3(0, 1, -1),
+            correctedUp: new Cartesian3(0, 1, 1),
+        }
         let resolveSceneRestore
         const sceneRestorePromise = new Promise(resolve => {
             resolveSceneRestore = resolve
@@ -337,8 +345,10 @@ describe('replay preparation camera', () => {
         const call = {
             cancelActiveCameraFlight: vi.fn(),
             captureCameraState:       vi.fn(),
+            cameraRecenterFrame:      vi.fn(() => frame),
             cesiumScene:              () => ({requestRender: vi.fn()}),
             configure:                vi.fn(() => ({atProgress: () => sample})),
+            persistCameraSettings:    vi.fn(),
             cameraViewForSample:      vi.fn(() => ({
                 sample,
                 heading:     0,
@@ -356,8 +366,12 @@ describe('replay preparation camera', () => {
             [JOURNEY_REPLAY_INTERNAL_STATE]: {sceneRestorePromise},
             [JOURNEY_REPLAY_INTERNAL_CALL]: call,
         }
+        let finishRotation
+        const rotationStopped = new Promise(resolve => { finishRotation = resolve })
+        const stopRotate = vi.fn(() => rotationStopped)
+        globalThis.__ = {ui: {cameraManager: {stopRotate}}}
         globalThis.lgs = {
-            camera: {positionWC: Cartesian3.fromDegrees(2, 48, 1200)},
+            camera: {positionWC: Cartesian3.fromDegrees(2, 48, 1200), pitch: -0.4, setView: vi.fn(), cancelFlight: vi.fn()},
             settings: {ui: {replay: settings}},
             stores: {replay: {camera: settings.camera, marker: settings.marker}},
         }
@@ -366,14 +380,45 @@ describe('replay preparation camera', () => {
             journey: {},
             shouldApply: () => true,
         })
+        expect(stopRotate).toHaveBeenCalledOnce()
         expect(call.configure).not.toHaveBeenCalled()
+        expect(lgs.camera.setView).not.toHaveBeenCalled()
+        finishRotation()
+        await rotationStopped
+        expect(call.configure).not.toHaveBeenCalled()
+        expect(lgs.camera.setView).not.toHaveBeenCalled()
 
         resolveSceneRestore()
         await expect(preparation).resolves.toBe(true)
-        expect(call.captureCameraState).toHaveBeenCalledOnce()
+        expect(call.cameraRecenterFrame).toHaveBeenCalledWith(expect.objectContaining({sample, heading: 0}))
+        expect(lgs.camera.setView).toHaveBeenCalledWith({destination: frame.destination, orientation: {direction: frame.direction, up: frame.correctedUp}})
+        expect(lgs.camera.cancelFlight).toHaveBeenCalledOnce()
+        expect(call.captureCameraState).not.toHaveBeenCalled()
         expect(call.hideOtherJourneysVisibility).toHaveBeenCalledOnce()
-        expect(call.setReplayPreparationPivot).toHaveBeenCalledWith(sample)
-        expect(call.lockReplayCameraToAnchor).toHaveBeenCalledOnce()
+        expect(call.setReplayPreparationPivot).not.toHaveBeenCalled()
+        expect(call.lockReplayCameraToAnchor).not.toHaveBeenCalled()
+    })
+
+    it('does not reorient or configure a cancelled preparation after rotation shutdown', async () => {
+        let finishRotation
+        let current = true
+        const rotationStopped = new Promise(resolve => { finishRotation = resolve })
+        const stopRotate = vi.fn(() => rotationStopped)
+        const setView = vi.fn()
+        const configure = vi.fn()
+        globalThis.__ = {ui: {cameraManager: {stopRotate}}}
+        globalThis.lgs = {camera: {pitch: -0.4, setView}}
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {},
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {configure},
+        }
+        const preparation = enterReplayPreparation(mode, {journey: {}, shouldApply: () => current})
+        expect(stopRotate).toHaveBeenCalledOnce()
+        current = false
+        finishRotation()
+        await expect(preparation).resolves.toBe(false)
+        expect(setView).not.toHaveBeenCalled()
+        expect(configure).not.toHaveBeenCalled()
     })
 
     it('restores the main-scene camera when leaving Replay preparation', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -268,7 +268,7 @@ export const resolveJourneyReplayLogicalCameraPose = ({
     const fullTurn = Math.PI * 2
     const desiredHeading = ((resolvedAxisHeading + Math.PI + cameraAngle) % fullTurn + fullTurn) % fullTurn
     const normalizedPitch = finiteNumber(cameraSettings.pitch) ?? -65
-    const pitch = normalizedPitch <= -89
+    const pitch = normalizedPitch <= -90
                   ? SAFE_TOP_DOWN_PITCH
                   : degreesToRadians(normalizedPitch) ?? SAFE_TOP_DOWN_PITCH
     const sampleHeight = finiteNumber(anchorSample?.altitude ?? anchorSample?.height) ?? 0

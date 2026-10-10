@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -578,7 +578,7 @@ export class JourneyReplayPlaybackController {
                 timeMillis: phase.frameTimeMs ?? frameTimeMs,
             })
         }
-        const initialCameraState = globalThis.__?.ui?.replay?.savedCameraState
+        const initialCameraState = globalThis.__?.ui?.replay?.replayEntryCameraState
                                    ?? deferredRenderContract?.initialCameraState
                                    ?? null
         store.dynamicFrameState = buildReplayFrameState({

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,8 @@
  * Scene, camera state and renderer binding for journey replay.
  */
 
+import {acquireReplayCameraOwnership, releaseReplayCameraOwnership, replayOwnedCameraFor, replayReturnCameraStateFor} from './ReplayCameraOwnership'
+import {replayCameraFor} from './ReplayRenderTarget'
 import { REPLAY_DRAWER }                                                               from '@Core/constants'
 import {
     getJourneyReplayHideOtherJourneys,
@@ -63,7 +65,6 @@ import {
 }                                                                                          from './JourneyReplayPlaybackController'
 import { replayVideoTraceDebug }                                                           from './ReplayVideoTraceDebug'
 import {disposeReplaySceneFrameQualifier} from './ReplaySceneFrameQualifier'
-import {replayCesiumCameraDestinationAboveTerrain} from './ReplayCesiumCameraAdapter'
 import {
     currentReplaySessionOwnership,
     invalidateReplaySessionOwnership,
@@ -129,37 +130,8 @@ import {
     safeCartesian3Lerp,
 } from './JourneyReplaySessionShared'
 
-export const syncCameraFromCesiumControls = (mode, {sample = null, altitudeMode = null} = {}) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        let resolvedSample = sample
-            ?? currentJourneyReplaySample(state.controller)
-            ?? globalThis.lgs?.stores?.replay?.sample
-            ?? state.sampler?.atProgress?.(state.controller.progress ?? 0)
-
-        if (!resolvedSample) {
-            const camera = globalThis.lgs?.camera ?? globalThis.lgs?.viewer?.camera
-            const position = camera?.positionCartographic
-            if (camera && position) {
-                resolvedSample = {
-                    longitude: CesiumMath.toDegrees(position.longitude),
-                    latitude:  CesiumMath.toDegrees(position.latitude),
-                    altitude:  position.height,
-                }
-            }
-        }
-
-        const next = call.updateCameraSettingsFromCesiumControls(resolvedSample, {altitudeMode})
-        if (!next) {
-            return null
-        }
-
-        state.lastCameraHeading = finiteNumber(globalThis.lgs?.viewer?.camera?.heading)
-        state.lastCameraPitch = degreesToRadians(next.pitch)
-        call.syncCameraDrawerFromSettings()
-        call.cesiumScene()?.requestRender?.()
-        return next
-    }
+/** Preserve Replay settings independently of normal Cesium navigation. */
+export const syncCameraFromCesiumControls = () => null
 
 export const handleProfileHover = (mode, {sample, source = 'profile'} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -204,7 +176,9 @@ export const stop = (mode, options = {}) => {
         state.clipSequenceToken++
         state.skipNextImmediateStartRecenter = false
         call.stopStopClipPOIMaskLoop()
-        call.cancelActiveCameraFlight()
+        if (replayOwnedCameraFor(mode)) {
+            call.cancelActiveCameraFlight()
+        }
         call.stopCameraLiveSyncLoop()
         state.deferPlaybackCameraRestore = options.emit !== false
         const shouldDeferSceneRestore = options.deferSceneRestore === true || state.sceneRestoreDeferred === true
@@ -278,8 +252,9 @@ export const dispose = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         disposeReplaySceneFrameQualifier(mode)
-        mode.clearRenderTarget?.()
         call.stop({emit: false})
+        call.restoreCameraState()
+        mode.clearRenderTarget?.()
         invalidateReplaySessionOwnership(mode)
         state.replayEntryCameraState = null
         if (state.profileHoverTimeout !== null) {
@@ -354,9 +329,9 @@ export const resetCameraController = (mode, {
             clearTimeout(state.cameraManualInteractionTimer)
             state.cameraManualInteractionTimer = null
         }
-        if (globalThis.lgs?.viewer) {
-            globalThis.lgs.viewer.trackedEntity = undefined
-            globalThis.lgs.viewer.camera?.cancelFlight?.()
+        const ownedCamera = replayOwnedCameraFor(mode)
+        if (ownedCamera) {
+            ownedCamera.cancelFlight?.()
         }
     }
 
@@ -403,11 +378,11 @@ const restoreCameraPivot = pivot => {
 }
 
 /**
- * Force the preparation pivot to the first replay sample.
+ * Resolve a preparation anchor without changing the normal map pivot.
  *
  * @param {object} mode - Replay session mode.
  * @param {object|null} sample - Departure sample used by the preparation camera.
- * @returns {object|null} Applied preparation pivot.
+ * @returns {object|null} Prepared geographic anchor.
  */
 export const setReplayPreparationPivot = (mode, sample) => {
     const longitude = finiteNumber(sample?.longitude)
@@ -422,24 +397,19 @@ export const setReplayPreparationPivot = (mode, sample) => {
         latitude,
         longitude,
     }
-    const cameraManager = globalThis.__?.ui?.cameraManager
-    if (cameraManager) {
-        cameraManager.target = {...pivot}
-    }
-    const cameraStore = globalThis.lgs?.stores?.main?.components?.camera
-    if (cameraStore) {
-        cameraStore.target = {...pivot}
-    }
-
     return pivot
 }
 
 export const captureCameraState = (mode, {sample = null} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        const camera = globalThis.lgs?.camera ?? globalThis.lgs?.viewer?.camera
+        const camera = replayCameraFor(mode)
+        const previousCamera = replayOwnedCameraFor(mode)
+        if (previousCamera && previousCamera !== camera) {
+            call.restoreCameraState()
+        }
         const position = camera?.positionCartographic
-        const sampleHeight = finiteNumber(sample?.altitude ?? sample?.height)
+        const sampleHeight = finiteNumber(sample?.altitude ?? sample?.height, null)
         if (!camera && sampleHeight === null) {
             state.savedCameraState = null
             return null
@@ -448,19 +418,38 @@ export const captureCameraState = (mode, {sample = null} = {}) => {
         const cameraManagerPivot = cloneCameraPivot(globalThis.__?.ui?.cameraManager?.target)
         const cameraPivot = cameraManagerPivot
             ?? cloneCameraPivot(globalThis.lgs?.stores?.main?.components?.camera?.target)
-        state.savedCameraState = {
+        const captured = {
+            worldPose: camera?.positionWC && camera?.directionWC && camera?.upWC && camera?.transform
+                ? {
+                    position: {...camera.positionWC},
+                    direction: {...camera.directionWC},
+                    up: {...camera.upWC},
+                    transform: Matrix4.toArray(camera.transform),
+                }
+                : null,
             destination: {
-                longitude: finiteNumber(position?.longitude) !== null ? CesiumMath.toDegrees(position.longitude) : finiteNumber(sample?.longitude) ?? 0,
-                latitude:  finiteNumber(position?.latitude) !== null ? CesiumMath.toDegrees(position.latitude) : finiteNumber(sample?.latitude) ?? 0,
-                height:    finiteNumber(position?.height) ?? sampleHeight ?? 0,
+                longitude: finiteNumber(position?.longitude, null) !== null ? CesiumMath.toDegrees(position.longitude) : finiteNumber(sample?.longitude, null) ?? 0,
+                latitude:  finiteNumber(position?.latitude, null) !== null ? CesiumMath.toDegrees(position.latitude) : finiteNumber(sample?.latitude, null) ?? 0,
+                height:    finiteNumber(position?.height, null) ?? sampleHeight ?? 0,
             },
             orientation: {
-                heading: finiteNumber(camera?.heading) ?? state.lastCameraHeading ?? 0,
-                pitch:   finiteNumber(camera?.pitch) ?? state.lastCameraPitch ?? SAFE_TOP_DOWN_PITCH,
-                roll:    finiteNumber(camera?.roll) ?? 0,
+                heading: finiteNumber(camera?.heading, null) ?? state.lastCameraHeading ?? 0,
+                pitch:   finiteNumber(camera?.pitch, null) ?? state.lastCameraPitch ?? SAFE_TOP_DOWN_PITCH,
+                roll:    finiteNumber(camera?.roll, null) ?? 0,
             },
-            altitude: finiteNumber(position?.height) ?? sampleHeight ?? 0,
+            altitude: finiteNumber(position?.height, null) ?? sampleHeight ?? 0,
             pivot: cameraPivot,
+            mapPosition: camera === globalThis.lgs?.camera || camera === globalThis.lgs?.viewer?.camera
+                ? {...globalThis.__?.ui?.cameraManager?.position}
+                : null,
+        }
+        state.savedCameraState = acquireReplayCameraOwnership(mode, camera, captured)
+        if (currentJourneyReplayCameraSettings().debug) {
+            console.debug('[Replay camera] saved normal view', {
+                destination: {...state.savedCameraState.destination},
+                orientation: {...state.savedCameraState.orientation},
+                transform: state.savedCameraState.worldPose?.transform?.slice() ?? null,
+            })
         }
         return state.savedCameraState
     }
@@ -493,6 +482,7 @@ export const markPlaybackCameraUserAdjusted = (mode, ) => {
         }
     }
 
+/** Restore the Replay baseline without reading the physical map camera. */
 export const restorePlaybackCameraSettings = (mode, {force = false} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -506,6 +496,14 @@ export const restorePlaybackCameraSettings = (mode, {force = false} = {}) => {
         }
 
         if (!initialCamera) {
+            return null
+        }
+
+        // A previous session can finish cleanup after the next preparation has
+        // started. Restoring its map view must not overwrite the new Replay edits.
+        const preparationActive = store?.simplePreparationActive === true
+            || globalThis.lgs?.stores?.ui?.video?.editing === true
+        if (cameraUserAdjusted || preparationActive) {
             return null
         }
 
@@ -557,8 +555,7 @@ export const restorePlaybackSceneInternal = (mode, ) => {
         call.restoreMainUI()
         void call.restoreNearbyPOIsAfterPlayback()
         resetRuntimeProgress(replayStore())
-        // Keep the captured POI visibility state until the focus operation has
-        // completed. `journey.focus()` can make every entity visible again.
+        // Keep captured visibility until asynchronous scene cleanup completes.
         call.restoreCurrentJourneyVisibility({restorePOIs: false})
         call.resetCameraController({preserveSavedCameraState: true})
         state.suppressPlaybackCameraSync = true
@@ -597,18 +594,10 @@ export const restorePlaybackSceneInternal = (mode, ) => {
                 return
             }
             state.deferPlaybackCameraRestore = false
-            // Focus can rewrite journey and POI visibility. Reapply the
-            // visibility captured before replay after focus has settled.
+            // Reapply captured visibility after asynchronous scene cleanup.
             call.restoreCurrentJourneyVisibility()
-            // Restoring the journey focus above changes the live Cesium view.
-            // Reapply the exact camera captured before Replay playback so a
-            // subsequent export does not inherit the focus angle.
-            if (!state.cameraStateRestoredBeforeSceneCleanup) {
-                call.restoreCameraState()
-            }
-            else {
-                state.savedCameraState = null
-            }
+            // Hand back the normal view before allowing map persistence again.
+            call.restoreCameraState()
             state.cameraStateRestoredBeforeSceneCleanup = false
             call.restorePlaybackCameraSettings({force: true})
             state.replayEntryCameraState = null
@@ -631,30 +620,55 @@ export const restorePlaybackSceneInternal = (mode, ) => {
 export const restoreCameraState = (mode, {clear = true, cameraState = null} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        const camera = globalThis.lgs?.viewer?.camera
-        const savedCameraState = cameraState ?? state.savedCameraState
-        if (clear && cameraState === null) {
-            state.savedCameraState = null
-        }
+        const camera = replayOwnedCameraFor(mode)
+        const savedCameraState = cameraState ?? replayReturnCameraStateFor(mode) ?? state.savedCameraState
         if (!camera || !savedCameraState) {
             return false
         }
 
         camera.cancelFlight?.()
-        CameraUtils.unlock(camera)
-        const destination = replayCesiumCameraDestinationAboveTerrain({
-            destination: Cartesian3.fromDegrees(
-                savedCameraState.destination.longitude,
-                savedCameraState.destination.latitude,
-                finiteNumber(savedCameraState.destination.height) ?? finiteNumber(savedCameraState.altitude) ?? 0,
-            ),
-            scene: globalThis.lgs?.scene ?? call.cesiumScene?.(),
-        })
-        camera.setView?.({
-            destination,
-            orientation: savedCameraState.orientation,
-        })
-        restoreCameraPivot(savedCameraState.pivot)
+        const worldPose = savedCameraState.worldPose
+        if (worldPose) {
+            // Restore the navigation reference frame as well as the visible pose.
+            camera.lookAtTransform(Matrix4.fromArray(worldPose.transform))
+            camera.setView({
+                destination: Cartesian3.clone(worldPose.position),
+                orientation: {
+                    direction: Cartesian3.clone(worldPose.direction),
+                    up: Cartesian3.clone(worldPose.up),
+                },
+            })
+        }
+        else {
+            CameraUtils.unlock(camera)
+            camera.setView?.({
+                destination: Cartesian3.fromDegrees(
+                    savedCameraState.destination.longitude,
+                    savedCameraState.destination.latitude,
+                    finiteNumber(savedCameraState.destination.height) ?? finiteNumber(savedCameraState.altitude) ?? 0,
+                ),
+                orientation: savedCameraState.orientation,
+            })
+        }
+        if (camera === globalThis.lgs?.camera || camera === globalThis.lgs?.viewer?.camera) {
+            restoreCameraPivot(savedCameraState.pivot)
+            const manager = globalThis.__?.ui?.cameraManager
+            if (manager?.position && savedCameraState.mapPosition) {
+                Object.assign(manager.position, savedCameraState.mapPosition)
+            }
+        }
+        if (clear && cameraState === null) {
+            if (currentJourneyReplayCameraSettings().debug) {
+                console.debug('[Replay camera] restored normal view', {
+                    destination: {...savedCameraState.destination},
+                    orientation: {...savedCameraState.orientation},
+                    actualHeight: camera.positionCartographic?.height,
+                    referenceFrameRestored: !worldPose || Matrix4.equalsEpsilon(camera.transform, Matrix4.fromArray(worldPose.transform), 1e-10),
+                })
+            }
+            state.savedCameraState = null
+            releaseReplayCameraOwnership(mode)
+        }
         return true
     }
 

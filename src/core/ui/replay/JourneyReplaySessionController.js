@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -67,8 +67,9 @@ import {
     REPLAY_MARKER_MODE_TRACE, getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
     normalizeJourneyReplayProgressionStyle, normalizeJourneyReplaySmoothing, normalizeJourneyReplayTrace,
 }                                                                                          from './JourneyReplayProgressionStyle'
+import {replayOwnedCameraFor} from './ReplayCameraOwnership'
 import {
-    clearReplayRenderTarget, replayRenderTargetFor, setReplayRenderTarget,
+    clearReplayRenderTarget, replayCameraFor, replayRenderTargetFor, setReplayRenderTarget,
 }                                                                                          from './ReplayRenderTarget'
 
 const DEFAULT_DURATION = 60
@@ -969,6 +970,10 @@ export class JourneyReplaySessionController {
             captureCameraState: (...args) => JourneyReplaySessionSceneController.captureCameraState(this, ...args),
             setReplayPreparationPivot: (...args) => JourneyReplaySessionSceneController.setReplayPreparationPivot(this, ...args),
             capturePlaybackCameraSettings: (...args) => JourneyReplaySessionSceneController.capturePlaybackCameraSettings(this, ...args),
+            start: (...args) => JourneyReplaySessionPlaybackController.start(this, ...args),
+            stop: (...args) => JourneyReplaySessionSceneController.stop(this, ...args),
+            pause: (...args) => JourneyReplaySessionPlaybackController.pause(this, ...args),
+            resume: (...args) => JourneyReplaySessionPlaybackController.resume(this, ...args),
             enterReplayPreparation: (...args) => JourneyReplaySessionPlaybackController.enterReplayPreparation(this, ...args),
             leaveReplayPreparation: (...args) => JourneyReplaySessionPlaybackController.leaveReplayPreparation(this, ...args),
             captureJourneyReplayDrawerStateBeforePlayback: (...args) => JourneyReplaySessionSceneController.captureJourneyReplayDrawerStateBeforePlayback(this, ...args),
@@ -1074,7 +1079,10 @@ export class JourneyReplaySessionController {
             bindCesiumCameraBridge: (...args) => JourneyReplayCameraController.bindCesiumCameraBridge(this, ...args),
             startCameraLiveSyncLoop: (...args) => JourneyReplayCameraController.startCameraLiveSyncLoop(this, ...args),
             stopCameraLiveSyncLoop: (...args) => JourneyReplayCameraController.stopCameraLiveSyncLoop(this, ...args),
-            updateCamera: (...args) => JourneyReplayCameraController.updateCamera(this, ...args),
+            // The session bridge is the physical camera ownership boundary.
+            updateCamera: (...args) => replayOwnedCameraFor(this) && replayOwnedCameraFor(this) === replayCameraFor(this)
+                ? JourneyReplayCameraController.updateCamera(this, ...args)
+                : undefined,
             hideOtherJourneysVisibility: (...args) => JourneyReplayVisibilityController.hideOtherJourneysVisibility(this, ...args),
             hideCurrentJourneyVisibility: (...args) => JourneyReplayVisibilityController.hideCurrentJourneyVisibility(this, ...args),
             persistCurrentJourneyVisibility: (...args) => JourneyReplayVisibilityController.persistCurrentJourneyVisibility(this, ...args),

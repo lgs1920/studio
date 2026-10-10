@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,14 +34,13 @@ import {
 import {
     currentJourneyReplayCameraSettings,
     finiteNumber,
-    isJourneyReplayCameraPreparationActive,
     replayStore,
 } from './JourneyReplayRuntime'
 import {
     clamp, lerp, hasFiniteLonLat, projectReplayTargetInCameraFrame, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
-    REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
+    REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
     getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
 } from './JourneyReplayProgressionStyle'
@@ -143,7 +142,7 @@ import {
 } from './JourneyReplayCameraOverlay'
 
 /**
- * Lock the interactive Cesium camera to one replay anchor.
+ * Lock the interactive Cesium camera to one replay anchor using the Replay pose.
  *
  * @param {object} mode - Replay camera mode.
  * @param {object} options - Replay sample and camera pose.
@@ -156,28 +155,29 @@ export const lockReplayCameraToAnchor = (mode, {
     roll = 0,
     cameraSettings,
     cameraHeight = null,
-    cameraPosition = null,
 } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     const camera = replayCameraFor(mode)
-    const capturedPose = cameraPosition
-        ? cameraPoseAroundReplayAnchor({positionWC: cameraPosition}, sample)
-        : null
-    // Keep the captured framing, but always orient the replay camera on the
-    // departure tangent instead of inheriting an orbit heading.
-    const effectiveHeading = heading
-    const effectivePitch = capturedPose?.pitch ?? pitch
-    const effectiveCameraHeight = capturedPose?.height ?? cameraHeight
-    const effectiveCameraRange = capturedPose?.range ?? null
+    const targetHeight = finiteNumber(call.markerRenderHeightForSample?.(sample))
+        ?? finiteNumber(sample?.altitude ?? sample?.height)
+        ?? 0
+    const replayCameraHeight = finiteNumber(cameraHeight)
+        ?? finiteNumber(call.cameraAltitudeForSample?.(sample, cameraSettings))
+    const replayCameraRange = replayCameraHeight === null
+        ? null
+        : replayCameraRangeFromPitch(
+            Math.max(CAMERA_REDIRECT_TERRAIN_CLEARANCE_METERS, replayCameraHeight - targetHeight),
+            sanitizeOrientationRadians(pitch, SAFE_TOP_DOWN_PITCH),
+        )
     const frame = call.cameraRecenterFrame?.({
         sample,
-        heading: effectiveHeading,
-        pitch: effectivePitch,
+        heading,
+        pitch,
         roll,
         cameraSettings,
-        cameraHeight: effectiveCameraHeight,
-        cameraRange: effectiveCameraRange,
+        cameraHeight,
+        cameraRange: replayCameraRange,
     })
     if (!camera || typeof camera.lookAtTransform !== 'function' || !frame?.target || !frame.destination) {
         return false
@@ -218,53 +218,6 @@ export const lockReplayCameraToAnchor = (mode, {
         state.cameraApplyingView = false
     }
 }
-
-/**
- * Resolve the live camera pose relative to a fixed replay anchor.
- *
- * @param {Object|null} camera - Interactive Cesium camera.
- * @param {Object|null} anchor - Replay anchor in geographic coordinates.
- * @returns {Object|null} Target-relative heading, pitch, range, and height.
- */
-const cameraPoseAroundReplayAnchor = (camera, anchor) => {
-    const position = camera?.positionWC ?? camera?.position
-    const target = safeCartesianFromLonLat(anchor)
-    if (!position || !target) {
-        return null
-    }
-
-    try {
-        const transform = Transforms.eastNorthUpToFixedFrame(target)
-        const inverse = Matrix4.inverseTransformation(transform, new Matrix4())
-        const localPosition = Matrix4.multiplyByPoint(inverse, position, new Cartesian3())
-        const horizontalDistance = Math.hypot(localPosition.x, localPosition.y)
-        const range = Cartesian3.magnitude(localPosition)
-        if (!Number.isFinite(horizontalDistance)
-            || !Number.isFinite(range)
-            || horizontalDistance <= 0
-            || range <= 0) {
-            return null
-        }
-
-        const cartographic = Cartographic.fromCartesian(position)
-        return {
-            heading: Math.atan2(-localPosition.x, -localPosition.y),
-            pitch: -Math.atan2(localPosition.z, horizontalDistance),
-            range,
-            height: Number.isFinite(cartographic?.height) ? cartographic.height : null,
-        }
-    }
-    catch {
-        return null
-    }
-}
-
-/**
- * Return the interactive Studio camera used during recording preparation.
- *
- * @returns {Object|null} The live Studio Cesium camera.
- */
-const interactiveReplayCamera = mode => replayCameraFor(mode)
 
 /**
  * Resolve the single route-relative camera angle from a live view heading.
@@ -309,9 +262,9 @@ export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraS
             terrainHeightLookupBypass: state.terrainHeightLookupBypass === true,
         })
         const anchorHeight = finiteNumber(anchor?.altitude ?? anchor?.height) ?? 0
-        const markerHeight = cameraSettings?.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
-            ? finiteNumber(call.markerRenderHeightForSample?.(anchor)) ?? anchorHeight
-            : anchorHeight
+        // Both fixed-altitude and ground-offset views aim at the rendered terrain marker.
+        // GPX elevation must not select a different target after startup placement.
+        const markerHeight = finiteNumber(call.markerRenderHeightForSample?.(anchor)) ?? anchorHeight
         const safeHeading = sanitizeOrientationRadians(heading, 0)
         const safePitch = sanitizeOrientationRadians(pitch, SAFE_TOP_DOWN_PITCH)
         const safeRoll = clamp(sanitizeOrientationRadians(roll, 0), -Math.PI / 4, Math.PI / 4)
@@ -325,7 +278,7 @@ export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraS
         }
 
         const cameraHeight = call.cameraAltitudeForSample(anchor, cameraSettings)
-        const range = replayCameraRangeFromPitch(Math.max(1, cameraHeight - markerHeight), safePitch)
+        const range = replayCameraRangeFromPitch(Math.max(CAMERA_REDIRECT_TERRAIN_CLEARANCE_METERS, cameraHeight - markerHeight), safePitch)
         const command = createReplayCameraCommand({
             pose: {
                 target: {
@@ -681,12 +634,6 @@ export const persistCameraSettings =  (mode, updates) => {
         const next = normalizeJourneyReplayCamera({
             ...current,
             ...updates,
-            ...(isBasicMode
-                ? {
-                    altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
-                    debug: false,
-                }
-                : {}),
             hysteresis: {
                 ...(current?.hysteresis ?? {}),
                 ...(updates?.hysteresis ?? {}),
@@ -702,8 +649,6 @@ export const persistCameraSettings =  (mode, updates) => {
                     camera: {
                         ...(simple.camera ?? {}),
                         ...next,
-                        altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
-                        debug: false,
                     },
                 }
             }
@@ -721,100 +666,35 @@ export const persistCameraSettings =  (mode, updates) => {
         return next
     }
 
-export const updateCameraSettingsFromCesiumControls = (mode, sample, {altitudeMode = null} = {}) => {
+/** Keep normal Cesium navigation outside persisted Replay configuration. */
+export const updateCameraSettingsFromCesiumControls = () => null
+
+/** Accept an intentional preparation mouse tilt without importing map height or heading. */
+export const updateCameraFromCesiumControls = mode => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
-        if (isJourneyReplayCameraPreparationActive()) {
-            return null
-        }
-
-        const camera = interactiveReplayCamera(mode)
-        if (!camera || !sample) {
-            return null
-        }
-
-        const terrainHeight = call.terrainHeightForLonLat(sample?.longitude, sample?.latitude)
-        const anchoredPose = cameraPoseAroundReplayAnchor(camera, sample)
-        const cameraHeight = anchoredPose?.height ?? finiteNumber(camera.positionCartographic?.height)
-        const currentCameraSettings = currentJourneyReplayCameraSettings()
-        const currentAltitude = currentCameraSettings.altitude
-        const pitchRadians = anchoredPose?.pitch ?? finiteNumber(camera.pitch)
-        const headingRadians = anchoredPose?.heading ?? finiteNumber(camera.heading)
-        const next = {
-            pitch: pitchRadians === null || pitchRadians === undefined
-                ? currentCameraSettings.pitch
-                : clamp(Math.round(CesiumMath.toDegrees(pitchRadians)), -89, -5),
-        }
-
-        if (headingRadians !== null && headingRadians !== undefined) {
-            const axisHeading = call.headingFromPositionProperty?.(sample?.progress ?? state.controller?.progress ?? 0)
-            const angle = replayCameraAngleFromHeading({
-                axisHeading,
-                cameraHeading: headingRadians,
-            })
-            if (angle) {
-                next.cameraAngle = angle.cameraAngle
-            }
-        }
-
-        const nextAltitudeMode = altitudeMode ?? currentCameraSettings.altitudeMode
-        if (nextAltitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET) {
-            next.altitude = terrainHeight === null
-                            ? currentAltitude
-                            : clamp(Math.max(10, (cameraHeight ?? (currentAltitude + terrainHeight)) - terrainHeight), 10, 100000)
-        }
-        else {
-            next.altitude = clamp(cameraHeight ?? currentAltitude, 10, 100000)
-        }
-
-        return call.persistCameraSettings(next)
+    const replay = replayStore()
+    if (globalThis.lgs?.stores?.ui?.video?.editing !== true
+        || replay?.active || replay?.playing || replay?.paused || replay?.clipSequenceActive
+        || state.cameraApplyingView || state.cameraFlightActive
+        || (!state.cameraPointerActive && !state.cameraUserAdjusting)
+        || state.preparationPointerPitch === null || state.preparationPointerPitch === undefined) {
+        return
     }
-
-/**
- * Persist a Cesium camera change only when it represents an authorized user
- * interaction rather than feedback from an automatic replay frame.
- *
- * @param {object} mode - Replay session mode.
- * @param {object} options - Synchronization options.
- * @param {boolean} [options.userInteraction=false] - Whether a completed user interaction authorized this synchronization.
- * @returns {void}
- */
-export const updateCameraFromCesiumControls = (mode, {userInteraction = false} = {}) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
-        const store = replayStore()
-        if (isJourneyReplayCameraPreparationActive()) {
-            return
-        }
-        if (state.suppressPlaybackCameraSync) {
-            return
-        }
-        if (store?.cameraUpdateSource === 'drawer') {
-            return
-        }
-        if (state.cameraApplyingView) {
-            return
-        }
-        const authorizedUserInteraction = userInteraction
-                                          || state.cameraPointerActive === true
-                                          || state.cameraUserAdjusting === true
-        if (!authorizedUserInteraction) {
-            return
-        }
-        if (store?.cameraUpdateSource === 'keyboard') {
-            store.cameraUpdateSource = null
-        }
-        const logicalNow = finiteNumber(call.now?.()) ?? 0
-        if (!userInteraction
-            && !state.cameraPointerActive
-            && logicalNow < (finiteNumber(state.cameraAutoTrackingIgnoreUntil) ?? 0)) {
-            return
-        }
-        call.markPlaybackCameraUserAdjusted()
-        mode.syncCameraFromCesiumControls()
+    const camera = globalThis.lgs?.viewer?.camera ?? globalThis.lgs?.camera
+    const pitch = finiteNumber(camera?.pitch)
+    if (pitch === null || Math.abs(pitch - state.preparationPointerPitch) < 1e-7) {
+        return
     }
+    const current = currentJourneyReplayCameraSettings()
+    const nextPitch = clamp(Math.round(CesiumMath.toDegrees(pitch)), -89, -5)
+    if (nextPitch === current.pitch) {
+        return
+    }
+    call.persistCameraSettings({...current, pitch: nextPitch})
+    console.info(`[Replay camera] preparation setting update | source=mouse pitch=${nextPitch} altitude=${current.altitude} angle=${current.cameraAngle}`)
+    call.refreshReplayDiagnosticsOverlay?.()
+}
 
 export const syncCameraDrawerFromSettings = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]

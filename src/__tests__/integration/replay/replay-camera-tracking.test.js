@@ -8,12 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import {releaseReplayCameraOwnership} from '@Core/ui/replay/ReplayCameraOwnership'
+import {captureCameraState} from '@Core/ui/replay/JourneyReplaySessionSceneController'
 import { REPLAY_DRAWER }                                           from '@Core/constants'
 import { createJourneyReplayClipInstance }                                from '@Core/ui/replay/JourneyReplayClips'
 import {
@@ -42,7 +44,7 @@ import { gpx }                                                         from '@tm
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
 import { Cartesian3, Cartographic, Matrix4, Math as CesiumMath, Transforms } from 'cesium'
 import { proxy }                                                       from 'valtio'
-import { describe, expect, it, vi }                                    from 'vitest'
+import { afterEach, describe, expect, it, vi }                                    from 'vitest'
 
 vi.mock('@Components/Toast', () => ({
     LGS_ERROR_TOAST:       'danger',
@@ -64,6 +66,18 @@ import {makeJourney, makeTrack} from '../../unit/replay/replay-phase1-fixtures'
 const defaultJourneyReplaySettings = () => ({
     ...defaultJourneyReplaySettingsBase(),
     userMode: REPLAY_USER_MODE_EXPERT,
+})
+
+const cameraOwners = []
+
+/** Simulate the playback camera lease when exercising tracking in isolation. */
+const claimTrackingCamera = mode => {
+    captureCameraState(mode)
+    cameraOwners.push(mode)
+}
+
+afterEach(() => {
+    cameraOwners.splice(0).forEach(owner => releaseReplayCameraOwnership(owner))
 })
 
 describe('replay camera tracking', () => {
@@ -351,7 +365,7 @@ describe('replay camera tracking', () => {
         }
     })
 
-    it('keeps the drawer in sync with live Cesium camera edits while an active replay is running', () => {
+    it('preserves prepared Replay settings during live Cesium navigation', () => {
         vi.useFakeTimers()
         const journey = makeJourney([
                                         makeTrack({
@@ -458,10 +472,10 @@ describe('replay camera tracking', () => {
             cameraChanged()
             moveEnd?.()
 
-            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBeCloseTo(-134, 0)
-            expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBeCloseTo(-45, 0)
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(3000)
-            expect(globalThis.lgs.stores.replay.camera.cameraAngle).toBeCloseTo(-134, 0)
+            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(replay.camera.cameraAngle)
+            expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(replay.camera.pitch)
+            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(replay.camera.altitude)
+            expect(globalThis.lgs.stores.replay.camera.cameraAngle).toBe(replay.camera.cameraAngle)
         }
         finally {
             vi.useRealTimers()
@@ -545,6 +559,7 @@ describe('replay camera tracking', () => {
                                                 },
                                             })
             mode.configure()
+            claimTrackingCamera(mode)
             mode.refresh({camera: false})
 
             expect(renderUpdates).toBe(1)
@@ -638,20 +653,21 @@ describe('replay camera tracking', () => {
                                                 },
                                             })
             mode.configure()
+            claimTrackingCamera(mode)
             mode.syncCameraFromCesiumControls()
             mode.refreshCamera()
             mode.refreshCamera()
 
             expect(lookAtTransformCalls).toHaveLength(1)
             expect(setViewCalls).toHaveLength(1)
-            expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBeCloseTo(-45, 6)
+            expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(replay.camera.pitch)
         }
         finally {
             globalThis.lgs = previousLgs
         }
     })
 
-    it('lets Cesium pointer interactions override navigation camera pitch before tracking resumes', () => {
+    it('keeps preparation navigation independent from configured Replay pitch', () => {
         vi.useFakeTimers()
         const journey = makeJourney([
                                         makeTrack({
@@ -754,10 +770,10 @@ describe('replay camera tracking', () => {
             vi.advanceTimersByTime(130)
             mode.refreshCamera()
 
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(2200)
-            expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBeCloseTo(-30, 6)
-            expect(lookAtTransformCalls).toHaveLength(1)
-            expect(setViewCalls).toHaveLength(1)
+            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(replay.camera.altitude)
+            expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(replay.camera.pitch)
+            expect(lookAtTransformCalls).toHaveLength(0)
+            expect(setViewCalls).toHaveLength(0)
         }
         finally {
             vi.useRealTimers()
@@ -855,6 +871,7 @@ describe('replay camera tracking', () => {
                                                 },
                                             })
             mode.configure()
+            claimTrackingCamera(mode)
             mode.refreshCamera()
             moveStart()
             moveEnd()
@@ -962,7 +979,7 @@ describe('replay camera tracking', () => {
             canvasListeners.get('wheel')()
             vi.advanceTimersByTime(130)
 
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(2600)
+            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(replay.camera.altitude)
         }
         finally {
             vi.useRealTimers()
@@ -970,7 +987,7 @@ describe('replay camera tracking', () => {
         }
     })
 
-    it('rechecks tolerance zone after camera zoom and recenters when the marker is outside', () => {
+    it('does not let a stale sampler recenter the map after zoom', () => {
         vi.useFakeTimers()
         const journey = makeJourney([
                                         makeTrack({
@@ -1066,8 +1083,8 @@ describe('replay camera tracking', () => {
             canvasListeners.get('wheel')()
             vi.advanceTimersByTime(130)
 
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(2600)
-            expect(flyToCalls).toHaveLength(1)
+            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(replay.camera.altitude)
+            expect(flyToCalls).toHaveLength(0)
         }
         finally {
             vi.useRealTimers()
@@ -1737,6 +1754,7 @@ describe('replay camera tracking', () => {
                                                 },
             })
             mode.configure({duration: 10})
+            claimTrackingCamera(mode)
             mode.refreshCamera({
                 sample:   mode.controller.sampler.atProgress(0),
                 progress: 0,
@@ -1826,6 +1844,7 @@ describe('replay camera tracking', () => {
                                                     renderer:   {clear: () => {}, show: () => {}, update: () => {}},
                                                 })
             mode.configure({duration: 10})
+            claimTrackingCamera(mode)
             mode.refreshCamera({
                                    sample:   mode.controller.sampler.atProgress(0),
                                    progress: 0,
@@ -1842,7 +1861,7 @@ describe('replay camera tracking', () => {
         }
     })
 
-    it('recenters tolerance tracking after a user zoom even when the marker was still inside the zone', () => {
+    it('leaves normal map zoom alone when Replay only has a configured sampler', () => {
         vi.useFakeTimers()
         const journey = makeJourney([
                                         makeTrack({
@@ -1937,14 +1956,8 @@ describe('replay camera tracking', () => {
             canvasListeners.get('wheel')()
             vi.advanceTimersByTime(130)
 
-            const target = Cartesian3.fromDegrees(2, 48, 120)
-            const up = Matrix4.getColumn(Transforms.eastNorthUpToFixedFrame(target), 2, new Cartesian3())
-            const verticalComponent = Cartesian3.dot(flyToCalls[0].orientation.direction, up)
-
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(2600)
-            expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBeCloseTo(-30, 6)
-            expect(flyToCalls).toHaveLength(1)
-            expect(verticalComponent).toBeCloseTo(-0.5, 2)
+            expect(globalThis.lgs.settings.ui.replay.camera).toEqual(replay.camera)
+            expect(flyToCalls).toHaveLength(0)
         }
         finally {
             vi.useRealTimers()
@@ -2046,6 +2059,7 @@ describe('replay camera tracking', () => {
                                                 },
                                             })
             mode.configure()
+            claimTrackingCamera(mode)
             mode.refreshCamera()
 
             expect(flyToCalls).toHaveLength(0)
@@ -2148,6 +2162,7 @@ describe('replay camera tracking', () => {
                                                 },
                                             })
             mode.configure()
+            claimTrackingCamera(mode)
             mode.refreshCamera()
 
             const target = Cartesian3.fromDegrees(2, 48, 20)
@@ -2167,7 +2182,7 @@ describe('replay camera tracking', () => {
         }
     })
 
-    it('cancels an active tolerance recenter before applying a user zoom recenter', () => {
+    it('does not restart configured Replay tracking after inactive map zoom', () => {
         vi.useFakeTimers()
         const journey = makeJourney([
                                         makeTrack({
@@ -2262,14 +2277,14 @@ describe('replay camera tracking', () => {
                                             })
             mode.configure()
             mode.refreshCamera()
-            expect(flyToCalls).toHaveLength(1)
+            expect(flyToCalls).toHaveLength(0)
 
             camera.positionCartographic.height = 2600
             canvasListeners.get('wheel')()
             vi.advanceTimersByTime(130)
 
-            expect(cancelFlightCalls).toBeGreaterThan(0)
-            expect(flyToCalls).toHaveLength(2)
+            expect(cancelFlightCalls).toBe(0)
+            expect(flyToCalls).toHaveLength(0)
         }
         finally {
             vi.useRealTimers()
@@ -2372,13 +2387,14 @@ describe('replay camera tracking', () => {
                                                 },
                                             })
             mode.configure()
+            claimTrackingCamera(mode)
             mode.refreshCamera()
             expect(flyToCalls).toHaveLength(1)
 
             vi.advanceTimersByTime(360)
             mode.refreshCamera()
 
-            expect(cancelFlightCalls).toBe(1)
+            expect(cancelFlightCalls).toBe(0)
             expect(flyToCalls).toHaveLength(1)
         }
         finally {
@@ -2482,6 +2498,7 @@ describe('replay camera tracking', () => {
                                                 },
                                             })
             mode.configure()
+            claimTrackingCamera(mode)
             cancelFlightCalls = 0
             mode.refreshCamera()
             expect(flyToCalls).toHaveLength(1)
@@ -2617,6 +2634,7 @@ describe('replay camera tracking', () => {
                                                 },
                                             })
             mode.configure()
+            claimTrackingCamera(mode)
             mode.refreshCamera({sample})
 
             const targetCartesian = Cartesian3.fromDegrees(2, 48, 120)
@@ -2755,6 +2773,7 @@ describe('replay camera tracking', () => {
                                                 },
                                             })
             mode.configure()
+            claimTrackingCamera(mode)
             mode.refreshCamera({sample})
 
             const targetCartesian = Cartesian3.fromDegrees(2, 48, 120)
@@ -2889,6 +2908,7 @@ describe('replay camera tracking', () => {
                                                 },
                                             })
             mode.configure()
+            claimTrackingCamera(mode)
             mode.refreshCamera({sample})
 
             expect(flyToCalls).toHaveLength(1)
@@ -3027,6 +3047,7 @@ describe('replay camera tracking', () => {
                                                 },
                                             })
             mode.configure()
+            claimTrackingCamera(mode)
             mode.refreshCamera({sample})
 
             expect(pickPositionCalls).toBeGreaterThan(0)

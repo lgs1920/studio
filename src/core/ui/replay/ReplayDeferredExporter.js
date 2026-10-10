@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -322,43 +322,11 @@ const captureReplayCameraStateSnapshot = ({
         replay = defaultReplayStore(),
                                               cameraState = null,
                                           } = {}) => {
-    const savedState = normalizeReplayCameraStateSnapshot(
+    return normalizeReplayCameraStateSnapshot(
         cameraState
         ?? replay?.replayEntryCameraState
-        ?? replay?.savedCameraState
-        ?? globalThis.__?.ui?.replay?.savedCameraState
         ?? globalThis.__?.ui?.replay?.replayEntryCameraState,
     )
-    if (savedState) {
-        return savedState
-    }
-
-    const camera = globalThis.lgs?.camera ?? globalThis.lgs?.viewer?.camera ?? null
-    const position = camera?.positionCartographic ?? null
-    const longitude = finiteNumber(position?.longitude, null)
-    const latitude = finiteNumber(position?.latitude, null)
-    const height = finiteNumber(position?.height, null)
-    const hasCameraState = Boolean(camera)
-                           || longitude !== null
-                           || latitude !== null
-                           || height !== null
-    if (!hasCameraState) {
-        return null
-    }
-
-    return {
-        destination: {
-            longitude: longitude !== null ? roundFocusValue((longitude * 180) / Math.PI) : null,
-            latitude:  latitude !== null ? roundFocusValue((latitude * 180) / Math.PI) : null,
-            height:    roundFocusValue(height),
-        },
-        orientation: {
-            heading: roundFocusValue(camera?.heading ?? 0),
-            pitch:   roundFocusValue(camera?.pitch ?? 0),
-            roll:    roundFocusValue(camera?.roll ?? 0),
-        },
-        altitude: roundFocusValue(height),
-    }
 }
 
 const normalizeDimensions = (dimensions = {}) => {

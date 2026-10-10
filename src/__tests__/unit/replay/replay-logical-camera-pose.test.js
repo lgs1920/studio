@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,6 +50,14 @@ describe('Journey replay logical camera pose', () => {
         expect(pose.pitch).toBeCloseTo(-Math.PI / 4)
         expect(pose.cameraHeight).toBe(420)
         expect(pose.logical).toBe(true)
+    })
+
+    it('preserves the supported -89 degree pitch for deterministic capture', () => {
+        const pose = resolveJourneyReplayLogicalCameraPose({
+            sample: {longitude: 2, latitude: 48, altitude: 120},
+            cameraSettings: normalizeJourneyReplayCamera({pitch: -89}),
+        })
+        expect(pose.pitch).toBeCloseTo(-89 * Math.PI / 180, 10)
     })
 
     it('places a positive camera azimuth to the right of the route and faces back toward it', () => {

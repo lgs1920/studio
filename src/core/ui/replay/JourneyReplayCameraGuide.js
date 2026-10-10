@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -826,7 +826,7 @@ export const cameraViewForSample = (mode, {
             const normalizedPitch = finiteNumber(cameraSettings?.pitch) ?? -65
             const pitch = immediateSource
                           ? degreesToRadians(normalizedPitch)
-                          : normalizedPitch <= -89
+                          : normalizedPitch <= -90
                             ? SAFE_TOP_DOWN_PITCH
                             : degreesToRadians(normalizedPitch)
             const desiredHeading = replayCameraHeadingForAngle({

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ import {
     JourneyReplayPlaybackController,
 }                                                                      from '@Core/ui/replay/JourneyReplayPlaybackController'
 import {
-    defaultJourneyReplaySettings, REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
+    defaultJourneyReplaySettings as productReplaySettings, REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
     REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_POSITION_AHEAD, REPLAY_CAMERA_POSITION_BEHIND, REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_CAMERA_PRESET_DEFAULT, REPLAY_CAMERA_PRESET_ULTRA_SMOOTH,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
@@ -56,9 +56,12 @@ vi.mock('@Components/Toast', () => ({
 
 import {makeJourney, makeTrack} from './replay-phase1-fixtures'
 
+/** Exercise clip behavior in Expert mode, where start and stop clips are supported. */
+const defaultJourneyReplaySettings = () => ({...productReplaySettings(), userMode: 'expert'})
+
 describe('replay visibility and clips', () => {
 
-    it('recenters on the current journey when stopping an active replay', () => {
+    it('restores the normal camera without focusing the journey when stopping Replay', () => {
         const journey = makeJourney([
                                         makeTrack({
                                                       slug:        'track#journey#gpx#main',
@@ -149,19 +152,14 @@ describe('replay visibility and clips', () => {
             expect(journey.persistToDatabase).toHaveBeenCalled()
 
             expect(cancelFlightCalls).toBeGreaterThan(0)
-            expect(journey.focus).toHaveBeenCalledTimes(1)
-            expect(journey.focus).toHaveBeenCalledWith(expect.objectContaining({
-                                                                                  resetCamera: true,
-                                                                                  rotate: false,
-                                                                                  snapDistance: 50000,
-                                                                              }))
+            expect(journey.focus).not.toHaveBeenCalled()
         }
         finally {
             globalThis.lgs = previousLgs
         }
     })
 
-    it('clears the replay marker and trace when stop clips complete', () => {
+    it('clears the replay marker and trace when stop clips complete', async () => {
         const journey = makeJourney([
                                         makeTrack({
                                                       slug:        'track#journey#gpx#main',
@@ -261,8 +259,9 @@ describe('replay visibility and clips', () => {
             now = 1000
             frames.shift()()
 
+            await mode.waitForSceneRestore()
             expect(renderer.clear).toHaveBeenCalledTimes(2)
-            expect(journey.focus).toHaveBeenCalled()
+            expect(journey.focus).not.toHaveBeenCalled()
         }
         finally {
             globalThis.lgs = previousLgs
@@ -416,6 +415,7 @@ describe('replay visibility and clips', () => {
                                             })
 
             mode.start()
+            setViewCalls.length = 0
             listeners.get(REPLAY_EVENT_END)?.({
                                                       controller,
                                                       sampler,
@@ -1066,7 +1066,7 @@ describe('replay visibility and clips', () => {
             })
             await vi.runAllTimersAsync()
 
-            expect(journey.focus).toHaveBeenCalledWith(expect.objectContaining({rotate: false}))
+            expect(journey.focus).not.toHaveBeenCalled()
 
             await Promise.resolve()
 
@@ -1225,7 +1225,8 @@ describe('replay visibility and clips', () => {
             await Promise.resolve()
             expect(controllerStartSpy).not.toHaveBeenCalled()
 
-            expect(setViewCalls).toHaveLength(1)
+            // Replay entry is applied before the first start-clip frame.
+            expect(setViewCalls).toHaveLength(2)
             await vi.advanceTimersByTimeAsync(1000)
 
             expect(controllerStartSpy).toHaveBeenCalledTimes(1)
@@ -1376,7 +1377,8 @@ describe('replay visibility and clips', () => {
             mode.start({duration: 1})
             await Promise.resolve()
             expect(controllerStartSpy).not.toHaveBeenCalled()
-            expect(setViewCalls).toHaveLength(1)
+            // Replay entry is applied before the first start-clip frame.
+            expect(setViewCalls).toHaveLength(2)
             await vi.advanceTimersByTimeAsync(250)
 
             expect(controllerStartSpy).toHaveBeenCalledTimes(1)
@@ -1588,7 +1590,8 @@ describe('replay visibility and clips', () => {
                 altitude:  120,
             }
             const targetCartesian = Cartesian3.fromDegrees(target.longitude, target.latitude, target.altitude)
-            const firstDestination = setViewCalls[0].destination
+            // The first write establishes Replay entry, then the clip starts high.
+            const firstDestination = setViewCalls[1].destination
             const lastDestination = setViewCalls.at(-1).destination
             const firstHeight = Cartographic.fromCartesian(firstDestination).height
             const lastHeight = Cartographic.fromCartesian(lastDestination).height
@@ -1705,7 +1708,7 @@ describe('replay visibility and clips', () => {
         }
     })
 
-    it('restores the captured camera altitude even when the start camera height is missing', () => {
+    it('applies Replay framing without inheriting a missing normal camera height', () => {
         const journey = makeJourney([
                                         makeTrack({
                                                       slug:        'track#journey#gpx#main',
@@ -1791,12 +1794,12 @@ describe('replay visibility and clips', () => {
             mode.start({duration: 1})
             mode.stop({emit: false})
 
-            expect(setViewCalls).toHaveLength(1)
+            expect(setViewCalls).toHaveLength(2)
             const restoredLongitude = (0.1 * 180) / Math.PI
             const restoredLatitude = (0.2 * 180) / Math.PI
             expect(Cartesian3.distance(
-                setViewCalls[0].destination,
-                Cartesian3.fromDegrees(restoredLongitude, restoredLatitude, 120 + REPLAY_CAMERA_TERRAIN_CLEARANCE_METERS),
+                setViewCalls[1].destination,
+                Cartesian3.fromDegrees(restoredLongitude, restoredLatitude, 120),
             )).toBeLessThan(1)
             expect(journey.visible).toBe(true)
             expect(journey.updateVisibility).toHaveBeenCalledWith(true)
@@ -1925,7 +1928,7 @@ describe('replay visibility and clips', () => {
         }
     })
 
-    it('focuses the full journey when playback naturally ends', () => {
+    it('restores journey visibility without a focus flight at natural completion', () => {
         const journey = makeJourney([
                                         makeTrack({
                                                       slug:        'track#journey#gpx#main',
@@ -1967,6 +1970,8 @@ describe('replay visibility and clips', () => {
             viewer:     {
                 trackedEntity: null,
                 camera:        {
+                    lookAtTransform:      () => {},
+                    setView:              vi.fn(),
                     heading:              0,
                     pitch:                -Math.PI / 4,
                     positionCartographic: {longitude: 0, latitude: 0, height: 1000},
@@ -2013,14 +2018,9 @@ describe('replay visibility and clips', () => {
             now = 1000
             frames.shift()()
 
-            expect(focusCalls).toHaveLength(1)
+            expect(focusCalls).toHaveLength(0)
             expect(journey.visible).toBe(true)
             expect(journey.updateVisibility).toHaveBeenCalledWith(true)
-            expect(focusCalls[0]).toEqual(expect.objectContaining({
-                                                                       resetCamera: true,
-                                                                       rotate:      false,
-                                                                       snapDistance: 50000,
-                                                                   }))
             expect(rendererUpdate).toHaveBeenCalledWith(expect.objectContaining({
                 freezeDynamic: true,
                 hideCursor:    true,

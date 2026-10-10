@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -640,7 +640,7 @@ describe('replay phase 1 playback controller', () => {
         }
     })
 
-    it('syncs the live Cesium camera into runtime and persisted replay camera settings', () => {
+    it('keeps live Cesium camera navigation outside persisted Replay settings', () => {
         const journey = makeJourney([
                                         makeTrack({
                                                       slug:        'track#journey#gpx#main',
@@ -714,10 +714,9 @@ describe('replay phase 1 playback controller', () => {
 
             const camera = mode.syncCameraFromCesiumControls()
 
-            expect(camera.altitude).toBe(1840)
-            expect(camera.pitch).toBeCloseTo(-45, 6)
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1840)
-            expect(globalThis.lgs.stores.replay.camera.pitch).toBeCloseTo(-45, 6)
+            expect(camera).toBeNull()
+            expect(globalThis.lgs.settings.ui.replay.camera).toEqual(replay.camera)
+            expect(globalThis.lgs.stores.replay.camera).toEqual(replay.camera)
         }
         finally {
             globalThis.lgs = previousLgs
@@ -960,9 +959,7 @@ describe('replay phase 1 playback controller', () => {
 
             mode.start()
 
-            expect(mode.replayEntryCameraState).toEqual(expect.objectContaining({
-                destination: expect.objectContaining({height: 2400}),
-            }))
+            expect(mode.replayEntryCameraState.destination.height).not.toBeCloseTo(2400, 3)
             expect(mode.savedCameraState.destination.height).toBe(2400)
             expect(camera.positionCartographic.height).not.toBeCloseTo(2400, 3)
 
@@ -1078,7 +1075,7 @@ describe('replay phase 1 playback controller', () => {
         }
     })
 
-    it('restores the starting ground offset after playback even if the runtime changed it', () => {
+    it('preserves explicit Replay ground-offset edits when returning to the map', () => {
         const journey = makeJourney([
                                         makeTrack({
                                                       slug:        'track#journey#gpx#main',
@@ -1162,8 +1159,8 @@ describe('replay phase 1 playback controller', () => {
             mode.stop({emit: false})
 
             expect(globalThis.lgs.settings.ui.replay.camera.altitudeMode).toBe(REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET)
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(2000)
-            expect(globalThis.lgs.stores.replay.camera.altitude).toBe(2000)
+            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(4300)
+            expect(globalThis.lgs.stores.replay.camera.altitude).toBe(4300)
         }
         finally {
             globalThis.__ = previousDoubleUnderscore
@@ -1275,7 +1272,7 @@ describe('replay phase 1 playback controller', () => {
             await Promise.resolve()
             await Promise.resolve()
 
-            expect(journey.focus).toHaveBeenCalled()
+            expect(journey.focus).not.toHaveBeenCalled()
             expect(globalThis.lgs.settings.ui.replay.camera.altitudeMode).toBe(REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET)
             expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(2000)
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(2000)
@@ -1390,7 +1387,7 @@ describe('replay phase 1 playback controller', () => {
             await Promise.resolve()
             await Promise.resolve()
 
-            expect(journey.focus).toHaveBeenCalled()
+            expect(journey.focus).not.toHaveBeenCalled()
             expect(globalThis.lgs.settings.ui.replay.camera.altitudeMode).toBe(REPLAY_CAMERA_ALTITUDE_CONSTANT)
             expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(2400)
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(2400)
@@ -1974,7 +1971,7 @@ describe('replay phase 1 playback controller', () => {
 
             await vi.advanceTimersByTimeAsync(2000)
 
-            expect(journey.focus).toHaveBeenCalled()
+            expect(journey.focus).not.toHaveBeenCalled()
 
             resolveFocus()
             await Promise.resolve()

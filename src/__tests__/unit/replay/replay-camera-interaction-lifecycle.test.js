@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -366,11 +366,11 @@ describe('JourneyReplay camera interaction lifecycle', () => {
 
         updateCameraFromCesiumControls(mode, {userInteraction: true})
 
-        expect(markPlaybackCameraUserAdjusted).toHaveBeenCalledOnce()
-        expect(syncCameraFromCesiumControls).toHaveBeenCalledOnce()
+        expect(markPlaybackCameraUserAdjusted).not.toHaveBeenCalled()
+        expect(syncCameraFromCesiumControls).not.toHaveBeenCalled()
     })
 
-    it('allows mouse synchronization after a keyboard camera adjustment', () => {
+    it('keeps mouse navigation outside prepared keyboard settings', () => {
         const syncCameraFromCesiumControls = vi.fn()
         const call = {
             markPlaybackCameraUserAdjusted: vi.fn(),
@@ -398,8 +398,8 @@ describe('JourneyReplay camera interaction lifecycle', () => {
 
         updateCameraFromCesiumControls(mode)
 
-        expect(globalThis.lgs.stores.replay.cameraUpdateSource).toBeNull()
-        expect(syncCameraFromCesiumControls).toHaveBeenCalledOnce()
+        expect(globalThis.lgs.stores.replay.cameraUpdateSource).toBe('keyboard')
+        expect(syncCameraFromCesiumControls).not.toHaveBeenCalled()
     })
 
     it('does not accumulate repeated automatic pitch offsets into the nominal setting', () => {

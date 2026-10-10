@@ -8,12 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import {captureCameraState} from '@Core/ui/replay/JourneyReplaySessionSceneController'
+import {releaseReplayCameraOwnership} from '@Core/ui/replay/ReplayCameraOwnership'
 import { JourneyReplayMode }          from '@Core/ui/replay/JourneyReplayMode'
 import { JourneyReplayPlaybackController } from '@Core/ui/replay/JourneyReplayPlaybackController'
 import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP } from '@Core/ui/replay/JourneyReplayClips'
@@ -151,7 +153,10 @@ const installReplayGlobals = (journey, {dataSources = null} = {}) => {
 }
 
 describe('JourneyReplayMode Replay export frames', () => {
-    afterEach(() => {
+    const cameraOwners = []
+
+afterEach(() => {
+    cameraOwners.splice(0).forEach(owner => releaseReplayCameraOwnership(owner))
         delete globalThis.lgs
         delete globalThis.__
     })
@@ -511,6 +516,8 @@ describe('JourneyReplayMode Replay export frames', () => {
         })
 
         mode.configure({duration: 1})
+        captureCameraState(mode)
+        cameraOwners.push(mode)
 
         await expect(mode.renderReplayExportFrame({
             frame: {
@@ -569,6 +576,8 @@ describe('JourneyReplayMode Replay export frames', () => {
         })
 
         mode.configure({duration: 1})
+        captureCameraState(mode)
+        cameraOwners.push(mode)
 
         await expect(mode.renderReplayExportFrame({
             frame: {

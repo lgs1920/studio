@@ -8,11 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
+import {acquireReplayCameraOwnership, releaseReplayCameraOwnership} from '@Core/ui/replay/ReplayCameraOwnership'
+
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
@@ -215,5 +218,63 @@ describe('CameraManager orbit', () => {
         expect(cancel).toHaveBeenCalledOnce()
         expect(lgs.stores.ui.mainUI.panorama.active).toBe(false)
         expect(lgs.stores.ui.mainUI.panorama.target).toBe(false)
+    })
+})
+
+
+describe('CameraManager Replay isolation', () => {
+    beforeEach(() => {
+        vi.spyOn(window, 'addEventListener').mockImplementation(() => undefined)
+    })
+
+    afterEach(() => {
+        CameraManager.instance = null
+        vi.restoreAllMocks()
+        vi.unstubAllGlobals()
+    })
+
+    it('does not read or persist a camera borrowed by Replay', async () => {
+        installCameraManagerGlobals()
+        const manager = new CameraManager()
+        await Promise.resolve()
+        const owner = {}
+        manager.proxy = {
+            updatePositionInformation: vi.fn(),
+            updatePositionInformationSync: vi.fn(),
+        }
+        acquireReplayCameraOwnership(owner, lgs.camera, {})
+        try {
+            await manager.updatePositionInformation()
+            expect(manager.syncPositionInformation()).toBeNull()
+            await manager.saveInformation(Date.now())
+            expect(manager.proxy.updatePositionInformation).not.toHaveBeenCalled()
+            expect(manager.proxy.updatePositionInformationSync).not.toHaveBeenCalled()
+            expect(lgs.db.lgs1920.put).not.toHaveBeenCalled()
+        }
+        finally {
+            releaseReplayCameraOwnership(owner)
+        }
+    })
+
+    it('rejects an asynchronous read that overlaps playback and handback', async () => {
+        installCameraManagerGlobals()
+        const manager = new CameraManager()
+        await Promise.resolve()
+        let resolveRead
+        manager.proxy = {
+            updatePositionInformation: vi.fn(() => new Promise(resolve => { resolveRead = resolve })),
+            getTargetPositionInPixels: vi.fn(() => null),
+        }
+        const clone = vi.spyOn(manager, 'clone')
+        const reading = manager.updatePositionInformation()
+        const owner = {}
+        acquireReplayCameraOwnership(owner, lgs.camera, {})
+        releaseReplayCameraOwnership(owner)
+        resolveRead({position: {height: 9999}, target: {longitude: 2, latitude: 48, height: 0}})
+        await reading
+        expect(clone).not.toHaveBeenCalled()
+        manager.proxy.updatePositionInformation = vi.fn(async () => ({position: {height: 1200}, target: {longitude: 2, latitude: 48, height: 0}}))
+        await manager.updatePositionInformation()
+        expect(clone).toHaveBeenCalledOnce()
     })
 })

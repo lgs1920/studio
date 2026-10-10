@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -1025,6 +1025,7 @@ describe('Journey replay camera paths', () => {
                 settings: {
                     ui: {
                         replay: {
+                            userMode: 'expert',
                             camera: {
                                 positionMode,
                                 headingOffset: 12,
@@ -1113,6 +1114,7 @@ describe('Journey replay camera paths', () => {
             settings: {
                 ui: {
                     replay: {
+                        userMode: 'expert',
                         camera: {
                             hysteresis: {
                                 easing:      0.18,
@@ -1976,6 +1978,7 @@ describe('Journey replay camera paths', () => {
                 settings: {
                     ui: {
                         replay: {
+                            userMode: 'expert',
                             camera: {
                                 positionMode: 'system',
                                 pitch:        -60,
