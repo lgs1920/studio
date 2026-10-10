@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -113,10 +113,13 @@ describe('replay camera diagnostics overlay', () => {
         expect(isReplayVideoLinked()).toBe(true)
     })
 
-    it('keeps one visible diagnostics canvas while camera updates redraw it', () => {
+    it.each([['basic', 'constant'], ['expert', 'constant'], ['basic', 'ground-offset']])('keeps visible %s %s diagnostics while camera updates redraw it', (userMode, altitudeMode) => {
         const settings = defaultJourneyReplaySettings()
-        settings.userMode = 'expert'
-        settings.camera.debug = true
+        settings.userMode = userMode
+        settings.camera.debug = userMode === 'expert'
+        settings.camera.altitudeMode = altitudeMode
+        settings.camera.altitude = altitudeMode === 'ground-offset' ? 485 : 1200
+        settings.simple = {camera: {...settings.camera, debug: false}}
         const container = document.createElement('div')
         document.body.appendChild(container)
         const drawingContext = createDrawingContext()
@@ -173,6 +176,8 @@ describe('replay camera diagnostics overlay', () => {
         expect(cameraChanged.addEventListener).toHaveBeenCalledOnce()
         expect(drawingContext.clearRect).toHaveBeenCalledTimes(2)
         expect(drawingContext.fillText.mock.calls.map(([label]) => label)).toContain('Phase  Clip: zoom-in')
+        expect(drawingContext.fillText.mock.calls.map(([label]) => label)).toContain(altitudeMode === 'ground-offset' ? 'Replay P -65°  Offset 485 m' : 'Replay P -65°  H 1200 m')
+        expect(drawingContext.fillText.mock.calls.map(([label]) => label)).toContain('Cesium H 2400 m')
 
         globalThis.lgs.stores.replay.dynamicFrameState.phase = {kind: 'replay', clip: null}
         updateToleranceZoneOverlay(mode, settings.camera.hysteresis)
@@ -186,9 +191,10 @@ describe('replay camera diagnostics overlay', () => {
         getContext.mockRestore()
     })
 
-    it('does not mount linked diagnostics when debug camera is disabled', () => {
+    it('does not mount Expert linked diagnostics when camera debug is disabled', () => {
         const settings = defaultJourneyReplaySettings()
-        settings.camera.debug = true
+        settings.userMode = 'expert'
+        settings.camera.debug = false
         settings.simple = {camera: {debug: false}}
         const container = document.createElement('div')
         document.body.appendChild(container)
@@ -218,10 +224,11 @@ describe('replay camera diagnostics overlay', () => {
         expect(container.querySelector('.replay-tolerance-zone-overlay')).toBeNull()
     })
 
-    it('restores linked diagnostics visibility when preparing the export scene', async () => {
+    it.each(['basic', 'expert'])('restores %s diagnostics visibility when preparing the export scene', async userMode => {
         const settings = defaultJourneyReplaySettings()
-        settings.userMode = 'expert'
-        settings.camera.debug = true
+        settings.userMode = userMode
+        settings.camera.debug = userMode === 'expert'
+        settings.simple = {camera: {debug: false}}
         const setVisible = vi.fn()
         const updateOverlay = vi.fn()
         const sample = {progress: 0}
@@ -257,7 +264,7 @@ describe('replay camera diagnostics overlay', () => {
             hideOtherJourneysVisibility: vi.fn(),
             prepareNearbyPOIsForPlayback: vi.fn(),
             hideMainUI: vi.fn(),
-            isReplayVideoLinked: vi.fn(() => true),
+            isReplayVideoLinked: vi.fn(() => userMode === 'expert'),
             setToleranceZoneOverlayVisible: setVisible,
             updateToleranceZoneOverlay: updateOverlay,
         }
@@ -276,7 +283,12 @@ describe('replay camera diagnostics overlay', () => {
             hideOtherJourneys: false,
         })
 
-        expect(call.hideOtherJourneysVisibility).not.toHaveBeenCalled()
+        if (userMode === 'basic') {
+            expect(call.hideOtherJourneysVisibility).toHaveBeenCalledOnce()
+        }
+        else {
+            expect(call.hideOtherJourneysVisibility).not.toHaveBeenCalled()
+        }
         expect(setVisible).toHaveBeenCalledWith(true)
         expect(updateOverlay).toHaveBeenCalledWith(settings.camera.hysteresis)
     })

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -164,6 +164,7 @@ export const removeToleranceZoneOverlay = (mode) => {
  * @param {object|null} options.innerBounds - Optional inner tolerance bounds in normalized coordinates.
  * @param {object} options.marker - Normalized marker settings.
  * @param {object} options.camera - Cesium camera.
+ * @param {object} options.cameraSettings - Prepared Replay camera settings.
  * @param {object} options.scene - Cesium scene.
  * @returns {void}
  */
@@ -174,6 +175,7 @@ const drawReplayDiagnosticsOverlayCanvas = ({
     innerBounds = null,
     marker,
     camera,
+    cameraSettings,
     scene,
 } = {}) => {
     if (!(canvas instanceof HTMLCanvasElement) || !rect?.width || !rect?.height) {
@@ -271,11 +273,15 @@ const drawReplayDiagnosticsOverlayCanvas = ({
     const pitch = finiteNumber(camera?.pitch)
     const roll = finiteNumber(camera?.roll)
     const heightMeters = finiteNumber(camera?.positionCartographic?.height)
+    const configuredPitch = finiteNumber(cameraSettings?.pitch)
+    const configuredAltitude = finiteNumber(cameraSettings?.altitude)
+    const altitudeLabel = cameraSettings?.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET ? 'Offset' : 'H'
     const zoom = cameraViewToSlippyLevel(camera, scene, {fallbackHeight: heightMeters})
     const lines = [
         `Phase  ${phaseLabel}`,
         `Angle  H ${heading !== null ? `${Math.round(CesiumMath.toDegrees(heading))}°` : '—'}  P ${pitch !== null ? `${Math.round(CesiumMath.toDegrees(pitch))}°` : '—'}  R ${roll !== null ? `${Math.round(CesiumMath.toDegrees(roll))}°` : '—'}`,
-        `Cam    ${heightMeters !== null ? `${Math.round(heightMeters)} m` : '—'}`,
+        `Replay P ${configuredPitch !== null ? `${Math.round(configuredPitch)}°` : '—'}  ${altitudeLabel} ${configuredAltitude !== null ? `${Math.round(configuredAltitude)} m` : '—'}`,
+        `Cesium H ${heightMeters !== null ? `${Math.round(heightMeters)} m` : '—'}`,
         `Zoom   ${zoom !== null && zoom !== undefined ? `L${Math.round(zoom)}` : '—'}`,
     ]
     const padding = 12
@@ -334,6 +340,7 @@ const resolveReplayDiagnosticsGeometry = (hysteresis, rect) => {
         outerBounds,
         innerBounds,
         marker,
+        cameraSettings,
         debug: cameraSettings.debug === true,
     }
 }
