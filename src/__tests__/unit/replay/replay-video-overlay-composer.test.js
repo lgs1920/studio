@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -401,7 +401,10 @@ describe('Replay widget frame capture', () => {
 
     beforeEach(() => {
         globalThis.__ = {ui: {widgetManager: {getElementById: vi.fn()}}}
-        globalThis.lgs = {stores: {replay: {recordingSync: true, active: true, playing: true}}}
+        globalThis.lgs = {
+            settings: {ui: {replay: {userMode: 'expert'}}},
+            stores: {replay: {recordingSync: true, active: true, playing: true}},
+        }
     })
 
     afterEach(() => {
@@ -466,6 +469,29 @@ describe('Replay widget frame capture', () => {
         const rejection = expect(capture).rejects.toThrow('custom-widget')
         await vi.advanceTimersByTimeAsync(100)
         await rejection
+        expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('waits for a visible widget mirror to register during Replay startup', async () => {
+        vi.useFakeTimers()
+        vi.setSystemTime(0)
+        __.ui.widgetManager.getElementById.mockReturnValue(document.createElement('div'))
+        const mirror = {setFrameDriven: vi.fn()}
+        vi.spyOn(Widget2Canvas, 'get').mockImplementation(() => Date.now() >= 16 ? mirror : null)
+        const flush = vi.spyOn(Widget2Canvas, 'flush')
+            .mockResolvedValueOnce(false)
+            .mockResolvedValue(true)
+        const captureMirrors = new Set()
+        const capture = flushReplayVideoOverlayCanvases({
+            widgetKeys: ['logo-widget'], strict: true, timeoutMs: 100, captureMirrors,
+        })
+
+        await vi.advanceTimersByTimeAsync(16)
+
+        await expect(capture).resolves.toEqual(['logo-widget'])
+        expect(flush).toHaveBeenCalledTimes(2)
+        expect(mirror.setFrameDriven).toHaveBeenCalledWith(true)
+        expect(captureMirrors).toEqual(new Set([mirror]))
         expect(vi.getTimerCount()).toBe(0)
     })
 

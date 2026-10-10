@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ import { Widget2Canvas } from '@Core/ui/widget-manager/widget-2-canvas/Widget2Ca
 
 const DEFAULT_METRICS_CACHE_TTL_MS = 750
 const OVERLAY_FLUSH_TIMEOUT_MS = 1000
+const OVERLAY_MIRROR_READY_POLL_MS = 16
 
 const getComputedStyleSafe = element => globalThis.getComputedStyle?.(element) ?? globalThis.window?.getComputedStyle?.(element) ?? null
 
@@ -188,14 +189,40 @@ export const flushReplayVideoOverlayCanvases = async ({
     await Promise.all(keys.map(async widgetId => {
         let timeoutId = null
         let abort = null
-        const mirror = Widget2Canvas.get(widgetId)
-        if (captureMirrors && mirror) {
-            mirror.setFrameDriven(true)
-            captureMirrors.add(mirror)
+        const startedAt = Date.now()
+        let captureCancelled = false
+        let mirror = Widget2Canvas.get(widgetId)
+        const prepareMirror = currentMirror => {
+            if (captureMirrors && currentMirror) {
+                currentMirror.setFrameDriven(true)
+                captureMirrors.add(currentMirror)
+            }
         }
+        prepareMirror(mirror)
         try {
             const result = await Promise.race([
-                Widget2Canvas.flush(widgetId, {onlyIfDirty: true}),
+                (async () => {
+                    let flushed = await Widget2Canvas.flush(widgetId, {onlyIfDirty: true})
+                    // A widget can enter the visible set just before its React
+                    // setup effect registers the DOM-to-canvas mirror. Retry
+                    // that startup race instead of treating the missing mirror
+                    // as a failed capture on the first Replay frame.
+                    if (strict && flushed === false && !Widget2Canvas.get(widgetId)) {
+                        const deadline = startedAt + timeoutMs
+                        while (!captureCancelled && !mirror && Date.now() < deadline) {
+                            await new Promise(resolve => setTimeout(
+                                resolve,
+                                Math.min(OVERLAY_MIRROR_READY_POLL_MS, Math.max(1, deadline - Date.now())),
+                            ))
+                            mirror = Widget2Canvas.get(widgetId)
+                        }
+                        if (mirror && !captureCancelled) {
+                            prepareMirror(mirror)
+                            flushed = await Widget2Canvas.flush(widgetId, {onlyIfDirty: true})
+                        }
+                    }
+                    return flushed
+                })(),
                 new Promise(resolve => {
                     timeoutId = setTimeout(() => resolve(false), timeoutMs)
                 }),
@@ -219,6 +246,7 @@ export const flushReplayVideoOverlayCanvases = async ({
             }
         }
         finally {
+            captureCancelled = true
             clearTimeout(timeoutId)
             signal?.removeEventListener('abort', abort)
         }
