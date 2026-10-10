@@ -42,7 +42,8 @@ This is the canonical source for the project's AI-agent and development rules.
 - **CSS:** Use nested syntax with `&` selector. Every CSS custom property must have an English comment explaining its purpose.
 - **Backend:** Runtime must be **Bun**. Server framework must be **Elysia**.
 - **Vite:** Agents must not start `bun run dev`; `vite build` is allowed. Keep the PWA service worker enabled during development so local behavior matches production and cache testing is available by default.
-- **PWA cache testing:** In Edge DevTools, inspect **Application > Service Workers** and **Cache Storage**, ensure **Bypass for network** is disabled, and load target resources online before testing them offline.
+- **Browser automation:** In this WSL development environment, use the installed Linux Google Chrome with `chrome-devtools`. Its profile is separate from the usual Windows browser, including tabs, sign-ins, IndexedDB, and caches. Follow `skills/lgs-1920-studio-browser-devtools/SKILL.md` for connection checks and troubleshooting. Use the Windows browser when the user explicitly requests it.
+- **PWA cache testing:** In the browser under test, inspect DevTools **Application > Service Workers** and **Cache Storage**, ensure **Bypass for network** is disabled, and load target resources online before testing them offline.
 
 ### Timeline isolation
 
