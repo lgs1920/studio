@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,6 +40,7 @@ import {
     JOURNEY_REPLAY_INTERNAL_CALL,
     JOURNEY_REPLAY_INTERNAL_STATE,
 } from '@Core/ui/replay/JourneyReplayInternal'
+import {SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID} from '@Core/ui/replay/JourneyReplaySimpleFocus'
 
 describe('logical replay clip camera path', () => {
     afterEach(() => {
@@ -338,6 +339,47 @@ describe('logical replay clip camera path', () => {
         expect(plan.endView.height).toBeGreaterThan(plan.startView.height)
     })
 
+    it('uses the tracked maximum replay altitude for the Simple Replay trace focus', async () => {
+        const sample = {longitude: 2, latitude: 48, altitude: 120}
+        const target = {longitude: 2.05, latitude: 48.05, altitude: 135}
+        const stopReplayCameraAltitudeTracking = vi.fn()
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                maxReplayCameraAltitude: 8000,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                cameraSettingsForClip: vi.fn(() => ({altitude: 500, pitch: -30, duration: 4})),
+                replayExportBaseView: vi.fn(() => ({
+                    sample,
+                    heading:      0.2,
+                    pitch:        -0.7,
+                    cameraHeight: 1500,
+                })),
+                clipReplayHeadingForProgress: vi.fn(() => 0.2),
+                focusTargetSampleForReplayExport: vi.fn(() => target),
+                cameraAltitudeForSample: vi.fn(() => 500),
+                stopReplayCameraAltitudeTracking,
+            },
+        }
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {camera: {altitude: 500, pitch: -30, cameraAngle: 0}}}},
+        })
+
+        const plan = await resolveJourneyReplayClipCameraPlan(mode, {
+            clip: {
+                id: SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID,
+                clipId: 'focus',
+                params: {duration: 4, heightDelta: 2000, pitch: -30},
+            },
+            slot: REPLAY_CLIP_SLOT_STOP,
+            sample,
+            startCamera: {sample, heading: 0.2, pitch: -0.5, height: 1800},
+        })
+
+        expect(plan.endView).toEqual(expect.objectContaining({sample: target, height: 10_000}))
+        expect(stopReplayCameraAltitudeTracking).toHaveBeenCalledOnce()
+    })
+
     it('synchronizes a zoom-in endpoint with the ground pose of a following launch', async () => {
         const replaySample = {longitude: 2, latitude: 48, altitude: 120}
         const launchSample = {longitude: 2.001, latitude: 48.001, altitude: 125}
@@ -419,6 +461,7 @@ describe('logical replay clip camera path', () => {
             },
         }
         vi.stubGlobal('lgs', {
+            theJourney: {replay: {expert: {camera: {positionMode: 'system', pitch: -63}}}},
             settings: {ui: {replay: {userMode: 'expert', camera: {positionMode: 'system', pitch: -63}}}},
         })
 

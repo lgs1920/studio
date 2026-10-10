@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { Widget } from '@Components/MainUI/widgets/Widget'
 import { LGS_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
 import {isJourneyReplayDryRunActive} from '@Core/ui/replay/JourneyReplayRuntime'
+import {REPLAY_INITIAL_CAMERA_ANGLE} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModes'
 import { foot, meter, UnitUtils } from '@Utils/UnitUtils'
 import { cameraViewToSlippyLevel } from '@Utils/cesium/CameraLevel'
@@ -58,7 +59,7 @@ const DEFAULT_REPLAY_OVERLAY_STATE = {
     playing:       false,
     recordingSync: false,
     userMode:      REPLAY_USER_MODE_BASIC,
-    camera:        {cameraAngle: 180},
+    camera:        {cameraAngle: REPLAY_INITIAL_CAMERA_ANGLE},
 }
 
 const DEFAULT_VIDEO_OVERLAY_STATE = {

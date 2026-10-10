@@ -38,6 +38,7 @@ import {
     REPLAY_CAMERA_PRESET_DEFAULT, REPLAY_CAMERA_PRESET_ULTRA_SMOOTH,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
     getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplaySettings,
+    toGlobalReplayCameraSettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModeConstants'
 import { gpx }                                                         from '@tmcw/togeojson'
@@ -67,6 +68,16 @@ const defaultJourneyReplaySettings = () => ({
     ...defaultJourneyReplaySettingsBase(),
     userMode: REPLAY_USER_MODE_EXPERT,
 })
+
+const setExpertReplayCamera = (journey, camera) => {
+    journey.replay = {
+        ...(journey.replay ?? {}),
+        expert: {
+            ...(journey.replay?.expert ?? {}),
+            camera: {...camera},
+        },
+    }
+}
 
 const cameraOwners = []
 
@@ -375,6 +386,7 @@ describe('replay camera tracking', () => {
                                     ])
         const previousLgs = globalThis.lgs
         const replay = defaultJourneyReplaySettings()
+        setExpertReplayCamera(journey, replay.camera)
         let cameraChanged = null
         let moveStart = null
         let moveEnd = null
@@ -386,6 +398,7 @@ describe('replay camera tracking', () => {
                 ui: {
                     replay: {
                         ...replay,
+                        camera: toGlobalReplayCameraSettings(replay.camera),
                         marker: {
                             ...replay.marker,
                             mode: REPLAY_MARKER_MODE_HYSTERESIS,
@@ -472,9 +485,12 @@ describe('replay camera tracking', () => {
             cameraChanged()
             moveEnd?.()
 
-            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(replay.camera.cameraAngle)
-            expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(replay.camera.pitch)
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(replay.camera.altitude)
+            expect(journey.replay.expert.camera.cameraAngle).toBe(replay.camera.cameraAngle)
+            expect(journey.replay.expert.camera.pitch).toBe(replay.camera.pitch)
+            expect(journey.replay.expert.camera.altitude).toBe(replay.camera.altitude)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('pitch')
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
+            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(0)
             expect(globalThis.lgs.stores.replay.camera.cameraAngle).toBe(replay.camera.cameraAngle)
         }
         finally {
@@ -1317,6 +1333,7 @@ describe('replay camera tracking', () => {
                                     ])
         const previousLgs = globalThis.lgs
         const replay = defaultJourneyReplaySettings()
+        setExpertReplayCamera(journey, {...replay.camera, debug: true})
         const canvas = {
             clientWidth:           1000,
             clientHeight:          800,
@@ -1351,6 +1368,7 @@ describe('replay camera tracking', () => {
                 replay: proxy({
                                       progress: 0,
                                       camera:   replay.camera,
+                                      recordingSync: true,
                                   }),
             },
             viewer:     {
@@ -1449,6 +1467,7 @@ describe('replay camera tracking', () => {
                                     ])
         const previousLgs = globalThis.lgs
         const replay = defaultJourneyReplaySettings()
+        setExpertReplayCamera(journey, {...replay.camera, debug: true})
         const canvas = {
             clientWidth:           1000,
             clientHeight:          800,
@@ -1572,6 +1591,7 @@ describe('replay camera tracking', () => {
                                     ])
         const previousLgs = globalThis.lgs
         const replay = defaultJourneyReplaySettings()
+        setExpertReplayCamera(journey, {...replay.camera, debug: true})
         const canvas = {
             clientWidth:           1000,
             clientHeight:          800,
@@ -1604,6 +1624,7 @@ describe('replay camera tracking', () => {
                 replay: proxy({
                                       progress: 0,
                                       camera:   replay.camera,
+                                      recordingSync: true,
                                   }),
             },
             viewer:     {
@@ -1678,6 +1699,7 @@ describe('replay camera tracking', () => {
                                     ])
         const previousLgs = globalThis.lgs
         const replay = defaultJourneyReplaySettings()
+        setExpertReplayCamera(journey, {...replay.camera, cameraAngle: 180})
         const canvas = {
             clientWidth:         1000,
             clientHeight:        1000,
@@ -2530,6 +2552,7 @@ describe('replay camera tracking', () => {
                                                              pitch:        -45,
                                                              altitude:     1800,
                                                          })
+        setExpertReplayCamera(journey, cameraSettings)
         const appCanvas = {
             clientWidth:         1000,
             clientHeight:        1000,
@@ -2669,6 +2692,7 @@ describe('replay camera tracking', () => {
                                                              pitch:        -45,
                                                              altitude:     1800,
                                                          })
+        setExpertReplayCamera(journey, cameraSettings)
         const appCanvas = {
             clientWidth:         1000,
             clientHeight:        1000,
@@ -2806,6 +2830,7 @@ describe('replay camera tracking', () => {
                                                              pitch:        -45,
                                                              altitude:     1800,
                                                          })
+        setExpertReplayCamera(journey, cameraSettings)
         const appCanvas = {
             clientWidth:         1000,
             clientHeight:        1000,
@@ -2935,6 +2960,7 @@ describe('replay camera tracking', () => {
                                                              pitch:        -45,
                                                              altitude:     1800,
                                                          })
+        setExpertReplayCamera(journey, cameraSettings)
         const appCanvas = {
             clientWidth:         1000,
             clientHeight:        1000,

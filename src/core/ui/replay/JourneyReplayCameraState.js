@@ -42,7 +42,7 @@ import {
 import {
     REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
-    getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
+    getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, toGlobalReplayCameraSettings,
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {replayCameraFor, replaySceneFor, replayViewerFor} from './ReplayRenderTarget'
@@ -624,11 +624,19 @@ export const setTerrainHeightLookupTrace = (mode, value) => {
         return state.terrainHeightLookupTrace
     }
 
-export const persistCameraSettings =  (mode, updates) => {
+/**
+ * Persist normalized Replay camera settings to runtime state and the journey.
+ *
+ * @param {Object} mode - Replay camera mode.
+ * @param {Object} updates - Camera values being committed.
+ * @param {Object|null} [options.journey=null] - Journey receiving the settings.
+ * @returns {Object} Normalized camera settings.
+ */
+export const persistCameraSettings =  (mode, updates, {journey = null} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const replaySettings = getJourneyReplaySettings()
+        const replaySettings = journey ? getJourneyReplaySettings({journey}) : getJourneyReplaySettings()
         const current = replaySettings.camera
         const isBasicMode = isJourneyReplayBasicMode()
         const next = normalizeJourneyReplayCamera({
@@ -641,15 +649,12 @@ export const persistCameraSettings =  (mode, updates) => {
         })
 
         if (globalThis.lgs?.settings?.ui?.replay) {
-            globalThis.lgs.settings.ui.replay.camera = next
+            globalThis.lgs.settings.ui.replay.camera = toGlobalReplayCameraSettings(next)
             if (isBasicMode) {
                 const simple = globalThis.lgs.settings.ui.replay.simple ?? {}
                 globalThis.lgs.settings.ui.replay.simple = {
                     ...simple,
-                    camera: {
-                        ...(simple.camera ?? {}),
-                        ...next,
-                    },
+                    camera: toGlobalReplayCameraSettings({...simple.camera, ...next}),
                 }
             }
         }
@@ -657,10 +662,10 @@ export const persistCameraSettings =  (mode, updates) => {
             globalThis.lgs.stores.replay.camera = next
         }
         if (!isBasicMode) {
-            syncJourneyExpertReplayCamera(next)
+            syncJourneyExpertReplayCamera(next, journey)
         }
         else {
-            syncJourneySimpleReplayCamera(next)
+            syncJourneySimpleReplayCamera(next, journey)
         }
 
         return next
@@ -704,7 +709,6 @@ export const updateCameraFromCesiumControls = mode => {
         return
     }
     call.persistCameraSettings({...current, pitch: nextPitch, altitude})
-    console.info(`[Replay camera] preparation setting update | source=mouse pitch=${nextPitch} altitude=${altitude} mode=${current.altitudeMode} cesiumHeight=${height} markerHeight=${markerHeight} angle=${current.cameraAngle}`)
     call.refreshReplayDiagnosticsOverlay?.()
 }
 
@@ -714,7 +718,7 @@ export const syncCameraDrawerFromSettings = (mode) => {
 
         const camera = currentJourneyReplayCameraSettings()
         if (globalThis.lgs?.settings?.ui?.replay) {
-            globalThis.lgs.settings.ui.replay.camera = camera
+            globalThis.lgs.settings.ui.replay.camera = toGlobalReplayCameraSettings(camera)
         }
         if (globalThis.lgs?.stores?.replay) {
             globalThis.lgs.stores.replay.camera = camera

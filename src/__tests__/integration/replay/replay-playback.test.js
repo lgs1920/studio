@@ -35,6 +35,7 @@ import {
     REPLAY_CAMERA_PRESET_DEFAULT, REPLAY_CAMERA_PRESET_ULTRA_SMOOTH,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
     getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplaySettings,
+    toGlobalReplayCameraSettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { REPLAY_USER_MODE_EXPERT }                                    from '@Core/ui/replay/ReplayUserModeConstants'
 import { gpx }                                                         from '@tmcw/togeojson'
@@ -76,6 +77,16 @@ const defaultJourneyReplaySettings = () => ({
     ...defaultJourneyReplaySettingsBase(),
     userMode: REPLAY_USER_MODE_EXPERT,
 })
+
+const setExpertReplayCamera = (journey, camera) => {
+    journey.replay = {
+        ...(journey.replay ?? {}),
+        expert: {
+            ...(journey.replay?.expert ?? {}),
+            camera: {...camera},
+        },
+    }
+}
 
 describe('replay phase 1 playback controller', () => {
     it('advances from elapsed time rather than point count', () => {
@@ -825,6 +836,7 @@ describe('replay phase 1 playback controller', () => {
             altitude: 1350,
             pitch:    -62,
         }
+        setExpertReplayCamera(journey, replay.camera)
 
         globalThis.lgs = {
             theJourney: journey,
@@ -884,17 +896,18 @@ describe('replay phase 1 playback controller', () => {
             })
 
             mode.start()
-            globalThis.lgs.settings.ui.replay.camera = {
-                ...globalThis.lgs.settings.ui.replay.camera,
+            globalThis.lgs.stores.replay.camera = {
+                ...globalThis.lgs.stores.replay.camera,
                 altitude: 9800,
                 pitch:    -20,
             }
-            globalThis.lgs.stores.replay.camera = globalThis.lgs.settings.ui.replay.camera
 
             mode.stop({emit: false})
 
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1350)
-            expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-62)
+            expect(journey.replay.expert.camera.altitude).toBe(1350)
+            expect(journey.replay.expert.camera.pitch).toBe(-62)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('pitch')
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(1350)
         }
         finally {
@@ -1090,11 +1103,12 @@ describe('replay phase 1 playback controller', () => {
             altitudeMode: REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
             altitude:     2000,
         }
+        setExpertReplayCamera(journey, replay.camera)
 
         globalThis.lgs = {
             theJourney: journey,
             theTrack:   null,
-            settings:   {ui: {replay, journeyToolbar: {show: true}}},
+            settings:   {ui: {replay: {...replay, camera: toGlobalReplayCameraSettings(replay.camera)}, journeyToolbar: {show: true}}},
             stores:     {
                 replay: proxy({
                                       progress: 0,
@@ -1149,17 +1163,19 @@ describe('replay phase 1 playback controller', () => {
             })
 
             mode.start()
-            globalThis.lgs.settings.ui.replay.camera = {
-                ...globalThis.lgs.settings.ui.replay.camera,
+            const editedCamera = {
+                ...globalThis.lgs.stores.replay.camera,
                 altitude: 4300,
             }
-            globalThis.lgs.stores.replay.camera = globalThis.lgs.settings.ui.replay.camera
+            setExpertReplayCamera(journey, editedCamera)
+            globalThis.lgs.stores.replay.camera = editedCamera
             globalThis.lgs.stores.replay.cameraUserAdjusted = true
 
             mode.stop({emit: false})
 
-            expect(globalThis.lgs.settings.ui.replay.camera.altitudeMode).toBe(REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET)
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(4300)
+            expect(journey.replay.expert.camera.altitudeMode).toBe(REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET)
+            expect(journey.replay.expert.camera.altitude).toBe(4300)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(4300)
         }
         finally {
@@ -1183,6 +1199,7 @@ describe('replay phase 1 playback controller', () => {
             altitudeMode: REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
             altitude:     2000,
         }
+        setExpertReplayCamera(journey, replay.camera)
 
         journey.focus = vi.fn(({callback} = {}) => {
             const camera = {
@@ -1273,8 +1290,9 @@ describe('replay phase 1 playback controller', () => {
             await Promise.resolve()
 
             expect(journey.focus).not.toHaveBeenCalled()
-            expect(globalThis.lgs.settings.ui.replay.camera.altitudeMode).toBe(REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET)
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(2000)
+            expect(journey.replay.expert.camera.altitudeMode).toBe(REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET)
+            expect(journey.replay.expert.camera.altitude).toBe(2000)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(2000)
         }
         finally {
@@ -1298,6 +1316,7 @@ describe('replay phase 1 playback controller', () => {
             altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
             altitude:     2400,
         }
+        setExpertReplayCamera(journey, replay.camera)
 
         journey.focus = vi.fn(({callback} = {}) => {
             const camera = {
@@ -1388,8 +1407,9 @@ describe('replay phase 1 playback controller', () => {
             await Promise.resolve()
 
             expect(journey.focus).not.toHaveBeenCalled()
-            expect(globalThis.lgs.settings.ui.replay.camera.altitudeMode).toBe(REPLAY_CAMERA_ALTITUDE_CONSTANT)
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(2400)
+            expect(journey.replay.expert.camera.altitudeMode).toBe(REPLAY_CAMERA_ALTITUDE_CONSTANT)
+            expect(journey.replay.expert.camera.altitude).toBe(2400)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(2400)
         }
         finally {
@@ -1414,6 +1434,8 @@ describe('replay phase 1 playback controller', () => {
             heading:  40,
             pitch:    -22,
         }
+        replay.camera.cameraAngle = 180
+        setExpertReplayCamera(journey, replay.camera)
 
         globalThis.lgs = {
             theJourney: journey,
@@ -1473,19 +1495,21 @@ describe('replay phase 1 playback controller', () => {
             })
 
             mode.start()
-            globalThis.lgs.settings.ui.replay.camera = {
-                ...globalThis.lgs.settings.ui.replay.camera,
+            globalThis.lgs.stores.replay.camera = {
+                ...globalThis.lgs.stores.replay.camera,
                 altitude:   9800,
                 cameraAngle: -75,
                 pitch:      -31,
             }
-            globalThis.lgs.stores.replay.camera = globalThis.lgs.settings.ui.replay.camera
 
             mode.stop({emit: false})
 
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(2400)
-            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(180)
-            expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-22)
+            expect(journey.replay.expert.camera.altitude).toBe(2400)
+            expect(journey.replay.expert.camera.cameraAngle).toBe(180)
+            expect(journey.replay.expert.camera.pitch).toBe(-22)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('pitch')
+            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(0)
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(2400)
             expect(globalThis.lgs.stores.replay.camera.cameraAngle).toBe(180)
             expect(globalThis.lgs.stores.replay.camera.pitch).toBe(-22)

@@ -22,6 +22,8 @@ import {REPLAY_DRAWER} from '@Core/constants'
 import {
     getJourneyReplaySettings,
     normalizeJourneyReplayCamera,
+    REPLAY_INITIAL_CAMERA_ANGLE,
+    toGlobalReplayCameraSettings,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     mountJourneyReplayCameraAngleGuide,
@@ -48,7 +50,7 @@ import {useCallback, useEffect, useRef} from 'react'
 import {useSnapshot} from 'valtio'
 
 const DEFAULT_REPLAY_ANGLE_GUIDE_SETTINGS = {
-    camera: {cameraAngle: 180},
+    camera: {cameraAngle: REPLAY_INITIAL_CAMERA_ANGLE},
     userMode: REPLAY_USER_MODE_BASIC,
 }
 
@@ -103,9 +105,9 @@ export const JourneyReplayCameraAngleGuide = () => {
         const settings = lgs.settings.ui.replay
         const currentCamera = currentJourneyReplayCameraSettings()
         const nextCamera = normalizeJourneyReplayCamera({...currentCamera, ...updates})
-        settings.camera = nextCamera
+        settings.camera = toGlobalReplayCameraSettings(nextCamera)
         if (settings.userMode === REPLAY_USER_MODE_BASIC) {
-            settings.simple = {...settings.simple, camera: nextCamera}
+            settings.simple = {...settings.simple, camera: toGlobalReplayCameraSettings(nextCamera)}
             syncJourneySimpleReplayCamera(nextCamera)
         }
         else {

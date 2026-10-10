@@ -31,6 +31,7 @@ import {
     DEFAULT_SIMPLE_REPLAY_DURATION,
     normalizeSimpleReplayDuration,
     SIMPLE_REPLAY_DURATIONS,
+    toGlobalReplayCameraSettings,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {isJourneyReplayDryRunActive} from '@Core/ui/replay/JourneyReplayRuntime'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
@@ -170,11 +171,9 @@ export const VideoRecordingSettingsToolbar = memo(({
 
     /**
      * Starts the Replay recording after the current crop and camera are ready.
-     * @returns {Promise<void>} Completion promise.
+    * @returns {Promise<void>} Completion promise.
      */
     const handleReplayRecording = useCallback(async () => {
-        const runtimeCamera = $replay.camera
-        console.info(`[Replay camera] Record button | journey=${lgs.theJourney?.slug ?? 'none'} prep=${$replay.simplePreparationActive === true} editing=${$video.editing === true} runtime=H${runtimeCamera?.altitude}/P${runtimeCamera?.pitch}/A${runtimeCamera?.cameraAngle}`)
         if (timelineSettings && isJourneyReplayDryRunActive($replay, $video)) {
             return
         }
@@ -209,9 +208,11 @@ export const VideoRecordingSettingsToolbar = memo(({
         const duration = normalizeSimpleReplayDuration(value)
         $replay.duration = duration
         lgs.settings.ui.replay.duration = duration
+        const simple = lgs.settings.ui.replay.simple ?? {}
         lgs.settings.ui.replay.simple = {
-            ...(lgs.settings.ui.replay.simple ?? {}),
+            ...simple,
             duration,
+            ...(simple.camera ? {camera: toGlobalReplayCameraSettings(simple.camera)} : {}),
         }
     }, [$replay])
 

@@ -173,9 +173,9 @@ describe('JourneyReplay camera interaction lifecycle', () => {
             }, {cameraAngle: 32})
 
             expect(next).toMatchObject({cameraAngle: 32})
-            expect(globalThis.lgs.settings.ui.replay.simple.camera).toMatchObject({
-                cameraAngle: 32,
-            })
+            expect(globalThis.lgs.settings.ui.replay.simple.camera.cameraAngle).toBe(0)
+            expect(globalThis.lgs.settings.ui.replay.simple.camera).not.toHaveProperty('altitude')
+            expect(globalThis.lgs.settings.ui.replay.simple.camera).not.toHaveProperty('pitch')
             expect(journey.replay.simple.camera).toMatchObject({
                 cameraAngle: 32,
             })

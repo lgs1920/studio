@@ -216,8 +216,16 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.getByTestId('preset-popup-content').dataset.inlineCustom).toBe('false')
         expect(screen.getByTestId('preset-popup-content').dataset.compactSimple).toBe('true')
 
+        globalThis.lgs.settings.ui.replay.simple.camera = {
+            altitude: 3454,
+            pitch: -30,
+            cameraAngle: 82,
+        }
         fireEvent.click(screen.getByRole('button', {name: '20s'}))
         expect(globalThis.lgs.settings.ui.replay.simple.duration).toBe(20)
+        expect(globalThis.lgs.settings.ui.replay.simple.camera).not.toHaveProperty('altitude')
+        expect(globalThis.lgs.settings.ui.replay.simple.camera).not.toHaveProperty('pitch')
+        expect(globalThis.lgs.settings.ui.replay.simple.camera.cameraAngle).toBe(0)
         expect(globalThis.lgs.settings.ui.replay.duration).toBe(20)
         expect(globalThis.lgs.stores.replay.duration).toBe(20)
     })

@@ -41,7 +41,7 @@ const expectPose = (camera, expected) => {
 }
 
 /** Install a real Cesium camera with only the rendering surface stubbed. */
-const installScene = ({userMode = 'expert', terrainHeight = 120, pitch = -38, altitude = 1600, cameraAngle = 65} = {}) => {
+const installScene = ({userMode = 'expert', terrainHeight = 120, pitch = -38, altitude = 1600, cameraAngle = 65, journeyCameraSaved = true} = {}) => {
     const settings = defaultJourneyReplaySettings()
     settings.userMode = userMode
     settings.camera = {...settings.camera, altitude, pitch, cameraAngle, debug: false}
@@ -65,7 +65,9 @@ const installScene = ({userMode = 'expert', terrainHeight = 120, pitch = -38, al
     const journey = makeJourney([makeTrack({slug: 'track#journey#gpx#main', coordinates: [[2, 48, 120], [2.01, 48.01, 130]]})])
     if (userMode === 'basic') {
         settings.simple = {...settings.simple, camera: {...settings.camera}}
-        journey.replay = {simple: {camera: {...settings.camera}}}
+        journey.replay = {simple: journeyCameraSaved ? {camera: {...settings.camera}} : {}}
+    } else {
+        journey.replay = {expert: journeyCameraSaved ? {camera: {...settings.camera}} : {}}
     }
     const canvas = document.createElement('canvas')
     let elapsed = 0
@@ -100,6 +102,46 @@ afterEach(() => {
 })
 
 describe('Replay with the real Cesium camera', () => {
+    it.each(['basic', 'expert'])('seeds first %s Replay H/P from the live Cesium camera and starts at zero azimuth', async userMode => {
+        const {camera, mode, journey, settings} = installScene({userMode, journeyCameraSaved: false})
+        const cesiumHeight = camera.positionCartographic.height
+        const cesiumPitch = camera.pitch * 180 / Math.PI
+        const expectedPitch = Math.max(-89, Math.min(-5, Math.ceil(cesiumPitch)))
+        const replayKey = userMode === 'basic' ? 'simple' : 'expert'
+        settings.camera = {...settings.camera, altitude: 9000, pitch: -5, cameraAngle: 120}
+        if (settings.simple) {
+            settings.simple.camera = {...settings.simple.camera, altitude: 7000, pitch: -15, cameraAngle: 90}
+        }
+
+        try {
+            mode.start({journey})
+
+            expect(journey.replay[replayKey].camera).toMatchObject({
+                altitude: Math.ceil(cesiumHeight),
+                pitch: expectedPitch,
+                cameraAngle: 0,
+                altitudeMode: 'constant',
+            })
+            expect(lgs.stores.replay.camera).toMatchObject({
+                altitude: Math.ceil(cesiumHeight),
+                pitch: expectedPitch,
+                cameraAngle: 0,
+            })
+            expect(settings.camera).not.toHaveProperty('altitude')
+            expect(settings.camera).not.toHaveProperty('pitch')
+            expect(settings.camera.cameraAngle).toBe(0)
+            if (settings.simple) {
+                expect(settings.simple.camera).not.toHaveProperty('altitude')
+                expect(settings.simple.camera).not.toHaveProperty('pitch')
+                expect(settings.simple.camera.cameraAngle).toBe(0)
+            }
+        }
+        finally {
+            mode.dispose()
+            await mode.waitForSceneRestore()
+        }
+    })
+
     it.each(['constant', 'ground-offset'])('retains mouse-prepared H3454 / P-30 in Simple recording with %s altitude', async altitudeMode => {
         const {camera, mode, journey, settings} = installScene({userMode: 'basic', terrainHeight: 2969, altitude: 485, pitch: -45, cameraAngle: 65})
         settings.simple.camera.altitudeMode = altitudeMode
@@ -161,7 +203,7 @@ describe('Replay with the real Cesium camera', () => {
             // changed threshold or wait for the delayed live-sync frame.
             canvas.dispatchEvent(new MouseEvent('pointerup', {bubbles: true}))
             expect(lgs.stores.replay.camera).toMatchObject({pitch: -45, altitude: 2630, cameraAngle: 65})
-            expect(userMode === 'basic' ? settings.simple.camera.pitch : settings.camera.pitch).toBe(-45)
+            expect(userMode === 'basic' ? journey.replay.simple.camera.pitch : journey.replay.expert.camera.pitch).toBe(-45)
             const normal = readPose(camera)
             await mode.prepareReplayCamera()
             if (entry === 'playback') {
@@ -229,7 +271,7 @@ describe('Replay with the real Cesium camera', () => {
             const target = Cartesian3.fromDegrees(2, 48, 1180)
             const local = Matrix4.inverseTransformation(Transforms.eastNorthUpToFixedFrame(target), new Matrix4())
             const direction = Matrix4.multiplyByPointAsVector(local, camera.directionWC, new Cartesian3())
-            const guide = resolveJourneyReplayCameraAngleGuide({journey, camera: settings.simple.camera})
+            const guide = resolveJourneyReplayCameraAngleGuide({journey, camera: journey.replay.simple.camera})
             expect(Math.atan2(direction.x, direction.y)).toBeCloseTo(Math.atan2(Math.sin(guide.cameraHeading), Math.cos(guide.cameraHeading)), 4)
             expect(Math.asin(direction.z)).toBeCloseTo(-Math.PI / 4, 8)
             expect(Cartesian3.distance(camera.positionWC, target)).toBeLessThan(10)
@@ -282,7 +324,7 @@ describe('Replay with the real Cesium camera', () => {
             const local = Matrix4.inverseTransformation(Transforms.eastNorthUpToFixedFrame(target), new Matrix4())
             const direction = Matrix4.multiplyByPointAsVector(local, camera.directionWC, new Cartesian3())
             expect(Math.asin(direction.z)).toBeCloseTo(-23 * Math.PI / 180, 8)
-            expect(settings.camera.pitch).toBe(-23)
+            expect(userMode === 'basic' ? journey.replay.simple.camera.pitch : journey.replay.expert.camera.pitch).toBe(-23)
             mode.stop()
             await mode.waitForSceneRestore()
             expectPose(camera, preparedNormal)
@@ -317,15 +359,16 @@ describe('Replay with the real Cesium camera', () => {
         const {camera, mode, settings, journey} = installScene({userMode})
         try {
             await mode.prepareReplayCamera()
-            const guide = resolveJourneyReplayCameraAngleGuide({journey, camera: settings.camera})
+            const cameraSettings = userMode === 'basic' ? journey.replay.simple.camera : journey.replay.expert.camera
+            const guide = resolveJourneyReplayCameraAngleGuide({journey, camera: cameraSettings})
             mode.start()
             const target = Cartesian3.fromDegrees(guide.anchor.longitude, guide.anchor.latitude, 120)
             const local = Matrix4.inverseTransformation(Transforms.eastNorthUpToFixedFrame(target), new Matrix4())
             const direction = Matrix4.multiplyByPointAsVector(local, camera.directionWC, new Cartesian3())
             const position = Matrix4.multiplyByPoint(local, camera.positionWC, new Cartesian3())
             expect(Math.atan2(direction.x, direction.y)).toBeCloseTo(Math.atan2(Math.sin(guide.cameraHeading), Math.cos(guide.cameraHeading)), 4)
-            expect(Math.asin(direction.z)).toBeCloseTo(settings.camera.pitch * Math.PI / 180, 8)
-            expect(position.z).toBeCloseTo(settings.camera.altitude - 120, 5)
+            expect(Math.asin(direction.z)).toBeCloseTo(cameraSettings.pitch * Math.PI / 180, 8)
+            expect(position.z).toBeCloseTo(cameraSettings.altitude - 120, 5)
         }
         finally {
             mode.dispose()
@@ -334,7 +377,7 @@ describe('Replay with the real Cesium camera', () => {
     })
 
     it.each([-5, -38, -65, -89])('keeps prepared pitch %s during Simple playback despite an Expert trace-only setting', async pitch => {
-        const {camera, mode, controller, settings} = installScene({userMode: 'basic', pitch})
+        const {camera, mode, controller, settings, journey} = installScene({userMode: 'basic', pitch})
         try {
             await mode.prepareReplayCamera()
             mode.start()
@@ -346,8 +389,8 @@ describe('Replay with the real Cesium camera', () => {
             const local = Matrix4.inverseTransformation(Transforms.eastNorthUpToFixedFrame(target), new Matrix4())
             const direction = Matrix4.multiplyByPointAsVector(local, camera.directionWC, new Cartesian3())
             const position = Matrix4.multiplyByPoint(local, camera.positionWC, new Cartesian3())
-            expect(Math.asin(direction.z)).toBeCloseTo(settings.simple.camera.pitch * Math.PI / 180, 8)
-            expect(position.z).toBeCloseTo(settings.simple.camera.altitude - 120, 5)
+            expect(Math.asin(direction.z)).toBeCloseTo(journey.replay.simple.camera.pitch * Math.PI / 180, 8)
+            expect(position.z).toBeCloseTo(journey.replay.simple.camera.altitude - 120, 5)
         }
         finally {
             mode.dispose()
@@ -373,7 +416,7 @@ describe('Replay with the real Cesium camera', () => {
             lgs.stores.ui.video.editing = false
             lgs.stores.ui.video.exporting = true
             await mode.preparePlaybackSceneForExport({journey, progress: 0})
-            const guide = resolveJourneyReplayCameraAngleGuide({journey, camera: settings.simple.camera})
+            const guide = resolveJourneyReplayCameraAngleGuide({journey, camera: journey.replay.simple.camera})
             for (const progress of [0, 0.1, 0.5, 1]) {
                 await mode.renderReplayExportFrame({phase: {kind: 'replay', progress}, frame: {frameTimeMs: progress * controller.duration * 1000, frameIntervalMs: 1000 / 30}})
                 const sample = controller.currentSample()
@@ -386,7 +429,7 @@ describe('Replay with the real Cesium camera', () => {
                 }
                 expect(Math.asin(direction.z), `pitch at ${progress}`).toBeCloseTo(-23 * Math.PI / 180, 8)
                 expect(position.z, `height at ${progress}`).toBeCloseTo(3515 - terrainHeight, 5)
-                expect(settings.simple.camera).toMatchObject({pitch: -23, altitude: 3515, cameraAngle: -113})
+                expect(journey.replay.simple.camera).toMatchObject({pitch: -23, altitude: 3515, cameraAngle: -113})
             }
         }
         finally {
@@ -421,7 +464,7 @@ describe('Replay with the real Cesium camera', () => {
             const local = Matrix4.inverseTransformation(Transforms.eastNorthUpToFixedFrame(target), new Matrix4())
             const direction = Matrix4.multiplyByPointAsVector(local, camera.directionWC, new Cartesian3())
             expect(Math.asin(direction.z)).toBeCloseTo(-23 * Math.PI / 180, 8)
-            expect(settings.simple.camera).toMatchObject({altitude: 2630, pitch: -23})
+            expect(journey.replay.simple.camera).toMatchObject({altitude: 2630, pitch: -23})
         }
         finally {
             await mode.restorePlaybackScene({force: true})
@@ -451,7 +494,7 @@ describe('Replay with the real Cesium camera', () => {
             const position = Matrix4.multiplyByPoint(local, camera.positionWC, new Cartesian3())
             expect(Math.asin(direction.z)).toBeCloseTo(-23 * Math.PI / 180, 8)
             expect(position.z).toBeCloseTo(2630 - 120, 5)
-            expect(settings.simple.camera).toMatchObject({altitude: 2630, pitch: -23})
+            expect(journey.replay.simple.camera).toMatchObject({altitude: 2630, pitch: -23})
         }
         finally {
             await mode.restorePlaybackScene({force: true})
@@ -472,7 +515,7 @@ describe('Replay with the real Cesium camera', () => {
             mode.start()
             // Exercise the live command used by Navigation after its startup placement.
             const sample = {...controller.currentSample(), longitude: 2.0001, latitude: 48.0001}
-            applyCameraView(mode, {anchor: sample, heading: 1, pitch: -38 * Math.PI / 180, cameraSettings: settings.simple.camera})
+            applyCameraView(mode, {anchor: sample, heading: 1, pitch: -38 * Math.PI / 180, cameraSettings: journey.replay.simple.camera})
             const target = Cartesian3.fromDegrees(sample.longitude, sample.latitude, 900)
             const expectedDirection = Cartesian3.normalize(Cartesian3.subtract(target, camera.positionWC, new Cartesian3()), new Cartesian3())
             expect(Cartesian3.angleBetween(expectedDirection, camera.directionWC)).toBeLessThan(1e-7)

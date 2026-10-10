@@ -16,7 +16,10 @@
 
 import {captureReplayEntryCameraState, replayOwnedCameraFor} from './ReplayCameraOwnership'
 import {replayCameraFor} from './ReplayRenderTarget'
-import {createSimpleReplayTraceFocusClips} from './JourneyReplaySimpleFocus'
+import {
+    createSimpleReplayTraceFocusClips,
+    SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID,
+} from './JourneyReplaySimpleFocus'
 
 
 /**
@@ -63,7 +66,7 @@ import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './Jou
 import * as JourneyReplayVisibilityController from './JourneyReplayVisibilityController'
 import * as JourneyReplayClipController from './JourneyReplayClipController'
 import {
-    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForAngle, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
+    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForAngle, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
     REPLAY_SCOPE_ALL_TRACKS, JourneyReplayPathSampler,
@@ -78,10 +81,60 @@ import {
 }                                                                                          from './JourneyReplayPOISettings'
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
-    REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION,
+    REPLAY_INITIAL_CAMERA_ANGLE, REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION,
     REPLAY_MARKER_MODE_TRACE, getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
     normalizeJourneyReplayProgressionStyle, normalizeJourneyReplayReadiness, normalizeJourneyReplaySmoothing, normalizeJourneyReplayTrace,
 }                                                                                          from './JourneyReplayProgressionStyle'
+
+/**
+ * Seed a journey's first Replay camera from the live Cesium pose.
+ *
+ * @param {Object} mode - Replay session mode.
+ * @param {Object} journey - Journey whose Replay settings are initialized.
+ * @returns {boolean} Whether the camera settings were seeded.
+ */
+const seedReplayCameraFromCesium = (mode, journey) => {
+    const simpleMode = isJourneyReplayBasicMode()
+    const savedCamera = simpleMode
+        ? journey?.replay?.simple?.camera
+        : journey?.replay?.expert?.camera ?? journey?.replay?.camera
+    const hasSavedValue = key => {
+        const value = key === 'altitude'
+            ? savedCamera?.altitude ?? savedCamera?.groundOffset
+            : savedCamera?.[key]
+        return value !== null && value !== undefined && Number.isFinite(Number(value))
+    }
+    const hasSavedAngle = hasSavedValue('cameraAngle')
+        || ['ahead', 'behind'].includes(savedCamera?.positionMode)
+    const hasSavedCameraValue = key => key === 'cameraAngle' ? hasSavedAngle : hasSavedValue(key)
+    if (['altitude', 'pitch', 'cameraAngle'].every(hasSavedCameraValue)) {
+        return false
+    }
+
+    const camera = replayCameraFor(mode)
+    const currentSettings = currentJourneyReplayCameraSettings({journey})
+    const height = finiteNumber(camera?.positionCartographic?.height)
+    const pitch = finiteNumber(camera?.pitch)
+    const altitudeIsSaved = hasSavedValue('altitude')
+    const pitchIsSaved = hasSavedValue('pitch')
+    if (!altitudeIsSaved && height === null && !pitchIsSaved && pitch === null) {
+        return false
+    }
+
+    const seededCamera = normalizeJourneyReplayCamera({
+        ...currentSettings,
+        altitude: altitudeIsSaved ? currentSettings.altitude : height ?? currentSettings.altitude,
+        altitudeMode: altitudeIsSaved ? currentSettings.altitudeMode : REPLAY_CAMERA_ALTITUDE_CONSTANT,
+        cameraAngle: hasSavedAngle
+            ? currentSettings.cameraAngle
+            : REPLAY_INITIAL_CAMERA_ANGLE,
+        debug: simpleMode ? false : currentSettings.debug,
+        pitch: pitchIsSaved || pitch === null ? currentSettings.pitch : radiansToDegrees(pitch),
+    })
+
+    mode[JOURNEY_REPLAY_INTERNAL_CALL].persistCameraSettings(seededCamera, {journey})
+    return true
+}
 
 
 import {
@@ -274,7 +327,7 @@ export const prepareReplayCamera = async (mode, {
             || globalThis.lgs?.stores?.ui?.video?.editing === true)
     // configure() rebuilds the sampler and also hydrates runtime settings. Keep
     // the camera that the user just prepared across that hydration boundary.
-    const preparedSimpleCamera = simplePreparation && store?.camera
+    let preparedSimpleCamera = simplePreparation && store?.camera
         ? normalizeJourneyReplayCamera(store.camera)
         : null
     const sampler = call.configure({journey, progress: 0})
@@ -284,16 +337,18 @@ export const prepareReplayCamera = async (mode, {
     }
     state.replayPreparationSample = sample
 
+    const replayPreparationActive = store?.simplePreparationActive === true
+        || globalThis.lgs?.stores?.ui?.video?.editing === true
+    if (replayPreparationActive && seedReplayCameraFromCesium(mode, journey) && simplePreparation) {
+        preparedSimpleCamera = store?.camera
+            ? normalizeJourneyReplayCamera(store.camera)
+            : null
+    }
+
     const replaySettings = getJourneyReplaySettings({journey})
     const cameraSettings = preparedSimpleCamera ?? currentJourneyReplayCameraSettings({journey})
     if (preparedSimpleCamera && store) {
         store.camera = cameraSettings
-    }
-    if (isJourneyReplayBasicMode()) {
-        const cameraSummary = camera => camera
-            ? `H${camera.altitude}/P${camera.pitch}/A${camera.cameraAngle}/mode=${camera.altitudeMode}`
-            : 'none'
-        console.info(`[Replay camera] record preparation | basic=${isJourneyReplayBasicMode()} prep=${store?.simplePreparationActive === true} editing=${globalThis.lgs?.stores?.ui?.video?.editing === true} runtime=${cameraSummary(store?.camera)} user=${cameraSummary(globalThis.lgs?.settings?.ui?.replay?.simple?.camera)} journey=${cameraSummary(journey?.replay?.simple?.camera)} selected=${cameraSummary(cameraSettings)}`)
     }
     const markerSettings = normalizeJourneyReplayMarker(
         globalThis.lgs?.stores?.replay?.marker ?? replaySettings.marker,
@@ -423,6 +478,7 @@ export const leaveReplayPreparation = (mode) => {
     call.setJourneyReplayOrbitAllowed?.(true)
 
     const restored = call.restoreCameraState?.() === true
+    call.stopReplayCameraAltitudeTracking?.()
     state.replayCameraPrepared = false
     state.replayPreparationSample = null
     state.replayEntryCameraState = null
@@ -473,9 +529,10 @@ export const start = (mode, options = {}) => {
         state.videoReplayClipLogicalTrajectory = videoReplayLinked
         const startSample = sampler.atProgress?.(options.progress ?? 0)
         call.captureCameraState({sample: startSample})
+        seedReplayCameraFromCesium(mode, journey)
         void globalThis.__?.ui?.cameraManager?.stopRotate?.()
         call.setJourneyReplayOrbitAllowed(false)
-        call.restoreOtherJourneysVisibility()
+        call.restoreOtherJourneysVisibility({respectReplaySetting: false})
         call.restoreJourneyReplayPOIVisibility()
         call.hideCurrentJourneyVisibility()
         if (shouldHideOtherJourneys) {
@@ -483,15 +540,6 @@ export const start = (mode, options = {}) => {
         }
         const initialCameraPlaced = call.placeCameraAtPlaybackStart(startSample, options.progress ?? 0) === true
         state.replayEntryCameraState = captureReplayEntryCameraState(replayCameraFor(mode))
-        const preparedSettings = currentJourneyReplayCameraSettings()
-        if (preparedSettings.debug) {
-            console.info('[Replay camera] applied Replay entry', {
-                configuredPitch: preparedSettings.pitch,
-                configuredHeight: preparedSettings.altitude,
-                configuredAngle: preparedSettings.cameraAngle,
-                entry: state.replayEntryCameraState,
-            })
-        }
         state.replayCameraPrepared = false
         traceStartStep('capture-drawer-state.begin')
         call.captureJourneyReplayDrawerStateBeforePlayback()
@@ -735,26 +783,13 @@ export const preparePlaybackSceneForExport = async (mode, {
             }
         }
 
-        const preparedCamera = currentJourneyReplayCameraSettings()
-        if (preparedCamera.debug) {
-            console.info('[Replay camera] recording entry', {
-                configuredPitch: preparedCamera.pitch,
-                configuredHeight: preparedCamera.altitude,
-                requestedCameraAltitude: sample ? call.cameraAltitudeForSample?.(sample, preparedCamera) ?? null : null,
-                configuredAngle: preparedCamera.cameraAngle,
-                altitudeMode: preparedCamera.altitudeMode,
-                markerHeight: sample ? call.markerRenderHeightForSample?.(sample) ?? null : null,
-                actualHeight: targetCamera?.positionCartographic?.height ?? null,
-                actualPitch: targetCamera?.pitch === undefined ? null : CesiumMath.toDegrees(targetCamera.pitch),
-                entry: state.replayEntryCameraState,
-            })
-        }
+        call.startReplayCameraAltitudeTracking()
 
         // Do not compile the constrained camera path synchronously during export preparation.
         // Export preparation must return control to the fixed-frame renderer immediately.
 
         call.setJourneyReplayOrbitAllowed(false)
-        call.restoreOtherJourneysVisibility()
+        call.restoreOtherJourneysVisibility({respectReplaySetting: false})
         call.hideCurrentJourneyVisibility()
         if (isJourneyReplayBasicMode() || hideOtherJourneys) {
             call.hideOtherJourneysVisibility()
@@ -874,6 +909,7 @@ export const refresh = (mode, {
                 sample,
                 sampler: state.sampler,
                 forceGeometry,
+                syncCursorToTrace: true,
                 showTrace: exportMode || isJourneyReplayTraceActive(),
             })
             if (camera && replayOwnedCameraFor(mode)) {
@@ -888,6 +924,7 @@ export const refresh = (mode, {
                                        frameIntervalMs,
                                        exportMode,
                                    })
+                call.recordReplayCameraAltitude?.()
             }
         }
         return sample
@@ -1068,6 +1105,7 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
                     logicalCamera: true,
                     logicalFrame,
                 })
+                call.recordReplayCameraAltitude()
                 if (typeof call.currentReplayClipCameraState === 'function') {
                     state.clipCameraContinuity = call.currentReplayClipCameraState({
                         sample,
@@ -1096,6 +1134,9 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
         const isFinalExportFrame = phase?.isFinalSceneFrame === true
                                    || phase?.isLastPhaseFrame === true
         const stopClip = phase?.slot === REPLAY_CLIP_SLOT_STOP
+        if (phase?.clip?.id === SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID) {
+            call.stopReplayCameraAltitudeTracking()
+        }
         const staticCompletedTrace = (stopClip || replayPhase)
                                      && isFinalExportFrame
                                      && frame !== null

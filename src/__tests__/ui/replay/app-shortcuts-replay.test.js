@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -203,8 +203,20 @@ describe('app replay shortcuts', () => {
         const canvas = document.createElement('canvas')
         document.body.appendChild(canvas)
         globalThis.lgs.viewer = {scene: {canvas}}
+        globalThis.lgs.theJourney = {
+            replay: {
+                expert: {
+                    camera: {...globalThis.lgs.settings.ui.replay.camera},
+                },
+            },
+        }
         globalThis.lgs.settings.ui.replay.camera = {
             ...globalThis.lgs.settings.ui.replay.camera,
+            cameraAngle: 10,
+            pitch: -50,
+        }
+        globalThis.lgs.theJourney.replay.expert.camera = {
+            ...globalThis.lgs.theJourney.replay.expert.camera,
             cameraAngle: 10,
             pitch: -50,
         }
@@ -223,14 +235,18 @@ describe('app replay shortcuts', () => {
 
         window.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, cancelable: true, key: 'ArrowUp'}))
         await Promise.resolve()
-        expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-49)
-        expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(10)
+        expect(globalThis.lgs.theJourney.replay.expert.camera.pitch).toBe(-49)
+        expect(globalThis.lgs.theJourney.replay.expert.camera.cameraAngle).toBe(10)
+        expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('pitch')
+        expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(0)
 
         window.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, cancelable: true, key: 'ArrowRight'}))
         await Promise.resolve()
 
-        expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-49)
-        expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(11)
+        expect(globalThis.lgs.theJourney.replay.expert.camera.pitch).toBe(-49)
+        expect(globalThis.lgs.theJourney.replay.expert.camera.cameraAngle).toBe(11)
+        expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('pitch')
+        expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(0)
         expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenCalledTimes(2)
         expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenLastCalledWith(expect.objectContaining({
             preparation: true,

@@ -267,6 +267,9 @@ export class JourneyReplaySessionController {
     #clipSequenceToken = 0
     #sceneRestoreDeferred = false
     #sceneRestorePromise = null
+    #maxReplayCameraAltitude = null
+    #replayCameraAltitudeTracking = false
+    #replayCameraAltitudeTrackingRemove = null
     #preparationTransitionToken = 0
     #replayPoiExpandedState = new Map()
     #replayPoiCollapseTimers = new Map()
@@ -836,6 +839,27 @@ export class JourneyReplaySessionController {
                 this.#sceneRestorePromise = value
             },
         })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'maxReplayCameraAltitude', {
+            configurable: true,
+            get: () => this.#maxReplayCameraAltitude,
+            set: value => {
+                this.#maxReplayCameraAltitude = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayCameraAltitudeTracking', {
+            configurable: true,
+            get: () => this.#replayCameraAltitudeTracking,
+            set: value => {
+                this.#replayCameraAltitudeTracking = value === true
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayCameraAltitudeTrackingRemove', {
+            configurable: true,
+            get: () => this.#replayCameraAltitudeTrackingRemove,
+            set: value => {
+                this.#replayCameraAltitudeTrackingRemove = value
+            },
+        })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'preparationTransitionToken', {
             configurable: true,
             get: () => this.#preparationTransitionToken,
@@ -968,6 +992,9 @@ export class JourneyReplaySessionController {
             focusJourneyAfterPlayback: (...args) => JourneyReplayClipController.focusJourneyAfterPlayback(this, ...args),
             resetCameraController: (...args) => JourneyReplaySessionSceneController.resetCameraController(this, ...args),
             captureCameraState: (...args) => JourneyReplaySessionSceneController.captureCameraState(this, ...args),
+            startReplayCameraAltitudeTracking: (...args) => JourneyReplaySessionSceneController.startReplayCameraAltitudeTracking(this, ...args),
+            stopReplayCameraAltitudeTracking: (...args) => JourneyReplaySessionSceneController.stopReplayCameraAltitudeTracking(this, ...args),
+            recordReplayCameraAltitude: (...args) => JourneyReplaySessionSceneController.recordReplayCameraAltitude(this, ...args),
             setReplayPreparationPivot: (...args) => JourneyReplaySessionSceneController.setReplayPreparationPivot(this, ...args),
             capturePlaybackCameraSettings: (...args) => JourneyReplaySessionSceneController.capturePlaybackCameraSettings(this, ...args),
             start: (...args) => JourneyReplaySessionPlaybackController.start(this, ...args),

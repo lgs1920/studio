@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-17
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -375,16 +375,27 @@ export const JourneySettings = () => {
      * @returns {Promise<void>} Resolves after the journey update.
      */
     const setSimpleReplayCamera = async (key, value) => {
+        const savedCamera = $journeyEditor.journey.replay?.simple?.camera ?? {}
         const current = normalizeSimpleReplaySettings($journeyEditor.journey.replay?.simple)
+        const hasStoredNumber = candidate => candidate !== null
+            && candidate !== undefined
+            && Number.isFinite(Number(candidate))
+        const camera = {
+            ...current.camera,
+            [key]: value,
+            altitudeMode: 'constant',
+        }
+        if (key !== 'altitude' && !hasStoredNumber(savedCamera.altitude ?? savedCamera.groundOffset)) {
+            delete camera.altitude
+        }
+        if (key !== 'pitch' && !hasStoredNumber(savedCamera.pitch)) {
+            delete camera.pitch
+        }
         $journeyEditor.journey.replay = {
             ...$journeyEditor.journey.replay,
             simple: {
                 ...current,
-                camera: {
-                    ...current.camera,
-                    [key]: value,
-                    altitudeMode: 'constant',
-                },
+                camera,
             },
         }
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})

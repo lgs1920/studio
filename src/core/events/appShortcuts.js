@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,8 +25,15 @@ import {
     REPLAY_MARKER_MODE_TRACE,
     normalizeJourneyReplayMarker,
     replayCameraSettingsFromArrowKey,
+    toGlobalReplayCameraSettings,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
-import {REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModes'
+import {
+    REPLAY_USER_MODE_BASIC,
+    REPLAY_USER_MODE_EXPERT,
+    syncJourneyExpertReplayCamera,
+    syncJourneySimpleReplayCamera,
+} from '@Core/ui/replay/ReplayUserModes'
+import {resolveJourneyReplayUserMode} from '@Core/ui/replay/ReplayUserModeConstants'
 import {
     hasManageableWidgets,
     openWidgetManagementDrawer,
@@ -728,14 +735,29 @@ const replayCameraKeyboardAction = event => {
         }
     }
 
-    const nextCamera = replayCameraSettingsFromArrowKey(replaySettings.camera, key)
+    const camera = lgs.stores.replay?.camera ?? replaySettings.camera
+    const nextCamera = replayCameraSettingsFromArrowKey(camera, key)
     if (!nextCamera) {
         return () => {
         }
     }
 
     return () => {
-        lgs.settings.ui.replay.camera = nextCamera
+        lgs.settings.ui.replay.camera = toGlobalReplayCameraSettings(nextCamera)
+        const userMode = resolveJourneyReplayUserMode({
+            settings: replaySettings,
+            replay: lgs.stores.replay,
+        })
+        if (userMode === REPLAY_USER_MODE_BASIC) {
+            lgs.settings.ui.replay.simple = {
+                ...lgs.settings.ui.replay.simple,
+                camera: toGlobalReplayCameraSettings(nextCamera),
+            }
+            syncJourneySimpleReplayCamera(nextCamera)
+        }
+        else if (userMode === REPLAY_USER_MODE_EXPERT) {
+            syncJourneyExpertReplayCamera(nextCamera)
+        }
         if (lgs.stores.replay) {
             lgs.stores.replay.camera = nextCamera
             lgs.stores.replay.cameraUpdateSource = 'keyboard'

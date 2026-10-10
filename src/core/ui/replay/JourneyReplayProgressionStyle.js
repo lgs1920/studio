@@ -56,6 +56,8 @@ export const REPLAY_CAMERA_HEADING_OFFSET_MIN = -180
 export const REPLAY_CAMERA_HEADING_OFFSET_MAX = 180
 export const REPLAY_CAMERA_ANGLE_MIN = -180
 export const REPLAY_CAMERA_ANGLE_MAX = 180
+/** Initial azimuth for a Replay camera before the Journey stores its own angle. */
+export const REPLAY_INITIAL_CAMERA_ANGLE = 0
 const REPLAY_CAMERA_KEYBOARD_STEP_DEGREES = 1
 export const REPLAY_CAMERA_PRESET_CUSTOM = 'custom'
 export const REPLAY_CAMERA_PRESET_DEFAULT = 'default'
@@ -205,6 +207,32 @@ export const defaultJourneyReplayMarkerStyle = () => ({...DEFAULT_REPLAY_MARKER}
 export const defaultJourneyReplayCameraStyle = () => ({...DEFAULT_REPLAY_CAMERA})
 export const defaultJourneyReplayReadiness = () => ({...DEFAULT_REPLAY_READINESS})
 
+/**
+ * Project a Replay camera onto the persistent global settings shape.
+ * Journey-owned pose values stay in the Journey; global settings retain the
+ * other camera controls and the fixed initial azimuth.
+ *
+ * @param {Object} camera - Candidate Replay camera settings.
+ * @returns {Object} Global Replay camera settings without Journey-owned pose values.
+ */
+export const toGlobalReplayCameraSettings = (camera = {}) => {
+    const projected = {
+        ...camera,
+        cameraAngle: REPLAY_INITIAL_CAMERA_ANGLE,
+        ...(camera?.playback ? {playback: {...camera.playback}} : {}),
+        ...(camera?.hysteresis ? {
+            hysteresis: {
+                ...camera.hysteresis,
+                ...(camera.hysteresis.zone ? {zone: {...camera.hysteresis.zone}} : {}),
+            },
+        } : {}),
+    }
+    delete projected.altitude
+    delete projected.pitch
+    delete projected.groundOffset
+    return projected
+}
+
 export const REPLAY_CAMERA_PRESETS = Object.freeze([
     {
         key:    REPLAY_CAMERA_PRESET_DEFAULT,
@@ -240,7 +268,10 @@ export const defaultJourneyReplaySettings = () => ({
     trace:       defaultJourneyReplayTraceStyle(),
     smoothing:   defaultJourneyReplaySmoothing(),
     marker:      defaultJourneyReplayMarkerStyle(),
-    camera:      defaultJourneyReplayCameraStyle(),
+    camera:      {
+        ...defaultJourneyReplayCameraStyle(),
+        cameraAngle: REPLAY_INITIAL_CAMERA_ANGLE,
+    },
     readiness:   defaultJourneyReplayReadiness(),
     clips:       (() => {
         const clips = defaultJourneyReplayClips()
@@ -275,6 +306,18 @@ const wrappedReplayCameraAngle = value => {
     }
     const wrapped = ((angle + 180) % 360 + 360) % 360 - 180
     return wrapped === -180 && angle > 0 ? 180 : wrapped
+}
+
+const replayCameraAngleFromJourney = camera => {
+    const explicitAngle = finiteNumber(camera?.cameraAngle)
+    if (explicitAngle !== null) {
+        return explicitAngle
+    }
+    if (camera?.positionMode === REPLAY_CAMERA_POSITION_AHEAD
+        || camera?.positionMode === REPLAY_CAMERA_POSITION_BEHIND) {
+        return normalizeJourneyReplayCamera(camera).cameraAngle
+    }
+    return null
 }
 
 const finiteNumber = value => {
@@ -697,17 +740,12 @@ const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
         ...product.camera,
         ...(user?.camera ?? {}),
         ...(journey?.camera ?? {}),
+        altitude: finiteNumber(journey?.camera?.altitude ?? journey?.camera?.groundOffset)
+            ?? product.camera.altitude,
+        pitch: finiteNumber(journey?.camera?.pitch) ?? product.camera.pitch,
+        cameraAngle: replayCameraAngleFromJourney(journey?.camera) ?? REPLAY_INITIAL_CAMERA_ANGLE,
         canDrift: false,
         canRoll: false,
-    }
-    const hasUserAngle = user?.camera?.cameraAngle !== null
-        && user?.camera?.cameraAngle !== undefined
-        && Number.isFinite(Number(user.camera.cameraAngle))
-    const hasJourneyAngle = journey?.camera?.cameraAngle !== null
-        && journey?.camera?.cameraAngle !== undefined
-        && Number.isFinite(Number(journey.camera.cameraAngle))
-    if (!hasUserAngle && !hasJourneyAngle) {
-        cameraSettings.cameraAngle = undefined
     }
     const camera = normalizeJourneyReplayCamera(cameraSettings)
     const marker = normalizeJourneyReplayMarker({
@@ -805,14 +843,24 @@ export const getJourneyReplaySettings = ({journey = currentReplayJourney()} = {}
         }
 
         const expert = journeyReplay?.expert
-        return expert
-            ? {
-                ...settings,
-                camera: expert.camera ?? settings.camera,
+        const expertCamera = expert?.camera ?? journeyReplay?.camera ?? {}
+        const camera = normalizeJourneyReplayCamera({
+            ...settings.camera,
+            ...expertCamera,
+            altitude: finiteNumber(expertCamera.altitude ?? expertCamera.groundOffset)
+                ?? DEFAULT_REPLAY_CAMERA.altitude,
+            pitch: finiteNumber(expertCamera.pitch) ?? DEFAULT_REPLAY_CAMERA.pitch,
+            cameraAngle: replayCameraAngleFromJourney(expertCamera)
+                ?? REPLAY_INITIAL_CAMERA_ANGLE,
+        })
+        return {
+            ...settings,
+            camera,
+            ...(expert ? {
                 progression: expert.progression ?? settings.progression,
                 profileInfo: expert.profileInfo ?? settings.profileInfo,
-            }
-            : settings
+            } : {}),
+        }
     })(),
 )
 
@@ -822,7 +870,12 @@ export const ensureJourneyReplaySettings = ({resetTransient = false} = {}) => {
         return defaultJourneyReplaySettings()
     }
 
-    ui.replay = normalizeJourneyReplaySettings(ui.replay)
+    const replay = normalizeJourneyReplaySettings(ui.replay)
+    replay.camera = toGlobalReplayCameraSettings(replay.camera)
+    if (replay.simple?.camera && typeof replay.simple.camera === 'object') {
+        replay.simple.camera = toGlobalReplayCameraSettings(replay.simple.camera)
+    }
+    ui.replay = replay
     if (resetTransient) {
         ui.replay.recordingSync = false
     }

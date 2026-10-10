@@ -42,7 +42,7 @@ replay:
   camera:
     positionMode: system
     altitudeMode: constant
-    altitude: 1200
+    cameraAngle: 0
     headingOffset: 0
     canDrift: true
     canFixHiddenMarker: true
@@ -50,7 +50,6 @@ replay:
     driftSensitivity: 1
     rollSensitivity: 1
     pitchCorrectionSensitivity: 1
-    pitch: -65
     heading: 0
     hysteresis:
       marginRatio: 0.12

@@ -53,6 +53,7 @@ describe('JourneyReplayRuntime', () => {
         const previousLgs = globalThis.lgs
         try {
             globalThis.lgs = {
+                theJourney: {replay: {expert: {camera: {altitude: 700, debug: true}}}},
                 settings: {
                     ui: {
                         replay: {
@@ -86,6 +87,7 @@ describe('JourneyReplayRuntime', () => {
         const previousLgs = globalThis.lgs
         try {
             globalThis.lgs = {
+                theJourney: {replay: {expert: {camera: {altitude: 700, debug: true}}}},
                 settings: {
                     ui: {
                         replay: {

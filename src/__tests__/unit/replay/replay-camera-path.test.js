@@ -1215,6 +1215,19 @@ describe('Journey replay camera paths', () => {
 
     it('resets the export camera follower before restoring the nominal pitch', () => {
         vi.stubGlobal('lgs', {
+            theJourney: {
+                replay: {
+                    expert: {
+                        camera: {
+                            positionMode: 'system',
+                            heading:      0,
+                            pitch:        -45,
+                            altitude:     1000,
+                            hysteresis:   {easing: 0.18},
+                        },
+                    },
+                },
+            },
             settings: {
                 ui: {
                     replay: {
@@ -1872,6 +1885,19 @@ describe('Journey replay camera paths', () => {
 
     it('applies the logical camera pose without asking Cesium to build a path', () => {
         vi.stubGlobal('lgs', {
+            theJourney: {
+                replay: {
+                    expert: {
+                        camera: {
+                            positionMode: 'system',
+                            cameraAngle:  180,
+                            pitch:        -60,
+                            altitude:     1000,
+                            hysteresis:   {easing: 0.18},
+                        },
+                    },
+                },
+            },
             settings: {
                 ui: {
                     replay: {
@@ -2528,6 +2554,18 @@ describe('Journey replay camera paths', () => {
 
     it('does not let a prepared path bypass the shared runtime camera resolver', () => {
         vi.stubGlobal('lgs', {
+            theJourney: {
+                replay: {
+                    expert: {
+                        camera: {
+                            positionMode: 'system',
+                            heading:      0,
+                            pitch:        -60,
+                            altitude:     1000,
+                        },
+                    },
+                },
+            },
             settings: {
                 ui: {
                     replay: {

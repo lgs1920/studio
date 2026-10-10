@@ -444,7 +444,7 @@ describe('replay visibility and clips', () => {
         }
     })
 
-    it('hides other journeys during replay and restores them at the end', () => {
+    it('keeps other journeys hidden after replay while the setting is enabled', () => {
         const currentJourney = makeJourney([
                                                makeTrack({
                                                              slug:        'track#journey#gpx#main',
@@ -561,10 +561,17 @@ describe('replay visibility and clips', () => {
 
             expect(currentJourney.updateVisibility).toHaveBeenCalledWith(true)
             expect(currentJourney.visible).toBe(true)
-            expect(otherJourney.updateVisibility).toHaveBeenCalledWith(true)
-            expect(otherJourney.visible).toBe(true)
+            expect(otherJourney.updateVisibility).toHaveBeenLastCalledWith(false)
+            expect(otherJourney.visible).toBe(false)
             expect(globalThis.lgs.stores.replay.hideOtherJourneys).toBe(true)
             expect(globalThis.lgs.settings.ui.replay.hideOtherJourneys).toBe(true)
+
+            globalThis.lgs.settings.ui.replay.userMode = 'expert'
+            globalThis.lgs.settings.ui.replay.inheritHideOtherJourneys = false
+            mode.setHideOtherJourneys(false)
+
+            expect(otherJourney.updateVisibility).toHaveBeenLastCalledWith(true)
+            expect(otherJourney.visible).toBe(true)
         }
         finally {
             globalThis.lgs = previousLgs

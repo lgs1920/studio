@@ -21,6 +21,7 @@ import {
     defaultJourneyReplaySettings, REPLAY_CAMERA_PRESET_ULTRA_SMOOTH, REPLAY_MARKER_MODE_HYSTERESIS,
     REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NONE, REPLAY_EFFECT_NEON,
     REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE, REPLAY_READINESS_POLICY_ADAPTIVE,
+    ensureJourneyReplaySettings, toGlobalReplayCameraSettings,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { createJourneyReplayClipInstance }                          from '@Core/ui/replay/JourneyReplayClips'
 import { JourneyReplayDrawer }                                from '@Components/JourneyReplay/JourneyReplayDrawer'
@@ -194,6 +195,12 @@ describe('JourneyReplayDrawer', () => {
     beforeEach(() => {
         const replay = proxy({...defaultJourneyReplaySettings(), userMode: 'expert'})
         replay.marker.mode = REPLAY_MARKER_MODE_NAVIGATION
+        const runtimeCamera = {...replay.camera}
+        replay.camera = toGlobalReplayCameraSettings(runtimeCamera)
+        const journey = proxy({
+            slug: 'journey-a',
+            replay: {expert: {camera: runtimeCamera}},
+        })
         const poiList = proxyMap()
         poiList.set('poi-1', {
             id: 'poi-1',
@@ -247,7 +254,7 @@ describe('JourneyReplayDrawer', () => {
                     video: proxy({}),
                 }),
                 main: proxy({
-                    theJourney: {slug: 'journey-a'},
+                    theJourney: journey,
                     components: {
                         pois: {
                             list: poiList,
@@ -256,7 +263,7 @@ describe('JourneyReplayDrawer', () => {
                 }),
                 replay: proxy({
                     ...replay,
-                    camera: proxy({...replay.camera}),
+                    camera: proxy({...runtimeCamera}),
                     trace: proxy({...replay.trace, remaining: {...replay.trace.remaining}}),
                     marker: proxy({...replay.marker}),
                     progression: proxy({...replay.progression, fill: {...replay.progression.fill}, border: {...replay.progression.border}}),
@@ -286,6 +293,8 @@ describe('JourneyReplayDrawer', () => {
                 }),
             },
         }
+        globalThis.lgs.theJourney = journey
+        ensureJourneyReplaySettings()
 
         globalThis.__ = {
             ui: {
@@ -378,7 +387,8 @@ describe('JourneyReplayDrawer', () => {
         const pitchInput = view.getByLabelText('Pitch (deg)')
         fireEvent.focus(pitchInput)
         fireEvent.input(pitchInput, {target: {value: '-38'}})
-        await waitFor(() => expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-38))
+        await waitFor(() => expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.pitch).toBe(-38))
+        expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('pitch')
         expect(globalThis.__.ui.cameraManager.stopRotate).not.toHaveBeenCalled()
         expect(globalThis.lgs.stores.ui.mainUI.rotate.running).toBe(true)
     })
@@ -393,14 +403,15 @@ describe('JourneyReplayDrawer', () => {
         expect(pitchInput.value).toBe('-20')
 
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-20)
+            expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.pitch).toBe(-20)
             expect(globalThis.lgs.stores.replay.camera.pitch).toBe(-20)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('pitch')
         })
 
         fireEvent.blur(pitchInput)
 
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-20)
+            expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.pitch).toBe(-20)
             expect(globalThis.lgs.stores.replay.camera.pitch).toBe(-20)
         })
     })
@@ -417,7 +428,7 @@ describe('JourneyReplayDrawer', () => {
         globalThis.lgs.theJourney = journey
         globalThis.lgs.stores.main.theJourney = journey
         globalThis.lgs.settings.ui.replay.userMode = 'expert'
-        globalThis.lgs.settings.ui.replay.camera = camera
+        globalThis.lgs.settings.ui.replay.camera = toGlobalReplayCameraSettings(camera)
         globalThis.lgs.stores.replay.camera = proxy({...camera})
 
         const view = render(<JourneyReplayDrawer/>)
@@ -427,7 +438,7 @@ describe('JourneyReplayDrawer', () => {
 
         await waitFor(() => {
             expect(globalThis.lgs.theJourney.replay.expert.camera.pitch).toBe(-38)
-            expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-38)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('pitch')
             expect(globalThis.lgs.stores.replay.camera.pitch).toBe(-38)
         })
     })
@@ -479,6 +490,25 @@ describe('JourneyReplayDrawer', () => {
         })
     })
 
+    it('does not restore Journey camera pose in global Simple settings when saving presentation style', async () => {
+        lgs.settings.ui.replay.userMode = 'basic'
+        lgs.stores.replay.userMode = 'basic'
+        lgs.stores.main.theJourney.replay = {}
+        lgs.settings.ui.replay.simple = {
+            camera: {altitude: 3454, pitch: -30, cameraAngle: 82},
+        }
+
+        const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByText('Style'))
+        fireEvent.change(view.getByLabelText('Effect'), {target: {value: REPLAY_EFFECT_NEON}})
+
+        await waitFor(() => {
+            expect(lgs.settings.ui.replay.simple.camera).not.toHaveProperty('altitude')
+            expect(lgs.settings.ui.replay.simple.camera).not.toHaveProperty('pitch')
+            expect(lgs.settings.ui.replay.simple.camera.cameraAngle).toBe(0)
+        })
+    })
+
     it('keeps altitude as a single value when switching to ground offset mode', async () => {
         globalThis.lgs.stores.replay.sample = {
             longitude: 2,
@@ -492,8 +522,9 @@ describe('JourneyReplayDrawer', () => {
 
         await waitFor(() => {
             expect(globalThis.lgs.settings.ui.replay.camera.altitudeMode).toBe('ground-offset')
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(900)
+            expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitude).toBe(900)
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(900)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
             expect(globalThis.lgs.settings.ui.replay.camera.groundOffset).toBeUndefined()
             expect(globalThis.lgs.stores.replay.camera.groundOffset).toBeUndefined()
             expect(view.getByLabelText('Ground offset (m)')).toBeTruthy()
@@ -502,16 +533,20 @@ describe('JourneyReplayDrawer', () => {
 
     it('converts the prepared altitude without borrowing normal Cesium height', async () => {
         lgs.settings.ui.replay.userMode = 'basic'
-        lgs.settings.ui.replay.simple = {camera: {...defaultJourneyReplaySettings().camera, altitude: 2630, pitch: -23}}
+        const preparedCamera = {...defaultJourneyReplaySettings().camera, altitude: 2630, pitch: -23}
+        lgs.settings.ui.replay.simple = {
+            camera: toGlobalReplayCameraSettings(preparedCamera),
+        }
+        lgs.stores.main.theJourney.replay.simple = {camera: preparedCamera}
         lgs.stores.replay.simplePreparationActive = true
-        lgs.stores.replay.camera = {...lgs.settings.ui.replay.simple.camera}
+        lgs.stores.replay.camera = {...preparedCamera}
         lgs.stores.replay.sample = {longitude: 2, latitude: 48}
         lgs.viewer.camera = {positionCartographic: {height: 1300}, pitch: -0.1}
         const view = render(<JourneyReplayDrawer/>)
 
         fireEvent.change(view.getByLabelText('Camera altitude'), {target: {value: 'ground-offset'}})
         await waitFor(() => expect(lgs.stores.replay.camera).toMatchObject({altitude: 2330, pitch: -23, altitudeMode: 'ground-offset'}))
-        expect(lgs.settings.ui.replay.simple.camera).toMatchObject({altitude: 2330, pitch: -23, altitudeMode: 'ground-offset'})
+        expect(lgs.stores.main.theJourney.replay.simple.camera).toMatchObject({altitude: 2330, pitch: -23, altitudeMode: 'ground-offset'})
         fireEvent.change(view.getByLabelText('Camera altitude'), {target: {value: 'constant'}})
         await waitFor(() => expect(lgs.stores.replay.camera).toMatchObject({altitude: 2630, pitch: -23, altitudeMode: 'constant'}))
         expect(lgs.viewer.camera.positionCartographic.height).toBe(1300)
@@ -534,7 +569,7 @@ describe('JourneyReplayDrawer', () => {
         globalThis.lgs.stores.replay.marker.mode = REPLAY_MARKER_MODE_TRACE
         globalThis.lgs.settings.ui.replay.marker.mode = REPLAY_MARKER_MODE_TRACE
         globalThis.lgs.stores.replay.camera.cameraAngle = -165
-        globalThis.lgs.settings.ui.replay.camera.cameraAngle = -165
+        globalThis.lgs.stores.main.theJourney.replay.expert.camera.cameraAngle = -165
 
         const view = render(<JourneyReplayDrawer/>)
         fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
@@ -708,7 +743,7 @@ describe('JourneyReplayDrawer', () => {
         const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
         globalThis.lgs.settings.ui.replay.userMode = 'expert'
         globalThis.lgs.stores.replay.camera.cameraAngle = 180
-        globalThis.lgs.settings.ui.replay.camera.cameraAngle = 180
+        globalThis.lgs.stores.main.theJourney.replay.expert.camera.cameraAngle = 180
         globalThis.lgs.settings.ui.replay.clips = {
             catalog: {
                 'take-off': {id: 'take-off', slots: ['start']},
@@ -747,7 +782,8 @@ describe('JourneyReplayDrawer', () => {
         fireEvent.input(angleInput, {target: {value: '40'}})
 
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(40)
+            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(0)
+            expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.cameraAngle).toBe(40)
             expect(globalThis.lgs.stores.replay.camera.cameraAngle).toBe(40)
         })
         expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenCalledTimes(2)
@@ -772,7 +808,7 @@ describe('JourneyReplayDrawer', () => {
         globalThis.lgs.theJourney = journey
         globalThis.lgs.stores.main.theJourney = journey
         globalThis.lgs.settings.ui.replay.userMode = 'expert'
-        globalThis.lgs.settings.ui.replay.camera = proxy({...camera})
+        globalThis.lgs.settings.ui.replay.camera = proxy(toGlobalReplayCameraSettings(camera))
         globalThis.lgs.stores.replay.userMode = 'expert'
         globalThis.lgs.stores.replay.camera = proxy({...camera})
         globalThis.lgs.stores.ui.video.editing = true
@@ -795,7 +831,8 @@ describe('JourneyReplayDrawer', () => {
         fireEvent.input(angleSlider, {target: {value: '35'}})
 
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(35)
+            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(0)
+            expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.cameraAngle).toBe(35)
             expect(cameraGuideHarness.update).toHaveBeenLastCalledWith(
                 expect.anything(),
                 expect.objectContaining({angleDegrees: 35, coneHeading: (35 * Math.PI) / 180}),
@@ -813,7 +850,8 @@ describe('JourneyReplayDrawer', () => {
         })
 
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(-25)
+            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(0)
+            expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.cameraAngle).toBe(-25)
             expect(view.getByLabelText('Camera angle').value).toBe('-25')
             expect(document.activeElement).toBe(view.getByLabelText('Camera angle'))
         })
@@ -829,7 +867,8 @@ describe('JourneyReplayDrawer', () => {
         fireEvent.input(angleSlider, {target: {value: '15'}})
 
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(15)
+            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(0)
+            expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.cameraAngle).toBe(15)
             expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenCalledTimes(1)
         })
         expect(globalThis.lgs.stores.replay.cameraUpdateSource).toBe('drawer')
@@ -838,7 +877,7 @@ describe('JourneyReplayDrawer', () => {
     it('keeps the advanced camera setup closed and focuses the range after a map-guide change', async () => {
         globalThis.lgs.settings.ui.replay.userMode = 'expert'
         globalThis.lgs.stores.replay.userMode = 'expert'
-        globalThis.lgs.settings.ui.replay.camera.cameraAngle = 180
+        globalThis.lgs.stores.main.theJourney.replay.expert.camera.cameraAngle = 180
         globalThis.lgs.stores.replay.camera.cameraAngle = 180
         globalThis.lgs.stores.ui.video.editing = true
 
@@ -857,7 +896,8 @@ describe('JourneyReplayDrawer', () => {
 
         await waitFor(() => {
             const angleSlider = view.getByLabelText('Camera angle')
-            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(-25)
+            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(0)
+            expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.cameraAngle).toBe(-25)
             expect(globalThis.lgs.stores.replay.camera.cameraAngle).toBe(-25)
             expect(angleSlider.value).toBe('-25')
             expect(document.activeElement).toBe(angleSlider)
@@ -867,6 +907,7 @@ describe('JourneyReplayDrawer', () => {
 
     it('shows the ground offset label when the camera mode is ground offset', () => {
         globalThis.lgs.stores.replay.camera.altitudeMode = 'ground-offset'
+        globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitudeMode = 'ground-offset'
         globalThis.lgs.settings.ui.replay.camera.altitudeMode = 'ground-offset'
 
         const view = render(<JourneyReplayDrawer/>)
@@ -906,7 +947,7 @@ describe('JourneyReplayDrawer', () => {
     it('restores altitude on blur when the draft is emptied', async () => {
         globalThis.lgs.settings.unitSystem.current = 1
         globalThis.lgs.stores.replay.camera.altitude = 1000
-        globalThis.lgs.settings.ui.replay.camera.altitude = 1000
+        globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitude = 1000
 
         const view = render(<JourneyReplayDrawer/>)
         const altitudeInput = view.getByLabelText('Altitude (ft)')
@@ -916,14 +957,16 @@ describe('JourneyReplayDrawer', () => {
         fireEvent.focus(altitudeInput)
         fireEvent.input(altitudeInput, {target: {value: ''}})
 
-        expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1000)
+        expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
+        expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitude).toBe(1000)
         expect(globalThis.lgs.stores.replay.camera.altitude).toBe(1000)
         expect(altitudeInput.value).toBe('')
 
         fireEvent.blur(altitudeInput)
 
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1000)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
+            expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitude).toBe(1000)
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(1000)
             expect(altitudeInput.value).toBe(String(Math.round(UnitUtils.convert(1000).to(ELEVATION_UNITS[1]))))
         })
@@ -937,12 +980,14 @@ describe('JourneyReplayDrawer', () => {
         fireEvent.input(altitudeInput, {target: {value: '1500'}})
 
         expect(altitudeInput.value).toBe('1500')
-        expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1500)
+        expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
+        expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitude).toBe(1500)
         expect(globalThis.lgs.stores.replay.camera.altitude).toBe(1500)
 
         fireEvent.blur(altitudeInput)
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1500)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
+            expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitude).toBe(1500)
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(1500)
             expect(altitudeInput.value).toBe('1500')
         })
@@ -955,24 +1000,26 @@ describe('JourneyReplayDrawer', () => {
         fireEvent.focus(altitudeInput)
         fireEvent.input(altitudeInput, {target: {value: '1'}})
         expect(altitudeInput.value).toBe('1')
-        expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1200)
+        expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
+        expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitude).toBe(1200)
 
         fireEvent.input(altitudeInput, {target: {value: '10'}})
         expect(altitudeInput.value).toBe('10')
-        expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(10)
+        expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitude).toBe(10)
 
         fireEvent.input(altitudeInput, {target: {value: '100'}})
         expect(altitudeInput.value).toBe('100')
-        expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(100)
+        expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitude).toBe(100)
 
         fireEvent.input(altitudeInput, {target: {value: '1000'}})
         expect(altitudeInput.value).toBe('1000')
-        expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1000)
+        expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitude).toBe(1000)
 
         fireEvent.blur(altitudeInput)
 
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1000)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
+            expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitude).toBe(1000)
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(1000)
         })
     })
@@ -986,7 +1033,8 @@ describe('JourneyReplayDrawer', () => {
         fireEvent.blur(altitudeInput)
 
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1500)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
+            expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitude).toBe(1500)
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(1500)
         })
 
@@ -996,6 +1044,7 @@ describe('JourneyReplayDrawer', () => {
 
     it('keeps a ground offset change stable even when change fires before focus', async () => {
         globalThis.lgs.stores.replay.camera.altitudeMode = 'ground-offset'
+        globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitudeMode = 'ground-offset'
         globalThis.lgs.settings.ui.replay.camera.altitudeMode = 'ground-offset'
 
         const view = render(<JourneyReplayDrawer/>)
@@ -1007,7 +1056,8 @@ describe('JourneyReplayDrawer', () => {
         expect(globalThis.lgs.stores.replay.cameraUpdateSource).toBe('drawer')
 
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1000)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
+            expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitude).toBe(1000)
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(1000)
         })
 
@@ -1060,14 +1110,16 @@ describe('JourneyReplayDrawer', () => {
         fireEvent.focus(altitudeInput)
         fireEvent.input(altitudeInput, {target: {value: '9'}})
 
-        expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1200)
+        expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
+        expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitude).toBe(1200)
         expect(globalThis.lgs.stores.replay.camera.altitude).toBe(1200)
         expect(altitudeInput.value).toBe('9')
 
         fireEvent.blur(altitudeInput)
 
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1200)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
+            expect(globalThis.lgs.stores.main.theJourney.replay.expert.camera.altitude).toBe(1200)
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(1200)
         })
     })

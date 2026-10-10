@@ -45,7 +45,7 @@ import {
     REPLAY_SMOOTHING_MAX_STEP, REPLAY_SMOOTHING_MIN_STEP,
     getJourneyReplayCameraPresetKey, getJourneyReplayCameraPresetUpdates, getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplayProfileInfo,
     normalizeJourneyReplayProgressionStyle, normalizeJourneyReplaySmoothing, normalizeJourneyReplayTrace,
-    normalizeJourneyReplayReadiness,
+    normalizeJourneyReplayReadiness, toGlobalReplayCameraSettings,
 }                 from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
 import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
@@ -705,6 +705,7 @@ export const JourneyReplayDrawer = memo(() => {
                 const simple = normalizeSimpleReplaySettings(lgs.settings.ui.replay.simple ?? {})
                 lgs.settings.ui.replay.simple = {
                     ...simple,
+                    camera: toGlobalReplayCameraSettings(simple.camera),
                     presentation: {
                         ...simple.presentation,
                         progression: nextProgression,
@@ -727,6 +728,7 @@ export const JourneyReplayDrawer = memo(() => {
                 const simple = normalizeSimpleReplaySettings(lgs.settings.ui.replay.simple ?? {})
                 lgs.settings.ui.replay.simple = {
                     ...simple,
+                    camera: toGlobalReplayCameraSettings(simple.camera),
                     trace: nextTrace,
                 }
             }
@@ -763,7 +765,7 @@ export const JourneyReplayDrawer = memo(() => {
         const currentCamera = normalizeJourneyReplayCamera(lgs.stores.replay.camera ?? camera)
         const nextCamera = mergeCamera(currentCamera, updates)
         if (isExpertMode) {
-            lgs.settings.ui.replay.camera = nextCamera
+            lgs.settings.ui.replay.camera = toGlobalReplayCameraSettings(nextCamera)
             syncJourneyExpertReplayCamera(nextCamera)
         }
         else {
@@ -772,19 +774,11 @@ export const JourneyReplayDrawer = memo(() => {
                 const simple = normalizeSimpleReplaySettings(lgs.settings.ui.replay.simple ?? {})
                 lgs.settings.ui.replay.simple = {
                     ...simple,
-                    camera: nextCamera,
+                    camera: toGlobalReplayCameraSettings(nextCamera),
                 }
             }
         }
         lgs.stores.replay.camera = nextCamera
-        if (!isExpertMode && (updates.altitude !== undefined || updates.pitch !== undefined)) {
-            console.info('[Replay camera] preparation setting update', {
-                altitude: nextCamera.altitude,
-                altitudeMode: nextCamera.altitudeMode,
-                pitch: nextCamera.pitch,
-                source: 'drawer',
-            })
-        }
         if (syncCamera) {
             lgs.stores.replay.cameraUpdateSource = 'drawer'
             if (cameraUpdateSourceClearTimer.current !== null) {
@@ -985,10 +979,14 @@ export const JourneyReplayDrawer = memo(() => {
         if (!isExpertMode) {
             const journeyDuration = syncJourneySimpleReplayDuration(duration)
             if (journeyDuration === null) {
-                lgs.settings.ui.replay.simple = normalizeSimpleReplaySettings({
+                const simple = normalizeSimpleReplaySettings({
                     ...(lgs.settings.ui.replay.simple ?? {}),
                     duration,
                 })
+                lgs.settings.ui.replay.simple = {
+                    ...simple,
+                    camera: toGlobalReplayCameraSettings(simple.camera),
+                }
             }
         }
         else {

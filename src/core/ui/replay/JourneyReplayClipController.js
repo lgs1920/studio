@@ -35,7 +35,10 @@ import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {resolveJourneyReplayLogicalCameraPose} from './JourneyReplayLogicalCameraPose'
 import {createReplayCameraCommand} from './ReplayCameraCommand'
-import {SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID} from './JourneyReplaySimpleFocus'
+import {
+    createSimpleReplayTraceFocusClips,
+    SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID,
+} from './JourneyReplaySimpleFocus'
 
 const SAFE_TOP_DOWN_PITCH = -(Math.PI / 2 - 0.0001)
 const LANDING_CAMERA_GROUND_OFFSET_METERS = 20
@@ -291,10 +294,11 @@ export const resolveJourneyReplayClipCameraPlan = (mode, {
                                                clip = null,
                                                slot = null,
                                                sample = null,
-                                               startCamera = null,
-                                               nextClip = null,
-                                               nextElement = null,
-                                           } = {}) => {
+                                           startCamera = null,
+                                           nextClip = null,
+                                           nextElement = null,
+                                       } = {}) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         if (!clip || !sample) {
@@ -545,20 +549,27 @@ export const resolveJourneyReplayClipCameraPlan = (mode, {
                     plan.kind = 'focus'
                     plan.focusTarget = target
                     plan.rpm = Number.isFinite(Number(clip?.params?.rpm)) ? Number(clip.params.rpm) : 0
-                    const heightDelta = clip?.id === SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID
+                    const isSimpleTraceFocus = clip?.id === SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID
+                    if (isSimpleTraceFocus) {
+                        call.stopReplayCameraAltitudeTracking?.()
+                    }
+                    const heightDelta = isSimpleTraceFocus
                         ? finiteNumber(clip?.params?.heightDelta) ?? 0
                         : 0
                     const focusStartHeight = finiteNumber(continuityStartView.height)
                         ?? finiteNumber(baseView.cameraHeight)
                         ?? finiteNumber(clipHeight)
                         ?? 0
+                    const focusHeightBase = isSimpleTraceFocus
+                        ? finiteNumber(state.maxReplayCameraAltitude) ?? focusStartHeight
+                        : focusStartHeight
                     plan.endView = {
                         ...baseStartView,
                         sample: target,
                         heading: baseView.heading,
                         pitch:   clipPitch,
                         height:  heightDelta !== 0
-                            ? focusStartHeight + heightDelta
+                            ? focusHeightBase + heightDelta
                             : clipCameraHeightForSample(target),
                         cameraSettings: clipCamera,
                     }

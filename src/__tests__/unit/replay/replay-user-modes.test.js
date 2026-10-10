@@ -28,6 +28,7 @@ import {
 } from '@Core/ui/replay/ReplayUserModes'
 import {isJourneyReplayBasicMode, resolveJourneyReplayUserMode} from '@Core/ui/replay/ReplayUserModeConstants'
 import {
+    DEFAULT_REPLAY_CAMERA,
     getJourneyReplaySettings,
     normalizeJourneyReplaySettings,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
@@ -61,18 +62,23 @@ describe('Replay user modes', () => {
             journey: {camera: {cameraAngle: 45}},
         })
 
-        expect(resolved.camera.altitude).toBe(900)
+        expect(resolved.camera.altitude).toBe(DEFAULT_REPLAY_CAMERA.altitude)
         expect(resolved.camera.cameraAngle).toBe(45)
         expect(resolved.camera.altitudeMode).toBe('constant')
     })
 
-    it.each(['constant', 'ground-offset'])('preserves the prepared Simple pitch and %s altitude mode', altitudeMode => {
+    it.each(['constant', 'ground-offset'])('resolves the prepared Simple pitch and %s altitude from its Journey', altitudeMode => {
         const camera = {altitude: 2630, pitch: -23, cameraAngle: -113, altitudeMode}
         expect(normalizeSimpleReplaySettings({camera}).camera).toMatchObject(camera)
-        expect(resolveSimpleReplaySettings({user: {camera}}).camera).toMatchObject(camera)
+        expect(resolveSimpleReplaySettings({user: {camera}}).camera).toMatchObject({
+            altitude: DEFAULT_REPLAY_CAMERA.altitude,
+            pitch: DEFAULT_REPLAY_CAMERA.pitch,
+            cameraAngle: 0,
+        })
+        const journey = {slug: 'prepared', replay: {simple: {camera}}}
         vi.stubGlobal('lgs', {
-            settings: {ui: {replay: {userMode: 'basic', simple: {camera}}}},
-            stores: {main: {theJourney: {slug: 'prepared'}}, replay: {simplePreparationActive: false}},
+            settings: {ui: {replay: {userMode: 'basic', simple: {camera: {altitude: 480, pitch: -5, cameraAngle: 45}}}}},
+            stores: {main: {theJourney: journey}, replay: {simplePreparationActive: false}},
         })
         try {
             expect(getJourneyReplaySettings().camera).toMatchObject(camera)
@@ -90,7 +96,9 @@ describe('Replay user modes', () => {
             trace: {mode: 'full'},
         })
 
-        expect(defaults.camera).toMatchObject({debug: false, cameraAngle: 180})
+        expect(defaults.camera).toMatchObject({debug: false, cameraAngle: 0})
+        expect(defaults.camera).not.toHaveProperty('altitude')
+        expect(defaults.camera).not.toHaveProperty('pitch')
         expect(defaults.marker.mode).toBe('navigation')
         expect(defaults.trace.mode).toBe('progressive')
         expect(normalized.camera).toMatchObject({debug: false, cameraAngle: 0})
@@ -128,7 +136,7 @@ describe('Replay user modes', () => {
     it('resolves Expert settings when the runtime store still has its default Basic mode', () => {
         const previousLgs = globalThis.lgs
         globalThis.lgs = {
-            settings: {ui: {replay: {camera: {altitude: 1300}}}},
+            settings: {ui: {replay: {camera: {altitude: 1300, pitch: -20, cameraAngle: 80}}}},
             stores: {replay: {userMode: REPLAY_USER_MODE_EXPERT, simplePreparationActive: false}},
             theJourney: {replay: {expert: {camera: {altitude: 2100}}}},
         }
@@ -136,7 +144,7 @@ describe('Replay user modes', () => {
         try {
             const settings = getJourneyReplaySettings()
             expect(settings.userMode).toBe(REPLAY_USER_MODE_EXPERT)
-            expect(settings.camera.altitude).toBe(2100)
+            expect(settings.camera).toMatchObject({altitude: 2100, pitch: DEFAULT_REPLAY_CAMERA.pitch, cameraAngle: 0})
         } finally {
             if (previousLgs === undefined) {
                 delete globalThis.lgs
@@ -170,6 +178,9 @@ describe('Replay user modes', () => {
             syncJourneyExpertReplayCamera({altitude: 900, pitch: -35})
             expect(selectedJourney.replay.expert.camera.pitch).toBe(-35)
             expect(previousJourney.replay.expert.camera.pitch).toBe(-12)
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('altitude')
+            expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('pitch')
+            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(0)
         } finally {
             if (previousLgs === undefined) {
                 delete globalThis.lgs
@@ -199,10 +210,12 @@ describe('Replay user modes', () => {
         const existing = {replay: {expert: {camera: {altitude: 500}}}}
 
         expect(hasExpertReplayConfiguration(journey)).toBe(false)
-        expect(initialized.expert.camera.altitude).toBe(simple.camera.altitude)
+        expect(initialized.expert.camera).not.toHaveProperty('altitude')
+        expect(initialized.expert.camera).not.toHaveProperty('pitch')
+        expect(initialized.expert.camera.cameraAngle).toBe(0)
         expect(initializeExpertReplayFromSimple({replay: {start: [], stop: []}}, {
             camera: {positionMode: 'system'},
-        }).expert.camera.cameraAngle).toBe(180)
+        }).expert.camera.cameraAngle).toBe(0)
         expect(initializeExpertReplayFromSimple(existing, simple)).toBe(existing.replay)
     })
 

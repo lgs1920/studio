@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@
 import {JulianDate} from 'cesium'
 import {POIUtils} from '@Utils/cesium/POIUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
+import {getJourneyReplayHideOtherJourneys} from '@Core/ui/JourneyVisibility'
 import {normalizeJourneyReplayPOISettings} from './JourneyReplayPOISettings'
 import {
     currentJourneyReplayPoiBehavior, finiteNumber, replayStore,
@@ -453,9 +454,22 @@ export const setJourneyReplayOrbitAllowed = (mode, allowed = true) => {
         }
     }
 
-export const restoreOtherJourneysVisibility = (mode) => {
+/**
+ * Restore other journeys unless the active Replay preference keeps them hidden.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {object} [options] - Visibility restoration options.
+ * @param {boolean} [options.respectReplaySetting=true] - Whether Replay's hide preference takes precedence.
+ * @returns {void}
+ */
+export const restoreOtherJourneysVisibility = (mode, {respectReplaySetting = true} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+
+        if (respectReplaySetting && getJourneyReplayHideOtherJourneys()) {
+            call.hideOtherJourneysVisibility()
+            return
+        }
 
         if (state.hiddenJourneyVisibility.size === 0) {
             return

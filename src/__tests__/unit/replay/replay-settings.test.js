@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,7 +38,7 @@ import {
     REPLAY_READINESS_POLICY_ADAPTIVE, REPLAY_READINESS_POLICY_OFF,
     REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NEON, REPLAY_EFFECT_NONE,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
-    getJourneyReplayCameraPresetKey, getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplayReadiness, normalizeJourneyReplaySettings,
+    ensureJourneyReplaySettings, getJourneyReplayCameraPresetKey, getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplayReadiness, normalizeJourneyReplaySettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { gpx }                                                         from '@tmcw/togeojson'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
@@ -172,6 +172,39 @@ describe('replay settings normalization', () => {
         expect(camera.altitude).toBe(1500)
         expect(camera.altitudeMode).toBe('ground-offset')
         expect(camera.groundOffset).toBeUndefined()
+    })
+
+    it('keeps Replay pose values Journey-owned while retaining other global camera settings', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        duration: 42,
+                        camera: {altitude: 900, pitch: -25, cameraAngle: 70, driftSensitivity: 0.4},
+                        simple: {
+                            duration: 20,
+                            camera: {altitude: 800, pitch: -35, cameraAngle: -45, canRoll: false},
+                        },
+                    },
+                },
+            },
+        })
+
+        try {
+            const settings = ensureJourneyReplaySettings()
+            expect(settings.duration).toBe(42)
+            expect(settings.simple.duration).toBe(20)
+            expect(settings.camera).not.toHaveProperty('altitude')
+            expect(settings.camera).not.toHaveProperty('pitch')
+            expect(settings.camera).toMatchObject({cameraAngle: 0, driftSensitivity: 0.4})
+            expect(settings.simple.camera).not.toHaveProperty('altitude')
+            expect(settings.simple.camera).not.toHaveProperty('pitch')
+            expect(settings.simple.camera).toMatchObject({cameraAngle: 0, canRoll: false})
+            expect(defaultJourneyReplaySettings().camera.cameraAngle).toBe(0)
+        }
+        finally {
+            vi.unstubAllGlobals()
+        }
     })
 
     it('normalizes camera motion sensitivities and preserves the current default response', () => {

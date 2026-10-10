@@ -322,8 +322,13 @@ afterEach(() => {
                 }),
             ])
             installReplayGlobals(journey)
-            globalThis.lgs.settings.ui.replay.camera.cameraAngle = cameraAngle
-            globalThis.lgs.stores.replay.camera = globalThis.lgs.settings.ui.replay.camera
+            journey.replay = {
+                ...(journey.replay ?? {}),
+                expert: {
+                    ...(journey.replay?.expert ?? {}),
+                    camera: {cameraAngle},
+                },
+            }
 
             const setView = vi.fn(options => {
                 globalThis.lgs.viewer.camera.position = options.destination
@@ -370,8 +375,13 @@ afterEach(() => {
                 }),
             ])
             installReplayGlobals(journey)
-            globalThis.lgs.settings.ui.replay.camera.cameraAngle = cameraAngle
-            globalThis.lgs.stores.replay.camera = globalThis.lgs.settings.ui.replay.camera
+            journey.replay = {
+                ...(journey.replay ?? {}),
+                expert: {
+                    ...(journey.replay?.expert ?? {}),
+                    camera: {cameraAngle},
+                },
+            }
 
             const setView = vi.fn(options => {
                 globalThis.lgs.viewer.camera.position = options.destination

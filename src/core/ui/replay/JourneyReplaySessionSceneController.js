@@ -400,6 +400,68 @@ export const setReplayPreparationPivot = (mode, sample) => {
     return pivot
 }
 
+/**
+ * Record the physical camera height while Replay owns the Cesium camera.
+ *
+ * @param {Object} mode - Replay session mode.
+ * @returns {number|null} Highest recorded camera altitude.
+ */
+export const recordReplayCameraAltitude = mode => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    if (!state.replayCameraAltitudeTracking) {
+        return finiteNumber(state.maxReplayCameraAltitude)
+    }
+
+    const height = finiteNumber(replayCameraFor(mode)?.positionCartographic?.height)
+    if (height !== null) {
+        state.maxReplayCameraAltitude = Math.max(
+            finiteNumber(state.maxReplayCameraAltitude) ?? height,
+            height,
+        )
+    }
+
+    return finiteNumber(state.maxReplayCameraAltitude)
+}
+
+/**
+ * Track the highest physical Cesium camera altitude for the current Replay.
+ *
+ * @param {Object} mode - Replay session mode.
+ * @returns {number|null} Initial recorded camera altitude.
+ */
+export const startReplayCameraAltitudeTracking = mode => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    stopReplayCameraAltitudeTracking(mode)
+    state.maxReplayCameraAltitude = null
+    state.replayCameraAltitudeTracking = true
+    recordReplayCameraAltitude(mode)
+
+    const scene = mode[JOURNEY_REPLAY_INTERNAL_CALL].cesiumScene?.()
+    const sampleAltitude = () => recordReplayCameraAltitude(mode)
+    const removeListener = scene?.postRender?.addEventListener?.(sampleAltitude)
+    state.replayCameraAltitudeTrackingRemove = typeof removeListener === 'function'
+        ? removeListener
+        : typeof scene?.postRender?.removeEventListener === 'function'
+            ? () => scene.postRender.removeEventListener(sampleAltitude)
+            : null
+
+    return finiteNumber(state.maxReplayCameraAltitude)
+}
+
+/**
+ * Stop recording Replay camera altitude and release its Cesium render listener.
+ *
+ * @param {Object} mode - Replay session mode.
+ * @returns {number|null} Highest recorded camera altitude.
+ */
+export const stopReplayCameraAltitudeTracking = mode => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    state.replayCameraAltitudeTracking = false
+    state.replayCameraAltitudeTrackingRemove?.()
+    state.replayCameraAltitudeTrackingRemove = null
+    return finiteNumber(state.maxReplayCameraAltitude)
+}
+
 export const captureCameraState = (mode, {sample = null} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -444,13 +506,6 @@ export const captureCameraState = (mode, {sample = null} = {}) => {
                 : null,
         }
         state.savedCameraState = acquireReplayCameraOwnership(mode, camera, captured)
-        if (currentJourneyReplayCameraSettings().debug) {
-            console.debug('[Replay camera] saved normal view', {
-                destination: {...state.savedCameraState.destination},
-                orientation: {...state.savedCameraState.orientation},
-                transform: state.savedCameraState.worldPose?.transform?.slice() ?? null,
-            })
-        }
         return state.savedCameraState
     }
 
@@ -540,6 +595,7 @@ export const restorePlaybackSceneInternal = (mode, ) => {
             return state.sceneRestorePromise
         }
 
+        call.stopReplayCameraAltitudeTracking?.()
         // Clear the replay renderer before focus and visibility restoration so
         // normal completion and premature aborts cannot leave replay graphics visible.
         state.renderer.clear()
@@ -658,14 +714,6 @@ export const restoreCameraState = (mode, {clear = true, cameraState = null} = {}
             }
         }
         if (clear && cameraState === null) {
-            if (currentJourneyReplayCameraSettings().debug) {
-                console.debug('[Replay camera] restored normal view', {
-                    destination: {...savedCameraState.destination},
-                    orientation: {...savedCameraState.orientation},
-                    actualHeight: camera.positionCartographic?.height,
-                    referenceFrameRestored: !worldPose || Matrix4.equalsEpsilon(camera.transform, Matrix4.fromArray(worldPose.transform), 1e-10),
-                })
-            }
             state.savedCameraState = null
             releaseReplayCameraOwnership(mode)
         }
@@ -845,6 +893,7 @@ export const bindRenderer = (mode, ) => {
                     traceStep('hide-journey-toolbar.end')
                     traceStep('set-continuous-render.begin')
                     call.setContinuousRender(true)
+                    call.startReplayCameraAltitudeTracking()
                     traceStep('set-continuous-render.end')
                     traceStep('renderer.show.begin')
                     state.renderer.show({
@@ -861,6 +910,7 @@ export const bindRenderer = (mode, ) => {
                         ...detail,
                         forceGeometry: true,
                         hideTrace: true,
+                        syncCursorToTrace: true,
                         showTrace: isJourneyReplayTraceActive(),
                     })
                     traceStep('renderer.update.end')
@@ -884,6 +934,7 @@ export const bindRenderer = (mode, ) => {
                                                    immediateToleranceRecenter: true,
                                                    logicalCamera:             isJourneyReplayVideoCaptureActive(),
                                                })
+                            call.recordReplayCameraAltitude()
                             traceStep('update-camera.end')
                         }
                         updateReplayFrameRenderContract({
@@ -936,6 +987,7 @@ export const bindRenderer = (mode, ) => {
                     state.renderer.update({
                         ...detail,
                         sampler: state.sampler,
+                        syncCursorToTrace: true,
                         showTrace: isJourneyReplayTraceActive(),
                     })
                     traceUpdateStep('renderer.update.end')
@@ -962,6 +1014,7 @@ export const bindRenderer = (mode, ) => {
                         source:        'playback',
                         logicalCamera: videoCaptureActive,
                     })
+                    call.recordReplayCameraAltitude()
                     updateReplayFrameRenderContract({
                         logicalFrame: detail?.logicalFrame,
                     })
@@ -982,7 +1035,12 @@ export const bindRenderer = (mode, ) => {
                 state.lastPlaybackUpdateProgressKey = null
                 call.setContinuousRender(false)
                 try {
-                    state.renderer.update({...detail, freezeDynamic: true, showTrace: isJourneyReplayTraceActive()})
+                    state.renderer.update({
+                        ...detail,
+                        freezeDynamic: true,
+                        showTrace: isJourneyReplayTraceActive(),
+                        syncCursorToTrace: true,
+                    })
                     updateReplayFrameRenderContract({
                         logicalFrame: detail?.logicalFrame,
                     })
@@ -995,11 +1053,17 @@ export const bindRenderer = (mode, ) => {
                 try {
                     state.lastPlaybackUpdateProgressKey = null
                     call.setContinuousRender(true)
-                    state.renderer.update({...detail, forceGeometry: true, showTrace: isJourneyReplayTraceActive()})
+                    state.renderer.update({
+                        ...detail,
+                        forceGeometry: true,
+                        showTrace: isJourneyReplayTraceActive(),
+                        syncCursorToTrace: true,
+                    })
                     call.updateCamera({
                         ...detail,
                         logicalCamera: isJourneyReplayVideoCaptureActive(),
                     })
+                    call.recordReplayCameraAltitude()
                     updateReplayFrameRenderContract({
                         logicalFrame: detail?.logicalFrame,
                     })
@@ -1010,6 +1074,7 @@ export const bindRenderer = (mode, ) => {
             }),
             state.controller.on(REPLAY_EVENT_STOP, () => {
                 state.lastPlaybackUpdateProgressKey = null
+                call.stopReplayCameraAltitudeTracking()
                 state.clipSequenceToken++
                 call.stopStopClipPOIMaskLoop()
                 call.setContinuousRender(false)

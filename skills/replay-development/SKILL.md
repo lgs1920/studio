@@ -42,6 +42,7 @@ Preserve these boundaries:
 - Qualification and readiness work must be cancellable and bounded; slider
   interaction must not synchronously compile a complete trajectory.
 - Follow [the normal Cesium and Replay camera ownership rules](../../PROJECT_RULES.md#normal-cesium-and-replay-camera-ownership).
+  Store Replay height, pitch, and camera angle in the active Journey's Simple or Expert camera data. Global Replay settings omit height and pitch and keep camera angle at the initial value `0`. A Journey without saved camera pose starts from the active Cesium height and pitch, then saves those values on the Journey; migrate legacy angle fields on the Journey instead of falling back to global settings.
   Entering video preparation stops and awaits normal map rotation and presents
   a North-oriented view of the canonical departure using Replay pitch and height.
   Only this explicit entry boundary frames the map, after successful preparation

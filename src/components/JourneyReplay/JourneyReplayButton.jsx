@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { REPLAY_DRAWER } from '@Core/constants'
-import { REPLAY_LABEL } from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import { REPLAY_LABEL, REPLAY_INITIAL_CAMERA_ANGLE, toGlobalReplayCameraSettings } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     hasExpertReplayConfiguration,
     initializeExpertReplayFromSimple,
@@ -78,10 +78,35 @@ export const JourneyReplayButton = (props) => {
                 journey: journey.replay?.simple,
                 user: lgs.settings.ui.replay.simple,
             })
+            const journeyReplay = journey.replay ?? {}
+            const journeySimple = journeyReplay.simple ?? {}
+            const journeySimpleCamera = journeySimple.camera ?? {}
+            const hasSavedSimpleAngle = journeySimpleCamera.cameraAngle !== null
+                && journeySimpleCamera.cameraAngle !== undefined
+                && Number.isFinite(Number(journeySimpleCamera.cameraAngle))
+            const hasLegacySimpleAngle = ['ahead', 'behind'].includes(journeySimpleCamera.positionMode)
+            if (!hasSavedSimpleAngle) {
+                journey.replay = {
+                    ...journeyReplay,
+                    simple: {
+                        ...journeySimple,
+                        camera: {
+                            ...journeySimpleCamera,
+                            cameraAngle: hasLegacySimpleAngle
+                                ? simple.camera.cameraAngle
+                                : REPLAY_INITIAL_CAMERA_ANGLE,
+                        },
+                    },
+                }
+                void journey.persistToDatabase?.()
+            }
             lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_BASIC
             lgs.stores.replay.userMode = REPLAY_USER_MODE_BASIC
-            lgs.settings.ui.replay.simple = simple
-            lgs.settings.ui.replay.camera = simple.camera
+            lgs.settings.ui.replay.simple = {
+                ...simple,
+                camera: toGlobalReplayCameraSettings(simple.camera),
+            }
+            lgs.settings.ui.replay.camera = toGlobalReplayCameraSettings(simple.camera)
             lgs.stores.replay.camera = simple.camera
             lgs.stores.replay.duration = simple.duration
             lgs.stores.replay.simplePreparationActive = true
@@ -120,18 +145,33 @@ export const JourneyReplayButton = (props) => {
             const expertReplay = journey?.replay?.expert
             const expertCamera = normalizeExpertReplayCamera(expertReplay?.camera)
             if (expertReplay) {
+                const savedCamera = expertReplay.camera ?? {}
+                const hasSavedAngle = savedCamera.cameraAngle !== null
+                    && savedCamera.cameraAngle !== undefined
+                    && Number.isFinite(Number(savedCamera.cameraAngle))
+                const hasLegacyAngle = ['ahead', 'behind'].includes(savedCamera.positionMode)
+                const persistedCamera = {...expertCamera}
+                if (savedCamera.altitude === null || savedCamera.altitude === undefined) {
+                    delete persistedCamera.altitude
+                }
+                if (savedCamera.pitch === null || savedCamera.pitch === undefined) {
+                    delete persistedCamera.pitch
+                }
+                persistedCamera.cameraAngle = hasSavedAngle
+                    ? expertCamera.cameraAngle
+                    : hasLegacyAngle ? expertCamera.cameraAngle : REPLAY_INITIAL_CAMERA_ANGLE
                 shouldPersistExpertCamera = shouldPersistExpertCamera
-                                          || expertReplay.camera?.cameraAngle !== expertCamera.cameraAngle
+                                          || (!hasSavedAngle && !hasLegacyAngle)
                                           || expertReplay.camera?.positionMode !== undefined
                                           || expertReplay.camera?.headingOffset !== undefined
                                           || expertReplay.camera?.heading !== undefined
-                expertReplay.camera = expertCamera
+                expertReplay.camera = persistedCamera
             }
             if (shouldPersistExpertCamera) {
                 void journey?.persistToDatabase?.()
             }
             if (expertCamera) {
-                lgs.settings.ui.replay.camera = expertCamera
+                lgs.settings.ui.replay.camera = toGlobalReplayCameraSettings(expertCamera)
                 lgs.stores.replay.camera = expertCamera
             }
             lgs.stores.replay.duration = lgs.settings.ui.replay.duration

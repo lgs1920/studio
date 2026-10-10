@@ -20,6 +20,7 @@ import {
     DEFAULT_REPLAY_PROFILE_INFO,
     DEFAULT_SIMPLE_REPLAY_DURATION,
     REPLAY_MARKER_MODE_NAVIGATION,
+    REPLAY_INITIAL_CAMERA_ANGLE,
     REPLAY_TRACE_MODE_PROGRESSIVE,
     defaultJourneyReplayCameraStyle,
     defaultJourneyReplayMarkerStyle,
@@ -30,6 +31,7 @@ import {
     normalizeJourneyReplayProfileInfo,
     normalizeJourneyReplayTrace,
     normalizeSimpleReplayDuration,
+    toGlobalReplayCameraSettings,
 } from './JourneyReplayProgressionStyle'
 
 import {
@@ -43,6 +45,16 @@ export {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT}
 export const DEFAULT_REPLAY_USER_MODE = REPLAY_USER_MODE_BASIC
 
 const clone = value => JSON.parse(JSON.stringify(value))
+const hasFiniteCameraValue = value => value !== null && value !== undefined && Number.isFinite(Number(value))
+const journeyReplayCameraAngle = camera => {
+    if (hasFiniteCameraValue(camera?.cameraAngle)) {
+        return Number(camera.cameraAngle)
+    }
+    if (camera?.positionMode === 'ahead' || camera?.positionMode === 'behind') {
+        return normalizeJourneyReplayCamera(camera).cameraAngle
+    }
+    return REPLAY_INITIAL_CAMERA_ANGLE
+}
 const expertCameraPersistTimers = new WeakMap()
 const expertProgressionPersistTimers = new WeakMap()
 const simpleCameraPersistTimers = new WeakMap()
@@ -74,12 +86,13 @@ export const normalizeExpertReplayCamera = camera => normalizeJourneyReplayCamer
  * after a short quiet period so slider movement does not write every frame.
  *
  * @param {Object} camera - Complete normalized camera settings.
+ * @param {Object|null} [journeyOverride=null] - Journey receiving the settings.
  * @returns {Object|null} The synchronized camera, or null outside Expert mode.
  */
-export const syncJourneyExpertReplayCamera = (camera) => {
+export const syncJourneyExpertReplayCamera = (camera, journeyOverride = null) => {
     const lgs = globalThis.lgs
     const replaySettings = lgs?.settings?.ui?.replay
-    const journey = currentReplayJourney()
+    const journey = journeyOverride ?? currentReplayJourney()
     if (resolveJourneyReplayUserMode() !== REPLAY_USER_MODE_EXPERT || !journey || !replaySettings) {
         return null
     }
@@ -109,7 +122,7 @@ export const syncJourneyExpertReplayCamera = (camera) => {
             camera: nextCamera,
         },
     }
-    replaySettings.camera = nextCamera
+    replaySettings.camera = toGlobalReplayCameraSettings(nextCamera)
     if (lgs?.stores?.replay) {
         lgs.stores.replay.camera = nextCamera
     }
@@ -173,20 +186,21 @@ export const syncJourneyExpertReplayProgression = progression => {
 }
 
 /**
- * Keep an explicitly configured journey Simple camera in sync with its live
- * preparation edits, then persist it after a short quiet period.
+ * Keep the current journey's Simple camera in sync with its live edits, then
+ * persist it after a short quiet period.
  *
  * @param {Object} camera - Complete normalized camera settings.
- * @returns {Object|null} The synchronized camera, or null without journey-level Simple settings.
+ * @param {Object|null} [journeyOverride=null] - Journey receiving the settings.
+ * @returns {Object|null} The synchronized camera, or null without a journey.
  */
-export const syncJourneySimpleReplayCamera = (camera) => {
-    const journey = currentReplayJourney()
-    const replay = journey?.replay
-    const simple = replay?.simple
-    if (!journey || !simple || typeof simple !== 'object') {
+export const syncJourneySimpleReplayCamera = (camera, journeyOverride = null) => {
+    const journey = journeyOverride ?? currentReplayJourney()
+    if (!journey) {
         return null
     }
 
+    const replay = journey.replay ?? {}
+    const simple = replay.simple && typeof replay.simple === 'object' ? replay.simple : {}
     const nextCamera = normalizeJourneyReplayCamera(Object.assign({}, simple.camera, camera, {debug: false}))
     journey.replay = {
         ...replay,
@@ -194,6 +208,17 @@ export const syncJourneySimpleReplayCamera = (camera) => {
             ...simple,
             camera: nextCamera,
         },
+    }
+
+    const replaySettings = globalThis.lgs?.settings?.ui?.replay
+    if (replaySettings) {
+        replaySettings.camera = toGlobalReplayCameraSettings(nextCamera)
+        if (replaySettings.simple?.camera && typeof replaySettings.simple.camera === 'object') {
+            replaySettings.simple = {
+                ...replaySettings.simple,
+                camera: toGlobalReplayCameraSettings(nextCamera),
+            }
+        }
     }
 
     if (typeof journey.persistToDatabase === 'function') {
@@ -331,19 +356,27 @@ export const syncJourneySimpleReplayDuration = duration => {
 }
 
 /**
+ * Build first-run Simple camera defaults without a Journey-saved pose.
+ *
+ * @returns {Object} Simple Replay camera controls and the initial angle.
+ */
+const defaultSimpleReplayCamera = () => {
+    const camera = defaultJourneyReplayCameraStyle()
+    delete camera.altitude
+    delete camera.pitch
+    delete camera.groundOffset
+    camera.cameraAngle = REPLAY_INITIAL_CAMERA_ANGLE
+    return camera
+}
+
+/**
  * Return product defaults for the compact Simple Replay workflow.
  *
  * @returns {Object} Simple Replay defaults.
  */
 export const defaultSimpleReplaySettings = () => ({
     duration: DEFAULT_SIMPLE_REPLAY_DURATION,
-    camera: {
-        ...defaultJourneyReplayCameraStyle(),
-        altitudeMode: DEFAULT_REPLAY_CAMERA.altitudeMode,
-        altitude: DEFAULT_REPLAY_CAMERA.altitude,
-        cameraAngle: DEFAULT_REPLAY_CAMERA.cameraAngle,
-        pitch: DEFAULT_REPLAY_CAMERA.pitch,
-    },
+    camera: defaultSimpleReplayCamera(),
     presentation: {
         progression: {
             ...clone(DEFAULT_REPLAY_PROGRESSION),
@@ -386,9 +419,9 @@ export const normalizeSimpleReplaySettings = (settings = {}) => {
         ...(settings?.camera ?? {}),
     }
     const savedCameraAngle = settings?.camera?.cameraAngle
-    if (savedCameraAngle === null || savedCameraAngle === undefined || !Number.isFinite(Number(savedCameraAngle))) {
-        cameraSettings.cameraAngle = undefined
-    }
+    cameraSettings.cameraAngle = hasFiniteCameraValue(savedCameraAngle)
+        ? savedCameraAngle
+        : REPLAY_INITIAL_CAMERA_ANGLE
     const camera = normalizeJourneyReplayCamera({
         ...cameraSettings,
         debug: false,
@@ -443,6 +476,10 @@ export const resolveSimpleReplaySettings = ({journey, user, product} = {}) => no
         ...(product?.camera ?? {}),
         ...(user?.camera ?? {}),
         ...(journey?.camera ?? {}),
+        altitude: journey?.camera?.altitude ?? journey?.camera?.groundOffset
+            ?? product?.camera?.altitude ?? DEFAULT_REPLAY_CAMERA.altitude,
+        pitch: journey?.camera?.pitch ?? product?.camera?.pitch ?? DEFAULT_REPLAY_CAMERA.pitch,
+        cameraAngle: journeyReplayCameraAngle(journey?.camera),
     },
     presentation: {
         ...(product?.presentation ?? {}),
@@ -485,10 +522,22 @@ export const initializeExpertReplayFromSimple = (journey, simple) => {
         return replay
     }
 
+    const savedSimpleCamera = journey?.replay?.simple?.camera ?? {}
+    const camera = normalizeExpertReplayCamera({
+        ...simple?.camera,
+        cameraAngle: journeyReplayCameraAngle(savedSimpleCamera),
+    })
+    if (!hasFiniteCameraValue(savedSimpleCamera.altitude ?? savedSimpleCamera.groundOffset)) {
+        delete camera.altitude
+    }
+    if (!hasFiniteCameraValue(savedSimpleCamera.pitch)) {
+        delete camera.pitch
+    }
+
     return {
         ...replay,
         expert: {
-            camera: normalizeExpertReplayCamera(simple?.camera),
+            camera,
             progression: normalizeJourneyReplayProgressionStyle(simple?.presentation?.progression),
             profileInfo: normalizeJourneyReplayProfileInfo(simple?.presentation?.profileInfo),
         },

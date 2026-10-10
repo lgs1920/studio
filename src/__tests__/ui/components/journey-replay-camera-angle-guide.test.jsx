@@ -237,12 +237,12 @@ describe('JourneyReplayCameraAngleGuide component', () => {
         await waitFor(() => {
             expect(guideHarness.mount).toHaveBeenCalledWith(
                 expect.anything(),
-                expect.objectContaining({angleDegrees: 180}),
+                expect.objectContaining({angleDegrees: 0}),
                 {},
                 expect.objectContaining({onCameraChange: expect.any(Function), screenLocked: true}),
             )
             expect(guideHarness.resolve).toHaveBeenLastCalledWith(expect.objectContaining({
-                camera: expect.objectContaining({cameraAngle: 180}),
+                camera: expect.objectContaining({cameraAngle: 0}),
             }))
         })
 
@@ -254,7 +254,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
 
         await waitFor(() => {
             expect(guideHarness.resolve).toHaveBeenLastCalledWith(expect.objectContaining({
-                camera: expect.objectContaining({cameraAngle: 180}),
+                camera: expect.objectContaining({cameraAngle: 0}),
                 sample,
             }))
         })
@@ -329,7 +329,8 @@ describe('JourneyReplayCameraAngleGuide component', () => {
             guideHarness.mount.mock.calls.at(-1)[3].onCameraChange({altitude: 600, cameraAngle: -150})
         })
 
-        expect(settings.simple.camera).toMatchObject({altitude: 600, cameraAngle: -150})
+        expect(settings.simple.camera).not.toHaveProperty('altitude')
+        expect(settings.simple.camera.cameraAngle).toBe(0)
         expect(journey.replay.simple.camera).toMatchObject({altitude: 600, cameraAngle: -150})
         expect(globalThis.lgs.stores.replay.camera).toMatchObject({altitude: 600, cameraAngle: -150})
         expect(refresh).not.toHaveBeenCalled()
@@ -368,7 +369,8 @@ describe('JourneyReplayCameraAngleGuide component', () => {
             })
         })
 
-        expect(settings.camera).toMatchObject({altitude: 900, cameraAngle: -40})
+        expect(settings.camera).not.toHaveProperty('altitude')
+        expect(settings.camera.cameraAngle).toBe(0)
         expect(journey.replay.expert.camera).toMatchObject({altitude: 900, cameraAngle: -40})
         expect(globalThis.lgs.stores.replay.camera).toMatchObject({altitude: 900, cameraAngle: -40})
         expect(refresh).not.toHaveBeenCalled()
