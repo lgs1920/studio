@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,12 +27,13 @@ import {
     currentJourneyReplayPoiBehavior, finiteNumber, replayStore,
 } from './JourneyReplayRuntime'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
+import {currentReplayJourney} from './ReplayUserModeConstants'
 
 export const hideOtherJourneysVisibility = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const currentJourneySlug = globalThis.lgs?.theJourney?.slug ?? null
+        const currentJourneySlug = currentReplayJourney()?.slug ?? null
         const journeys = globalThis.lgs?.journeys
         if (!journeys?.values) {
             return
@@ -47,8 +48,8 @@ export const hideOtherJourneysVisibility = (mode) => {
                 state.hiddenJourneyVisibility.set(journey.slug, journey.visible !== false)
             }
 
-            // Other journeys keep their original persisted state in the
-            // visibility map and are restored when replay ends.
+            // Keep each original state so it can be restored if the hide
+            // preference is later disabled.
             journey.visible = false
             journey.updateVisibility?.(false)
         }
@@ -60,7 +61,7 @@ export const hideCurrentJourneyVisibility = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const journey = globalThis.lgs?.theJourney
+        const journey = currentReplayJourney()
         if (!journey) {
             return
         }
@@ -87,7 +88,7 @@ export const restoreCurrentJourneyVisibility = (mode, {restorePOIs = true} = {})
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const journey = globalThis.lgs?.theJourney
+        const journey = currentReplayJourney()
         if (!journey) {
             return
         }
@@ -95,7 +96,7 @@ export const restoreCurrentJourneyVisibility = (mode, {restorePOIs = true} = {})
         const editorJourney = globalThis.lgs?.theJourneyEditorProxy?.journey ?? null
         state.hiddenJourneyVisibility.delete(journey.slug)
         journey.visible = true
-        if (editorJourney) {
+        if (editorJourney?.slug === journey.slug) {
             editorJourney.visible = true
         }
         call.persistCurrentJourneyVisibility(journey)
@@ -475,7 +476,7 @@ export const restoreOtherJourneysVisibility = (mode, {respectReplaySetting = tru
             return
         }
 
-        const currentJourneySlug = globalThis.lgs?.theJourney?.slug ?? null
+        const currentJourneySlug = currentReplayJourney()?.slug ?? null
         for (const [slug, visible] of state.hiddenJourneyVisibility.entries()) {
             if (slug === currentJourneySlug) {
                 state.hiddenJourneyVisibility.delete(slug)

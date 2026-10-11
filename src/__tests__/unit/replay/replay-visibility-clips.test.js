@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,10 @@
 
 import { REPLAY_DRAWER }                                           from '@Core/constants'
 import { createJourneyReplayClipInstance }                                from '@Core/ui/replay/JourneyReplayClips'
+import {
+    JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE,
+}                                                                      from '@Core/ui/replay/JourneyReplayInternal'
+import {hideOtherJourneysVisibility}                                     from '@Core/ui/replay/JourneyReplayVisibilityController'
 import {
     replayAngularDelta, replayCameraHeadingForPositionMode, replayCameraHeadingWithHysteresis,
     replayCameraRangeFromPitch, replayCameraRecenterDuration, replayCameraRecenterHeight,
@@ -60,6 +64,51 @@ import {makeJourney, makeTrack} from './replay-phase1-fixtures'
 const defaultJourneyReplaySettings = () => ({...productReplaySettings(), userMode: 'expert'})
 
 describe('replay visibility and clips', () => {
+
+    it('keeps the Replay-selected journey visible when the legacy selection differs', () => {
+        const replayJourney = makeJourney([
+            makeTrack({slug: 'track#journey#replay#main', coordinates: [[2, 48, 120], [2.001, 48.001, 130]]}),
+        ])
+        const legacyJourney = makeJourney([
+            makeTrack({slug: 'track#journey#legacy#main', coordinates: [[3, 47, 90], [3.001, 47.001, 100]]}),
+        ])
+        replayJourney.slug = 'journey-replay-selected'
+        legacyJourney.slug = 'journey-legacy-selected'
+        replayJourney.visible = true
+        legacyJourney.visible = true
+        replayJourney.updateVisibility = vi.fn(visible => {
+            replayJourney.visible = visible
+        })
+        legacyJourney.updateVisibility = vi.fn(visible => {
+            legacyJourney.visible = visible
+        })
+        const previousLgs = globalThis.lgs
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {},
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {hiddenJourneyVisibility: new Map()},
+        }
+
+        globalThis.lgs = {
+            theJourney: legacyJourney,
+            journeys: new Map([
+                [replayJourney.slug, replayJourney],
+                [legacyJourney.slug, legacyJourney],
+            ]),
+            stores: {main: {theJourney: replayJourney}},
+            scene: {requestRender: vi.fn()},
+        }
+
+        try {
+            hideOtherJourneysVisibility(mode)
+
+            expect(replayJourney.visible).toBe(true)
+            expect(legacyJourney.updateVisibility).toHaveBeenCalledWith(false)
+            expect(legacyJourney.visible).toBe(false)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
 
     it('restores the normal camera without focusing the journey when stopping Replay', () => {
         const journey = makeJourney([
