@@ -2,7 +2,7 @@
 
 Status: current implementation inventory; see the implementation status for known gaps
 
-Date: 2026-08-24
+Date: 2026-10-11
 
 ## Purpose
 
@@ -55,18 +55,28 @@ locking, or capturing the normal map camera or changing its geographic pivot. Dr
 timeline seeks cannot apply a camera update without a playback camera lease;
 the session call bridge enforces this boundary.
 
-At playback or capture start, the session leases its physical render-target
-camera and saves the current normal view separately from the Replay entry pose.
-Replay applies its configured angle, pitch, and height before start clips.
+On first successful video-preparation entry, the session keeps the existing
+normal camera pose for restoring when preparation is exited, without taking a
+camera lease. At playback or capture start, it leases the physical
+render-target camera and saves that camera's current view separately from the
+preparation-exit view and the Replay entry pose. In video preparation this is
+the displayed preparation view; when playback starts outside preparation it
+is the current normal view. An isolated export lease snapshots only its own
+camera and leaves the main map camera alone. Replay applies its configured
+angle, pitch, and height before start clips.
 The normal camera manager suspends reads and persistence while the main camera
 is leased. A lifecycle revision rejects asynchronous reads that overlap a lease.
 Isolated export cameras acquire their own leases and leave main-view persistence
 independent.
 
-Completion, cancellation, and disposal restore the saved world-space position,
-direction, up vector, Cesium reference frame, and map pivot before
-releasing ownership. No journey focus flight runs during handback. Reentrant starts retain the original return view. A stale
-session cannot restore or release a camera borrowed by a newer session.
+Playback completion, cancellation, and error restore the saved preparation
+view (or the current normal view when playback began outside preparation),
+including world-space position, direction, up vector, Cesium reference frame,
+and map pivot before releasing ownership. Exiting or disposing video
+preparation restores the normal view captured before preparation. No journey
+focus flight runs during handback. Reentrant starts retain the original return
+view. A stale session cannot restore or release a camera borrowed by a newer
+session.
 A successful new preparation invalidates the Replay settings baseline from an
 earlier preview, while retaining its normal-camera return snapshot. Recording
 cleanup cannot persist the older baseline over newer preparation edits. Pending
@@ -77,7 +87,7 @@ settings enable them. Expert Replay exposes the diagnostics setting.
 Diagnostics label ground offset separately from absolute Replay height.
 Recording diagnostics report the altitude mode, configured pitch, altitude,
 and angle alongside the rendered marker height and applied Cesium entry pose.
-Deferred export context uses Replay entry state only and never the normal return
+Deferred export context uses Replay entry state only and never a camera return
 snapshot or an arbitrary live map view.
 
 Simple Replay adds a fixed four-second trace-centroid focus phase after its

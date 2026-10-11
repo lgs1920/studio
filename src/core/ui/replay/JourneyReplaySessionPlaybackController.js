@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -66,7 +66,7 @@ import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './Jou
 import * as JourneyReplayVisibilityController from './JourneyReplayVisibilityController'
 import * as JourneyReplayClipController from './JourneyReplayClipController'
 import {
-    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForAngle, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
+    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForAngle, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
     REPLAY_SCOPE_ALL_TRACKS, JourneyReplayPathSampler,
@@ -427,27 +427,15 @@ export const enterReplayPreparation = async (mode, {
     const preparationSucceeded = prepared === true && isCurrentTransition()
     if (preparationSucceeded) {
         const camera = globalThis.lgs?.viewer?.camera ?? globalThis.lgs?.camera
-        const cameraSettings = currentJourneyReplayCameraSettings({journey})
-        // Entry is the single explicit framing boundary. Later guide refreshes
-        // leave mouse navigation intact and never recenter the preparation view.
         const sample = state.replayPreparationSample
-        const frame = call.cameraRecenterFrame?.({
-            sample,
-            heading: 0,
-            pitch: degreesToRadians(cameraSettings.pitch),
-            cameraSettings,
-            cameraHeight: call.cameraAltitudeForSample?.(sample, cameraSettings),
-        })
-        if (frame && typeof camera?.setView === 'function') {
-            state.cameraApplyingView = true
-            try {
-                camera.cancelFlight?.()
-                camera.setView({destination: frame.destination, orientation: {direction: frame.direction, up: frame.correctedUp}})
-                call.cesiumScene?.()?.requestRender?.()
+        // Keep the original map pose for leaving preparation, then use the same
+        // route-aligned view that playback applies at progress zero.
+        if (sample && camera) {
+            if (!state.preparationExitCameraState) {
+                state.preparationExitCameraState = call.captureCameraSnapshot?.({camera}) ?? null
             }
-            finally {
-                state.cameraApplyingView = false
-            }
+            call.placeCameraAtPlaybackStart?.(sample, 0)
+            call.cesiumScene?.()?.requestRender?.()
         }
     }
     return preparationSucceeded
@@ -477,12 +465,25 @@ export const leaveReplayPreparation = (mode) => {
     call.restoreCurrentJourneyVisibility?.()
     call.setJourneyReplayOrbitAllowed?.(true)
 
-    const restored = call.restoreCameraState?.() === true
+    const preparationExitCameraState = state.preparationExitCameraState
+    const ownedCamera = replayOwnedCameraFor(mode)
+    const mainCamera = globalThis.lgs?.viewer?.camera ?? globalThis.lgs?.camera
+    let restored = ownedCamera ? call.restoreCameraState?.() === true : false
+    if (preparationExitCameraState) {
+        restored = call.restoreCameraState?.({
+            cameraState: preparationExitCameraState,
+            targetCamera: mainCamera,
+        }) === true || restored
+    }
+    else if (!ownedCamera) {
+        restored = call.restoreCameraState?.() === true
+    }
     call.stopReplayCameraAltitudeTracking?.()
     state.replayCameraPrepared = false
     state.replayPreparationSample = null
     state.replayEntryCameraState = null
     state.savedCameraState = null
+    state.preparationExitCameraState = null
     return restored
 }
 
@@ -931,7 +932,7 @@ export const refresh = (mode, {
     }
 
 /**
- * Refresh the configured departure guide without moving the normal camera.
+ * Refresh the configured departure guide and, when preparation is active, its camera.
  *
  * @param {Object} mode - Replay session mode.
  * @param {Object} sample - Departure sample.
@@ -959,6 +960,12 @@ const refreshPreparationCamera = (mode, sample, options = {}) => {
         return false
     }
 
+    if (state.preparationExitCameraState
+        && globalThis.lgs?.stores?.ui?.video?.editing === true
+        && !replayOwnedCameraFor(mode)) {
+        call.placeCameraAtPlaybackStart?.(sample, 0)
+    }
+
     if (options.source === 'keyboard') {
         call.persistCameraSettings?.(cameraSettings)
     }
@@ -972,7 +979,10 @@ export const refreshCamera = (mode, options = {}) => {
         const journey = globalThis.lgs?.theJourney
             ?? globalThis.lgs?.stores?.main?.theJourney
         let sample = null
-        if (options.preparation === true) {
+        const preparationCameraActive = state.preparationExitCameraState
+            && globalThis.lgs?.stores?.ui?.video?.editing === true
+            && !replayOwnedCameraFor(mode)
+        if (options.preparation === true || preparationCameraActive) {
             const sampler = state.sampler
                 ?? (journey ? call.configure?.({journey, progress: 0}) : null)
             sample = state.replayPreparationSample

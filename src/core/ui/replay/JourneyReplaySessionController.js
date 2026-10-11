@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -220,6 +220,7 @@ export class JourneyReplaySessionController {
     #lastCameraTimingWallNow = null
     #cameraTimingChange = null
     #savedCameraState = null
+    #preparationExitCameraState = null
     #replayEntryCameraState = null
     #playbackStartCameraSettings = null
     #cameraStateRestoredBeforeSceneCleanup = false
@@ -515,6 +516,13 @@ export class JourneyReplaySessionController {
             get: () => this.#savedCameraState,
             set: value => {
                 this.#savedCameraState = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'preparationExitCameraState', {
+            configurable: true,
+            get: () => this.#preparationExitCameraState,
+            set: value => {
+                this.#preparationExitCameraState = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'playbackStartCameraSettings', {
@@ -992,6 +1000,7 @@ export class JourneyReplaySessionController {
             focusJourneyAfterPlayback: (...args) => JourneyReplayClipController.focusJourneyAfterPlayback(this, ...args),
             resetCameraController: (...args) => JourneyReplaySessionSceneController.resetCameraController(this, ...args),
             captureCameraState: (...args) => JourneyReplaySessionSceneController.captureCameraState(this, ...args),
+            captureCameraSnapshot: (...args) => JourneyReplaySessionSceneController.captureCameraSnapshot(this, ...args),
             startReplayCameraAltitudeTracking: (...args) => JourneyReplaySessionSceneController.startReplayCameraAltitudeTracking(this, ...args),
             stopReplayCameraAltitudeTracking: (...args) => JourneyReplaySessionSceneController.stopReplayCameraAltitudeTracking(this, ...args),
             recordReplayCameraAltitude: (...args) => JourneyReplaySessionSceneController.recordReplayCameraAltitude(this, ...args),
