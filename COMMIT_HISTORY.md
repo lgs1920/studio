@@ -3382,3 +3382,35 @@
 ## 2026-10-10 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/8b5ea98882a4f51454aae719a283a4f7ba124afd)
 
 - Recorded automatically from Git history.
+
+## 2026-10-11 — [`fix(replay): keep selected journey visible during preparation`](https://github.com/lgs1920/studio/commit/0748cda0d7f3ed8c69b0d9acaafb0fe0d2cab91b)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/6a345af8f99b9b7cdbf7a305a5cef28cc2279f14)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`fix(replay): smooth camera motion through tight turns`](https://github.com/lgs1920/studio/commit/e9ab7ca15f1b12505ba88f05827cab2d3a7e2df8)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`fix(poi): bound concurrent canvas rendering`](https://github.com/lgs1920/studio/commit/9f23804c22fe3737e00cd641519fd1a53ba7e15a)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`fix(widgets): keep widgets interactive during replay`](https://github.com/lgs1920/studio/commit/77b702254365cbe875020091b28d6fe9fd018911)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`chore(deps): update timeline and tooling dependencies`](https://github.com/lgs1920/studio/commit/92869fb96ee688c2ab8ced8413c22339830f5c13)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`docs(replay): update implementation status`](https://github.com/lgs1920/studio/commit/c8a5b422886ccae31cd295f1f588a4d6f77fd1cf)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`chore: FA duotone logo`](https://github.com/lgs1920/studio/commit/edf41bd88bd51a34feb0c3eb4282ac4424b67dba)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
