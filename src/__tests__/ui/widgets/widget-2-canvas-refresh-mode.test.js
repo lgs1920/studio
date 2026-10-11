@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-09
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -519,11 +519,18 @@ describe('Widget2Canvas refresh modes', () => {
     })
 
     it('reports failed capture and retries on the next flush', async () => {
-        mirror = new Widget2Canvas(target, {refreshMode: 'manual'})
+        mirror = new Widget2Canvas(target, {refreshMode: 'manual', widgetId: 'capture-error-widget'})
         await mirror.init()
         child.textContent = 'changed'
-        snapdomMock.mockRejectedValueOnce(new Error('Rasterization failed'))
+        const rasterError = new Error('Rasterization failed')
+        snapdomMock.mockRejectedValueOnce(rasterError)
         expect(await mirror.flush({onlyIfDirty: true})).toBe(false)
+        expect(mirror.getCaptureDiagnostics()).toMatchObject({
+            widgetId: 'capture-error-widget',
+            registered: true,
+            visible: true,
+            refreshError: rasterError,
+        })
         expect(await mirror.flush({onlyIfDirty: true})).toBe(true)
         expect(snapdomToCanvasMock).toHaveBeenCalledTimes(2)
     })

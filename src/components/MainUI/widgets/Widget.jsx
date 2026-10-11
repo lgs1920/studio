@@ -418,6 +418,7 @@ const WidgetHost = ({
     const _suppressClickUntil = useRef(0)
     const _w2c = useRef(null)
     const _initialCropDimensionsApplied = useRef(false)
+    const _initializedConfig = useRef(null)
     const previewOnly = useContext(WidgetPreviewContext)
 
     // UI state
@@ -434,6 +435,7 @@ const WidgetHost = ({
     const [collapsedIconFallback, setCollapsedIconFallback] = useState(false)
     const [showLockedHint, setShowLockedHint] = useState(false)
     const [contentResizeLimits, setContentResizeLimits] = useState(null)
+    const [initializationRevision, setInitializationRevision] = useState(0)
 
     // Global stores (valtio)
     const $widget = lgs.stores.ui.widget
@@ -1555,6 +1557,7 @@ const WidgetHost = ({
      * Component Lifecycle: Initialization and Persistence synchronization.
      */
     useEffect(() => {
+        _initializedConfig.current = null
         if (!isVisible || !config || !actualContainer) {
             return
         }
@@ -1644,6 +1647,9 @@ const WidgetHost = ({
             }
 
             const resolved = await __.ui.widgetManager.retrieveConfig(_widget.current, fullConfig)
+            if (cancelled) {
+                return
+            }
 
             // Critical: Force the reactive zIndex over retrieved stale persistence during launch
             resolved.zIndex = activeZIndex
@@ -1652,9 +1658,14 @@ const WidgetHost = ({
 
 
             const success = await __.ui.widgetManager.setupElement(_widget.current, resolved, setBounds, setPosition, _moveable)
+            if (cancelled) {
+                return
+            }
 
             if (success) {
                 _initialized.current = true
+                _initializedConfig.current = config
+                setInitializationRevision(revision => revision + 1)
                 resolved.icon = collapsedIcon
                 __.ui.widgetManager.setConfig(widgetId, resolved)
                 __.ui.widgetCache.mount(widgetId)
@@ -1702,63 +1713,6 @@ const WidgetHost = ({
 
                 _widget.current.style.opacity = liveOpacity
                 lgs.stores.ui.widget.current.rotate = resolved.rotate
-
-                if (interactionLocked) {
-                    let mirror = _w2c.current
-                    if (!_w2c.current) {
-                        mirror = new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
-                            embedFonts:      true,
-                            exclude:         config.captureExclude ?? [],
-                            excludeMode:     'remove',
-                            captureWholeWidget: config.captureWholeWidget ?? false,
-                            scale:           LGS_WIDGET_SCALE_EFFECTIVE,
-                            type:            fullConfig.snap,
-                            outerTransforms: true,
-                            outerShadows:    true,
-                            widgetId,
-                            isVisible: () => {
-                                const entry = lgs.stores.ui.widget.list.get(widgetId)
-                                if (config.widgetsBoard === VIDEO_WIDGETS_BOARD) {
-                                    return resolveVideoOverlayVisibility({widgetId, widgetEl: _widget.current})
-                                }
-                                if (entry?.visible === false && config.canHide !== false) {
-                                    return false
-                                }
-                                return true
-                            },
-                            debugTiming: false,//config.refreshMode === 'both',
-                            refreshMode:     config.refreshMode ?? (interactionLocked ? 'live' : 'mutation'),
-                        })
-                        _w2c.current = mirror
-                        try {
-                            await mirror.init()
-                        }
-                        catch {
-                            mirror.destroy()
-                            if (_w2c.current === mirror) {
-                                _w2c.current = null
-                            }
-                            _widget.current.style.visibility = 'visible'
-                            return
-                        }
-                    }
-                    if (cancelled || _w2c.current !== mirror) {
-                        mirror.destroy()
-                        return
-                    }
-                    const canvas = mirror.getCanvas?.()
-                    if (canvas) {
-                        canvas.style.visibility = 'hidden'
-                    }
-                    if (_widget.current) {
-                        _widget.current.style.visibility = 'visible'
-                    }
-                }
-                else if (_w2c.current) {
-                    _w2c.current.destroy()
-                    _w2c.current = null
-                    _moveable.current?.updateRect()
-                }
             }
             else if (!cancelled) {
                 requestAnimationFrame(init)
@@ -1780,11 +1734,8 @@ const WidgetHost = ({
 
         return () => {
             cancelled = true
+            _initializedConfig.current = null
             clearTimeout(_controlBoxTimer.current)
-            if (_w2c.current) {
-                _w2c.current.destroy()
-                _w2c.current = null
-            }
             if (_initialized.current && _widget.current && !config?.persist) {
                 try {
                     __.ui.widgetManager.disposeElement(_widget.current)
@@ -1796,6 +1747,88 @@ const WidgetHost = ({
             }
         }
     }, [isVisible, config, widgetId, actualContainer])
+
+    useEffect(() => {
+        if (!isVisible || !interactionLocked || !_initialized.current
+            || _initializedConfig.current !== config || !_widget.current) {
+            return undefined
+        }
+
+        let cancelled = false
+        let mirror = null
+        const moveable = _moveable.current
+        const initializeMirror = async () => {
+            if (cancelled || !_widget.current) {
+                return
+            }
+
+            mirror = new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
+                embedFonts:      true,
+                exclude:         config.captureExclude ?? [],
+                excludeMode:     'remove',
+                captureWholeWidget: config.captureWholeWidget ?? false,
+                scale:           LGS_WIDGET_SCALE_EFFECTIVE,
+                type:            config.snap ?? false,
+                outerTransforms: true,
+                outerShadows:    true,
+                widgetId,
+                isVisible: () => {
+                    const entry = lgs.stores.ui.widget.list.get(widgetId)
+                    if (config.widgetsBoard === VIDEO_WIDGETS_BOARD) {
+                        return resolveVideoOverlayVisibility({widgetId, widgetEl: _widget.current})
+                    }
+                    if (entry?.visible === false && config.canHide !== false) {
+                        return false
+                    }
+                    return true
+                },
+                debugTiming: false,//config.refreshMode === 'both',
+                refreshMode:     config.refreshMode ?? 'live',
+            })
+            _w2c.current = mirror
+            try {
+                await mirror.init()
+            }
+            catch (error) {
+                if (error?.name !== 'AbortError') {
+                    console.error(`[Widget] Failed to initialize capture mirror for "${widgetId}":`, error)
+                }
+                mirror.destroy()
+                if (_w2c.current === mirror) {
+                    _w2c.current = null
+                }
+                if (_widget.current) {
+                    _widget.current.style.visibility = 'visible'
+                }
+                return
+            }
+
+            if (cancelled || _w2c.current !== mirror) {
+                mirror.destroy()
+                return
+            }
+            const canvas = mirror.getCanvas?.()
+            if (canvas) {
+                canvas.style.visibility = 'hidden'
+            }
+            if (_widget.current) {
+                _widget.current.style.visibility = 'visible'
+            }
+        }
+
+        const frameId = requestAnimationFrame(initializeMirror)
+        return () => {
+            cancelled = true
+            cancelAnimationFrame(frameId)
+            if (mirror) {
+                mirror.destroy()
+                if (_w2c.current === mirror) {
+                    _w2c.current = null
+                }
+            }
+            moveable?.updateRect()
+        }
+    }, [actualContainer, config, initializationRevision, interactionLocked, isVisible, widgetId])
 
     useEffect(() => {
         if (!isVisible || !shouldRestoreSelection) {

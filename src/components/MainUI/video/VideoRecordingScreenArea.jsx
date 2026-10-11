@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-30
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -222,6 +222,15 @@ export const VideoRecordingScreenArea = memo(() => {
         }
         catch (error) {
             if (error?.name !== 'AbortError') {
+                console.error(
+                    '[Replay video] Export failed before showing the error toast:',
+                    error,
+                    'Widget capture diagnostics:',
+                    error?.captureDiagnostics ?? null,
+                    'Underlying capture error:',
+                    error?.cause ?? null,
+                )
+                console.trace('[Replay video] Error toast emitted here')
                 UIToast.error({
                     caption: 'Replay video',
                     text: error?.message ?? 'Replay video could not be generated.',

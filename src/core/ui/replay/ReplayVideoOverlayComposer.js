@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -200,7 +200,7 @@ export const flushReplayVideoOverlayCanvases = async ({
         }
         prepareMirror(mirror)
         try {
-            const result = await Promise.race([
+            const outcome = await Promise.race([
                 (async () => {
                     let flushed = await Widget2Canvas.flush(widgetId, {onlyIfDirty: true})
                     // A widget can enter the visible set just before its React
@@ -221,10 +221,10 @@ export const flushReplayVideoOverlayCanvases = async ({
                             flushed = await Widget2Canvas.flush(widgetId, {onlyIfDirty: true})
                         }
                     }
-                    return flushed
+                    return {kind: 'flush', result: flushed}
                 })(),
                 new Promise(resolve => {
-                    timeoutId = setTimeout(() => resolve(false), timeoutMs)
+                    timeoutId = setTimeout(() => resolve({kind: 'timeout'}), timeoutMs)
                 }),
                 new Promise((_, reject) => {
                     abort = () => reject(new DOMException('Replay widget capture was aborted.', 'AbortError'))
@@ -236,8 +236,27 @@ export const flushReplayVideoOverlayCanvases = async ({
                     }
                 }),
             ])
-            if (strict && result === false) {
-                throw new Error(`Replay widget capture did not complete: ${widgetId}`)
+            if (strict && (outcome.kind === 'timeout' || outcome.result === false)) {
+                const registeredMirror = Widget2Canvas.get(widgetId)
+                const diagnosticMirror = registeredMirror ?? mirror
+                const mirrorDiagnostics = diagnosticMirror?.getCaptureDiagnostics?.() ?? {
+                    registered: Boolean(registeredMirror),
+                }
+                const captureDiagnostics = {
+                    widgetId,
+                    outcome: outcome.kind,
+                    flushResult: outcome.kind === 'flush' ? outcome.result : null,
+                    elapsedMs: Date.now() - startedAt,
+                    timeoutMs,
+                    mirror: mirrorDiagnostics,
+                }
+                const error = new Error(`Replay widget capture did not complete: ${widgetId}`)
+                error.captureDiagnostics = captureDiagnostics
+                if (mirrorDiagnostics.refreshError) {
+                    error.cause = mirrorDiagnostics.refreshError
+                }
+                replayVideoTraceDebug('overlay-capture-failed', captureDiagnostics)
+                throw error
             }
         }
         catch (error) {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -466,10 +466,46 @@ describe('Replay widget frame capture', () => {
         __.ui.widgetManager.getElementById.mockReturnValue(document.createElement('div'))
         vi.spyOn(Widget2Canvas, 'flush').mockReturnValue(new Promise(() => {}))
         const capture = flushReplayVideoOverlayCanvases({widgetKeys: ['custom-widget'], strict: true, timeoutMs: 100})
-        const rejection = expect(capture).rejects.toThrow('custom-widget')
+        const rejection = expect(capture).rejects.toMatchObject({
+            message: expect.stringContaining('custom-widget'),
+            captureDiagnostics: {
+                widgetId: 'custom-widget',
+                outcome: 'timeout',
+                flushResult: null,
+                timeoutMs: 100,
+                mirror: {registered: false},
+            },
+        })
         await vi.advanceTimersByTimeAsync(100)
         await rejection
         expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('preserves the mirror raster error when a strict flush returns false', async () => {
+        __.ui.widgetManager.getElementById.mockReturnValue(document.createElement('div'))
+        const rasterError = new Error('Logo SVG rasterization failed')
+        const mirror = {
+            setFrameDriven: vi.fn(),
+            getCaptureDiagnostics: vi.fn(() => ({
+                widgetId: 'logo-widget',
+                registered: true,
+                visible: true,
+                refreshError: rasterError,
+            })),
+        }
+        vi.spyOn(Widget2Canvas, 'get').mockReturnValue(mirror)
+        vi.spyOn(Widget2Canvas, 'flush').mockResolvedValue(false)
+
+        await expect(flushReplayVideoOverlayCanvases({widgetKeys: ['logo-widget'], strict: true})).rejects.toMatchObject({
+            message: expect.stringContaining('logo-widget'),
+            cause: rasterError,
+            captureDiagnostics: {
+                widgetId: 'logo-widget',
+                outcome: 'flush',
+                flushResult: false,
+                mirror: {visible: true, refreshError: rasterError},
+            },
+        })
     })
 
     it('waits for a visible widget mirror to register during Replay startup', async () => {

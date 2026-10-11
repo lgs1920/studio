@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-14
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -940,6 +940,35 @@ export class Widget2Canvas {
     }
     getContext = () => this.#canvas?.getContext('2d') ?? null
     getCanvas = () => this.#canvas
+
+    /** Return the mirror state needed to diagnose an incomplete capture. */
+    getCaptureDiagnostics = () => {
+        let visible = null
+        let visibilityError = null
+        try {
+            visible = this.#isVisible()
+        }
+        catch (error) {
+            visibilityError = error
+        }
+
+        return {
+            widgetId: this.#widgetId,
+            registered: Boolean(this.#widgetId && Widget2Canvas.get(this.#widgetId) === this),
+            destroyed: this.#destroyed,
+            originalConnected: Boolean(this.#original?.isConnected),
+            visible,
+            visibilityError,
+            pendingRefresh: this.#pendingRefresh,
+            refreshing: this.#refreshing,
+            queuedRefresh: this.#queuedRefresh,
+            dirty: this.#dirty,
+            revision: this.#revision,
+            canvasConnected: Boolean(this.#canvas?.isConnected),
+            canvasSize: this.#canvas ? {width: this.#canvas.width, height: this.#canvas.height} : null,
+            refreshError: this.#refreshError,
+        }
+    }
 
     /**
      * Returns the logical geometry used by the latest canvas capture.

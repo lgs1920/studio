@@ -198,6 +198,7 @@ describe('Widget snap behavior', () => {
 
     afterEach(() => {
         cleanup()
+        vi.restoreAllMocks()
         document.body.innerHTML = ''
         globalThis.lgs = undefined
         globalThis.__ = undefined
@@ -505,6 +506,37 @@ describe('Widget snap behavior', () => {
         ]))
     })
 
+    it('starts a capture mirror when replay preparation begins after a widget has mounted', async () => {
+        installGlobals()
+        const config = {
+            id:             'journey-stats-widget#capture',
+            group:          'test-widgets',
+            showControlBox: true,
+            type:           LGS_VISUAL_WIDGET,
+        }
+        const renderConfiguredWidget = () => (
+            <Widget isVisible={true} config={config}>
+                <div>content</div>
+            </Widget>
+        )
+        const view = render(renderConfiguredWidget())
+
+        await waitFor(() => expect(__.ui.widgetManager.setupElement).toHaveBeenCalledTimes(1))
+        expect(widgetCanvasState.instances).toHaveLength(0)
+
+        lgs.stores.ui.video.preRecording = true
+        view.rerender(renderConfiguredWidget())
+
+        await waitFor(() => expect(widgetCanvasState.instances).toHaveLength(1))
+        const mirror = widgetCanvasState.instances[0]
+        await waitFor(() => expect(mirror.getCanvas).toHaveBeenCalledTimes(1))
+        expect(__.ui.widgetManager.setupElement).toHaveBeenCalledTimes(1)
+
+        lgs.stores.ui.video.preRecording = false
+        view.rerender(renderConfiguredWidget())
+        await waitFor(() => expect(mirror.destroy).toHaveBeenCalledTimes(1))
+    })
+
     it('keeps the cropper host transparent to pointer events during capture lock', () => {
         installGlobals()
         lgs.stores.ui.video.preRecording = true
@@ -741,6 +773,26 @@ describe('Widget snap behavior', () => {
         await waitFor(() => expect(mirror.destroy).toHaveBeenCalledTimes(1))
 
         expect(mirror.getCanvas).not.toHaveBeenCalled()
+    })
+
+    it('reports a failed capture mirror initialization with its widget identifier', async () => {
+        installGlobals()
+        lgs.stores.ui.video.preRecording = true
+        const error = new Error('Canvas capture failed')
+        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+        widgetCanvasState.init = () => Promise.reject(error)
+
+        renderWidget({
+            id:           'logo-widget#capture',
+            type:         LGS_VISUAL_WIDGET,
+            widgetsBoard: 'video-crop-zone',
+        })
+
+        await waitFor(() => expect(consoleError).toHaveBeenCalledWith(
+            '[Widget] Failed to initialize capture mirror for "logo-widget#capture":',
+            error,
+        ))
+        expect(widgetCanvasState.instances[0].destroy).toHaveBeenCalledTimes(1)
     })
 
     it('does not snap a visual widget to widgets on another board', async () => {
