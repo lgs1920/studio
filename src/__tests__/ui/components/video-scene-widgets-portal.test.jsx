@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-27
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -71,6 +71,13 @@ describe('VideoSceneWidgetsPortal', () => {
             },
         }
         globalThis.lgs = {
+            settings: {
+                ui: {
+                    replay: {
+                        userMode: 'expert',
+                    },
+                },
+            },
             stores: {
                 replay: proxy({recordingSync: false}),
                 ui: {

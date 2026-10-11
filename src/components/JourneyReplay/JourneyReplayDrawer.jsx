@@ -58,13 +58,11 @@ import {
     syncJourneyExpertReplayProgression,
     syncJourneySimpleReplayDuration,
     syncJourneySimpleReplayCamera,
-    syncJourneySimpleReplayProgression,
     syncJourneySimpleReplayTrace,
     REPLAY_USER_MODE_EXPERT,
 } from '@Core/ui/replay/ReplayUserModes'
 import {
     isJourneyReplayCameraActive,
-    isJourneyReplayDryRunActive,
 } from '@Core/ui/replay/JourneyReplayRuntime'
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
@@ -218,6 +216,7 @@ const JourneyReplayColorField = ({
                                   color,
                                   opacity,
                                   swatches,
+                                  disabled = false,
                                   onColorInput,
                                   onOpacityInput,
                               }) => (
@@ -229,6 +228,7 @@ const JourneyReplayColorField = ({
                 aria-label={ariaLabel}
                 value={color}
                 swatches={swatches}
+                disabled={disabled}
                 onInput={onColorInput}
             />
             <WaSlider
@@ -244,13 +244,14 @@ const JourneyReplayColorField = ({
                 placement="top"
                 value={opacity}
                 valueFormatter={formatSliderPercent}
+                disabled={disabled}
                 onInput={onOpacityInput}
             />
         </div>
     </JourneyReplayStyleField>
 )
 
-const JourneyReplayWidthField = ({label, unit = 'm', value, min, max, step, onInput}) => (
+const JourneyReplayWidthField = ({label, unit = 'm', value, min, max, step, disabled = false, onInput}) => (
     <JourneyReplayStyleField>
         <WaNumberInput
             label={`${label} (${unit})`}
@@ -261,6 +262,7 @@ const JourneyReplayWidthField = ({label, unit = 'm', value, min, max, step, onIn
             max={max}
             step={step}
             value={value}
+            disabled={disabled}
             onInput={onInput}
             label-at-start/>
     </JourneyReplayStyleField>
@@ -374,6 +376,7 @@ const JourneyReplayProgressionGroup = ({
                                         widthMin,
                                         widthMax,
                                         swatches,
+                                        disabled = false,
                                         onColorInput,
                                         onOpacityInput,
                                         onWidthInput,
@@ -387,6 +390,7 @@ const JourneyReplayProgressionGroup = ({
                 color={color}
                 opacity={opacity}
                 swatches={swatches}
+                disabled={disabled}
                 onColorInput={onColorInput}
                 onOpacityInput={onOpacityInput}
             />
@@ -396,6 +400,7 @@ const JourneyReplayProgressionGroup = ({
                     min={widthMin}
                     max={widthMax}
                     step="0.5"
+                    disabled={disabled}
                     onInput={onWidthInput}
                 />
         </div>
@@ -421,9 +426,6 @@ export const JourneyReplayDrawer = memo(() => {
     const currentJourney = currentReplayJourney()
     const poiList = lgs.stores.main.components.pois.list
     const replayState = useSnapshot(lgs.stores.replay)
-    const videoState = useSnapshot(lgs.stores.ui.video)
-    const videoCameraPreparationActive = videoState.editing === true
-        && !isJourneyReplayDryRunActive(replayState, videoState)
     ensureJourneyReplaySettings()
     const replaySettings = useSnapshot(lgs.settings.ui.replay)
     const effectiveReplaySettings = getJourneyReplaySettings({journey: currentJourney})
@@ -694,25 +696,12 @@ export const JourneyReplayDrawer = memo(() => {
     }, [])
 
     const updateProgression = useCallback((updates) => {
+        if (!isExpertMode) {
+            return
+        }
         const nextProgression = mergeProgressionStyle(progression, updates)
-        if (isExpertMode) {
-            lgs.settings.ui.replay.progression = nextProgression
-            syncJourneyExpertReplayProgression(nextProgression)
-        }
-        else {
-            const journeyProgression = syncJourneySimpleReplayProgression(nextProgression)
-            if (journeyProgression === null) {
-                const simple = normalizeSimpleReplaySettings(lgs.settings.ui.replay.simple ?? {})
-                lgs.settings.ui.replay.simple = {
-                    ...simple,
-                    camera: toGlobalReplayCameraSettings(simple.camera),
-                    presentation: {
-                        ...simple.presentation,
-                        progression: nextProgression,
-                    },
-                }
-            }
-        }
+        lgs.settings.ui.replay.progression = nextProgression
+        syncJourneyExpertReplayProgression(nextProgression)
         lgs.stores.replay.progression = nextProgression
         refreshJourneyReplay(false)
     }, [isExpertMode, progression, refreshJourneyReplay])
@@ -1304,8 +1293,8 @@ export const JourneyReplayDrawer = memo(() => {
                 REPLAY_CAMERA_ANGLE_MIN,
                 REPLAY_CAMERA_ANGLE_MAX,
             ),
-        }, {immediate: true, syncCamera: !videoCameraPreparationActive})
-    }, [camera.cameraAngle, updateCamera, videoCameraPreparationActive])
+        }, {immediate: true})
+    }, [camera.cameraAngle, updateCamera])
 
     const updateCameraPreset = useCallback((event) => {
         const presetKey = event.target.value
@@ -1966,6 +1955,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                              widthMin={REPLAY_PROGRESSION_FILL_MIN_WIDTH}
                                                              widthMax={REPLAY_PROGRESSION_FILL_MAX_WIDTH}
                                                              swatches={swatches}
+                                                             disabled={!isExpertMode}
                                                              onColorInput={updateFillColor}
                                                              onOpacityInput={updateFillOpacity}
                                                              onWidthInput={updateFillWidth}
@@ -1978,6 +1968,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                              widthMin={REPLAY_PROGRESSION_BORDER_MIN_WIDTH}
                                                              widthMax={REPLAY_PROGRESSION_BORDER_MAX_WIDTH}
                                                              swatches={swatches}
+                                                             disabled={!isExpertMode}
                                                              onColorInput={updateBorderColor}
                                                              onOpacityInput={updateBorderOpacity}
                                                              onWidthInput={updateBorderWidth}
@@ -1989,6 +1980,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                              label-at-start
                                                              size="s"
                                                              value={effectMode}
+                                                             disabled={!isExpertMode}
                                                              onChange={updateEffectMode}
                                                          >
                                                              <WaOption value={REPLAY_EFFECT_NONE}>{'No effect'}</WaOption>
@@ -2019,6 +2011,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                                  min={REPLAY_PROFILE_MARKER_FILL_MIN_SIZE}
                                                                  max={REPLAY_PROFILE_MARKER_FILL_MAX_SIZE}
                                                                  step="0.5"
+                                                                 disabled={!isExpertMode}
                                                                  onInput={updateFillProfileMarker}
                                                              />
                                                              <JourneyReplayWidthField
@@ -2028,6 +2021,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                                  min={REPLAY_PROFILE_MARKER_BORDER_MIN_WIDTH}
                                                                  max={REPLAY_PROFILE_MARKER_BORDER_MAX_WIDTH}
                                                                  step="0.5"
+                                                                 disabled={!isExpertMode}
                                                                  onInput={updateBorderProfileMarker}
                                                              />
                                                      </div>

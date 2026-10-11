@@ -490,7 +490,7 @@ describe('JourneyReplayDrawer', () => {
         })
     })
 
-    it('does not restore Journey camera pose in global Simple settings when saving presentation style', async () => {
+    it('keeps Simple Replay presentation fields read-only while using YAML product settings', () => {
         lgs.settings.ui.replay.userMode = 'basic'
         lgs.stores.replay.userMode = 'basic'
         lgs.stores.main.theJourney.replay = {}
@@ -500,13 +500,11 @@ describe('JourneyReplayDrawer', () => {
 
         const view = render(<JourneyReplayDrawer/>)
         fireEvent.click(view.getByText('Style'))
-        fireEvent.change(view.getByLabelText('Effect'), {target: {value: REPLAY_EFFECT_NEON}})
 
-        await waitFor(() => {
-            expect(lgs.settings.ui.replay.simple.camera).not.toHaveProperty('altitude')
-            expect(lgs.settings.ui.replay.simple.camera).not.toHaveProperty('pitch')
-            expect(lgs.settings.ui.replay.simple.camera.cameraAngle).toBe(0)
-        })
+        expect(view.getByLabelText('Effect').disabled).toBe(true)
+        expect(view.getByLabelText('Trace and Marker color').disabled).toBe(true)
+        expect(view.getAllByLabelText('Width (m)').every(field => field.disabled)).toBe(true)
+        expect(lgs.stores.main.theJourney.replay.simple?.presentation?.progression).toBeUndefined()
     })
 
     it('keeps altitude as a single value when switching to ground offset mode', async () => {
@@ -796,7 +794,7 @@ describe('JourneyReplayDrawer', () => {
         setTimeoutSpy.mockRestore()
     })
 
-    it('synchronizes the preparation camera sliders and map guide in both directions without moving Cesium', async () => {
+    it('synchronizes preparation camera sliders and the map guide with Replay camera framing', async () => {
         const camera = {
             ...defaultJourneyReplaySettings().camera,
             cameraAngle: 180,
@@ -840,10 +838,8 @@ describe('JourneyReplayDrawer', () => {
             )
         })
         expect(angleSlider.value).toBe('35')
-        expect(globalThis.__.ui.replay.refreshCamera).not.toHaveBeenCalled()
-        expect(globalThis.__.ui.replay.refresh).toHaveBeenLastCalledWith({camera: false})
-        expect(globalThis.lgs.stores.replay.cameraUpdateSource).toBe(null)
-        expect(globalThis.__.ui.replay.refreshCamera).not.toHaveBeenCalled()
+        expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenCalledOnce()
+        expect(globalThis.__.ui.replay.refresh).toHaveBeenLastCalledWith({camera: true})
 
         act(() => {
             cameraGuideHarness.mount.mock.calls.at(-1)[3].onCameraChange({cameraAngle: -25})
