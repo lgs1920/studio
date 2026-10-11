@@ -103,6 +103,14 @@ Simple/Expert support is present but incomplete:
 - Crop-aware isolated export camera frustums and readiness identity for 2D,
   terrain, and 3D Tiles capture.
 - Frame-accurate export trace updates and deterministic Navigation camera updates.
+- Shared Replay camera-heading anticipation for Simple and Expert playback and
+  export. Simple has a minimum Ease of `0.3`; Expert uses its saved Ease. The
+  sampler replaces tight alternating turns with a camera-only chord when their
+  cross-track spread is below half the projected crop width. Trace, marker, and
+  visibility constraints continue to use the original route sample.
+- Widget buttons remain interactive during ordinary Replay playback. Replay
+  no longer applies the visual-recording input lock to every widget; crop
+  framing and layout interaction policies remain in effect.
 - Moving clip readiness separated from settled waits.
 - Linked-video Replay preparation timeline with a normalized transient
   multi-track projection, controlled playhead and scrubbing, widget visibility
@@ -160,8 +168,3 @@ Replay work is not complete merely because unit tests pass. The applicable
 checks in [Replay Quality Validation](CORE-REPLAY-QUALITY-VALIDATION.md) must pass,
 including a real Replay/capture visual run for changes that affect pixels,
 timing, camera, scene readiness, overlays, or encoding.
-- Shared Replay camera-heading anticipation for Simple and Expert playback and
-  export. Simple has a minimum Ease of `0.3`; Expert uses its saved Ease. The
-  sampler replaces tight alternating turns with a camera-only chord when their
-  cross-track spread is below half the projected crop width. Trace, marker, and
-  visibility constraints continue to use the original route sample.
