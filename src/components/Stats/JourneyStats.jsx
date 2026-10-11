@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-03
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,7 +40,7 @@ import { WIDGET_RADIUS }                                from '@Core/constants'
 import { SlDivider }                                    from '@shoelace-style/shoelace/dist/react'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import { useOptionalSnapshot, useProxyValue }             from '@Utils/ValtioUtils'
-import { WaIcon }                                       from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon }                                       from '@awesome.me/webawesome/dist/react'
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                           from 'valtio'
 

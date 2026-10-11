@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-19
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -98,7 +98,7 @@ vi.mock('@Components/MainUI/ElevationProfile', () => ({
     },
 }))
 vi.mock('@Editor/journey/JourneyData', () => ({JourneyData: () => null}))
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
+vi.mock('@awesome.me/webawesome/dist/react', () => {
     const Container = ({children, ...props}) => <div {...props}>{children}</div>
     const Button = ({children, ...props}) => <button type="button" {...props}>{children}</button>
     const Icon = ({name, animation, ...props}) => <span data-animation={animation} data-icon={name} {...props}/>

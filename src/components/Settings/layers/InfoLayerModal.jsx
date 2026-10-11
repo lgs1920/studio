@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-07
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
-import { WaButton, WaDialog, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaDialog, WaIcon } from '@awesome.me/webawesome/dist/react'
 import React, { useEffect, useState }            from 'react'
 import { default as ReactMarkdown }   from 'react-markdown'
 import { useSnapshot }                from 'valtio'

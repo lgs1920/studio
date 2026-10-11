@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2025-01-09
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,7 @@ import {
 import { Utils }                                        from '@Editor/Utils'
 import { UIToast }                                      from '@Utils/UIToast'
 import { LGSPopup }                            from '@Components/LGSPopup'
-import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaCard, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { useCallback, useEffect, useState }             from 'react'
 import { useSnapshot }                                  from 'valtio'
 

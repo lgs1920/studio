@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-06
- * Last modified: 2026-06-06
+ * Created on: 2026-06-07
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGSPopup } from '@Components/LGSPopup'
-import { WaCard } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaCard } from '@awesome.me/webawesome/dist/react'
 import classNames from 'classnames'
 import { forwardRef, memo } from 'react'
 

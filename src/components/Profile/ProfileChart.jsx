@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-02
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,7 +37,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { subscribe, useSnapshot } from 'valtio'
 import { usePreviewChartResize } from '@Components/MainUI/widgets/editor/usePreviewChartResize'
 import { v4 as uuid } from 'uuid'
-import { WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon } from '@awesome.me/webawesome/dist/react'
 
 const scaleValue = (value, correction = 1) => {
     const numericValue = Number(value)

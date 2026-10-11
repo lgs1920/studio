@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-03-08
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaButton, WaDivider, WaDropdown, WaDropdownItem, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaDivider, WaDropdown, WaDropdownItem, WaIcon } from '@awesome.me/webawesome/dist/react'
 import { useEffect, useState } from 'react'
 import { useSnapshot }         from 'valtio'
 import { AppUtils }            from '@Utils/AppUtils'

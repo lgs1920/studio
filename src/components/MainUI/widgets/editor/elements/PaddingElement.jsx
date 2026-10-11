@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-04-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaSlider }                                from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaSlider }                                from '@awesome.me/webawesome/dist/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { ScaleSwitchElement }                      from './ScaleSwitchElement'
 import { sanitizeNumericControlValue }             from './sliderUtils'

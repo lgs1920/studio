@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,9 @@ export default defineConfig({
         },
     },
     resolve: {
+        dedupe: [
+            '@awesome.me/webawesome',
+        ],
         alias: {
             '@Utils': fileURLToPath(new URL('./src/Utils', import.meta.url)),
             '@Editor': fileURLToPath(new URL('./src/components/TracksEditor', import.meta.url)),

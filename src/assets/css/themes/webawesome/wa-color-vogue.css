@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-27
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-@import '@web.awesome.me/webawesome-pro/dist/styles/color/variants/neutral.css';
-@import '@web.awesome.me/webawesome-pro/dist/styles/utilities/variants.css';
+@import '@awesome.me/webawesome/dist/styles/color/variants/neutral.css';
+@import '@awesome.me/webawesome/dist/styles/utilities/variants.css';
 
 @layer wa-color-palette, wa-color-variant, wa-utilities;
 

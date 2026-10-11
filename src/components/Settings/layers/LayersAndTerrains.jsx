@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-07
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import { LGSPopup }                     from '@Components/LGSPopup'
 import { ALL, BASE3D_ENTITY, BASE_ENTITY, FREE_ANONYMOUS_ACCESS, OVERLAY_ENTITY, TERRAIN_ENTITY, TILES3D_ENTITY, UNLOCKED } from '@Core/constants'
 import {
     WaBadge, WaButton, WaIcon, WaTab, WaTabGroup, WaTabPanel, WaTooltip,
-}                                       from '@web.awesome.me/webawesome-pro/dist/react'
+}                                       from '@awesome.me/webawesome/dist/react'
 import { useSnapshot }                  from 'valtio'
 import {
     ToggleStateIcon,

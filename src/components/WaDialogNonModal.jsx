@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
-import { WaDialog as WaDialogBase }                           from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaDialog as WaDialogBase }                           from '@awesome.me/webawesome/dist/react'
 
 let patched = false
 let pending = false

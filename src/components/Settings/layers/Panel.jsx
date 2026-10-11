@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-08
- * Last modified: 2026-04-08
+ * Created on: 2024-11-07
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import DrawerFooter from '@Components/DrawerFooter'
 import PanelActions                              from '@Components/PanelsActions'
 import { LAYERS_DRAWER }          from '@Core/constants'
 import WaDrawer                        from '@Components/WaDrawerNonModal'
-import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { createPortal }                from 'react-dom'
 import { useSnapshot }            from 'valtio'
 import './style.css'

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { ToggleStateIcon }                    from '@Components/ToggleStateIcon'
 import { EDIT_WIDGET_ICON }                   from '@Core/constants'
-import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaCard, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { useMemo }                             from 'react'
 import { useSnapshot }    from 'valtio'
 

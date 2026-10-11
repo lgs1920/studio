@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,7 @@ import { openPOIEditor } from '@Components/MainUI/MapPOI/openPOIEditor'
 import { DEFAULT_PANORAMA_HEIGHT_OFFSET, DEFAULT_PANORAMA_PITCH, getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
 import { ELEVATION_UNITS, UnitUtils }       from '@Utils/UnitUtils'
 import { UIToast }                                from '@Utils/UIToast'
-import { WaDivider, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaDivider, WaIcon } from '@awesome.me/webawesome/dist/react'
 import { useCallback, useEffect, useMemo } from 'react'
 import { proxy, useSnapshot } from 'valtio'
 

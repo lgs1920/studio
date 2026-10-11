@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-11
- * Last modified: 2026-06-11
+ * Created on: 2025-02-18
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,7 +25,7 @@ import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { createPortal }                                 from 'react-dom'
 import { useSnapshot }                                  from 'valtio'
 import { proxyMap }                                     from 'valtio/utils'
-import { WaIcon }                                       from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon }                                       from '@awesome.me/webawesome/dist/react'
 import DrawerFooter                                     from '../../DrawerFooter'
 import './style.css'
 

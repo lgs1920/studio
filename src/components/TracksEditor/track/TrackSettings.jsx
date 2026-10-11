@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-24
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import { TrackSelector }                             from '@Editor/track/TrackSe
 import { TrackUtils }                                from '@Utils/cesium/TrackUtils'
 import { decodeHTMLEntities }                        from '@Utils/TextUtils'
 import { useProxyValue }                              from '@Utils/ValtioUtils'
-import { WaDivider, WaInput, WaTextarea, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaDivider, WaInput, WaTextarea, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { Utils }                                     from '../Utils'
 import { TrackData }                                 from './TrackData'
 import { TrackStyleSettings }                        from './TrackStyleSettings'

@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-28
- * Last modified: 2026-04-28
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaCard, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaCard, WaIcon } from '@awesome.me/webawesome/dist/react'
 import { memo }           from 'react'
 import './style.css'
 

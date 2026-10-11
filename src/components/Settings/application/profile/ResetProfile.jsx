@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-17
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { WIDGETS_STORE } from '@Core/constants'
 
-import { WaButton, WaDetails, WaDivider, WaIcon, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaDetails, WaDivider, WaIcon, WaSwitch } from '@awesome.me/webawesome/dist/react'
 import { useSnapshot }                                      from 'valtio/index'
 import { useConfirm }                                       from '../../../Modals/ConfirmUI'
 import './style.css'

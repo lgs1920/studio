@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2025-02-25
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { JOURNEY_EDITOR_DRAWER, POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE } from '@Core/constants'
 import {
     WaButton, WaDropdown, WaDropdownItem, WaIcon,
-}                                                                                 from '@web.awesome.me/webawesome-pro/dist/react'
+}                                                                                 from '@awesome.me/webawesome/dist/react'
 import React, { useCallback, useEffect, useState }                                from 'react'
 import { useSnapshot }                                                            from 'valtio'
 import './style.css'

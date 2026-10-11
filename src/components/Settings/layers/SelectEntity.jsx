@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-07
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,7 @@ import {
 
 import {
     WaButton, WaCallout, WaCard, WaDivider, WaDropdown, WaDropdownItem, WaIcon, WaTooltip,
-}                                        from '@web.awesome.me/webawesome-pro/dist/react'
+}                                        from '@awesome.me/webawesome/dist/react'
 import parse               from 'html-react-parser'
 import { Fragment, useRef, useLayoutEffect } from 'react'
 

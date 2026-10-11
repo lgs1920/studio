@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-03-25
- * Last modified: 2026-03-25
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,7 @@
 
 import { ICONS_PATH }                from '@Core/constants'
 import { applyPOIDuotoneIconStyles } from '@Components/MainUI/MapPOI/duotoneIconUtils'
-import { WaIcon }                    from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon }                    from '@awesome.me/webawesome/dist/react'
 import { useMemo }                   from 'react'
 import { useSnapshot }               from 'valtio'
 import './style.css'

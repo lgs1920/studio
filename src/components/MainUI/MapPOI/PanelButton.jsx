@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2025-01-19
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { POIS_EDITOR_DRAWER }          from '@Core/constants'
-import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { useCallback } from 'react'
 
 

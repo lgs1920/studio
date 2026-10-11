@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,7 +34,7 @@ import {
     toGlobalReplayCameraSettings,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {isJourneyReplayDryRunActive} from '@Core/ui/replay/JourneyReplayRuntime'
-import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { memo, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
 import { VideoRecordingSettingsMenuContent } from './VideoRecordingSettingsMenus'

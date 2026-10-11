@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-08
- * Last modified: 2026-07-08
+ * Created on: 2024-06-04
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { INFO_CHANGELOG_TAB, INFO_DRAWER } from '@Core/constants'
 import { LogoSvg }                         from '@Components/MainUI/LogoSvg'
-import { WaButton, WaDivider, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaDivider, WaIcon } from '@awesome.me/webawesome/dist/react'
 import React                           from 'react'
 
 const openChangelog = () => {

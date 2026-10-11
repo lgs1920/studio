@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-21
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import WaDialogNonModal                from '@Components/WaDialogNonModal'
 import { SECOND }                      from '@Core/constants'
 import {
     WaButton, WaDivider, WaIcon, WaInput, WaSwitch, WaTooltip,
-}                                      from '@web.awesome.me/webawesome-pro/dist/react'
+}                                      from '@awesome.me/webawesome/dist/react'
 import * as turf                       from '@turf/helpers'
 import { UIToast }                     from '@Utils/UIToast'
 import { useManagedStylesheet }        from '@Utils/useManagedStylesheet'

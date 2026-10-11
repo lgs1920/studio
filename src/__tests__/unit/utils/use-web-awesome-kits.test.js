@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-09-11
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,7 +30,7 @@ const mocks = vi.hoisted(() => ({
     registerIconLibrary: vi.fn(),
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/library.js', () => ({
+vi.mock('@awesome.me/webawesome/dist/components/icon/library.js', () => ({
     getIconLibrary: mocks.getIconLibrary,
     registerIconLibrary: mocks.registerIconLibrary,
 }))

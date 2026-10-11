@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-09-22
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { SlAlert, SlDialog }         from '@shoelace-style/shoelace/dist/react'
-import { WaIcon }                    from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon }                    from '@awesome.me/webawesome/dist/react'
 import { useProxyValue }              from '@Utils/ValtioUtils'
 
 

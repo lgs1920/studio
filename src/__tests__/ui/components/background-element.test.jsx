@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-16
- * Last modified on: 2026-07-16
+ * Created on: 2026-07-03
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaColorPicker: ({onInput}) => <input aria-label="Background color" onInput={onInput}/>,
     WaSlider: ({label, onInput, defaultValue}) => (
         <input aria-label={label} defaultValue={defaultValue} onInput={onInput}/>

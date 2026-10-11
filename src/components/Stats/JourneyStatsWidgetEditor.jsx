@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-06
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -52,7 +52,7 @@ import {
     WaButton, WaButtonGroup, WaCard, WaColorPicker, WaDivider, WaIcon, WaSlider, WaSwitch, WaTab,
     WaTabGroup,
     WaTabPanel,
-}                                                                   from '@web.awesome.me/webawesome-pro/dist/react'
+}                                                                   from '@awesome.me/webawesome/dist/react'
 import { useOptionalSnapshot, useProxyValue }                       from '@Utils/ValtioUtils'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Sortable                                               from 'sortablejs'

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2024-12-28
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import { Range }                               from '@Components/Range'
 import { BASE_ENTITY, DEFAULT_LAYERS_COLOR_SETTINGS, OVERLAY_ENTITY } from '@Core/constants'
 import { ensureLayerColorSettings } from '@Utils/cesium/LayerColorSettingsUtils'
 import { LayersUtils }                         from '@Utils/cesium/LayersUtils'
-import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaCard, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { useEffect }                           from 'react'
 import { useSnapshot }                         from 'valtio/index'
 

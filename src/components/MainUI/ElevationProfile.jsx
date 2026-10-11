@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-07-28
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,7 +32,7 @@ import { UIToast }                                                  from '@Utils
 import { useProxyValue }                                             from '@Utils/ValtioUtils'
 import {
     WaButton, WaIcon, WaOption, WaProgressBar, WaSelect, WaSwitch, WaTooltip,
-}                                                                   from '@web.awesome.me/webawesome-pro/dist/react'
+}                                                                   from '@awesome.me/webawesome/dist/react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState }                 from 'react'
 import { useSnapshot }                                              from 'valtio'
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-26
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,7 +33,7 @@ import { useOptionalSnapshot, useProxyValue }                                 fr
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
     WaButton, WaCopyButton, WaDivider, WaIcon, WaSwitch, WaTooltip,
-}                                                                              from '@web.awesome.me/webawesome-pro/dist/react'
+}                                                                              from '@awesome.me/webawesome/dist/react'
 import { Cartographic, Rectangle }                                             from 'cesium'
 import { DateTime }                                                            from 'luxon'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,7 +25,7 @@ import {
     resolveSimpleReplaySettings,
 } from '@Core/ui/replay/ReplayUserModes'
 import { TunnelTooltip } from '@Components/Tunnel/Tunnel'
-import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import {useProxyValue} from '@Utils/ValtioUtils'
 import { useCallback } from 'react'
 import { useSnapshot } from 'valtio'

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-12
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,7 +26,7 @@ import firefoxInstructions     from '@Locales/en/pwa-instructions/firefox.md?raw
 import iosInstructions         from '@Locales/en/pwa-instructions/ios.md?raw'
 import otherInstructions       from '@Locales/en/pwa-instructions/other.md?raw'
 import safariMacOSInstructions from '@Locales/en/pwa-instructions/safari-macos.md?raw'
-import { WaButton, WaCallout, WaDialog, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaCallout, WaDialog, WaIcon, WaSpinner } from '@awesome.me/webawesome/dist/react'
 import {
     collectErrorDiagnostic, formatErrorDiagnostic, sanitizeErrorHtml,
 } from '@Utils/ErrorDiagnosticUtils'

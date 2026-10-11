@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,7 +28,7 @@ vi.mock('@Components/MainUI/MapPOI/MapPOISummary', () => ({
     MapPOISummary: ({poi}) => <div>{poi}</div>,
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaDetails: ({children, open, onWaAfterShow, ...props}) => {
         useEffect(() => {
             if (open) {

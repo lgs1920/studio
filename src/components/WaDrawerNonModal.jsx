@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-03-18
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import React, { forwardRef }        from 'react'
 import { useCallback, useState }    from 'react'
-import { WaDrawer as WaDrawerBase } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaDrawer as WaDrawerBase } from '@awesome.me/webawesome/dist/react'
 import { DrawerResizeHandle }       from '@Components/DrawerResizeHandle'
 
 let patched = false

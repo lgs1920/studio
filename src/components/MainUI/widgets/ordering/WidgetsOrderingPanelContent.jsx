@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import {
     CREDITS_WIDGET, LOGO_WIDGET, REPLAY_TIMELINE_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
 } from '@Core/constants'
-import { WaCard, WaDivider }                        from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaCard, WaDivider }                        from '@awesome.me/webawesome/dist/react'
 import classNames from 'classnames'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import Sortable              from 'sortablejs'

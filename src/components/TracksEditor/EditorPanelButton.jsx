@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-28
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { JOURNEY_EDITOR_DRAWER, JOURNEY_GROUPS_DRAWER, REMOVE_JOURNEY_IN_TOOLBAR } from '@Core/constants'
 import { LGSPopup }                    from '@Components/LGSPopup'
 import { useProxyValue }               from '@Utils/ValtioUtils'
-import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                           from 'valtio'
 

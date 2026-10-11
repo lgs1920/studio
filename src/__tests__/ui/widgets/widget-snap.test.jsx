@@ -64,7 +64,7 @@ vi.mock('@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas', () => {
     return {Widget2Canvas: vi.fn(Widget2CanvasMock)}
 })
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaIcon: ({name}) => <span data-icon={name}/>,
 }))
 

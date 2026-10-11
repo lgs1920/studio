@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-01
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,7 @@ import {
 import './style.css'
 import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
 import { useProxyValue }                from '@Utils/ValtioUtils'
-import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 
 export const ProfileButton = (props) => {
     const $main = lgs.stores.main

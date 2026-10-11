@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -72,7 +72,7 @@ import {
     WaSwitch, WaTab, WaTooltip,
     WaTabGroup,
     WaTabPanel,
-}                 from '@web.awesome.me/webawesome-pro/dist/react'
+}                 from '@awesome.me/webawesome/dist/react'
 import { colord } from 'colord'
 import { Cartographic } from 'cesium'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'

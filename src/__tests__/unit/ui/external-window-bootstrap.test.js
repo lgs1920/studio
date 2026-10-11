@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-11
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,12 +21,12 @@ const {registerLGS1920IconLibrary} = vi.hoisted(() => ({
     registerLGS1920IconLibrary: vi.fn(),
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/button/button.js', () => ({}))
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/card/card.js', () => ({}))
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/divider/divider.js', () => ({}))
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/icon.js', () => ({}))
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/progress-bar/progress-bar.js', () => ({}))
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/tooltip/tooltip.js', () => ({}))
+vi.mock('@awesome.me/webawesome/dist/components/button/button.js', () => ({}))
+vi.mock('@awesome.me/webawesome/dist/components/card/card.js', () => ({}))
+vi.mock('@awesome.me/webawesome/dist/components/divider/divider.js', () => ({}))
+vi.mock('@awesome.me/webawesome/dist/components/icon/icon.js', () => ({}))
+vi.mock('@awesome.me/webawesome/dist/components/progress-bar/progress-bar.js', () => ({}))
+vi.mock('@awesome.me/webawesome/dist/components/tooltip/tooltip.js', () => ({}))
 vi.mock('@lgs1920/timeline', () => ({}))
 vi.mock('../../../Utils/LGS1920IconLibrary', () => ({registerLGS1920IconLibrary}))
 

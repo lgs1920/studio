@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,7 +30,7 @@ vi.mock('@Components/MainUI/video/toolbox/VideoPresetToolbar', () => ({
     VideoPresetToolbar: ({compactSimple, inlineCustom, mainTheme}) => <div data-testid="preset-popup-content" data-compact-simple={compactSimple} data-inline-custom={inlineCustom} data-main-theme={mainTheme}>Preset, FPS and quality choices</div>,
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
     WaIcon: ({name}) => <span data-icon={name}/>,
     WaTooltip: ({children, for: targetId}) => <span data-tooltip-for={targetId}>{children}</span>,

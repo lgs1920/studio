@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2024-11-18
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import { EditorSettings } from '@Components/Settings/application/style/EditorSet
 import { MenuSettings }      from '@Components/Settings/application/style/MenuSettings'
 import { PWASettings } from '@Components/Settings/application/style/PWASettings'
 import { SETTINGS_EDITOR_DRAWER }  from '@Core/constants'
-import { WaDetails } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaDetails } from '@awesome.me/webawesome/dist/react'
 import { memo, useEffect, useRef } from 'react'
 import { useSnapshot }             from 'valtio'
 

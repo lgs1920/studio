@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-08
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { SlButton, SlDropdown, SlMenu, SlMenuItem, SlTooltip }           from '@shoelace-style/shoelace/dist/react'
-import { WaIcon }                                                        from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon }                                                        from '@awesome.me/webawesome/dist/react'
 
 export const SnapshotMenu = (props) => {
     return(

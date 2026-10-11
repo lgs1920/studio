@@ -72,7 +72,7 @@ These are the current package names declared in the `dependencies` section of `p
 @turf/nearest-point-on-line
 @turf/point-to-line-distance
 @turf/transform-rotate
-@web.awesome.me/webawesome-pro
+@awesome.me/webawesome
 @zumer/snapdom
 argparse
 axios

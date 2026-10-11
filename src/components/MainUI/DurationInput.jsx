@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-11
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,7 +21,7 @@
  * File: DurationInput.jsx
  ******************************************************************************/
 
-import { WaButton, WaIcon, WaInput } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaInput } from '@awesome.me/webawesome/dist/react'
 import React, { useCallback, useEffect, useState, useRef, useMemo } from 'react'
 import { useSnapshot }                                              from 'valtio'
 

@@ -236,7 +236,7 @@ bunx --bun vitest run \
     src/__tests__/unit/data/app-utils-count.test.js
 ```
 
-The implementation uses Web Awesome Pro `3.14.0`. Consult the [Web Awesome icon
+The implementation uses Web Awesome `3.14.0`. Consult the [Web Awesome icon
 documentation](https://webawesome.com/docs/components/icon) when the library or wrapper API
 changes.
 
@@ -331,7 +331,7 @@ registry. The detached bootstrap therefore imports the icon element and register
 
 ```js
 // src/external-window-bootstrap.js
-import '@web.awesome.me/webawesome-pro/dist/components/icon/icon.js'
+import '@awesome.me/webawesome/dist/components/icon/icon.js'
 import {registerLGS1920IconLibrary} from './Utils/LGS1920IconLibrary'
 
 registerLGS1920IconLibrary()
@@ -348,7 +348,7 @@ Use the normal Web Awesome React wrapper for an icon that can resolve through th
 default library:
 
 ```jsx
-import {WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
+import {WaIcon} from '@awesome.me/webawesome/dist/react'
 
 export const ReplaySetupIcon = () => (
     <WaIcon name="camera-sliders" variant="regular" />
@@ -363,7 +363,7 @@ definitions are checked before Web Awesome's original default resolver.
 Use the named application library when the rendering context is detached:
 
 ```jsx
-import {WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
+import {WaIcon} from '@awesome.me/webawesome/dist/react'
 
 export const DetachedReplaySetupIcon = () => (
     <WaIcon
@@ -377,7 +377,7 @@ export const DetachedReplaySetupIcon = () => (
 Application code can use the shared constant instead of duplicating the library name:
 
 ```jsx
-import {WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
+import {WaIcon} from '@awesome.me/webawesome/dist/react'
 import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAwesomeKits'
 
 export const DetachedReplaySetupIcon = () => (
@@ -578,7 +578,7 @@ import {icon as renderFontAwesomeIcon} from '@fortawesome/fontawesome-svg-core'
 import {
     getIconLibrary,
     registerIconLibrary,
-} from '@web.awesome.me/webawesome-pro/dist/components/icon/library.js'
+} from '@awesome.me/webawesome/dist/components/icon/library.js'
 
 const FAMILY_BY_PREFIX = {
     fab: 'brands',
@@ -744,7 +744,7 @@ Web Awesome registry, such as a detached window:
 ### React component using the default resolver
 
 ```jsx
-import {WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
+import {WaIcon} from '@awesome.me/webawesome/dist/react'
 
 export const CameraIcon = () => (
     <WaIcon name="camera-sliders" variant="regular" />
@@ -760,7 +760,7 @@ Use the library property when rendering in a detached document or when the compo
 the custom registry explicitly:
 
 ```jsx
-import {WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
+import {WaIcon} from '@awesome.me/webawesome/dist/react'
 
 export const DetachedCameraIcon = () => (
     <WaIcon
@@ -776,7 +776,7 @@ export const DetachedCameraIcon = () => (
 An icon that is absent from the custom kits is delegated to the original Web Awesome resolver:
 
 ```jsx
-import {WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
+import {WaIcon} from '@awesome.me/webawesome/dist/react'
 
 export const StandardHouseIcon = () => (
     <WaIcon name="house" variant="solid" />

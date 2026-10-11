@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import { LGSPopup }           from '@Components/LGSPopup'
 import { OS_ICONS }           from '@Core/constants'
 import { SHORTCUTS } from '@Core/events/appShortcuts'
 import { UIToast }            from '@Utils/UIToast'
-import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaCard, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { Fragment, useCallback, useRef, useState } from 'react'
 
 const MOUSE_TOKEN_ICONS = {

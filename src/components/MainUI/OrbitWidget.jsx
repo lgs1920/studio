@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-26
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,7 +41,7 @@ import {
   WaIcon,
   WaSlider,
   WaTooltip,
-} from "@web.awesome.me/webawesome-pro/dist/react";
+} from "@awesome.me/webawesome/dist/react";
 import { Math as M } from "cesium";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSnapshot } from "valtio";

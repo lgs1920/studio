@@ -8,8 +8,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-09-11
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@
 import {render} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, size, ...props}) => <button type="button" data-size={size} {...props}>{children}</button>,
     WaIcon: ({name, ...props}) => <span data-icon={name} {...props}/>,
     WaTooltip: ({children, ...props}) => <span data-tooltip {...props}>{children}</span>,

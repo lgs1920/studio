@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-08
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,7 +54,7 @@ vi.mock('@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas', () => {
     return {Widget2Canvas: vi.fn(Widget2CanvasMock)}
 })
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaIcon: ({name}) => <span data-icon={name}/>,
     WaSlider: forwardRef((props, ref) => {
@@ -74,15 +74,15 @@ vi.mock('@Components/MainUI/video/toolbox/VideoRecordingSettingsMenus', () => ({
     VideoRecordingSettingsMenus: () => <div data-testid="video-recording-settings-menu-content"/>,
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/button/button.js', () => ({}))
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/card/card.js', () => ({}))
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/color-picker/color-picker.js', () => ({}))
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/drawer/drawer.js', () => ({}))
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/icon.js', () => ({}))
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/input/input.js', () => ({}))
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/popup/popup.js', () => ({}))
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/split-panel/split-panel.js', () => ({}))
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/tooltip/tooltip.js', () => ({}))
+vi.mock('@awesome.me/webawesome/dist/components/button/button.js', () => ({}))
+vi.mock('@awesome.me/webawesome/dist/components/card/card.js', () => ({}))
+vi.mock('@awesome.me/webawesome/dist/components/color-picker/color-picker.js', () => ({}))
+vi.mock('@awesome.me/webawesome/dist/components/drawer/drawer.js', () => ({}))
+vi.mock('@awesome.me/webawesome/dist/components/icon/icon.js', () => ({}))
+vi.mock('@awesome.me/webawesome/dist/components/input/input.js', () => ({}))
+vi.mock('@awesome.me/webawesome/dist/components/popup/popup.js', () => ({}))
+vi.mock('@awesome.me/webawesome/dist/components/split-panel/split-panel.js', () => ({}))
+vi.mock('@awesome.me/webawesome/dist/components/tooltip/tooltip.js', () => ({}))
 
 import {Widget} from '@Components/MainUI/widgets/Widget'
 import {ReplayTimelinePreview} from '@Components/MainUI/video/ReplayTimelinePreview'

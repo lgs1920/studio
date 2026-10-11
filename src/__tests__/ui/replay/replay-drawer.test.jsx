@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -98,7 +98,7 @@ vi.mock('@Components/WaDrawerNonModal', () => ({
     default: ({children, open, ...props}) => open ? <div data-testid="wa-drawer" {...props}>{children}</div> : null,
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
+vi.mock('@awesome.me/webawesome/dist/react', () => {
     const WaTab = ({children}) => <>{children}</>
     const WaTabPanel = ({children}) => <>{children}</>
     const WaBadge = ({children, ...props}) => <span {...props}>{children}</span>

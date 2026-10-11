@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-03
- * Last modified: 2026-06-03
+ * Created on: 2026-05-06
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,7 +26,7 @@ import { Journey }               from '@Core/Journey'
 import {
     WaButton, WaCallout, WaCard, WaColorPicker, WaDivider, WaIcon, WaInput, WaOption,
     WaSelect, WaTab, WaTabGroup, WaTabPanel, WaTextarea, WaTooltip, WaTree, WaTreeItem,
-}                                from '@web.awesome.me/webawesome-pro/dist/react'
+}                                from '@awesome.me/webawesome/dist/react'
 import classNames                from 'classnames'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal }          from 'react-dom'

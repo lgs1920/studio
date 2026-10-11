@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-10-07
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,12 +19,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
 // Use native components with the browser wrapper: Node resolves Lit's SSR wrapper.
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', async () => {
+vi.mock('@awesome.me/webawesome/dist/react', async () => {
     const React = await import('react')
     const {createComponent} = await import('../../../../node_modules/@lit/react/create-component.js')
     const components = {}
     for (const name of ['select', 'option', 'button', 'divider', 'icon']) {
-        const {default: elementClass} = await import(`../../../../node_modules/@web.awesome.me/webawesome-pro/dist/components/${name}/${name}.js`)
+        const {default: elementClass} = await import(`../../../../node_modules/@awesome.me/webawesome/dist/components/${name}/${name}.js`)
         const componentName = `Wa${name[0].toUpperCase()}${name.slice(1)}`
         components[componentName] = createComponent({react: React, tagName: `wa-${name}`, elementClass})
     }

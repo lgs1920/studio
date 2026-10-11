@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,8 +17,8 @@
 import './assets/css/app.css?v=1.0.5'
 import './assets/css/themes/wa-lgs1920.css'
 import './assets/css/animations.css'
-import '@web.awesome.me/webawesome-pro/dist/components/icon/icon.js'
-import '@web.awesome.me/webawesome-pro/dist/components/spinner/spinner.js'
+import '@awesome.me/webawesome/dist/components/icon/icon.js'
+import '@awesome.me/webawesome/dist/components/spinner/spinner.js'
 
 const markStartup = name => {
     const performanceObject = globalThis.performance

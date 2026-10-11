@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-02-20
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,7 @@ import {
     ColorElement,
 }                                                                   from '@Components/MainUI/widgets/editor/elements/ColorElement'
 import { COMPASS_FLAT, COMPASS_FULL, COMPASS_LIGHT, COMPASS_MODERN } from '@Core/constants'
-import { WaButton, WaCard, WaDivider, WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaCard, WaDivider, WaIcon, WaOption, WaSelect } from '@awesome.me/webawesome/dist/react'
 import { colord, extend }                                             from 'colord'
 import namesPlugin                                                    from 'colord/plugins/names'
 import { useCallback, useEffect, useMemo }                            from 'react'

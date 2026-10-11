@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-20
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@ import { useOptionalSnapshot, useProxyValue }         from '@Utils/ValtioUtils'
 import classNames                                    from 'classnames'
 
 import './style.css'
-import { WaIcon, WaSwitch }                          from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon, WaSwitch }                          from '@awesome.me/webawesome/dist/react'
 import { memo, useCallback, useEffect, useRef }      from 'react'
 import { createPortal }                              from 'react-dom'
 import { useSnapshot }              from 'valtio'

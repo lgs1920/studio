@@ -38,7 +38,7 @@ import {
 }                                 from '@Core/ui/widget-manager/widgetGridUtils'
 import {resolveWidgetResizeLimits} from '@Core/ui/widget-manager/widgetResizeUtils'
 import { useOptionalSnapshot }     from '@Utils/ValtioUtils'
-import { WaIcon }                 from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon }                 from '@awesome.me/webawesome/dist/react'
 import classNames                 from 'classnames'
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Moveable                   from 'react-moveable'

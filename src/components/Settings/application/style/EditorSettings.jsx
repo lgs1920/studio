@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2025-03-31
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { formatSliderPercent } from '@Components/MainUI/widgets/editor/elements/sliderUtils'
-import { WaButton, WaDivider, WaIcon, WaSlider, WaSwitch, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaDivider, WaIcon, WaSlider, WaSwitch, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { useSnapshot }                             from 'valtio'
 
 export const EditorSettings = () => {

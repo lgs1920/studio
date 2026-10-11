@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -51,7 +51,7 @@ vi.mock('@shoelace-style/shoelace/dist/react', () => ({
     SlDivider: () => <hr />,
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaIcon: ({name}) => <span data-icon={name}/>,
 }))
 

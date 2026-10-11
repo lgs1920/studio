@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-04
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,7 +28,7 @@ import { REPLAY_DEFERRED_EXPORT_READY_EVENT } from '@Core/ui/replay/ReplayRecord
 import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
 import {
     WaButton, WaDialog, WaIcon, WaInput, WaTooltip,
-}                        from '@web.awesome.me/webawesome-pro/dist/react'
+}                        from '@awesome.me/webawesome/dist/react'
 import {
     UIToast,
 }                      from '@Utils/UIToast'

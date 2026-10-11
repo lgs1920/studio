@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-18
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import { CameraSettings }      from '@Components/Settings/application/general/Ca
 import { TileCacheSettings } from './TileCacheSettings'
 import { JourneyStatisticsSettings } from '@Components/Settings/application/general/JourneyStatisticsSettings'
 import { UnitsSystemSettings } from '@Components/Settings/application/general/UnitsSystemSettings'
-import { WaDetails } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaDetails } from '@awesome.me/webawesome/dist/react'
 import { memo, useRef } from 'react'
 
 /** Render general application preferences, including the local tile cache budget. */

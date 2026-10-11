@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-18
- * Last modified: 2026-06-18
+ * Created on: 2026-04-14
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { sanitizeNumericControlValue }     from '@Components/MainUI/widgets/editor/elements/sliderUtils'
-import { WaIcon, WaNumberInput }           from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon, WaNumberInput }           from '@awesome.me/webawesome/dist/react'
 import { useCallback, useEffect, useMemo } from 'react'
 import { useSnapshot }                     from 'valtio'
 

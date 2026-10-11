@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-11
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -58,7 +58,7 @@ vi.mock('@Utils/cesium/TrackUtils', () => ({
     },
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, loading, variant, size, ...props}) => <button type={props.type ?? 'button'} {...props}>{children}</button>,
     WaCopyButton: ({from, ...props}) => <button data-copy-from={from} {...props}>{'Copy error'}</button>,
     WaDetails: ({children, open, summary, onWaShow, onWaHide, ...props}) => (

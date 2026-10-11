@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-06
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaButton, WaIcon, WaNumberInput, WaSlider } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaNumberInput, WaSlider } from '@awesome.me/webawesome/dist/react'
 import { useCallback, useMemo }                       from 'react'
 
 /**

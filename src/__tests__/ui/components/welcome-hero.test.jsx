@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,7 +25,7 @@ vi.mock('@Components/MainUI/WelcomeHeroControls', () => ({
     WelcomeHeroControls: () => <div aria-label="Welcome hero controls"/>,
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', async () => {
+vi.mock('@awesome.me/webawesome/dist/react', async () => {
     const {forwardRef} = await import('react')
 
     return {

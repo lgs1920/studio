@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-07-16
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGSScrollbars }              from '@Components/MainUI/LGSScrollbars'
-import { WaCard, WaIcon }             from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaCard, WaIcon }             from '@awesome.me/webawesome/dist/react'
 import { default as ReactMarkdown }   from 'react-markdown'
 import { markdown as license }        from '../../../LICENSE.md'
 import { markdown as contributorCLA } from '../../../CONTRIBUTOR_LICENSE_AGREEMENT.md'

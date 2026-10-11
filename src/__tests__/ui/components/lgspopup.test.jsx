@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-08
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,7 @@ const {waPopupMock} = vi.hoisted(() => ({
     waPopupMock: vi.fn(),
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', async () => {
+vi.mock('@awesome.me/webawesome/dist/react', async () => {
     const { forwardRef } = await vi.importActual('react')
 
     return {

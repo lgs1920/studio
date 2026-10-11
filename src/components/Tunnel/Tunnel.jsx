@@ -7,12 +7,13 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-05
- * Last modified: 2026-06-05
+ * Created on: 2025-08-20
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
 /**
  * Tunnel.jsx
  *
@@ -22,7 +23,7 @@
  * @module Tunnel
  */
 import { LGSPopup }         from '@Components/LGSPopup'
-import { WaButton, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon } from '@awesome.me/webawesome/dist/react'
 import classNames                                                  from 'classnames'
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import './style.css'

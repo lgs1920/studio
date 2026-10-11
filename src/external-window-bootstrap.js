@@ -8,18 +8,18 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-18
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import '@web.awesome.me/webawesome-pro/dist/components/button/button.js'
-import '@web.awesome.me/webawesome-pro/dist/components/card/card.js'
-import '@web.awesome.me/webawesome-pro/dist/components/divider/divider.js'
-import '@web.awesome.me/webawesome-pro/dist/components/icon/icon.js'
-import '@web.awesome.me/webawesome-pro/dist/components/progress-bar/progress-bar.js'
-import '@web.awesome.me/webawesome-pro/dist/components/tooltip/tooltip.js'
+import '@awesome.me/webawesome/dist/components/button/button.js'
+import '@awesome.me/webawesome/dist/components/card/card.js'
+import '@awesome.me/webawesome/dist/components/divider/divider.js'
+import '@awesome.me/webawesome/dist/components/icon/icon.js'
+import '@awesome.me/webawesome/dist/components/progress-bar/progress-bar.js'
+import '@awesome.me/webawesome/dist/components/tooltip/tooltip.js'
 import {registerLGS1920IconLibrary} from './Utils/LGS1920IconLibrary'
 import '@lgs1920/timeline'
 

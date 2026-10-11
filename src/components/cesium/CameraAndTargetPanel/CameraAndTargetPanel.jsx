@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,7 +21,7 @@ import {
 }                      from '@Core/constants'
 import { CameraUtils }                                       from '@Utils/cesium/CameraUtils'
 import { foot, meter, UnitUtils }                            from '@Utils/UnitUtils'
-import { WaIcon }                                            from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon }                                            from '@awesome.me/webawesome/dist/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { snapshot, useSnapshot }                             from 'valtio'
 

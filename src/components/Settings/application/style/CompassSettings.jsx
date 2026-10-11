@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2025-04-09
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,7 +32,7 @@ import {
     WIDGET_EDITOR_PRE_RENDER_EVENT,
     WIDGETS_EDITOR_DRAWER,
 }                                                          from '@Core/constants'
-import { WaButton, WaDivider, WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaDivider, WaIcon, WaOption, WaSelect } from '@awesome.me/webawesome/dist/react'
 import { useCallback }                                     from 'react'
 import { useSnapshot }                                     from 'valtio'
 

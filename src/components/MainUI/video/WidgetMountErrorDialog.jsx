@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-28
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { ErrorDiagnosticDetails } from '@Components/Modals/ErrorDiagnosticDetails'
 import { collectErrorDiagnostic, formatErrorDiagnostic } from '@Utils/ErrorDiagnosticUtils'
 import { SlAlert, SlButton, SlDialog }                   from '@shoelace-style/shoelace/dist/react'
-import { WaIcon }                                        from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon }                                        from '@awesome.me/webawesome/dist/react'
 import React                                            from 'react'
 import './style.css'
 

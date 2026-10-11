@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-07
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,7 +34,7 @@ import {
 }                                from '@Core/ui/widget-manager/widgetGridUtils'
 import { isWidgetAvailable }     from '@Core/ui/widget-manager/widgetAvailability'
 import { useOptionalSnapshot }    from '@Utils/ValtioUtils'
-import { WaDivider, WaIcon, WaNumberInput, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaDivider, WaIcon, WaNumberInput, WaSwitch } from '@awesome.me/webawesome/dist/react'
 import classNames                from 'classnames'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }           from 'valtio'

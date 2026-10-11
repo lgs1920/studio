@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,7 +28,7 @@ import {
 import {isDocumentPictureInPictureSupported} from '@Core/ui/widget-manager/WidgetWindowManager'
 import {LGS_TOOLBAR, REPLAY_RECORDING_MONITOR_WIDGET_ID} from '@Core/constants'
 import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAwesomeKits'
-import {WaButton, WaIcon, WaProgressBar, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/react'
+import {WaButton, WaIcon, WaProgressBar, WaTooltip} from '@awesome.me/webawesome/dist/react'
 import {createPortal} from 'react-dom'
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore} from 'react'
 import './replay-recording-monitor.css'

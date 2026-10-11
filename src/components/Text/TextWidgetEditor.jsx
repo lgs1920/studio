@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-12-21
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,7 @@ import { TextColorElement }     from '@Components/MainUI/widgets/editor/elements
 import { TextElevationElement } from '@Components/MainUI/widgets/editor/elements/TextElevationElement'
 import { TypefaceElement }      from '@Components/MainUI/widgets/editor/elements/TypefaceElement'
 
-import { WaCard, WaDivider } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaCard, WaDivider } from '@awesome.me/webawesome/dist/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSnapshot }          from 'valtio'
 import { useOptionalSnapshot }  from '@Utils/ValtioUtils'

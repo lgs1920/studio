@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-20
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import { LGSPopup }                                                       from '
 import { Journey }                                                        from '@Core/Journey'
 import {
     WaCard, WaIcon, WaOption, WaSelect, WaTree, WaTreeItem,
-}                                                                         from '@web.awesome.me/webawesome-pro/dist/react'
+}                                                                         from '@awesome.me/webawesome/dist/react'
 import classNames                                                         from 'classnames'
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                                    from 'valtio'

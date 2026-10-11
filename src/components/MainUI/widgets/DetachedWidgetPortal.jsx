@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-10
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
 import { JOURNEY_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
-import { WaCard } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaCard } from '@awesome.me/webawesome/dist/react'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { createPortal } from 'react-dom'
 import { useSnapshot } from 'valtio'

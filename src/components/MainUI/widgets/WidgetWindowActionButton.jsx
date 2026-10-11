@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-09-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {WaButton, WaIcon, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/react'
+import {WaButton, WaIcon, WaTooltip} from '@awesome.me/webawesome/dist/react'
 import {useId} from 'react'
 
 const WIDGET_WINDOW_ACTION_FONT_SIZE = 'var(--wa-font-size-m)'

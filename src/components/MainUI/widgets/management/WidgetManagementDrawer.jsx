@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-20
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,7 @@ import {
     getWidgetManagementExcludedTypes,
 } from '@Components/MainUI/widgets/openWidgetManagementDrawer'
 import { SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD, WIDGET_MANAGEMENT_DRAWER } from '@Core/constants'
-import { WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon } from '@awesome.me/webawesome/dist/react'
 import PanelActions from '@Components/PanelsActions'
 import { useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'

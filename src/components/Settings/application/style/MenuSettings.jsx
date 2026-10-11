@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-03-11
- * Last modified: 2026-03-11
+ * Created on: 2025-01-03
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import {
     MENU_START_START, MOBILE_MAX, START,
 }                        from '@Core/constants'
 import { SlDivider }     from '@shoelace-style/shoelace/dist/react'
-import { WaDivider } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaDivider } from '@awesome.me/webawesome/dist/react'
 
 export const MenuSettings = (props) => {
 

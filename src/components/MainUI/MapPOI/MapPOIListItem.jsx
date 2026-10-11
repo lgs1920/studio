@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2025-02-20
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@
 import { MapPOIEditContent }                               from '@Components/MainUI/MapPOI/MapPOIEditContent'
 import { MapPOISummary }                                   from '@Components/MainUI/MapPOI/MapPOISummary'
 import { POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE } from '@Core/constants'
-import { WaDetails, WaIcon }                               from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaDetails, WaIcon }                               from '@awesome.me/webawesome/dist/react'
 import classNames                                          from 'classnames'
 import { memo, useCallback, useRef } from 'react'
 import { proxy, useSnapshot } from 'valtio'

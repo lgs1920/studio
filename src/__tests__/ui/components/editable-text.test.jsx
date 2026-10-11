@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-18
- * Last modified: 2026-06-18
+ * Created on: 2026-06-16
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -48,7 +48,7 @@ vi.mock('@Core/events/shortcutBlockers', () => ({
     hasActiveAppShortcutBlocker: () => false,
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, disabled, ...props}) => <button type="button" disabled={disabled} {...props}>{children}</button>,
     WaButtonGroup: ({children, ...props}) => <div {...props}>{children}</div>,
     WaIcon: () => <span aria-hidden="true"/>,

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-15
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,7 +50,7 @@ vi.mock('@Utils/UIToast', () => ({
         error:   vi.fn(),
     },
 }))
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton:      ({children, ...props}) => <button type="button" {...props}>{children}</button>,
     WaIcon:        ({name}) => <span data-icon={name}/>,
     WaOption:      ({children, ...props}) => <div role="option" {...props}>{children}</div>,

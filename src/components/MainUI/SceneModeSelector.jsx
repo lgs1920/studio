@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2024-12-04
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { SCENE_MODES }                                             from '@Core/constants'
 import { LGSPopup }                                           from '@Components/LGSPopup'
-import { WaButton, WaIcon, WaTooltip }                        from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaTooltip }                        from '@awesome.me/webawesome/dist/react'
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                             from 'valtio/index'
 

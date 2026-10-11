@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-12-20
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,7 +37,7 @@ import {
     WaTab,
     WaTabGroup,
     WaTabPanel,
-}                                                                     from '@web.awesome.me/webawesome-pro/dist/react'
+}                                                                     from '@awesome.me/webawesome/dist/react'
 import { useOptionalSnapshot }                                        from '@Utils/ValtioUtils'
 import { useManagedStylesheet }                                        from '@Utils/useManagedStylesheet'
 import classNames                                                     from 'classnames'

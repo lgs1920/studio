@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2024-06-17
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { LGSScrollbars }                                     from '@Components/MainUI/LGSScrollbars'
 import { ChangelogManager, changelogFileName, changelogVersionFromFile } from '@Core/ui/ChangelogManager'
-import { WaButton, WaDetails, WaDivider, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaDetails, WaDivider, WaIcon, WaSpinner } from '@awesome.me/webawesome/dist/react'
 import { DateTime }                                          from 'luxon'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { default as ReactMarkdown }                          from 'react-markdown'

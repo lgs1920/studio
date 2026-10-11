@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { TEXT_WIDGET, WIDGET_FONT_FAMILIES, WIDGET_SYSTEM_FONT_STACK } from '@Core/constants'
-import { WaIcon, WaOption, WaSelect }                                  from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon, WaOption, WaSelect }                                  from '@awesome.me/webawesome/dist/react'
 import { useCallback, useMemo }                                        from 'react'
 import { useSnapshot }                                                 from 'valtio'
 

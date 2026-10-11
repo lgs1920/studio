@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-09
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaPopup as WaPopupBase }                                          from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaPopup as WaPopupBase }                                          from '@awesome.me/webawesome/dist/react'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 
 const resolveAnchorElement = (anchor) => {

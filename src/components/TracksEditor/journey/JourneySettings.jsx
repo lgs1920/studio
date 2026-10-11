@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-17
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -80,7 +80,7 @@ import { decodeHTMLEntities }         from '@Utils/TextUtils'
 import {
     WaButton, WaCard, WaDetails, WaIcon, WaInput, WaOption, WaSelect, WaTab, WaTabGroup, WaTabPanel,
     WaTextarea, WaTooltip,
-}                                     from '@web.awesome.me/webawesome-pro/dist/react'
+}                                     from '@awesome.me/webawesome/dist/react'
 import { useEffect, useRef, useState } from 'react'
 import { sprintf }                    from 'sprintf-js'
 import { useSnapshot }                from 'valtio'

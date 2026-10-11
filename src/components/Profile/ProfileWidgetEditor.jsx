@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-12-21
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,7 +34,7 @@ import {
 import {
     WaButton, WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect,
     WaSwitch,
-}                                                         from '@web.awesome.me/webawesome-pro/dist/react'
+}                                                         from '@awesome.me/webawesome/dist/react'
 import { colord }                      from 'colord'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                 from 'valtio'

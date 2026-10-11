@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-11
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,7 @@ import {
     layerCreditText,
     resolveLayerCredit,
 }                                                       from '@Core/ui/layerCredits'
-import { WaTooltip }                                   from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaTooltip }                                   from '@awesome.me/webawesome/dist/react'
 import { Fragment, memo, useEffect, useId }            from 'react'
 import { proxy, useSnapshot }                          from 'valtio'
 import { subscribeKey }                                from 'valtio/utils'

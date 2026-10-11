@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,7 +21,7 @@ vi.mock('@Components/ThemeSelector', () => ({
     ThemeSelector: ({paletteOnly}) => <div data-palette-only={paletteOnly}/>,
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaDropdown: ({children, onWaSelect, ...props}) => (
         <div {...props} onClick={() => onWaSelect?.({detail: {item: {value: 'fr'}}})}>{children}</div>

@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-02-24
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaSwitch }                    from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaSwitch }                    from '@awesome.me/webawesome/dist/react'
 import { colord }                      from 'colord'
 import { useEffect, useMemo, useRef }  from 'react'
 import { LineElement }                 from './LineElement'

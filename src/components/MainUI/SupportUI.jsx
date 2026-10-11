@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-06-04
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaButton, WaDialog, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaDialog, WaIcon } from '@awesome.me/webawesome/dist/react'
 import { default as ReactMarkdown }   from 'react-markdown'
 import { useSnapshot }                from 'valtio'
 import { markdown as support } from '../../../src/assets/modals/support.md'

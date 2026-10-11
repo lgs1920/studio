@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-05
- * Last modified: 2026-06-05
+ * Created on: 2024-11-17
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaDetails, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaDetails, WaIcon } from '@awesome.me/webawesome/dist/react'
 import { useEffect, useRef } from 'react'
 import { RemoveProfile } from './RemoveProfile'
 import { ResetProfile } from './ResetProfile'

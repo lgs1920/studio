@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,7 @@ import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/R
 import { foot, meter, UnitUtils } from '@Utils/UnitUtils'
 import { cameraViewToSlippyLevel } from '@Utils/cesium/CameraLevel'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
-import { WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon } from '@awesome.me/webawesome/dist/react'
 import { Math as CesiumMath } from 'cesium'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 

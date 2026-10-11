@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-10
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,7 +25,7 @@ import {JourneyReplayDrawer} from '@Components/JourneyReplay/JourneyReplayDrawer
 
 // Keep the drawer layout independent of its application host while exercising
 // the installed number input, shadow DOM, native events, and React wrapper.
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', async importOriginal => ({
+vi.mock('@awesome.me/webawesome/dist/react', async importOriginal => ({
     ...await importOriginal(),
     WaTab: ({children}) => <span>{children}</span>,
     WaTabGroup: ({children}) => <div>{children}</div>,

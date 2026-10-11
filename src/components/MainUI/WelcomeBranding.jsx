@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-21
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { SloganSvg } from '@Components/MainUI/SloganSvg'
-import { WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaSpinner } from '@awesome.me/webawesome/dist/react'
 import { useLayoutEffect } from 'react'
 
 /**

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import PanelActions from '@Components/PanelsActions'
 import WaDrawer from '@Components/WaDrawerNonModal'
 import { CODE_DEPENDENCIES_DRAWER } from '@Core/constants'
-import { WaCard } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaCard } from '@awesome.me/webawesome/dist/react'
 import { createPortal } from 'react-dom'
 import { useCallback, useEffect, useRef } from 'react'
 import { default as ReactMarkdown } from 'react-markdown'

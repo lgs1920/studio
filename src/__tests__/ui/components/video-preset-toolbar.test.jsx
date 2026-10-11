@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-12
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,7 +30,7 @@ vi.mock('@Components/MainUI/video/toolbox/VideoQualityToolbar', () => ({
     VideoQualityToolbar: ({compactSimple}) => <div data-testid="quality-choices" data-compact-simple={compactSimple}/>,
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
     WaIcon: () => <span/>,
 }))

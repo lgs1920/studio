@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-02-20
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaColorPicker, WaSlider }                        from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaColorPicker, WaSlider }                        from '@awesome.me/webawesome/dist/react'
 import { colord }                                         from 'colord'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { formatSliderPercent, sanitizeNumericControlValue } from './sliderUtils'

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-29
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,7 @@ import {
 }                                                                 from '@Core/ui/replay/JourneyReplayMode'
 import {
     WaButton, WaCard, WaIcon, WaTooltip,
-} from '@web.awesome.me/webawesome-pro/dist/react'
+} from '@awesome.me/webawesome/dist/react'
 import { useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                               from 'valtio'
 

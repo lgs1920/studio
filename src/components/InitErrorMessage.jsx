@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-08-11
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import {
 } from '@Utils/ErrorDiagnosticUtils'
 import {
     WaButton, WaCallout, WaDialog, WaIcon,
-}                        from '@web.awesome.me/webawesome-pro/dist/react'
+}                        from '@awesome.me/webawesome/dist/react'
 
 const BACKEND_SUPPORT_EMAIL = 'studio@lgs1920.fr'
 const BACKEND_SUPPORT_SUBJECT = '[Studio] Backend stopped'

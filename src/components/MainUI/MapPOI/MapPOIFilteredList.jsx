@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-20
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@
 import { MapPOIListItem }        from '@Components/MainUI/MapPOI/MapPOIListItem'
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
 import { useProxyValue }         from '@Utils/ValtioUtils'
-import { WaCallout, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaCallout, WaIcon } from '@awesome.me/webawesome/dist/react'
 import { useEffect, useMemo }          from 'react'
 import { useSnapshot }           from 'valtio'
 

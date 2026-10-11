@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-15
- * Last modified: 2026-04-15
+ * Created on: 2024-05-01
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { WaDivider, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaDivider, WaIcon } from '@awesome.me/webawesome/dist/react'
 import { useEffect, useState } from 'react'
 import { DateTimeDisplay }   from '@Components/DateTimeDisplay'
 

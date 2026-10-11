@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-18
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import PanelActions from '@Components/PanelsActions'
 import { SETTINGS_EDITOR_DRAWER }                                     from '@Core/constants'
 import WaDrawer                                             from '@Components/WaDrawerNonModal'
-import { WaIcon, WaTab, WaTabGroup, WaTabPanel, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon, WaTab, WaTabGroup, WaTabPanel, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { memo, useCallback, useEffect } from 'react'
 import { createPortal }                                     from 'react-dom'
 import { useSnapshot }                                                from 'valtio'

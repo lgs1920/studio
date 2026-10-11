@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2024-12-20
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { FOCUS_CENTROID, FOCUS_LAST, FOCUS_STARTER, SCENE_MODE_3D } from '@Core/constants'
-import { WaDivider, WaIcon, WaRadio, WaRadioGroup, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaDivider, WaIcon, WaRadio, WaRadioGroup, WaSwitch } from '@awesome.me/webawesome/dist/react'
 import { useCallback, useRef } from 'react'
 import { useSnapshot }                                        from 'valtio/index'
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-23
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@
 
 import {REPLAY_VIDEO_FPS} from '@Core/ui/replay/ReplayVideoSettings'
 import classNames         from 'classnames'
-import { WaButton }                           from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton }                           from '@awesome.me/webawesome/dist/react'
 import { Fragment, memo, useMemo } from 'react'
 import { useSnapshot }                        from 'valtio'
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import {render} from 'vitest-browser-react'
 import {afterEach, expect, test, vi} from 'vitest'
 import {proxy} from 'valtio'
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaCallout: ({children, ...props}) => <div {...props}>{children}</div>,
     WaDialog: ({children, open}) => open ? <div role="dialog">{children}</div> : null,

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-07
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { BASE3D_ENTITY, BASE_ENTITY, PERSONAL_ACCESS, TERRAIN_ENTITY, TILES3D_ENTITY, VAULT_STORE } from '@Core/constants'
 import { UIToast }                                                                    from '@Utils/UIToast'
 import { IonLayerUtils }                                                               from '@Utils/cesium/IonLayerUtils'
-import { WaBadge, WaButton, WaDialog, WaIcon, WaInput }                               from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaBadge, WaButton, WaDialog, WaIcon, WaInput }                               from '@awesome.me/webawesome/dist/react'
 import parse                                                                          from 'html-react-parser'
 import { useEffect, useState }                                                         from 'react'
 import { useSnapshot }                                                                 from 'valtio'

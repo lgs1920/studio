@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,7 @@ import {
 import { createReplayScrubScheduler } from '@Core/ui/replay/ReplayScrubScheduler'
 import { captureReplayCropSnapshot } from '@Core/ui/ReplayCropSnapshot'
 import { DISTANCE_UNITS, km, UnitUtils } from '@Utils/UnitUtils'
-import { WaButton, WaIcon, WaSlider, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaSlider, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot } from 'valtio'
 import { v4 as uuid } from 'uuid'

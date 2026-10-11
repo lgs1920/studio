@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2024-04-24
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import { useEffect, useRef }     from 'react'
 import { SECOND }                from '@Core/constants'
 import parse                     from 'html-react-parser'
 import { toast, ToastContainer } from 'react-toastify'
-import { WaCallout, WaIcon }     from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaCallout, WaIcon }     from '@awesome.me/webawesome/dist/react'
 import 'react-toastify/dist/ReactToastify.css'
 
 export const LGS_INFORMATION_TOAST = 'primary'

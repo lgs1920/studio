@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-03-22
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import { MapPOIEditFilterPopup }               from '@Components/MainUI/MapPOI/M
 import { PopupAnchor }                         from '@Components/PopupAnchor'
 import { LGSPopup }                   from '@Components/LGSPopup'
 import { JOURNEY_EDITOR_DRAWER }               from '@Core/constants'
-import { WaIcon, WaSwitch }           from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon, WaSwitch }           from '@awesome.me/webawesome/dist/react'
 import classNames                              from 'classnames'
 import { memo, useCallback, useMemo } from 'react'
 import { useSnapshot }                         from 'valtio'

@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-12
- * Last modified: 2026-04-12
+ * Created on: 2026-01-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { SlSkeleton }         from '@shoelace-style/shoelace/dist/react'
-import { WaCard, WaSkeleton } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaCard, WaSkeleton } from '@awesome.me/webawesome/dist/react'
 
 /**
  * A placeholder component that mimics the layout of a widget editor.

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,7 +45,7 @@ vi.mock('@Components/MainUI/widgets/Widget', () => ({
     },
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({appearance, children, size: _size, variant: _variant, ...props}) => (
         <button type="button" data-appearance={appearance} {...props}>{children}</button>
     ),

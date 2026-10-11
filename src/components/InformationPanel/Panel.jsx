@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *  
+ *
  * File: Panel.jsx
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2024-06-17
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import DrawerFooter                                  from '@Components/DrawerFoo
 import PanelActions                        from '@Components/PanelsActions'
 import WaDrawer                                      from '@Components/WaDrawerNonModal'
 import { INFO_CHANGELOG_TAB, INFO_DRAWER } from '@Core/constants'
-import { WaIcon, WaScroller, WaTab, WaTabGroup, WaTabPanel } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaIcon, WaScroller, WaTab, WaTabGroup, WaTabPanel } from '@awesome.me/webawesome/dist/react'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal }                from 'react-dom'

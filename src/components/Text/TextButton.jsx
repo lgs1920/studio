@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-07
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import {
     WidgetDynamicRenderer,
 }                                                                    from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import './style.css'
-import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 
 export const TextButton = (props) => {
     // Access the singleton correctly

@@ -7,11 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
+ * Created on: 2026-08-13
+ * Last modified: 2026-10-11
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { ThemeSelector }                                    from '@Components/ThemeSelector'
-import { WaButton, WaDropdown, WaDropdownItem }              from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaDropdown, WaDropdownItem }              from '@awesome.me/webawesome/dist/react'
 import { useState }                                         from 'react'
 
 const WELCOME_LANGUAGE_STORAGE_KEY = 'lgs-language'
