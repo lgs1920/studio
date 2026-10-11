@@ -82,4 +82,30 @@ describe('WidgetMountErrorDialog', () => {
         expect(onCancel).toHaveBeenCalledTimes(1)
         expect(onConfirm).toHaveBeenCalledTimes(2)
     })
+
+    it('portals the dialog outside a pointer-events-disabled tools container', () => {
+        const onConfirm = vi.fn()
+        const onCancel = vi.fn()
+        const {container} = render(
+            <div id="lgs-tools-ui" style={{pointerEvents: 'none'}}>
+                <WidgetMountErrorDialog
+                    open
+                    error={{missing: ['stats-widget'], timeoutMs: 5000}}
+                    action="record"
+                    onConfirm={onConfirm}
+                    onCancel={onCancel}
+                />
+            </div>,
+        )
+
+        const dialog = screen.getByRole('dialog', {name: 'Widgets not mounted'})
+        expect(container.querySelector('#lgs-tools-ui').contains(dialog)).toBe(false)
+        expect(dialog.parentElement).toBe(document.body)
+
+        fireEvent.click(screen.getByRole('button', {name: 'Cancel'}))
+        fireEvent.click(screen.getByRole('button', {name: 'Record anyway'}))
+
+        expect(onCancel).toHaveBeenCalledTimes(1)
+        expect(onConfirm).toHaveBeenCalledTimes(1)
+    })
 })

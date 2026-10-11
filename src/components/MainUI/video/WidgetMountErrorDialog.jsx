@@ -20,6 +20,7 @@ import {
     WaButton, WaCallout, WaDialog, WaIcon,
 }                                                       from '@awesome.me/webawesome/dist/react'
 import React                                            from 'react'
+import { createPortal }                                 from 'react-dom'
 import './style.css'
 
 export const WidgetMountErrorDialog = ({open, error, action, onConfirm, onCancel}) => {
@@ -35,12 +36,13 @@ export const WidgetMountErrorDialog = ({open, error, action, onConfirm, onCancel
         suggestedFix: 'Wait for the widgets to finish mounting, then retry the recording or snapshot.',
     })
     diagnostic.details = formatErrorDiagnostic(diagnostic)
-    return (
+    const dialog = (
         <WaDialog
             open={open}
             label={'Widgets not mounted'}
             onWaHide={onConfirm}
             className={'wa-theme-lgs1920 lgs-error-dialog widget-mount-error-dialog'}
+            style={{pointerEvents: 'auto'}}
         >
             <WaCallout variant="warning" open>
                 <WaIcon slot="icon" name="triangle-exclamation" variant="regular"/>
@@ -71,4 +73,10 @@ export const WidgetMountErrorDialog = ({open, error, action, onConfirm, onCancel
             </div>
         </WaDialog>
     )
+
+    // VideoRecordingScreenArea is rendered inside #lgs-tools-ui, whose
+    // pointer-events:none is required for map interaction. A native modal
+    // dialog inherits that hit-testing behavior, so portal it outside that
+    // subtree to keep its controls clickable.
+    return typeof document === 'undefined' ? dialog : createPortal(dialog, document.body)
 }
