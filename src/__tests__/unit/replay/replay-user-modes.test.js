@@ -34,12 +34,33 @@ import {
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {describe, expect, it, vi} from 'vitest'
 import {currentJourneyReplayCameraSettings} from '@Core/ui/replay/JourneyReplayRuntime'
+import {readFileSync} from 'node:fs'
+import {parse as parseYaml} from 'yaml'
+
+const replayYamlDefaults = parseYaml(readFileSync(new URL('../../../../public/replay.yaml', import.meta.url), 'utf8')).replay
 
 describe('Replay user modes', () => {
     it('defaults to Basic and normalizes unknown modes', () => {
         expect(normalizeReplayUserMode()).toBe(REPLAY_USER_MODE_BASIC)
         expect(normalizeReplayUserMode('unknown')).toBe(REPLAY_USER_MODE_BASIC)
         expect(normalizeReplayUserMode(REPLAY_USER_MODE_EXPERT)).toBe(REPLAY_USER_MODE_EXPERT)
+    })
+
+    it('keeps Simple camera policies when product YAML has not loaded yet', () => {
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_BASIC}}},
+            stores: {replay: {userMode: REPLAY_USER_MODE_BASIC, simplePreparationActive: false}},
+        })
+
+        try {
+            const defaults = defaultSimpleReplaySettings()
+            expect(defaults.camera).toMatchObject({canDrift: false, canRoll: false})
+            expect(defaults.marker.mode).toBe('navigation')
+            expect(defaults.trace.mode).toBe('progressive')
+        }
+        finally {
+            vi.unstubAllGlobals()
+        }
     })
 
     it('prefers the saved mode to the runtime store default while Simple preparation stays Basic', () => {
@@ -88,22 +109,87 @@ describe('Replay user modes', () => {
         }
     })
 
-    it('keeps Simple Replay behind by default and disables camera diagnostics', () => {
-        const defaults = defaultSimpleReplaySettings()
-        const normalized = normalizeSimpleReplaySettings({
-            camera: {debug: true, positionMode: 'ahead'},
-            marker: {mode: 'trace'},
-            trace: {mode: 'full'},
-        })
+    it('reads Simple Replay presentation defaults from YAML and keeps them separate from Expert persistence', () => {
+        const previousLgs = globalThis.lgs
+        const journey = {
+            replay: {
+                simple: {
+                    presentation: {
+                        progression: {
+                            fill: {color: '#008000', width: 7},
+                            border: {color: '#0000ff', width: 3},
+                        },
+                    },
+                },
+                expert: {
+                    progression: {
+                        fill: {color: '#008000', width: 7},
+                        border: {color: '#0000ff', width: 3},
+                    },
+                },
+            },
+        }
+        globalThis.lgs = {
+            savedConfiguration: {ui: {replay: replayYamlDefaults}},
+            settings: {
+                ui: {
+                    replay: {
+                        userMode: REPLAY_USER_MODE_BASIC,
+                        simple: {
+                            presentation: {
+                                progression: {
+                                    fill: {color: '#008000', width: 7},
+                                    border: {color: '#0000ff', width: 3},
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            stores: {replay: {userMode: REPLAY_USER_MODE_BASIC, simplePreparationActive: false}},
+        }
 
-        expect(defaults.camera).toMatchObject({debug: false, cameraAngle: 0})
-        expect(defaults.camera).not.toHaveProperty('altitude')
-        expect(defaults.camera).not.toHaveProperty('pitch')
-        expect(defaults.marker.mode).toBe('navigation')
-        expect(defaults.trace.mode).toBe('progressive')
-        expect(normalized.camera).toMatchObject({debug: false, cameraAngle: 0})
-        expect(normalized.marker.mode).toBe('navigation')
-        expect(normalized.trace.mode).toBe('progressive')
+        try {
+            const defaults = defaultSimpleReplaySettings()
+            const yamlProgression = replayYamlDefaults.simple.presentation.progression
+            const normalized = normalizeSimpleReplaySettings({
+                camera: {debug: true, positionMode: 'ahead'},
+                marker: {mode: 'trace'},
+                trace: {mode: 'full'},
+                presentation: {
+                    progression: {
+                        fill: {color: '#008000', width: 7},
+                        border: {color: '#0000ff', width: 3},
+                    },
+                },
+            })
+
+            expect(defaults.camera).toMatchObject({debug: false, cameraAngle: 0})
+            expect(defaults.camera).not.toHaveProperty('altitude')
+            expect(defaults.camera).not.toHaveProperty('pitch')
+            expect(defaults.marker.mode).toBe('navigation')
+            expect(defaults.trace.mode).toBe('progressive')
+            expect(defaults.presentation.progression).toMatchObject(yamlProgression)
+            expect(normalized.camera).toMatchObject({debug: false, cameraAngle: 0})
+            expect(normalized.marker.mode).toBe('trace')
+            expect(normalized.trace.mode).toBe('full')
+            expect(normalized.presentation.progression).toMatchObject(yamlProgression)
+
+            expect(getJourneyReplaySettings({journey}).progression).toMatchObject(yamlProgression)
+
+            globalThis.lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
+            globalThis.lgs.stores.replay.userMode = REPLAY_USER_MODE_EXPERT
+            expect(getJourneyReplaySettings({journey}).progression).toMatchObject({
+                fill: {color: '#008000', width: 7},
+                border: {color: '#0000ff', width: 3},
+            })
+        } finally {
+            if (previousLgs === undefined) {
+                delete globalThis.lgs
+            } else {
+                globalThis.lgs = previousLgs
+            }
+        }
     })
 
     it.each([false, true])('disables Simple runtime diagnostics when persisted settings enable them, preparation: %s', simplePreparationActive => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,15 +16,8 @@
 
 import {
     DEFAULT_REPLAY_CAMERA,
-    DEFAULT_REPLAY_PROGRESSION,
-    DEFAULT_REPLAY_PROFILE_INFO,
-    DEFAULT_SIMPLE_REPLAY_DURATION,
-    REPLAY_MARKER_MODE_NAVIGATION,
     REPLAY_INITIAL_CAMERA_ANGLE,
-    REPLAY_TRACE_MODE_PROGRESSIVE,
-    defaultJourneyReplayCameraStyle,
-    defaultJourneyReplayMarkerStyle,
-    defaultJourneyReplayTraceStyle,
+    defaultJourneyReplaySimpleSettings,
     normalizeJourneyReplayCamera,
     normalizeJourneyReplayMarker,
     normalizeJourneyReplayProgressionStyle,
@@ -44,7 +37,6 @@ import {
 export {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT}
 export const DEFAULT_REPLAY_USER_MODE = REPLAY_USER_MODE_BASIC
 
-const clone = value => JSON.parse(JSON.stringify(value))
 const hasFiniteCameraValue = value => value !== null && value !== undefined && Number.isFinite(Number(value))
 const journeyReplayCameraAngle = camera => {
     if (hasFiniteCameraValue(camera?.cameraAngle)) {
@@ -58,7 +50,6 @@ const journeyReplayCameraAngle = camera => {
 const expertCameraPersistTimers = new WeakMap()
 const expertProgressionPersistTimers = new WeakMap()
 const simpleCameraPersistTimers = new WeakMap()
-const simpleProgressionPersistTimers = new WeakMap()
 const simpleTracePersistTimers = new WeakMap()
 const simpleDurationPersistTimers = new WeakMap()
 const EXPERT_CAMERA_PERSIST_DELAY_MS = 250
@@ -236,48 +227,7 @@ export const syncJourneySimpleReplayCamera = (camera, journeyOverride = null) =>
 }
 
 /**
- * Synchronize Simple Replay progression edits with explicit journey settings.
- *
- * @param {Object} progression - Complete normalized progression settings.
- * @returns {Object|null} The synchronized progression, or null without journey-level Simple settings.
- */
-export const syncJourneySimpleReplayProgression = progression => {
-    const journey = currentReplayJourney()
-    const replay = journey?.replay
-    const simple = replay?.simple
-    if (!journey || !simple || typeof simple !== 'object') {
-        return null
-    }
-
-    const nextProgression = normalizeJourneyReplayProgressionStyle(progression)
-    journey.replay = {
-        ...replay,
-        simple: {
-            ...simple,
-            presentation: {
-                ...(simple.presentation ?? {}),
-                progression: nextProgression,
-            },
-        },
-    }
-
-    if (typeof journey.persistToDatabase === 'function') {
-        const pendingTimer = simpleProgressionPersistTimers.get(journey)
-        if (pendingTimer !== undefined) {
-            clearTimeout(pendingTimer)
-        }
-        simpleProgressionPersistTimers.set(journey, setTimeout(() => {
-            simpleProgressionPersistTimers.delete(journey)
-            void journey.persistToDatabase()
-        }, EXPERT_CAMERA_PERSIST_DELAY_MS))
-    }
-
-    return nextProgression
-}
-
-/**
  * Synchronize Simple Replay trace style edits with explicit journey settings.
- * The Simple mode keeps its supported progressive rendering policy.
  *
  * @param {Object} trace - Complete trace settings.
  * @returns {Object|null} The synchronized trace settings, or null without journey-level Simple settings.
@@ -293,7 +243,6 @@ export const syncJourneySimpleReplayTrace = trace => {
     const nextTrace = normalizeJourneyReplayTrace({
         ...(simple.trace ?? {}),
         ...trace,
-        mode: REPLAY_TRACE_MODE_PROGRESSIVE,
     })
     journey.replay = {
         ...replay,
@@ -356,55 +305,22 @@ export const syncJourneySimpleReplayDuration = duration => {
 }
 
 /**
- * Build first-run Simple camera defaults without a Journey-saved pose.
- *
- * @returns {Object} Simple Replay camera controls and the initial angle.
- */
-const defaultSimpleReplayCamera = () => {
-    const camera = defaultJourneyReplayCameraStyle()
-    delete camera.altitude
-    delete camera.pitch
-    delete camera.groundOffset
-    camera.cameraAngle = REPLAY_INITIAL_CAMERA_ANGLE
-    return camera
-}
-
-/**
  * Return product defaults for the compact Simple Replay workflow.
  *
  * @returns {Object} Simple Replay defaults.
  */
-export const defaultSimpleReplaySettings = () => ({
-    duration: DEFAULT_SIMPLE_REPLAY_DURATION,
-    camera: defaultSimpleReplayCamera(),
-    presentation: {
-        progression: {
-            ...clone(DEFAULT_REPLAY_PROGRESSION),
-            fill: {
-                ...clone(DEFAULT_REPLAY_PROGRESSION.fill),
-                color: '#ff2525',
-                width: DEFAULT_REPLAY_PROGRESSION.fill.width,
-            },
-            border: {
-                ...clone(DEFAULT_REPLAY_PROGRESSION.border),
-                color: '#ff2525',
-                width: DEFAULT_REPLAY_PROGRESSION.border.width,
-            },
-        },
-        profileInfo: {
-            ...DEFAULT_REPLAY_PROFILE_INFO,
-            color: '#ffffff',
-        },
-    },
-    marker: {
-        ...defaultJourneyReplayMarkerStyle(),
-        mode: REPLAY_MARKER_MODE_NAVIGATION,
-    },
-    trace: {
-        ...defaultJourneyReplayTraceStyle(),
-        mode: REPLAY_TRACE_MODE_PROGRESSIVE,
-    },
-})
+export const defaultSimpleReplaySettings = () => {
+    const defaults = defaultJourneyReplaySimpleSettings()
+    const camera = {...defaults.camera}
+    delete camera.altitude
+    delete camera.pitch
+    delete camera.groundOffset
+
+    return {
+        ...defaults,
+        camera,
+    }
+}
 
 /**
  * Normalize compact Simple Replay settings.
@@ -426,38 +342,20 @@ export const normalizeSimpleReplaySettings = (settings = {}) => {
         ...cameraSettings,
         debug: false,
     })
-    const presentation = settings?.presentation ?? {}
-
     return {
-        duration: normalizeSimpleReplayDuration(settings?.duration),
+        duration: normalizeSimpleReplayDuration(settings?.duration ?? defaults.duration),
         camera,
         presentation: {
-            progression: normalizeJourneyReplayProgressionStyle({
-                ...defaults.presentation.progression,
-                ...(presentation.progression ?? {}),
-                fill: {
-                    ...defaults.presentation.progression.fill,
-                    ...(presentation.progression?.fill ?? {}),
-                },
-                border: {
-                    ...defaults.presentation.progression.border,
-                    ...(presentation.progression?.border ?? {}),
-                },
-            }),
-            profileInfo: normalizeJourneyReplayProfileInfo({
-                ...defaults.presentation.profileInfo,
-                ...(presentation.profileInfo ?? {}),
-            }),
+            progression: normalizeJourneyReplayProgressionStyle(defaults.presentation.progression),
+            profileInfo: normalizeJourneyReplayProfileInfo(defaults.presentation.profileInfo),
         },
         marker: normalizeJourneyReplayMarker({
             ...defaults.marker,
             ...(settings?.marker ?? {}),
-            mode: REPLAY_MARKER_MODE_NAVIGATION,
         }),
         trace: normalizeJourneyReplayTrace({
             ...defaults.trace,
             ...(settings?.trace ?? {}),
-            mode: REPLAY_TRACE_MODE_PROGRESSIVE,
         }),
     }
 }
@@ -483,8 +381,6 @@ export const resolveSimpleReplaySettings = ({journey, user, product} = {}) => no
     },
     presentation: {
         ...(product?.presentation ?? {}),
-        ...(user?.presentation ?? {}),
-        ...(journey?.presentation ?? {}),
     },
     marker: {
         ...(product?.marker ?? {}),

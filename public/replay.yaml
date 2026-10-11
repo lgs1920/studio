@@ -1,5 +1,5 @@
 replay:
-  duration: 60
+  duration: 30
   simple:
     duration: 15
     includeHiddenTracks: false
@@ -9,7 +9,29 @@ replay:
     camera:
       canDrift: false
       canRoll: false
-  poiDistance: 10000
+    presentation:
+      progression:
+        effect:
+          mode: none
+        fill:
+          color: '#7FFF00'
+          opacity: 1
+          width: 4
+          profileMarker: 8
+        border:
+          color: '#000'
+          opacity: 1
+          width: 2
+          profileMarker: 2
+      profileInfo:
+        color: '#ffffff'
+        useTrackStyle: false
+    marker:
+      mode: navigation
+      position: null
+    trace:
+      mode: progressive
+  poiDistance: 5000
   direction: 1
   loop: false
   scope: all-tracks

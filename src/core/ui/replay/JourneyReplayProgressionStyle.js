@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -206,6 +206,71 @@ export const defaultJourneyReplaySmoothing = () => ({...DEFAULT_REPLAY_SMOOTHING
 export const defaultJourneyReplayMarkerStyle = () => ({...DEFAULT_REPLAY_MARKER})
 export const defaultJourneyReplayCameraStyle = () => ({...DEFAULT_REPLAY_CAMERA})
 export const defaultJourneyReplayReadiness = () => ({...DEFAULT_REPLAY_READINESS})
+
+/**
+ * Resolve Simple Replay product defaults from the replay YAML settings.
+ *
+ * @returns {Object} Simple Replay defaults layered over normalization fallbacks.
+ */
+export const defaultJourneyReplaySimpleSettings = () => {
+    const replayDefaults = globalThis.lgs?.savedConfiguration?.ui?.replay ?? {}
+    const simpleDefaults = replayDefaults.simple ?? {}
+    const progressionDefaults = defaultJourneyReplayProgressionStyle()
+    const replayProgression = replayDefaults.progression ?? {}
+    const simpleProgression = simpleDefaults.presentation?.progression ?? {}
+    const replayProfileInfo = replayDefaults.profileInfo ?? {}
+    const simpleProfileInfo = simpleDefaults.presentation?.profileInfo ?? {}
+
+    return {
+        ...simpleDefaults,
+        duration: simpleDefaults.duration ?? DEFAULT_SIMPLE_REPLAY_DURATION,
+        camera: {
+            ...defaultJourneyReplayCameraStyle(),
+            ...(replayDefaults.camera ?? {}),
+            ...(simpleDefaults.camera ?? {}),
+            canDrift: simpleDefaults.camera?.canDrift ?? false,
+            canRoll: simpleDefaults.camera?.canRoll ?? false,
+            altitudeMode: simpleDefaults.camera?.altitudeMode
+                ?? replayDefaults.camera?.altitudeMode
+                ?? REPLAY_CAMERA_ALTITUDE_CONSTANT,
+            cameraAngle: REPLAY_INITIAL_CAMERA_ANGLE,
+        },
+        marker: {
+            ...defaultJourneyReplayMarkerStyle(),
+            ...(replayDefaults.marker ?? {}),
+            ...(simpleDefaults.marker ?? {}),
+            mode: simpleDefaults.marker?.mode ?? REPLAY_MARKER_MODE_NAVIGATION,
+        },
+        trace: {
+            ...defaultJourneyReplayTraceStyle(),
+            ...(replayDefaults.trace ?? {}),
+            ...(simpleDefaults.trace ?? {}),
+            mode: simpleDefaults.trace?.mode ?? REPLAY_TRACE_MODE_PROGRESSIVE,
+        },
+        presentation: {
+            progression: {
+                ...progressionDefaults,
+                ...replayProgression,
+                ...simpleProgression,
+                fill: {
+                    ...progressionDefaults.fill,
+                    ...(replayProgression.fill ?? {}),
+                    ...(simpleProgression.fill ?? {}),
+                },
+                border: {
+                    ...progressionDefaults.border,
+                    ...(replayProgression.border ?? {}),
+                    ...(simpleProgression.border ?? {}),
+                },
+            },
+            profileInfo: {
+                ...defaultJourneyReplayProfileInfoStyle(),
+                ...replayProfileInfo,
+                ...simpleProfileInfo,
+            },
+        },
+    }
+}
 
 /**
  * Project a Replay camera onto the persistent global settings shape.
@@ -702,40 +767,7 @@ export const normalizeJourneyReplaySettings = (settings = {}) => {
 }
 
 const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
-    const product = {
-        duration: 15,
-        includeHiddenTracks: false,
-        readiness: {
-            enabled: false,
-            prewarmEnabled: false,
-        },
-        camera: {
-            ...defaultJourneyReplayCameraStyle(),
-            altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
-        },
-        marker: {
-            ...defaultJourneyReplayMarkerStyle(),
-            mode: REPLAY_MARKER_MODE_NAVIGATION,
-        },
-        trace: {
-            ...defaultJourneyReplayTraceStyle(),
-            mode: REPLAY_TRACE_MODE_PROGRESSIVE,
-        },
-        presentation: {
-            progression: {
-                ...defaultJourneyReplayProgressionStyle(),
-                fill: {
-                    ...DEFAULT_REPLAY_PROGRESSION.fill,
-                    color: '#ff2525',
-                },
-                border: {
-                    ...DEFAULT_REPLAY_PROGRESSION.border,
-                    color: '#ff2525',
-                },
-            },
-            profileInfo: defaultJourneyReplayProfileInfoStyle(),
-        },
-    }
+    const product = defaultJourneyReplaySimpleSettings()
     const cameraSettings = {
         ...product.camera,
         ...(user?.camera ?? {}),
@@ -752,25 +784,15 @@ const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
         ...product.marker,
         ...(user?.marker ?? {}),
         ...(journey?.marker ?? {}),
-        mode: REPLAY_MARKER_MODE_NAVIGATION,
     })
     const trace = normalizeJourneyReplayTrace({
         ...product.trace,
         ...(user?.trace ?? {}),
         ...(journey?.trace ?? {}),
-        mode: REPLAY_TRACE_MODE_PROGRESSIVE,
     })
     const presentation = {
-        progression: normalizeJourneyReplayProgressionStyle({
-            ...product.presentation.progression,
-            ...(user?.presentation?.progression ?? {}),
-            ...(journey?.presentation?.progression ?? {}),
-        }),
-        profileInfo: normalizeJourneyReplayProfileInfo({
-            ...product.presentation.profileInfo,
-            ...(user?.presentation?.profileInfo ?? {}),
-            ...(journey?.presentation?.profileInfo ?? {}),
-        }),
+        progression: normalizeJourneyReplayProgressionStyle(product.presentation.progression),
+        profileInfo: normalizeJourneyReplayProfileInfo(product.presentation.profileInfo),
     }
 
     return {
