@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -198,6 +198,12 @@ describe('JourneyReplay camera interaction lifecycle', () => {
                 replay: {camera: settings.camera, cameraUpdateSource: null},
                 ui: {video: {editing: true}},
             },
+            viewer: {
+                camera: {
+                    pitch: -30 * Math.PI / 180,
+                    positionCartographic: {height: 1800},
+                },
+            },
         }
         const mode = {
             [JOURNEY_REPLAY_INTERNAL_CALL]: {
@@ -205,8 +211,11 @@ describe('JourneyReplay camera interaction lifecycle', () => {
             },
             [JOURNEY_REPLAY_INTERNAL_STATE]: {
                 cameraApplyingView: false,
+                cameraFlightActive: false,
                 cameraPointerActive: true,
                 cameraUserAdjusting: true,
+                preparationPointerPitch: -5 * Math.PI / 180,
+                preparationPointerHeight: 539,
                 suppressPlaybackCameraSync: false,
             },
             syncCameraFromCesiumControls: syncCamera,
@@ -217,6 +226,7 @@ describe('JourneyReplay camera interaction lifecycle', () => {
 
         expect(persistSettings).not.toHaveBeenCalled()
         expect(syncCamera).not.toHaveBeenCalled()
+        expect(settings.camera).toEqual(globalThis.lgs.stores.replay.camera)
     })
 
     it('ignores unauthorised Cesium move events once replay is inactive', () => {
