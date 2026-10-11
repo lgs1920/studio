@@ -32,4 +32,6 @@ Create a feature issue for `1.0.0/backlog/LGS1920/chdenat`.
 
 Bind the popup opened by the cog icon to the widget instead of the button.
 
-Validate the prepared Replay pitch and smoothed camera path visually with a loaded journey.
+During application initialization, show an overlay while journeys are loading. I think 3D loading already has a similar overlay; reuse its style and display “Loading journeys (w/y)”, with `y` set to the total journey count.
+
+Do not start map rotation while journeys are loading. Start it after loading completes, unless it can be done without interfering with or slowing the display.
