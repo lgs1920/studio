@@ -51,7 +51,7 @@ Preserve these boundaries:
   or infer Replay settings from that normal view. Playback saves the current normal view before applying the configured
   Replay pose, then restores that view and its Cesium reference frame on every terminal path. Keep the normal
   return snapshot separate from the Replay entry pose and export context.
-  During video preparation only, explicit mouse tilt and zoom on the map are Replay pitch and height inputs. Compare against gesture-start values and flush pending wheel changes before Record. Preserve the cone angle. Constant altitude stores absolute prepared height and ground offset stores height minus the rendered Replay target height. Automatic camera events, unchanged gestures, playback/capture, and ordinary map navigation never persist Replay configuration. Suspend normal
+  During video preparation only, explicit mouse tilt and zoom on the map are Replay pitch and height inputs. Compare against gesture-start values, wait for pending wheel movement to settle, and commit the final pose to the active Journey before Record. Flush its debounced database write, then verify playback and export resolve that same Journey pose rather than stale runtime defaults. Preserve the cone angle. Constant altitude stores absolute prepared height and ground offset stores height minus the rendered Replay target height. Automatic camera events, unchanged gestures, playback/capture, and ordinary map navigation never persist Replay configuration. Suspend normal
   map persistence while Replay borrows its camera and reject overlapping async
   reads. Validate public drawer refresh, timeline seek, start, pause, resume, stop,
   and disposal with a real Cesium `Camera`. Test repeated starts, stale cleanup,
