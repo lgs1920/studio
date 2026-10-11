@@ -103,8 +103,37 @@ because the live camera may be over a different relief while it is displaced
 from the marker. If terrain is unavailable, the marker sample altitude is the
 deterministic fallback for both the marker and the camera.
 
-Navigation heading uses a minimum `400 m` metric window, a `2.5 s` future chord,
-and a nine-sample PCA axis oriented by that chord. The response factor is
+### Camera heading anticipation and tight zigzags (2026-10-11)
+
+Simple Replay applies a minimum camera Ease of `0.3`; Expert Replay keeps its
+persisted Ease value. The value controls both the existing time-normalized
+heading interpolation and a route-heading anticipation horizon from `2.5` to
+`4` seconds. Interactive playback and fixed-time export use the same camera
+motion resolver.
+
+The path sampler compiles alternating-turn candidates from each continuous
+route before playback. A candidate needs at least three alternating turns,
+each between `12°` and `60°`; sharper turns split candidates and remain visible
+to the camera heading. The sampler measures each candidate's full cross-track
+spread from the chord joining its entry and exit samples. When that spread is
+less than half the visible crop width projected onto the Replay target plane,
+the camera-only anchor moves along that chord. The camera eases toward the
+chord heading before the candidate and eases back afterward, while sharp turns
+bound that anticipation so a later zigzag cannot delay an earlier corner.
+Ordinary turns use the compiled route ahead to begin heading changes early.
+Crop width is estimated from the active camera height and pitch, perspective
+frustum, viewport aspect, and crop width ratio. For each candidate, the sampler
+uses the narrowest projected width across its bounded section, based on the
+highest target altitude in that section. The width and its anticipation horizon
+stay fixed through approach, traversal, and exit, so changing terrain altitude
+cannot toggle the camera between the original path and the chord. The original
+route sample continues to drive the trace, marker, and crop/visibility
+constraints, so this visual smoothing does not alter journey geometry or Replay
+progress.
+
+Navigation heading uses a minimum `400 m` metric window, extended by `10%` of
+the visible crop width up to `600 m`, a `2.5 s` future chord, and a nine-sample
+PCA axis oriented by that chord. The response factor is
 clamped to `0.04..0.18`, navigation drift is filtered with a `1.5 s` response,
 and lateral/heading drift is limited to `40 m` / `6°`. A turn drift requires a
 route turn of at least `12°`. These smoothing limits reduce beta.2-style zigzag

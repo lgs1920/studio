@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -84,6 +84,7 @@ import {
     headingFromPositionProperty,
     cameraAltitudeForSample,
     cameraViewForSample,
+    cameraMotionAtProgress,
 } from './JourneyReplayCameraGuide'
 import {
     memoizeReplayCameraUpdateCache,
@@ -342,6 +343,7 @@ export const cameraViewFrame =  (mode, view) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     return call.cameraRecenterFrame({
                                                              sample:         view?.sample,
+                                                             cameraAnchorSample: view?.cameraAnchorSample,
                                                              heading:        view?.heading,
                                                              pitch:          view?.pitch,
                                                              roll:           view?.roll,
@@ -616,12 +618,21 @@ export const cameraViewVisibilityForSample = (mode, {
                 return true
             }
 
+            const cameraMotion = source === 'playback' || source === 'replay-export'
+                ? cameraMotionAtProgress(mode, {
+                    sample: futureSample,
+                    progress: futureSample?.progress ?? nominalView?.progress ?? 0,
+                    cameraSettings,
+                })
+                : null
             const futureNominalView = call.cameraViewForSample({
                                                                     sample:          futureSample,
                                                                     progress:        futureSample.progress ?? nominalView?.progress ?? 0,
                                                                     source,
                                                                     cameraSettings,
                                                                     markerSettings,
+                                                                    cameraAnchorSample: cameraMotion?.zigzagSimplified ? cameraMotion.sample : null,
+                                                                    axisHeading: cameraMotion?.heading ?? null,
                                                                     previousHeading: nominalView?.heading,
                                                                     previousPitch:   nominalView?.pitch,
                                                                     cache,

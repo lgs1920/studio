@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -79,8 +79,18 @@ export const resolveCameraTransferLiftMeters = ({
     )
 }
 
+/**
+ * Recenter the Replay camera on a route sample or its smoothed camera anchor.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {object} options - Recenter inputs.
+ * @param {object} options.sample - True route sample used by the marker.
+ * @param {object|null} [options.cameraAnchorSample=null] - Optional camera-only path sample.
+ * @returns {Promise<boolean>|undefined} Whether the transition was started or applied.
+ */
 export const recenterCameraToSample = (mode, {
                                    sample,
+                                   cameraAnchorSample = null,
                                    heading,
                                    pitch,
                                    roll = 0,
@@ -100,6 +110,7 @@ export const recenterCameraToSample = (mode, {
         const camera = replayCameraFor(mode)
         const frame = call.cameraRecenterFrame({
             sample,
+            cameraAnchorSample,
             heading,
             pitch,
             roll,
@@ -115,7 +126,15 @@ export const recenterCameraToSample = (mode, {
             state.cameraFlightActive = false
         }
 
-        if (!force && !deterministic && call.cameraViewIsStable({anchor: sample, heading: safeHeading, pitch: safePitch, roll: safeRoll})) {
+        const cameraAnchor = cameraAnchorSample ?? sample
+        const rangeMeters = Cartesian3.distance(frame.destination, frame.target)
+        if (!force && !deterministic && call.cameraViewIsStable({
+            anchor: cameraAnchor,
+            heading: safeHeading,
+            pitch: safePitch,
+            roll: safeRoll,
+            rangeMeters,
+        })) {
             finishFlight()
             return Promise.resolve(true)
         }
@@ -124,7 +143,7 @@ export const recenterCameraToSample = (mode, {
         if (deterministic && !instant && duration > 0) {
             finishFlight()
             return Promise.resolve(call.startDeterministicCameraTransition({
-                sample,
+                sample: cameraAnchor,
                 heading: safeHeading,
                 pitch:   safePitch,
                 endFrame: frame,
@@ -149,12 +168,12 @@ export const recenterCameraToSample = (mode, {
                                         },
                                     })
             call.refreshReplayDiagnosticsOverlay?.()
-            call.rememberCameraView({anchor: sample, heading: safeHeading, pitch: safePitch, roll: safeRoll})
+            call.rememberCameraView({anchor: cameraAnchor, heading: safeHeading, pitch: safePitch, roll: safeRoll, rangeMeters})
             finishFlight()
             return Promise.resolve()
         }
         return call.startCameraTransition({
-            sample,
+            sample: cameraAnchor,
             heading:        safeHeading,
             pitch:          safePitch,
             cameraSettings,
@@ -165,8 +184,18 @@ export const recenterCameraToSample = (mode, {
         })
     }
 
+/**
+ * Start a camera transition to a route sample or smoothed camera anchor.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {object} options - Transition inputs.
+ * @param {object} options.sample - True route sample used by the marker.
+ * @param {object|null} [options.cameraAnchorSample=null] - Optional camera-only path sample.
+ * @returns {Promise<boolean>} Whether the transition was started or applied.
+ */
 export const startCameraTransition = (mode, {
                                         sample,
+                                        cameraAnchorSample = null,
                                         heading,
                                         pitch,
                                         roll = 0,
@@ -186,6 +215,7 @@ export const startCameraTransition = (mode, {
 
         const frame = endFrame ?? call.cameraRecenterFrame({
             sample,
+            cameraAnchorSample,
             heading,
             pitch,
             roll,
@@ -203,6 +233,9 @@ export const startCameraTransition = (mode, {
         const endPosition = frame.destination
         const endDirection = frame.direction
         const endUp = frame.correctedUp
+        const endRangeMeters = frame.target
+            ? Cartesian3.distance(endPosition, frame.target)
+            : null
         const currentHeight = finiteNumber(camera.positionCartographic?.height)
         state.cameraFlightActive = true
         state.cameraApplyingView = true
@@ -228,6 +261,7 @@ export const startCameraTransition = (mode, {
                         heading: endHeading,
                         pitch: endPitch,
                         roll: frame.roll,
+                        rangeMeters: endRangeMeters,
                     })
                 }
                 done(result)

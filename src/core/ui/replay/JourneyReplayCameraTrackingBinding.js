@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-03
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@
  * Shared logical replay camera tracking for interactive playback and export rendering.
  */
 
+import {Cartesian3} from 'cesium'
 import {currentJourneyReplayCameraSettings, finiteNumber} from './JourneyReplayRuntime'
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
 import {
@@ -52,6 +53,7 @@ import {
     JOURNEY_REPLAY_INTERNAL_STATE,
 } from './JourneyReplayInternal'
 import {resolveJourneyReplayLogicalCameraPose} from './JourneyReplayLogicalCameraPose'
+import {cameraMotionAtProgress} from './JourneyReplayCameraGuide'
 import {createReplayCameraUpdateCache} from './JourneyReplayCameraUpdateCache'
 import {
     replayCameraPitchCorrectionSearchLimits,
@@ -144,6 +146,7 @@ const applyLiveReplayCameraView = (mode, view, cameraSettings, {
     )
     const recenter = () => call.recenterCameraToSample({
         sample:         view.sample,
+        cameraAnchorSample: view.cameraAnchorSample,
         heading:        view.heading,
         pitch:          view.pitch,
         roll:           view.roll,
@@ -163,7 +166,7 @@ const applyLiveReplayCameraView = (mode, view, cameraSettings, {
     }
 
     const applied = call.applyCameraView({
-        anchor: view.sample,
+        anchor: view.cameraAnchorSample ?? view.sample,
         heading: view.heading,
         pitch: view.pitch,
         roll: view.roll,
@@ -214,6 +217,7 @@ export const applyResolvedReplayCameraView = (mode, {
 
     const recenterFrame = call.cameraRecenterFrame({
         sample:         view.sample,
+        cameraAnchorSample: view.cameraAnchorSample,
         heading:        view.heading,
         pitch:          view.pitch,
         roll:           view.roll,
@@ -226,6 +230,7 @@ export const applyResolvedReplayCameraView = (mode, {
         && typeof call.recenterCameraToSample === 'function') {
         void call.recenterCameraToSample({
             sample:         view.sample,
+            cameraAnchorSample: view.cameraAnchorSample,
             heading:        view.heading,
             pitch:          view.pitch,
             roll:           view.roll,
@@ -245,10 +250,13 @@ export const applyResolvedReplayCameraView = (mode, {
     }
 
     call.rememberCameraView?.({
-        anchor:  view.sample,
+        anchor:  view.cameraAnchorSample ?? view.sample,
         heading: recenterFrame.safeHeading ?? view.heading,
         pitch:   recenterFrame.safePitch ?? view.pitch,
         roll:    recenterFrame.roll ?? view.roll ?? 0,
+        rangeMeters: recenterFrame.destination && recenterFrame.target
+            ? Cartesian3.distance(recenterFrame.destination, recenterFrame.target)
+            : null,
     })
     state.lastCameraHeading = recenterFrame.safeHeading ?? view.heading
     state.lastCameraPitch = recenterFrame.safePitch ?? view.pitch
@@ -287,8 +295,13 @@ const replayCameraViewForTrackingSample = (mode, {
 } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const cameraMotion = source === 'playback' || source === 'replay-export'
+        ? cameraMotionAtProgress(mode, {sample, progress, cameraSettings})
+        : null
     const axisHeading = typeof call.headingFromPositionProperty === 'function'
-        ? call.headingFromPositionProperty(progress)
+        ? cameraMotion?.heading ?? call.headingFromPositionProperty(progress, {
+            easing: cameraSettings?.hysteresis?.easing,
+        })
         : null
     if (logicalCamera) {
         const pose = resolveJourneyReplayLogicalCameraPose({
@@ -299,6 +312,7 @@ const replayCameraViewForTrackingSample = (mode, {
             cameraSettings,
             markerSettings,
             axisHeading,
+            cameraAnchorSample: cameraMotion?.zigzagSimplified ? cameraMotion.sample : null,
         })
         const drift = cameraSettings.canDrift !== false
             && typeof call.replayTurnDriftForProgress === 'function'
@@ -322,6 +336,8 @@ const replayCameraViewForTrackingSample = (mode, {
         cameraSettings,
         markerSettings,
         collision,
+        cameraAnchorSample: cameraMotion?.zigzagSimplified ? cameraMotion.sample : null,
+        axisHeading,
         motionProfile: {
             turnDrift: {
                 enabled:                 cameraSettings.canDrift !== false,
@@ -919,8 +935,9 @@ export const updateCamera = (mode, {
             }
         }
         else {
-            const frame = call.cameraRecenterFrame({
-                sample:         targetView.sample,
+        const frame = call.cameraRecenterFrame({
+            sample:         targetView.sample,
+            cameraAnchorSample: targetView.cameraAnchorSample,
                 heading:        targetView.heading,
                 pitch:          targetView.pitch,
                 roll:           targetView.roll,

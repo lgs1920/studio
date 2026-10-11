@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,6 +37,10 @@ import {
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {resolveJourneyReplayLogicalCameraRoll} from './JourneyReplayLogicalCameraPose'
+import {
+    replayCameraCropWidthMeters,
+    replayCameraHeadingLookaheadSeconds,
+} from './JourneyReplayCameraMotionSmoothing'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
@@ -49,8 +53,6 @@ import {
     CAMERA_HEADING_HYSTERESIS_RADIANS,
     CAMERA_HEADING_LOOKAHEAD_PROGRESS,
     CAMERA_HEADING_MIN_CHANGE_RADIANS,
-    CAMERA_NAVIGATION_HEADING_LOOKAHEAD_SECONDS,
-    CAMERA_NAVIGATION_HEADING_WINDOW_SECONDS,
     CAMERA_NAVIGATION_HEADING_MIN_WINDOW_METERS,
     CAMERA_VIEW_POSITION_EPSILON_METERS,
     CAMERA_VIEW_ANGLE_EPSILON_RADIANS,
@@ -714,15 +716,27 @@ export const guideSampleFromPositionProperty =  (mode, progress) => {
         }
     }
 
-export const headingFromPositionProperty =  (mode, progress) => {
+/**
+ * Resolve a route heading with the configured Replay camera anticipation.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {number} progress - Normalized route progress.
+ * @param {object} options - Heading anticipation settings.
+ * @param {number|null} [options.easing=null] - Camera Ease setting.
+ * @returns {number} Heading in radians.
+ */
+export const headingFromPositionProperty =  (mode, progress, {
+    easing = null,
+} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const safeProgress = clamp(Number(progress) || 0, 0, 1)
         if (typeof state.sampler?.headingAtProgress === 'function') {
+            const lookaheadSeconds = replayCameraHeadingLookaheadSeconds(easing)
             return state.sampler.headingAtProgress(safeProgress, {
-                lookaheadSeconds: CAMERA_NAVIGATION_HEADING_LOOKAHEAD_SECONDS,
-                windowSeconds:   CAMERA_NAVIGATION_HEADING_WINDOW_SECONDS,
+                lookaheadSeconds,
+                windowSeconds:   lookaheadSeconds,
                 minimumMeters:   CAMERA_NAVIGATION_HEADING_MIN_WINDOW_METERS,
             })
         }
@@ -757,6 +771,67 @@ export const headingFromPositionProperty =  (mode, progress) => {
 
         return localHeading
     }
+
+/**
+ * Resolve a Replay-only smoothed camera anchor and route heading. The route
+ * sample itself remains untouched for trace, marker, and crop constraints.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {object} options - Replay sample and camera settings.
+ * @returns {object|null} Camera path sample and heading.
+ */
+export const cameraMotionAtProgress = (mode, {
+    sample,
+    progress = sample?.progress ?? 0,
+    cameraSettings,
+} = {}) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const sampler = state.sampler
+    if (!sampler?.cameraMotionAtProgress || !sample || !cameraSettings) {
+        return null
+    }
+
+    const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
+    const frustum = viewer?.camera?.frustum
+    const viewport = call.constrainedReplayProjectionViewport?.()
+        ?? call.viewportRectForCesiumSurface?.()
+    const aspectRatio = finiteNumber(frustum?.aspectRatio)
+        ?? ((viewport?.canvasHeight ?? viewport?.height) > 0
+            ? (viewport?.canvasWidth ?? viewport?.width) / (viewport?.canvasHeight ?? viewport?.height)
+            : null)
+    const fov = finiteNumber(frustum?.fovy) ?? finiteNumber(frustum?.fov)
+    const verticalFovRadians = fov !== null && aspectRatio !== null && aspectRatio > 1 && !Number.isFinite(frustum?.fovy)
+        ? 2 * Math.atan(Math.tan(fov / 2) / aspectRatio)
+        : fov
+    const viewportWidth = finiteNumber(viewport?.canvasWidth) ?? finiteNumber(viewport?.width)
+    const cropWidth = finiteNumber(viewport?.width)
+    const cropWidthRatio = viewportWidth > 0 && cropWidth > 0 ? cropWidth / viewportWidth : 1
+    const targetHeight = finiteNumber(sample.altitude ?? sample.height) ?? 0
+    const configuredHeight = finiteNumber(cameraSettings.altitude)
+    const pitchRadians = degreesToRadians(cameraSettings.pitch)
+    const cropZoneWidthAtTargetHeight = referenceTargetHeight => replayCameraCropWidthMeters({
+        cameraHeight: cameraSettings.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
+            ? referenceTargetHeight + (configuredHeight ?? 0)
+            : configuredHeight ?? referenceTargetHeight,
+        targetHeight: referenceTargetHeight,
+        pitchRadians,
+        verticalFovRadians,
+        aspectRatio,
+        cropWidthRatio,
+    })
+    const cropZoneWidthMeters = cropZoneWidthAtTargetHeight(targetHeight)
+    const lookaheadSeconds = replayCameraHeadingLookaheadSeconds(cameraSettings?.hysteresis?.easing)
+    return sampler.cameraMotionAtProgress(progress, {
+        cropZoneWidthMeters,
+        cropZoneWidthMetersForSection: section => cropZoneWidthAtTargetHeight(
+            finiteNumber(section.maximumTargetAltitude) ?? targetHeight,
+        ),
+        lookaheadSeconds,
+        windowSeconds: lookaheadSeconds,
+        minimumMeters: CAMERA_NAVIGATION_HEADING_MIN_WINDOW_METERS,
+    })
+}
 
 export const cameraAltitudeForSample = (mode, sample, cameraSettings) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -799,6 +874,17 @@ export const cameraAltitudeForSample = (mode, sample, cameraSettings) => {
         return cameraSettings.altitude
     }
 
+/**
+ * Resolve a camera view while keeping its camera-only path anchor separate
+ * from the true route sample used by the marker and visibility checks.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {object} options - Camera view inputs.
+ * @param {object} options.sample - True route sample.
+ * @param {object|null} [options.cameraAnchorSample=null] - Smoothed camera-only route sample.
+ * @param {number|null} [options.axisHeading=null] - Anticipated route heading in radians.
+ * @returns {object|null} Resolved camera view or null.
+ */
 export const cameraViewForSample = (mode, {
                                 sample,
                                 progress = sample?.progress ?? 0,
@@ -806,6 +892,8 @@ export const cameraViewForSample = (mode, {
                                 cameraSettings,
                                 markerSettings,
                                 collision = false,
+                                cameraAnchorSample = null,
+                                axisHeading = null,
                                 motionProfile = null,
                                 previousHeading = mode[JOURNEY_REPLAY_INTERNAL_STATE].lastNominalCameraHeading ?? mode[JOURNEY_REPLAY_INTERNAL_STATE].lastCameraHeading,
                                 previousPitch = mode[JOURNEY_REPLAY_INTERNAL_STATE].lastNominalCameraPitch ?? mode[JOURNEY_REPLAY_INTERNAL_STATE].lastCameraPitch,
@@ -829,8 +917,13 @@ export const cameraViewForSample = (mode, {
                           : normalizedPitch <= -90
                             ? SAFE_TOP_DOWN_PITCH
                             : degreesToRadians(normalizedPitch)
+            const configuredAxisHeading = axisHeading === null || axisHeading === undefined
+                ? null
+                : finiteNumber(axisHeading)
             const desiredHeading = replayCameraHeadingForAngle({
-                axisHeading: call.headingFromPositionProperty(progress),
+                axisHeading: configuredAxisHeading ?? call.headingFromPositionProperty(progress, {
+                    easing: cameraSettings?.hysteresis?.easing,
+                }),
                 cameraAngle: cameraSettings.cameraAngle,
             })
             const heading = immediateSource
@@ -858,8 +951,12 @@ export const cameraViewForSample = (mode, {
                                     call.timeNormalizedSmoothingFactor(0.08, state.cameraSmoothingDeltaSeconds),
                                 )
             const anchorSample = call.markerPositionForSample(sample, markerSettings)
+            const cameraAnchor = cameraAnchorSample
+                ? call.markerPositionForSample(cameraAnchorSample, markerSettings)
+                : null
             return {
                 sample:       anchorSample,
+                ...(cameraAnchor ? {cameraAnchorSample: cameraAnchor} : {}),
                 progress:     clamp(Number(progress) || 0, 0, 1),
                 heading:      smoothHeading,
                 pitch:        smoothPitch,
@@ -884,6 +981,8 @@ export const cameraViewForSample = (mode, {
                 }),
                 replayCameraUpdateCameraSettingsKey(cameraSettings),
                 replayCameraUpdateMarkerSettingsKey(markerSettings),
+                replayCameraUpdateSampleKey(cameraAnchorSample ?? {}),
+                finiteNumber(axisHeading) ?? 'null',
                 source ?? 'null',
                 collision === true ? '1' : '0',
                 JSON.stringify(motionProfile ?? null),

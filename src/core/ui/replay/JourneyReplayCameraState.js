@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -210,6 +210,7 @@ export const lockReplayCameraToAnchor = (mode, {
             heading: frame.safeHeading,
             pitch: frame.safePitch,
             roll: frame.roll,
+            rangeMeters: range,
         })
         call.refreshReplayDiagnosticsOverlay?.()
         return true
@@ -268,7 +269,12 @@ export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraS
         const safeHeading = sanitizeOrientationRadians(heading, 0)
         const safePitch = sanitizeOrientationRadians(pitch, SAFE_TOP_DOWN_PITCH)
         const safeRoll = clamp(sanitizeOrientationRadians(roll, 0), -Math.PI / 4, Math.PI / 4)
-        if (call.cameraViewIsStable({anchor, heading: safeHeading, pitch: safePitch, roll: safeRoll})) {
+        const cameraHeight = call.cameraAltitudeForSample(anchor, cameraSettings)
+        const range = replayCameraRangeFromPitch(
+            Math.max(CAMERA_REDIRECT_TERRAIN_CLEARANCE_METERS, cameraHeight - markerHeight),
+            safePitch,
+        )
+        if (call.cameraViewIsStable({anchor, heading: safeHeading, pitch: safePitch, roll: safeRoll, rangeMeters: range})) {
             replayVideoTraceDebug('camera.view.apply.end', {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startedAt,
                 skipped: true,
@@ -277,8 +283,6 @@ export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraS
             return false
         }
 
-        const cameraHeight = call.cameraAltitudeForSample(anchor, cameraSettings)
-        const range = replayCameraRangeFromPitch(Math.max(CAMERA_REDIRECT_TERRAIN_CLEARANCE_METERS, cameraHeight - markerHeight), safePitch)
         const command = createReplayCameraCommand({
             pose: {
                 target: {
@@ -323,7 +327,7 @@ export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraS
             if (!appliedFrame) {
                 return false
             }
-            call.rememberCameraView({anchor, heading: safeHeading, pitch: safePitch, roll: safeRoll})
+            call.rememberCameraView({anchor, heading: safeHeading, pitch: safePitch, roll: safeRoll, rangeMeters: range})
             return true
         }
         finally {

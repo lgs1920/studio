@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -116,6 +116,28 @@ describe('Replay user modes', () => {
             expect(getJourneyReplaySettings().camera.debug).toBe(false)
             expect(currentJourneyReplayCameraSettings().debug).toBe(false)
             expect(lgs.theJourney.replay.simple.camera.debug).toBe(true)
+        }
+        finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
+    it('gives Simple a smooth camera response while keeping Expert Ease adjustable', () => {
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_BASIC}}},
+            stores:   {replay: {simplePreparationActive: false}},
+            theJourney: {
+                replay: {
+                    simple: {camera: {hysteresis: {easing: 0.12}}},
+                    expert: {camera: {hysteresis: {easing: 0.12}}},
+                },
+            },
+        })
+        try {
+            expect(currentJourneyReplayCameraSettings().hysteresis.easing).toBe(0.3)
+
+            lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
+            expect(currentJourneyReplayCameraSettings().hysteresis.easing).toBe(0.12)
         }
         finally {
             vi.unstubAllGlobals()

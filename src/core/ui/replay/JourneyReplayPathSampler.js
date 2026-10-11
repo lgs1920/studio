@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-05-04
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,6 +33,107 @@ const finiteNumber = value => {
 }
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
+const REPLAY_CAMERA_ZIGZAG_MIN_TURN_RADIANS = 12 * (Math.PI / 180)
+const REPLAY_CAMERA_ZIGZAG_MAX_TURN_RADIANS = 60 * (Math.PI / 180)
+const REPLAY_CAMERA_ZIGZAG_MIN_TURNS = 3
+const REPLAY_CAMERA_MAX_ANTICIPATION_METERS = 600
+const EARTH_RADIUS_METERS = 6371008.8
+
+/**
+ * Normalize a longitude delta to the shortest interval around the globe.
+ *
+ * @param {number} value - Longitude delta in degrees.
+ * @returns {number} Normalized longitude delta in degrees.
+ */
+const normalizeLongitudeDelta = value => {
+    let delta = value
+    while (delta > 180) {
+        delta -= 360
+    }
+    while (delta < -180) {
+        delta += 360
+    }
+    return delta
+}
+
+/**
+ * Project a sample into a local east/north plane around an origin.
+ *
+ * @param {object} origin - Geographic origin sample.
+ * @param {object} sample - Geographic sample to project.
+ * @returns {{x: number, y: number}} Local offset in metres.
+ */
+const localOffsetMeters = (origin, sample) => {
+    const originLatitude = (Number(origin?.latitude) || 0) * (Math.PI / 180)
+    const latitude = (Number(sample?.latitude) || 0) * (Math.PI / 180)
+    const longitudeDelta = normalizeLongitudeDelta(
+        (Number(sample?.longitude) || 0) - (Number(origin?.longitude) || 0),
+    ) * (Math.PI / 180)
+    return {
+        x: longitudeDelta * Math.cos((originLatitude + latitude) / 2) * EARTH_RADIUS_METERS,
+        y: (latitude - originLatitude) * EARTH_RADIUS_METERS,
+    }
+}
+
+/**
+ * Resolve the signed turn at one route vertex.
+ *
+ * @param {Array<object>} samples - Ordered route samples.
+ * @param {number} index - Index of the candidate turn.
+ * @returns {number|null} Signed turn angle in radians.
+ */
+const signedTurnAt = (samples, index) => {
+    const previous = samples[index - 1]
+    const current = samples[index]
+    const next = samples[index + 1]
+    if (!previous || !current || !next) {
+        return null
+    }
+
+    const start = localOffsetMeters(previous, current)
+    const end = localOffsetMeters(current, next)
+    if (Math.hypot(start.x, start.y) < 1 || Math.hypot(end.x, end.y) < 1) {
+        return null
+    }
+
+    return Math.atan2(
+        (start.x * end.y) - (start.y * end.x),
+        (start.x * end.x) + (start.y * end.y),
+    )
+}
+
+/**
+ * Measure the full cross-track spread from a route chord.
+ *
+ * @param {Array<object>} samples - Ordered route samples.
+ * @param {number} startIndex - Chord start index.
+ * @param {number} endIndex - Chord end index.
+ * @returns {number} Cross-track spread in metres.
+ */
+const crossTrackWidthMeters = (samples, startIndex, endIndex) => {
+    const start = samples[startIndex]
+    const end = samples[endIndex]
+    if (!start || !end) {
+        return 0
+    }
+
+    const chordEnd = localOffsetMeters(start, end)
+    const chordLength = Math.hypot(chordEnd.x, chordEnd.y)
+    if (chordLength < 1) {
+        return 0
+    }
+
+    let minimum = 0
+    let maximum = 0
+    for (let index = startIndex + 1; index < endIndex; index += 1) {
+        const point = localOffsetMeters(start, samples[index])
+        const offset = ((chordEnd.x * point.y) - (chordEnd.y * point.x)) / chordLength
+        minimum = Math.min(minimum, offset)
+        maximum = Math.max(maximum, offset)
+    }
+
+    return maximum - minimum
+}
 
 const parseTimeMillis = value => {
     if (!value) {
@@ -136,6 +237,30 @@ const angularDelta = (start, end) => {
 
     const fullTurn = Math.PI * 2
     return ((end - start + Math.PI) % fullTurn + fullTurn) % fullTurn - Math.PI
+}
+
+/**
+ * Interpolate between two headings along the shortest angular path.
+ *
+ * @param {number} start - Starting heading in radians.
+ * @param {number} end - Destination heading in radians.
+ * @param {number} ratio - Interpolation ratio.
+ * @returns {number} Interpolated heading in radians.
+ */
+const interpolateHeading = (start, end, ratio) => {
+    const delta = angularDelta(start, end)
+    return delta === null ? start : start + (delta * clamp(ratio, 0, 1))
+}
+
+/**
+ * Smooth a normalized transition ratio with a cubic ease-in/ease-out curve.
+ *
+ * @param {number} ratio - Normalized transition ratio.
+ * @returns {number} Smoothed ratio.
+ */
+const smoothStep = ratio => {
+    const value = clamp(ratio, 0, 1)
+    return value * value * (3 - (2 * value))
 }
 
 /**
@@ -311,6 +436,7 @@ export class JourneyReplayPathSampler {
     #startTimeMillis = null
     #endTimeMillis = null
     #durationMillis = null
+    #cameraZigzagSections = []
 
     constructor(options = {}) {
         this.update(options)
@@ -415,6 +541,7 @@ export class JourneyReplayPathSampler {
         this.#startTimeMillis = null
         this.#endTimeMillis = null
         this.#durationMillis = null
+        this.#cameraZigzagSections = []
 
         if (!this.#journey?.tracks) {
             return
@@ -539,7 +666,102 @@ export class JourneyReplayPathSampler {
                 endPoint:   sameSegment(next) ? sampleReference(next) : null,
             }
         })
+        this.#cameraZigzagSections = this.#buildCameraZigzagSections()
     }
+
+    /**
+     * Precompute compact runs of alternating, moderate turns as camera-only
+     * chord candidates. Sharp turns form natural boundaries and are never
+     * swallowed by a zigzag simplification.
+     *
+     * @returns {Array<object>} Zigzag sections indexed by journey distance.
+     */
+    #buildCameraZigzagSections = () => this.#segments.flatMap(segment => {
+        const turns = []
+        for (let index = segment.startIndex + 1; index < segment.endIndex; index += 1) {
+            const radians = signedTurnAt(this.#samples, index)
+            if (radians !== null && Math.abs(radians) >= REPLAY_CAMERA_ZIGZAG_MIN_TURN_RADIANS) {
+                turns.push({index, radians, sign: Math.sign(radians)})
+            }
+        }
+
+        const sections = []
+        let turnIndex = 0
+        while (turnIndex < turns.length) {
+            const firstTurn = turns[turnIndex]
+            const firstTurnIsModerate = Math.abs(firstTurn.radians) <= REPLAY_CAMERA_ZIGZAG_MAX_TURN_RADIANS
+            if (!firstTurnIsModerate) {
+                turnIndex += 1
+                continue
+            }
+
+            let lastTurnIndex = turnIndex
+            while (lastTurnIndex + 1 < turns.length) {
+                const nextTurn = turns[lastTurnIndex + 1]
+                if (Math.abs(nextTurn.radians) > REPLAY_CAMERA_ZIGZAG_MAX_TURN_RADIANS
+                    || nextTurn.sign === turns[lastTurnIndex].sign) {
+                    break
+                }
+                lastTurnIndex += 1
+            }
+
+            const turnCount = lastTurnIndex - turnIndex + 1
+            if (turnCount < REPLAY_CAMERA_ZIGZAG_MIN_TURNS) {
+                turnIndex += 1
+                continue
+            }
+
+            const startIndex = Math.max(segment.startIndex, turns[turnIndex].index - 1)
+            const endIndex = Math.min(segment.endIndex, turns[lastTurnIndex].index + 1)
+            const start = this.#samples[startIndex]
+            const end = this.#samples[endIndex]
+            const chordPath = start && end
+                ? new JourneyReplayTurfPath([
+                    [start.longitude, start.latitude, start.altitude],
+                    [end.longitude, end.latitude, end.altitude],
+                ])
+                : null
+            const amplitudeMeters = crossTrackWidthMeters(this.#samples, startIndex, endIndex)
+            if (chordPath?.isValid && amplitudeMeters > 0) {
+                const previousTurn = turns[turnIndex - 1]
+                const nextTurn = turns[lastTurnIndex + 1]
+                const startBoundaryIndex = previousTurn
+                    ? previousTurn.index + (
+                        Math.abs(previousTurn.radians) > REPLAY_CAMERA_ZIGZAG_MAX_TURN_RADIANS ? 1 : 0
+                    )
+                    : segment.startIndex
+                const endBoundaryIndex = nextTurn?.index ?? segment.endIndex
+                let maximumTargetAltitude = -Infinity
+                for (let index = startBoundaryIndex; index <= endBoundaryIndex; index += 1) {
+                    maximumTargetAltitude = Math.max(
+                        maximumTargetAltitude,
+                        finiteNumber(this.#samples[index]?.altitude) ?? 0,
+                    )
+                }
+
+                sections.push({
+                    trackSlug: segment.trackSlug,
+                    trackIndex: segment.trackIndex,
+                    segmentIndex: segment.segmentIndex,
+                    startDistance: start.distanceFromStart,
+                    endDistance: end.distanceFromStart,
+                    startBoundaryDistance: this.#samples[startBoundaryIndex]?.distanceFromStart ?? segment.startDistance,
+                    endBoundaryDistance: this.#samples[endBoundaryIndex]?.distanceFromStart ?? segment.endDistance,
+                    startIndex,
+                    endIndex,
+                    amplitudeMeters,
+                    maximumTargetAltitude: Number.isFinite(maximumTargetAltitude) ? maximumTargetAltitude : 0,
+                    chordPath,
+                })
+                turnIndex = lastTurnIndex + 1
+            }
+            else {
+                turnIndex += 1
+            }
+        }
+
+        return sections
+    })
 
     #resolveJourneyTime = (fallbackBreakpoints = []) => {
         const sampleBreakpoints = this.#samples
@@ -698,6 +920,129 @@ export class JourneyReplayPathSampler {
         }
 
         return headingBetweenSamples(anchor, future) ?? 0
+    }
+
+    /**
+     * Resolve the Replay-only camera path for one progress sample. Alternating
+     * turns whose full cross-track spread is below half the crop width are
+     * replaced by a direct chord; the original route sample remains available
+     * to the trace, marker, and crop-visibility constraints.
+     *
+     * @param {number} progress - Normalized Replay progress.
+     * @param {object} options - Crop width and heading anticipation.
+     * @param {Function|null} [options.cropZoneWidthMetersForSection] - Stable crop width resolver per candidate.
+     * @returns {{sample: Object, heading: number, zigzagSimplified: boolean}|null}
+     * Camera anchor sample and stable heading.
+     */
+    cameraMotionAtProgress = (progress = 0, {
+        cropZoneWidthMeters = 0,
+        cropZoneWidthMetersForSection = null,
+        lookaheadSeconds = 2.5,
+        windowSeconds = lookaheadSeconds,
+        minimumMeters = 400,
+    } = {}) => {
+        const sample = this.atProgress(progress)
+        if (!sample) {
+            return null
+        }
+
+        const cropWidth = Math.max(0, finiteNumber(cropZoneWidthMeters) ?? 0)
+        const cropWidthForSection = candidate => Math.max(
+            0,
+            finiteNumber(typeof cropZoneWidthMetersForSection === 'function'
+                ? cropZoneWidthMetersForSection(candidate)
+                : cropWidth) ?? cropWidth,
+        )
+        const distance = finiteNumber(sample.distanceFromStart) ?? 0
+        const safeMinimumMeters = Math.max(0, finiteNumber(minimumMeters) ?? 400)
+        const anticipationForCropWidth = width => Math.max(
+            safeMinimumMeters,
+            Math.min(REPLAY_CAMERA_MAX_ANTICIPATION_METERS, width * 0.1),
+        )
+        const isInAnticipationRange = (candidate, anticipationMeters) => {
+            const anticipationStart = Math.max(
+                candidate.startBoundaryDistance,
+                candidate.startDistance - anticipationMeters,
+            )
+            const anticipationEnd = Math.min(
+                candidate.endBoundaryDistance,
+                candidate.endDistance + anticipationMeters,
+            )
+            return anticipationStart <= distance && distance <= anticipationEnd
+        }
+        let section = null
+        let anticipationMeters = anticipationForCropWidth(cropWidth)
+        for (const candidate of this.#cameraZigzagSections) {
+            if (candidate.trackSlug !== sample.trackSlug
+                || candidate.trackIndex !== sample.trackIndex
+                || candidate.segmentIndex !== sample.segmentIndex) {
+                continue
+            }
+            if (distance < candidate.startBoundaryDistance || distance > candidate.endBoundaryDistance) {
+                continue
+            }
+
+            const sectionCropWidth = cropWidthForSection(candidate)
+            const candidateAnticipationMeters = anticipationForCropWidth(sectionCropWidth)
+            if (candidate.amplitudeMeters < (sectionCropWidth * 0.5)
+                && isInAnticipationRange(candidate, candidateAnticipationMeters)) {
+                section = candidate
+                anticipationMeters = candidateAnticipationMeters
+                break
+            }
+        }
+        const anticipatedHeading = this.headingAtProgress(progress, {
+            lookaheadSeconds,
+            windowSeconds,
+            minimumMeters: anticipationMeters,
+        })
+
+        if (!section) {
+            return {
+                sample,
+                heading: anticipatedHeading,
+                zigzagSimplified: false,
+            }
+        }
+
+        const start = this.#samples[section.startIndex]
+        const end = this.#samples[section.endIndex]
+        const sectionDistance = Math.max(Number.EPSILON, section.endDistance - section.startDistance)
+        const isInsideSection = distance >= section.startDistance && distance <= section.endDistance
+        const ratio = clamp((distance - section.startDistance) / sectionDistance, 0, 1)
+        const position = section.chordPath.positionAtDistance(section.chordPath.totalDistance * ratio)
+        const altitude = interpolateValue(start.altitude ?? 0, end.altitude ?? 0, ratio)
+        const chordHeading = headingBetweenSamples(start, end) ?? anticipatedHeading
+        const entryStartDistance = Math.max(
+            section.startBoundaryDistance,
+            section.startDistance - anticipationMeters,
+        )
+        const exitEndDistance = Math.min(
+            section.endBoundaryDistance,
+            section.endDistance + anticipationMeters,
+        )
+        const entryDistance = section.startDistance - entryStartDistance
+        const exitDistance = exitEndDistance - section.endDistance
+        const headingEntryRatio = smoothStep(
+            entryDistance > 0 ? (distance - entryStartDistance) / entryDistance : 1,
+        )
+        const headingExitRatio = smoothStep(
+            exitDistance > 0 ? (exitEndDistance - distance) / exitDistance : 1,
+        )
+        const headingBlend = Math.min(headingEntryRatio, headingExitRatio)
+        return {
+            sample: isInsideSection ? {
+                ...sample,
+                longitude: position.longitude,
+                latitude:  position.latitude,
+                altitude,
+                height: altitude,
+            } : sample,
+            heading: interpolateHeading(anticipatedHeading, chordHeading, headingBlend),
+            zigzagSimplified: true,
+            zigzagAmplitudeMeters: section.amplitudeMeters,
+            zigzagAnticipationMeters: anticipationMeters,
+        }
     }
 
     atDistance = (distance = 0) => {

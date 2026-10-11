@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -95,6 +95,7 @@ import {
     headingFromPositionProperty,
     cameraAltitudeForSample,
     cameraViewForSample,
+    cameraMotionAtProgress,
     replayTurnDriftForProgress,
 } from './JourneyReplayCameraGuide'
 import {
@@ -452,6 +453,7 @@ export const startDeterministicCameraTransition = (mode, {
             destination: Cartesian3.clone(endFrame.destination, new Cartesian3()),
             direction:   Cartesian3.clone(endFrame.direction, new Cartesian3()),
             up:          Cartesian3.clone(endFrame.correctedUp, new Cartesian3()),
+            target:      endFrame.target ? Cartesian3.clone(endFrame.target, new Cartesian3()) : null,
         }
         const target = call.markerRenderCartesianForSample?.(sample) ?? null
         const replayMotionProfile = {
@@ -571,12 +573,19 @@ export const startDeterministicCameraTransition = (mode, {
                     return frame
                 }
 
+                const cameraMotion = cameraMotionAtProgress(mode, {
+                    sample,
+                    progress: sample?.progress ?? ratio ?? 0,
+                    cameraSettings: replayCameraSettings,
+                })
                 const view = call.cameraViewForSample({
                     sample,
                     progress:       sample?.progress ?? ratio ?? 0,
                     source:         'playback',
                     cameraSettings:  replayCameraSettings,
                     markerSettings:  replayMarkerSettings,
+                    cameraAnchorSample: cameraMotion?.zigzagSimplified ? cameraMotion.sample : null,
+                    axisHeading: cameraMotion?.heading ?? null,
                     motionProfile:   replayMotionProfile,
                     collision:      true,
                     previousHeading: endFrame?.safeHeading ?? heading,
@@ -588,6 +597,7 @@ export const startDeterministicCameraTransition = (mode, {
 
                 const correctedFrame = call.cameraRecenterFrame({
                     sample,
+                    cameraAnchorSample: view.cameraAnchorSample,
                     heading:        view.heading,
                     pitch:          view.pitch ?? pitch,
                     roll:           view.roll,
@@ -620,6 +630,7 @@ export const startDeterministicCameraTransition = (mode, {
             start:   startFrame,
             end,
             target,
+            cameraTarget: end.target,
             startVelocity: previousVelocity,
             endVelocity:   null,
             sample,
@@ -665,6 +676,9 @@ export const applyDeterministicCameraTransition =  (mode, logicalNow) => {
                 anchor: transition.sample,
                 heading: transition.heading,
                 pitch: transition.pitch,
+                rangeMeters: transition.cameraTarget
+                    ? Cartesian3.distance(transition.end.destination, transition.cameraTarget)
+                    : null,
             })
         }
         return applied
@@ -753,9 +767,19 @@ export const applyDeterministicCameraFollower = (mode, {
         return call.applyCameraFrame(frame)
     }
 
-/** Build a Replay entry frame from its configured pose without borrowing the map's range. */
+/**
+ * Build a Replay camera frame without borrowing the map range, while
+ * preserving the true route marker target.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {object} options - Frame inputs.
+ * @param {object} options.sample - True route sample used by the marker.
+ * @param {object|null} [options.cameraAnchorSample=null] - Optional camera-only path sample.
+ * @returns {object|null} Resolved camera and marker frame, or null.
+ */
 export const cameraRecenterFrame = (mode, {
                                 sample,
+                                cameraAnchorSample = null,
                                 heading,
                                 pitch,
                                 roll = 0,
@@ -767,18 +791,20 @@ export const cameraRecenterFrame = (mode, {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
-        const targetHeight = finiteNumber(call.markerRenderHeightForSample(sample))
+        const anchorSample = cameraAnchorSample ?? sample
+        const targetHeight = finiteNumber(call.markerRenderHeightForSample(anchorSample))
                             ?? finiteNumber(sample?.altitude ?? sample?.height)
                             ?? 0
-        const target = call.markerRenderCartesianForSample(sample)
-        if (!viewer || !target) {
+        const target = call.markerRenderCartesianForSample(anchorSample)
+        const markerTarget = call.markerRenderCartesianForSample(sample)
+        if (!viewer || !target || !markerTarget) {
             return null
         }
 
         const safeHeading = sanitizeOrientationRadians(heading, 0)
         const safePitch = sanitizeOrientationRadians(pitch, SAFE_TOP_DOWN_PITCH)
         const groundOffsetCameraHeight = cameraSettings?.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
-                                         ? finiteNumber(call.cameraAltitudeForSample(sample, cameraSettings))
+                                         ? finiteNumber(call.cameraAltitudeForSample(anchorSample, cameraSettings))
                                          : null
         const explicitCameraHeight = cameraHeight === null || cameraHeight === undefined || cameraHeight === ''
             ? null
@@ -786,7 +812,7 @@ export const cameraRecenterFrame = (mode, {
         // In ground-offset mode the marker-relative value is authoritative;
         // an explicit height may belong to a previous camera transition.
         const requestedCameraHeight = groundOffsetCameraHeight ?? explicitCameraHeight
-            ?? finiteNumber(call.cameraAltitudeForSample(sample, cameraSettings)) ?? targetHeight
+            ?? finiteNumber(call.cameraAltitudeForSample(anchorSample, cameraSettings)) ?? targetHeight
         // An absolute altitude below the target cannot form the requested downward
         // view. Apply terrain clearance before deriving range, preserving pitch and
         // leaving the persisted configuration independent of normal map navigation.
@@ -837,7 +863,9 @@ export const cameraRecenterFrame = (mode, {
         const rolledUp = rollCameraUp({direction, up: correctedUp, roll: safeRoll}) ?? correctedUp
         return {
             sample,
+            cameraAnchorSample: anchorSample,
             target,
+            markerTarget,
             targetHeight,
             destination,
             direction,
@@ -849,7 +877,7 @@ export const cameraRecenterFrame = (mode, {
         }
     }
 
-export const cameraViewDelta = (mode, {anchor, heading, pitch, roll = 0} = {}) => {
+export const cameraViewDelta = (mode, {anchor, heading, pitch, roll = 0, rangeMeters = null} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
@@ -864,6 +892,8 @@ export const cameraViewDelta = (mode, {anchor, heading, pitch, roll = 0} = {}) =
         const lastLongitude = finiteNumber(last.anchor?.longitude)
         const lastLatitude = finiteNumber(last.anchor?.latitude)
         const lastAltitude = finiteNumber(last.anchor?.altitude ?? last.anchor?.height) ?? 0
+        const currentRange = finiteNumber(rangeMeters)
+        const lastRange = finiteNumber(last.rangeMeters)
         if ([currentLongitude, currentLatitude, lastLongitude, lastLatitude].some(value => value === null)) {
             return null
         }
@@ -879,14 +909,19 @@ export const cameraViewDelta = (mode, {anchor, heading, pitch, roll = 0} = {}) =
             headingRadians:   Math.abs(replayAngularDelta(last.heading, heading) ?? Number.POSITIVE_INFINITY),
             pitchRadians:     Math.abs(replayAngularDelta(last.pitch, pitch) ?? Number.POSITIVE_INFINITY),
             rollRadians:      Math.abs((finiteNumber(last.roll) ?? 0) - (finiteNumber(roll) ?? 0)),
+            rangeMeters: currentRange === null && lastRange === null
+                ? 0
+                : currentRange === null || lastRange === null
+                    ? Number.POSITIVE_INFINITY
+                    : Math.abs(currentRange - lastRange),
         }
     }
 
-export const cameraViewIsStable = (mode, {anchor, heading, pitch, roll = 0} = {}) => {
+export const cameraViewIsStable = (mode, {anchor, heading, pitch, roll = 0, rangeMeters = null} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const delta = call.cameraViewDelta({anchor, heading, pitch, roll})
+        const delta = call.cameraViewDelta({anchor, heading, pitch, roll, rangeMeters})
         if (!delta) {
             return false
         }
@@ -896,9 +931,11 @@ export const cameraViewIsStable = (mode, {anchor, heading, pitch, roll = 0} = {}
             && delta.headingRadians <= CAMERA_VIEW_ANGLE_EPSILON_RADIANS
             && delta.pitchRadians <= CAMERA_VIEW_ANGLE_EPSILON_RADIANS
             && delta.rollRadians <= CAMERA_VIEW_ANGLE_EPSILON_RADIANS
+            && (delta.rangeMeters === undefined
+                || delta.rangeMeters <= CAMERA_VIEW_POSITION_EPSILON_METERS)
     }
 
-export const rememberCameraView = (mode, {anchor, heading, pitch, roll = 0} = {}) => {
+export const rememberCameraView = (mode, {anchor, heading, pitch, roll = 0, rangeMeters = null} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
@@ -911,6 +948,7 @@ export const rememberCameraView = (mode, {anchor, heading, pitch, roll = 0} = {}
             heading: finiteNumber(heading) ?? 0,
             pitch:   finiteNumber(pitch) ?? SAFE_TOP_DOWN_PITCH,
             roll:    finiteNumber(roll) ?? 0,
+            rangeMeters: finiteNumber(rangeMeters),
         }
     }
 

@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {Cartesian3, Cartographic, Matrix4, Transforms} from 'cesium'
+import {Cartesian3, Cartographic, Matrix4, Math as CesiumMath, Transforms} from 'cesium'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@Utils/UIToast', () => ({
@@ -70,8 +70,12 @@ import {
     interpolateCameraFrame,
     startDeterministicCameraTransition,
     cameraRecenterFrame as resolveCameraRecenterFrame,
+    cameraViewDelta,
+    cameraViewIsStable,
+    rememberCameraView,
 } from '@Core/ui/replay/JourneyReplayCameraTransition'
 import {
+    applyCameraView,
     cancelCameraBezierTransition,
     cameraCollisionForFrame,
     cameraCollisionForSample,
@@ -189,6 +193,48 @@ const makeJourney = () => ({
 describe('Journey replay camera paths', () => {
     afterEach(() => {
         vi.unstubAllGlobals()
+    })
+
+    it('reapplies a camera view when only the configured Replay zoom changes', () => {
+        const camera = {
+            lookAtTransform: vi.fn(),
+            setView: vi.fn(),
+        }
+        const scene = {globe: {getHeight: vi.fn(() => 0)}}
+        vi.stubGlobal('lgs', {
+            camera,
+            scene,
+            viewer: {camera, scene},
+        })
+        const {mode, call} = makeMode()
+        call.markerRenderHeightForSample = vi.fn(() => 100)
+        call.cameraAltitudeForSample = vi.fn((_sample, settings) => settings.altitude)
+        call.cameraViewDelta = options => cameraViewDelta(mode, options)
+        call.cameraViewIsStable = options => cameraViewIsStable(mode, options)
+        call.rememberCameraView = options => rememberCameraView(mode, options)
+        const anchor = {longitude: 2, latitude: 48, altitude: 100}
+        const pose = {
+            anchor,
+            heading: 0.4,
+            pitch: -Math.PI / 4,
+            cameraSettings: {altitudeMode: 'constant', altitude: 1200},
+        }
+
+        expect(applyCameraView(mode, pose)).toBe(true)
+        const firstDestination = camera.setView.mock.calls[0][0].destination
+
+        expect(applyCameraView(mode, {
+            ...pose,
+            cameraSettings: {...pose.cameraSettings, altitude: 2200},
+        })).toBe(true)
+        const secondDestination = camera.setView.mock.calls[1][0].destination
+
+        expect(Cartesian3.distance(firstDestination, secondDestination)).toBeGreaterThan(900)
+        expect(applyCameraView(mode, {
+            ...pose,
+            cameraSettings: {...pose.cameraSettings, altitude: 2200},
+        })).toBe(false)
+        expect(camera.setView).toHaveBeenCalledTimes(2)
     })
 
     it('applies a temporary pitch correction for an automatic redirect', () => {
@@ -962,6 +1008,43 @@ describe('Journey replay camera paths', () => {
         expect(Cartesian3.dot(frame.direction, frame.correctedUp)).toBeCloseTo(0, 10)
         expect(Cartesian3.magnitude(frame.correctedUp)).toBeCloseTo(1, 10)
         expect(Cartesian3.dot(frame.direction, localUp)).toBeCloseTo(Math.sin(pitch), 10)
+    })
+
+    it('keeps the camera on the smoothed anchor while retaining the real route marker target', () => {
+        vi.stubGlobal('lgs', {
+            viewer: {
+                camera: {
+                    positionCartographic: {height: 1000},
+                },
+            },
+        })
+        const {mode, call} = makeMode()
+        const routeSample = {longitude: 2, latitude: 48, altitude: 120}
+        const cameraAnchorSample = {longitude: 2.01, latitude: 48.01, altitude: 110}
+        call.markerRenderHeightForSample = vi.fn(sample => sample.altitude)
+        call.markerRenderCartesianForSample = vi.fn(sample => Cartesian3.fromDegrees(
+            sample.longitude,
+            sample.latitude,
+            sample.altitude,
+        ))
+        call.cameraAltitudeForSample = vi.fn(() => 1000)
+
+        const frame = resolveCameraRecenterFrame(mode, {
+            sample: routeSample,
+            cameraAnchorSample,
+            heading: 0.4,
+            pitch: -Math.PI / 4,
+            cameraHeight: 1000,
+            cameraSettings: {altitudeMode: 'constant', altitude: 1000},
+        })
+
+        const cameraTarget = Cartographic.fromCartesian(frame.target)
+        const routeMarker = Cartographic.fromCartesian(frame.markerTarget)
+        expect(CesiumMath.toDegrees(cameraTarget.longitude)).toBeCloseTo(cameraAnchorSample.longitude, 6)
+        expect(CesiumMath.toDegrees(cameraTarget.latitude)).toBeCloseTo(cameraAnchorSample.latitude, 6)
+        expect(CesiumMath.toDegrees(routeMarker.longitude)).toBeCloseTo(routeSample.longitude, 6)
+        expect(CesiumMath.toDegrees(routeMarker.latitude)).toBeCloseTo(routeSample.latitude, 6)
+        expect(frame.sample).toBe(routeSample)
     })
 
     it('preserves an explicit live camera range when locking the replay anchor', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -248,6 +248,7 @@ export const resolveJourneyReplayLogicalCameraRoll = ({sample = null, sampler = 
  *
  * @param {Object} options - Logical pose inputs.
  * @param {number|null} [options.axisHeading] - Canonical path heading in radians.
+ * @param {Object|null} [options.cameraAnchorSample] - Optional smoothed camera-only route sample.
  * @returns {Object|null} A renderer-independent camera pose.
  */
 export const resolveJourneyReplayLogicalCameraPose = ({
@@ -257,12 +258,16 @@ export const resolveJourneyReplayLogicalCameraPose = ({
                                                            cameraSettings = null,
                                                            markerSettings = null,
                                                            axisHeading = null,
+                                                           cameraAnchorSample = null,
                                                        } = {}) => {
     if (!sample || !cameraSettings) {
         return null
     }
 
     const anchorSample = markerPositionForSample(sample, markerSettings)
+    const cameraAnchor = cameraAnchorSample
+        ? markerPositionForSample(cameraAnchorSample, markerSettings)
+        : null
     const resolvedAxisHeading = finiteNumber(axisHeading) ?? pathHeadingForSample(sample)
     const cameraAngle = degreesToRadians(clamp(finiteNumber(cameraSettings.cameraAngle) ?? 180, -180, 180)) ?? Math.PI
     const fullTurn = Math.PI * 2
@@ -279,6 +284,7 @@ export const resolveJourneyReplayLogicalCameraPose = ({
 
     return {
         sample: anchorSample,
+        ...(cameraAnchor ? {cameraAnchorSample: cameraAnchor} : {}),
         progress: clamp(Number(progress) || 0, 0, 1),
         heading: desiredHeading,
         pitch,

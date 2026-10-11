@@ -160,3 +160,8 @@ Replay work is not complete merely because unit tests pass. The applicable
 checks in [Replay Quality Validation](CORE-REPLAY-QUALITY-VALIDATION.md) must pass,
 including a real Replay/capture visual run for changes that affect pixels,
 timing, camera, scene readiness, overlays, or encoding.
+- Shared Replay camera-heading anticipation for Simple and Expert playback and
+  export. Simple has a minimum Ease of `0.3`; Expert uses its saved Ease. The
+  sampler replaces tight alternating turns with a camera-only chord when their
+  cross-track spread is below half the projected crop width. Trace, marker, and
+  visibility constraints continue to use the original route sample.

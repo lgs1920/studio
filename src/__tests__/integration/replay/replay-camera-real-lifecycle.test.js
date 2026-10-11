@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-10
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -524,6 +524,39 @@ describe('Replay with the real Cesium camera', () => {
             const position = Matrix4.multiplyByPoint(local, camera.positionWC, new Cartesian3())
             expect(Math.asin(direction.z)).toBeCloseTo(-38 * Math.PI / 180, 8)
             expect(position.z).toBeCloseTo(1600 - 900, 5)
+        }
+        finally {
+            mode.dispose()
+            await mode.waitForSceneRestore()
+        }
+    })
+
+    it('updates Replay zoom when camera height changes at the same anchor and orientation', async () => {
+        const {camera, mode, controller, journey} = installScene()
+        const pitch = -38 * Math.PI / 180
+        try {
+            await mode.prepareReplayCamera()
+            mode.start()
+            const sample = {...controller.currentSample(), longitude: 2.0001, latitude: 48.0001}
+            const target = Cartesian3.fromDegrees(sample.longitude, sample.latitude, 120)
+
+            applyCameraView(mode, {
+                anchor: sample,
+                heading: 1,
+                pitch,
+                cameraSettings: {...journey.replay.expert.camera, altitudeMode: 'constant', altitude: 1800},
+            })
+            const firstRange = Cartesian3.distance(camera.positionWC, target)
+
+            applyCameraView(mode, {
+                anchor: sample,
+                heading: 1,
+                pitch,
+                cameraSettings: {...journey.replay.expert.camera, altitudeMode: 'constant', altitude: 2600},
+            })
+            const secondRange = Cartesian3.distance(camera.positionWC, target)
+
+            expect(secondRange).toBeGreaterThan(firstRange + 1000)
         }
         finally {
             mode.dispose()

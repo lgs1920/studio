@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {finiteNumber} from './JourneyReplayRuntime'
-import {replayTurnDriftForGuideProgress} from './JourneyReplayCameraGuide'
+import {cameraMotionAtProgress, replayTurnDriftForGuideProgress} from './JourneyReplayCameraGuide'
 import {
     clamp,
     replayAngularDelta,
@@ -340,6 +340,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
         if (cameraSettings.canFixHiddenMarker === false) {
             terrainRedirectCycle = null
         }
+        const cameraMotion = cameraMotionAtProgress(mode, {sample, progress, cameraSettings})
         const rawView = call.cameraViewForSample({
             sample,
             progress,
@@ -347,6 +348,8 @@ export const resolveConstrainedReplayCameraPath = (mode, {
             cameraSettings,
             markerSettings,
             collision: true,
+            cameraAnchorSample: cameraMotion?.zigzagSimplified ? cameraMotion.sample : null,
+            axisHeading: cameraMotion?.heading ?? null,
             previousHeading: null,
             previousPitch: null,
         })
@@ -392,6 +395,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
 
         let frame = call.cameraRecenterFrame({
             sample: view.sample,
+            cameraAnchorSample: view.cameraAnchorSample,
             heading: view.heading,
             pitch: view.pitch,
             roll: view.roll,
@@ -453,6 +457,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
             if (redirectedView) {
                 frame = call.cameraRecenterFrame({
                     sample: redirectedView.sample,
+                    cameraAnchorSample: redirectedView.cameraAnchorSample,
                     heading: redirectedView.heading,
                     pitch: redirectedView.pitch,
                     roll: redirectedView.roll,
@@ -532,6 +537,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
         },
     )
     const futureFrameAtProgress = (sample, progress) => {
+        const cameraMotion = cameraMotionAtProgress(mode, {sample, progress, cameraSettings})
         const futureView = call.cameraViewForSample({
             sample,
             progress,
@@ -539,6 +545,8 @@ export const resolveConstrainedReplayCameraPath = (mode, {
             cameraSettings,
             markerSettings,
             collision: true,
+            cameraAnchorSample: cameraMotion?.zigzagSimplified ? cameraMotion.sample : null,
+            axisHeading: cameraMotion?.heading ?? null,
             previousHeading: null,
             previousPitch: null,
         })
@@ -548,6 +556,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
 
         const frame = call.cameraRecenterFrame({
             sample: futureView.sample,
+            cameraAnchorSample: futureView.cameraAnchorSample,
             heading: futureView.heading,
             pitch: futureView.pitch,
             roll: futureView.roll,

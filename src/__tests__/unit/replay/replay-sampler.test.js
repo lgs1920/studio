@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: replay-phase1.test.js
+ * File: replay-sampler.test.js
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-01
- * Last modified: 2026-07-01
+ * Created on: 2026-07-22
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,6 +37,8 @@ import {
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
     getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplaySettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {cameraMotionAtProgress}                                          from '@Core/ui/replay/JourneyReplayCameraGuide'
+import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE}      from '@Core/ui/replay/JourneyReplayInternal'
 import { gpx }                                                         from '@tmcw/togeojson'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
 import { Cartesian3, Cartographic, Matrix4, Math as CesiumMath, Transforms } from 'cesium'
@@ -371,5 +373,241 @@ describe('replay phase 1 sampler', () => {
         )
 
         expect(maximumDeviation).toBeLessThan(0.2)
+    })
+
+    it('moves the camera anchor along a chord when a zigzag is under half the crop width', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#camera-zigzag-chord',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.001, 0.0002, 0],
+                    [0.002, 0, 0],
+                    [0.003, 0.0002, 0],
+                    [0.004, 0, 0],
+                    [0.005, 0.0002, 0],
+                    [0.006, 0, 0],
+                ],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const routeSample = sampler.atProgress(0.45)
+        const cameraMotion = sampler.cameraMotionAtProgress(0.45, {cropZoneWidthMeters: 1000})
+
+        expect(cameraMotion.zigzagSimplified).toBe(true)
+        expect(cameraMotion.zigzagAmplitudeMeters).toBeLessThan(500)
+        expect(Math.abs(cameraMotion.sample.latitude)).toBeLessThan(0.00001)
+        expect(Math.abs(routeSample.latitude)).toBeGreaterThan(0.00001)
+        expect(cameraMotion.heading).toBeCloseTo(Math.PI / 2, 2)
+        expect(sampler.cameraMotionAtProgress(0.45, {
+            cropZoneWidthMeters: cameraMotion.zigzagAmplitudeMeters * 2,
+        }).zigzagSimplified).toBe(false)
+    })
+
+    it('keeps a zigzag width decision stable across altitude changes within the section', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#camera-zigzag-stable-width',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.001, 0.0002, 1500],
+                    [0.002, 0, 0],
+                    [0.003, 0.0002, 1200],
+                    [0.004, 0, 0],
+                    [0.005, 0.0002, 1600],
+                    [0.006, 0, 0],
+                ],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const sectionAltitudes = []
+        const cameraMotions = [0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 0.95].map(progress => {
+            const sample = sampler.atProgress(progress)
+            return sampler.cameraMotionAtProgress(progress, {
+                cropZoneWidthMeters: sample.altitude > 500 ? 10 : 1000,
+                cropZoneWidthMetersForSection: section => {
+                    sectionAltitudes.push(section.maximumTargetAltitude)
+                    return 1000
+                },
+            })
+        })
+
+        expect(cameraMotions.every(motion => motion.zigzagSimplified)).toBe(true)
+        expect(sectionAltitudes.length).toBe(cameraMotions.length)
+        expect(new Set(sectionAltitudes)).toEqual(new Set([1600]))
+    })
+
+    it('uses the narrowest camera crop width across a zigzag section', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#camera-zigzag-peak-width',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.001, 0.0002, 1500],
+                    [0.002, 0, 0],
+                    [0.003, 0.0002, 1200],
+                    [0.004, 0, 0],
+                    [0.005, 0.0002, 1600],
+                    [0.006, 0, 0],
+                ],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {sampler},
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                cesiumViewer: () => ({camera: {frustum: {aspectRatio: 1, fovy: Math.PI / 3}}}),
+                constrainedReplayProjectionViewport: () => ({
+                    width: 1000,
+                    height: 800,
+                    canvasWidth: 1000,
+                    canvasHeight: 800,
+                }),
+            },
+        }
+        const cameraSettings = {
+            altitude: 1620,
+            altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
+            pitch: -90,
+            hysteresis: {easing: 0.3},
+        }
+        const cameraMotions = [0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 0.95].map(progress => (
+            cameraMotionAtProgress(mode, {
+                sample: sampler.atProgress(progress),
+                progress,
+                cameraSettings,
+            })
+        ))
+
+        expect(cameraMotions.every(motion => motion.zigzagSimplified === false)).toBe(true)
+    })
+
+    it('keeps zigzags that are at least half the crop width and keeps ordinary corners', () => {
+        const zigzagJourney = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#wide-camera-zigzag',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.001, 0.0002, 0],
+                    [0.002, 0, 0],
+                    [0.003, 0.0002, 0],
+                    [0.004, 0, 0],
+                    [0.005, 0.0002, 0],
+                    [0.006, 0, 0],
+                ],
+            }),
+        ])
+        const zigzagSampler = new JourneyReplayPathSampler({journey: zigzagJourney})
+        const wideRouteSample = zigzagSampler.atProgress(0.45)
+        const wideCameraMotion = zigzagSampler.cameraMotionAtProgress(0.45, {cropZoneWidthMeters: 20})
+
+        expect(wideCameraMotion.zigzagSimplified).toBe(false)
+        expect(wideCameraMotion.sample.latitude).toBeCloseTo(wideRouteSample.latitude, 8)
+
+        const cornerJourney = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#single-camera-corner',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.001, 0, 0],
+                    [0.001, 0.001, 0],
+                    [0.001, 0.002, 0],
+                ],
+            }),
+        ])
+        const cornerSampler = new JourneyReplayPathSampler({journey: cornerJourney})
+        const corner = cornerSampler.atProgress(0.5)
+        const cornerMotion = cornerSampler.cameraMotionAtProgress(0.5, {cropZoneWidthMeters: 1000})
+
+        expect(cornerMotion.zigzagSimplified).toBe(false)
+        expect(cornerMotion.sample.longitude).toBeCloseTo(corner.longitude, 8)
+        expect(cornerMotion.sample.latitude).toBeCloseTo(corner.latitude, 8)
+    })
+
+    it('anticipates a 90 degree turn from the compiled route without classifying it as a zigzag', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#camera-right-angle-anticipation',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.008, 0, 0],
+                    [0.008, 0.004, 0],
+                ],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const routeSample = sampler.atProgress(0.5)
+        const motion = sampler.cameraMotionAtProgress(0.5, {
+            cropZoneWidthMeters: 10000,
+            lookaheadSeconds:   4,
+            windowSeconds:      4,
+            minimumMeters:      400,
+        })
+        const eastHeading = Math.PI / 2
+        const turnHeading = 0
+        const anticipatedTurn = Math.abs(replayAngularDelta(motion.heading, eastHeading))
+
+        expect(motion.zigzagSimplified).toBe(false)
+        expect(motion.sample.longitude).toBeCloseTo(routeSample.longitude, 8)
+        expect(motion.sample.latitude).toBeCloseTo(routeSample.latitude, 8)
+        expect(anticipatedTurn).toBeGreaterThan(0.15)
+        expect(anticipatedTurn).toBeLessThan(Math.PI / 2 - 0.15)
+        expect(Math.abs(replayAngularDelta(motion.heading, turnHeading))).toBeLessThan(Math.PI / 2)
+    })
+
+    it('keeps turning through a 90 degree corner instead of holding the pre-turn heading', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#camera-right-angle-motion',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.008, 0, 0],
+                    [0.008, 0.004, 0],
+                ],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const headings = [0.3, 0.4, 0.5, 0.6, 0.7].map(progress => sampler.cameraMotionAtProgress(progress, {
+            cropZoneWidthMeters: 10000,
+            lookaheadSeconds:   4,
+            windowSeconds:      4,
+            minimumMeters:      400,
+        }).heading)
+
+        expect(headings[0]).toBeGreaterThan(headings[1])
+        expect(headings[1]).toBeGreaterThan(headings[2])
+        expect(headings[2]).toBeGreaterThan(headings[3])
+        expect(headings[3]).toBeGreaterThan(headings[4])
+        expect(headings[0] - headings[4]).toBeGreaterThan(0.35)
+    })
+
+    it('does not let a later compact zigzag delay anticipation of a sharp turn', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#camera-turn-before-zigzag',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.004, 0, 0],
+                    [0.004, 0.004, 0],
+                    [0.0045, 0.004866, 0],
+                    [0.0045, 0.005866, 0],
+                    [0.005, 0.006732, 0],
+                    [0.005, 0.007732, 0],
+                    [0.0055, 0.008598, 0],
+                ],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const beforeCorner = sampler.cameraMotionAtProgress(0.5, {
+            cropZoneWidthMeters: 10000,
+            minimumMeters:      400,
+        })
+        const insideLaterZigzag = sampler.cameraMotionAtProgress(0.72, {
+            cropZoneWidthMeters: 10000,
+            minimumMeters:      400,
+        })
+
+        expect(beforeCorner.zigzagSimplified).toBe(false)
+        expect(insideLaterZigzag.zigzagSimplified).toBe(true)
     })
 })

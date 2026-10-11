@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,7 @@ import {attachReplayFrameIntent, publishReplayFrameState} from './ReplayFramePub
 import {createReplayRenderModeContract} from './ReplayRenderModeContract'
 import {getJourneyReplaySettings, normalizeJourneyReplayCamera} from './JourneyReplayProgressionStyle'
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
+import {REPLAY_SIMPLE_CAMERA_MIN_EASING} from './JourneyReplayCameraMotionSmoothing'
 
 /**
  * Converts a value to a finite number.
@@ -269,10 +270,21 @@ export const currentJourneyReplayCameraSettings = (options = {}) => {
     const camera = simplePreparation && store?.camera
         ? {...settings.camera, ...store.camera}
         : settings.camera
+    const normalizedCamera = normalizeJourneyReplayCamera(camera)
+    const runtimeCamera = isJourneyReplayBasicMode()
+        && normalizedCamera.hysteresis.easing < REPLAY_SIMPLE_CAMERA_MIN_EASING
+        ? {
+            ...normalizedCamera,
+            hysteresis: {
+                ...normalizedCamera.hysteresis,
+                easing: REPLAY_SIMPLE_CAMERA_MIN_EASING,
+            },
+        }
+        : normalizedCamera
 
     return normalizeJourneyReplayCamera({
-        ...camera,
-        debug: !isJourneyReplayBasicMode() && camera.debug === true,
+        ...runtimeCamera,
+        debug: !isJourneyReplayBasicMode() && normalizedCamera.debug === true,
     })
 }
 

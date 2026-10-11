@@ -32,4 +32,4 @@ Create a feature issue for `1.0.0/backlog/LGS1920/chdenat`.
 
 Bind the popup opened by the cog icon to the widget instead of the button.
 
-Valider visuellement la reprise du pitch préparé dans le Replay.
+Validate the prepared Replay pitch and smoothed camera path visually with a loaded journey.
