@@ -3306,3 +3306,79 @@
 ## 2026-10-08 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/d98158de75129742ac51fd800471ba36c31b8442)
 
 - Recorded automatically from Git history.
+
+## 2026-10-08 — [`fix(geocoding): correct SelectLocation class prop`](https://github.com/lgs1920/studio/commit/9e3e365cae36892e1d6f7070278acacfcf3f0315)
+
+- Recorded automatically from Git history.
+
+## 2026-10-08 — [`fix(replay): keep prepared settings on selected journey`](https://github.com/lgs1920/studio/commit/a8e98d9ca8d106f26175a68209cea6af7dc175bc)
+
+- Recorded automatically from Git history.
+
+## 2026-10-09 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/8518d70955bd62d35927bce055af036fa7add934)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-10-10 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/d3ce4811d9ff56fd73063b89ac32d422a740cb52)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-10-10 — [`docs: define WSL Chrome browser automation rules`](https://github.com/lgs1920/studio/commit/3c4eade126502386771a3a6f72f9a3b3a2e7dc89)
+
+- Recorded automatically from Git history.
+
+## 2026-10-10 — [`docs: add WSL browser DevTools skill`](https://github.com/lgs1920/studio/commit/ef031c5b39d7db0bb5c328b5428215ad8b7d1823)
+
+- Recorded automatically from Git history.
+
+## 2026-10-10 — [`fix(replay): separate map camera state from replay poses`](https://github.com/lgs1920/studio/commit/832d52310e14812b82e098f825c7e39555633e83)
+
+- Recorded automatically from Git history.
+
+## 2026-10-10 — [`fix(replay): preserve prepared controls when recording starts`](https://github.com/lgs1920/studio/commit/50d7cf2ed8033b11442f774af7d9ccb609be7358)
+
+- Recorded automatically from Git history.
+
+## 2026-10-10 — [`fix(replay): retain mouse-prepared height before recording`](https://github.com/lgs1920/studio/commit/356e2f4f1159dbc86fc5af2189c2eaa54e76b11a)
+
+- Recorded automatically from Git history.
+
+## 2026-10-10 — [`fix(replay): distinguish prepared and physical camera diagnostics`](https://github.com/lgs1920/studio/commit/5b708d03b6c1beaf1ef4867dd8e62c3444c6d953)
+
+- Recorded automatically from Git history.
+
+## 2026-10-10 — [`fix(video): mask journey toolbar throughout capture`](https://github.com/lgs1920/studio/commit/0a39e499495ab8d87b9aa9820639b195491426ff)
+
+- Recorded automatically from Git history.
+
+## 2026-10-10 — [`docs(replay): document camera lifecycle and preparation behavior`](https://github.com/lgs1920/studio/commit/e4773ed0ac4df7508efc33f4eee38b0c34aae1aa)
+
+- Recorded automatically from Git history.
+
+## 2026-10-10 — [`docs: define Cesium and replay camera ownership rules`](https://github.com/lgs1920/studio/commit/a66f21c7aec7e9013879f8032c3fde824e6837cb)
+
+- Recorded automatically from Git history.
+
+## 2026-10-10 — [`fix(replay): disable camera diagnostics in Simple mode`](https://github.com/lgs1920/studio/commit/e290aacc41e1a466652aeaee6f4ad7b39293e57c)
+
+- Recorded automatically from Git history.
+
+## 2026-10-10 — [`feat(replay): add trace-focus outro to Simple Replay`](https://github.com/lgs1920/studio/commit/f0af19b0bb5746f1b53bb76e22add1854c9658df)
+
+- Recorded automatically from Git history.
+
+## 2026-10-10 — [`docs(replay): document Simple mode diagnostics and outro`](https://github.com/lgs1920/studio/commit/2623a3daabe806e81963b95f1c8d37dde9e1b002)
+
+- Recorded automatically from Git history.
+
+## 2026-10-10 — [`feat(replay): persist camera pose per journey`](https://github.com/lgs1920/studio/commit/921d6c0644d5ed68d37a2b7173c73d430367e0d7)
+
+- Recorded automatically from Git history.
+
+## 2026-10-10 — [`fix(video): wait for Replay widget capture mirrors`](https://github.com/lgs1920/studio/commit/47875776ce49c3332a93bf66c895f2310d358df1)
+
+- Recorded automatically from Git history.
+
+## 2026-10-10 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/8b5ea98882a4f51454aae719a283a4f7ba124afd)
+
+- Recorded automatically from Git history.
