@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-29
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import {act, cleanup, render, waitFor} from '@testing-library/react'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
+import {VIDEO_CROP_ZONE} from '@Core/constants'
 
 const guideHarness = vi.hoisted(() => ({
     mount:   vi.fn(() => true),
@@ -59,6 +60,7 @@ import {JourneyReplayCameraAngleGuide} from '@Components/JourneyReplay/JourneyRe
 
 afterEach(() => {
     cleanup()
+    document.getElementById(VIDEO_CROP_ZONE)?.remove()
     vi.clearAllMocks()
     globalThis.lgs = undefined
     globalThis.__ = undefined
@@ -182,7 +184,13 @@ describe('JourneyReplayCameraAngleGuide component', () => {
             viewer: {},
         }
 
-        render(<JourneyReplayCameraAngleGuide/>)
+        const {container} = render(
+            <>
+                <JourneyReplayCameraAngleGuide/>
+                <div id={VIDEO_CROP_ZONE}/>
+            </>,
+        )
+        const cropElement = container.querySelector(`#${VIDEO_CROP_ZONE}`)
 
         await waitFor(() => expect(guideHarness.mount).toHaveBeenCalledWith(
             expect.anything(),
@@ -190,8 +198,23 @@ describe('JourneyReplayCameraAngleGuide component', () => {
                 anchor: {height: 0, latitude: 48, longitude: 2},
             }),
             {},
-            expect.objectContaining({onCameraChange: expect.any(Function), screenLocked: true}),
+            expect.objectContaining({
+                cropElement,
+                onCameraChange: expect.any(Function),
+                screenLocked: true,
+            }),
         ))
+
+        await waitFor(() => expect(guideHarness.update).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.anything(),
+            expect.objectContaining({cropElement}),
+        ))
+        const initialUpdateCount = guideHarness.update.mock.calls.length
+        act(() => {
+            globalThis.lgs.stores.replay.videoCropRect = {left: 20, top: 30, width: 640, height: 360}
+        })
+        await waitFor(() => expect(guideHarness.update).toHaveBeenCalledTimes(initialUpdateCount + 1))
     })
 
     it('shows the cone during Simple Replay using its effective trace-relative camera', async () => {
@@ -337,7 +360,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
         expect(refreshCamera).not.toHaveBeenCalled()
     })
 
-    it('persists an Expert camera angle without moving Cesium', async () => {
+    it('persists an Expert camera angle without moving the prepared Cesium view', async () => {
         const journey = {replay: {expert: {camera: {altitude: 900, cameraAngle: 180}}}}
         const refresh = vi.fn()
         const refreshCamera = vi.fn()

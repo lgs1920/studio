@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -69,8 +69,9 @@ const CAMERA_ANGLE_GUIDE_LOOP_CLOSURE_DISTANCE_METERS = 100
 const CAMERA_ANGLE_GUIDE_ANGLE_ARC_BASE_RATIO = 0.4
 const CAMERA_ANGLE_GUIDE_ANGLE_ARC_SEGMENTS = 16
 const CAMERA_ANGLE_GUIDE_ANGLE_ARC_EDGE_CLEARANCE_PIXELS = 6
+const CAMERA_ANGLE_GUIDE_CROP_TIP_INSET_PIXELS = 12
 const CAMERA_ANGLE_GUIDE_SNAP_MARKER_RADIUS_PIXELS = 5
-const CAMERA_ANGLE_GUIDE_ANGLE_LABEL_OFFSET_PIXELS = 20
+const CAMERA_ANGLE_GUIDE_ANGLE_LABEL_OFFSET_PIXELS = 12
 const CAMERA_ANGLE_GUIDE_MIN_CAMERA_ALTITUDE_METERS = 10
 const CAMERA_ANGLE_GUIDE_MAX_CAMERA_ALTITUDE_METERS = 100000
 const CAMERA_ANGLE_GUIDE_MIN_CONE_SCALE = 0.25
@@ -643,6 +644,25 @@ const coneLengthFrom = (viewer, anchor, currentLength = CAMERA_ANGLE_GUIDE_CAMER
 }
 
 /**
+ * Read the rendered terrain height at a geographic position.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {Object} point - Geographic point with longitude and latitude.
+ * @returns {number|null} Terrain height in metres, or null when unavailable.
+ */
+const terrainHeightAtFrom = (viewer, point) => {
+    try {
+        const height = viewer?.scene?.globe?.getHeight?.(
+            Cartographic.fromDegrees(point.longitude, point.latitude),
+        ) ?? null
+        return Number.isFinite(height) ? height : null
+    }
+    catch {
+        return null
+    }
+}
+
+/**
  * Resolve the world-space anchors and transforms used to draw a guide.
  *
  * @param {Object} viewer - Cesium viewer.
@@ -651,31 +671,23 @@ const coneLengthFrom = (viewer, anchor, currentLength = CAMERA_ANGLE_GUIDE_CAMER
  * @returns {Object} World-space overlay geometry.
  */
 const worldGeometryFrom = (viewer, guide, currentConeLength = null) => {
-    const groundAnchor = Cartesian3.fromDegrees(guide.anchor.longitude, guide.anchor.latitude, guide.anchor.height)
-    const guideHeight = Number.isFinite(guide.coneHeight) ? guide.coneHeight : guide.anchor.height
-    let anchorTerrainHeight = null
-    try {
-        anchorTerrainHeight = viewer?.scene?.globe?.getHeight?.(Cartographic.fromCartesian(groundAnchor)) ?? null
-    }
-    catch {
-        anchorTerrainHeight = null
-    }
-    const coneHeight = Math.max(
-        guideHeight - CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS,
-        Number.isFinite(anchorTerrainHeight) ? anchorTerrainHeight : Number.NEGATIVE_INFINITY,
-    ) + CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS
-    const anchor = Cartesian3.fromDegrees(guide.anchor.longitude, guide.anchor.latitude, coneHeight)
+    const anchorTerrainHeight = terrainHeightAtFrom(viewer, guide.anchor)
+    const anchor = Cartesian3.fromDegrees(
+        guide.anchor.longitude,
+        guide.anchor.latitude,
+        Number.isFinite(anchorTerrainHeight) ? anchorTerrainHeight : 0,
+    )
     const visibilityAnchor = Cartesian3.fromDegrees(
         guide.anchor.longitude,
         guide.anchor.latitude,
-        coneHeight,
+        Number.isFinite(anchorTerrainHeight) ? anchorTerrainHeight : 0,
     )
     const transform = Transforms.eastNorthUpToFixedFrame(anchor)
     const directionPosition = guide.directionPoint
         ? Cartesian3.fromDegrees(
             guide.directionPoint.longitude,
             guide.directionPoint.latitude,
-            coneHeight,
+            Number.isFinite(anchorTerrainHeight) ? anchorTerrainHeight : 0,
         )
         : positionAtHeading(
             transform,
@@ -686,7 +698,6 @@ const worldGeometryFrom = (viewer, guide, currentConeLength = null) => {
         anchor,
         coneLength: coneLengthFrom(viewer, anchor, currentConeLength ?? CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS),
         directionPosition,
-        groundAnchor,
         transform,
         visibilityAnchor,
     }
@@ -748,6 +759,34 @@ const iconGapFrom = (viewer, anchor, pixelGap = CAMERA_ANGLE_GUIDE_ICON_GAP_PIXE
     }
     catch {
         return 20
+    }
+}
+
+/**
+ * Keep the guide origin on the same terrain surface used to project the route.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {Object} record - Mounted guide record.
+ * @returns {void} No return value.
+ */
+const syncGuideAnchorToTerrain = (viewer, record) => {
+    const terrainHeight = terrainHeightAtFrom(viewer, record.guide.anchor)
+    const anchorHeight = Number.isFinite(terrainHeight) ? terrainHeight : 0
+    const currentCartographic = Cartographic.fromCartesian(record.anchor)
+    if (currentCartographic && Math.abs(currentCartographic.height - anchorHeight) < 0.01) {
+        return
+    }
+
+    const anchor = Cartesian3.fromDegrees(
+        record.guide.anchor.longitude,
+        record.guide.anchor.latitude,
+        anchorHeight,
+    )
+    record.anchor = anchor
+    record.visibilityAnchor = anchor
+    record.transform = Transforms.eastNorthUpToFixedFrame(anchor)
+    if (record.screenLocked) {
+        record.preparationIconGap = iconGapFrom(viewer, anchor)
     }
 }
 
@@ -953,6 +992,160 @@ const projectGuidePosition = (viewer, overlay, position, projectionFrame = null)
     position,
     projectionFrame,
 )?.dom ?? null
+
+/**
+ * Resolve the visible crop bounds in the guide overlay's local coordinates.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {HTMLElement} overlay - DOM guide overlay.
+ * @param {HTMLElement|null} cropElement - Video crop-zone element.
+ * @returns {{left: number, right: number, top: number, bottom: number}|null} Crop bounds, or null when unavailable.
+ */
+const cropBoundsFrom = (viewer, overlay, cropElement) => {
+    if (!cropElement?.isConnected || typeof cropElement.getBoundingClientRect !== 'function') {
+        return null
+    }
+    const cropRect = cropElement.getBoundingClientRect()
+    const overlayRect = overlay.getBoundingClientRect?.() ?? {}
+    const containerRect = viewer?.container?.getBoundingClientRect?.() ?? {}
+    const referenceRect = Number(overlayRect.width) > 0 && Number(overlayRect.height) > 0
+        ? overlayRect
+        : containerRect
+    const referenceWidth = Number(referenceRect.width)
+    const referenceHeight = Number(referenceRect.height)
+    if (![cropRect.left, cropRect.top, cropRect.width, cropRect.height, referenceRect.left, referenceRect.top,
+        referenceWidth, referenceHeight].every(Number.isFinite) || referenceWidth <= 0 || referenceHeight <= 0
+        || cropRect.width <= 0 || cropRect.height <= 0) {
+        return null
+    }
+
+    const left = Math.max(0, cropRect.left - referenceRect.left)
+    const right = Math.min(referenceWidth, cropRect.right - referenceRect.left)
+    const top = Math.max(0, cropRect.top - referenceRect.top)
+    const bottom = Math.min(referenceHeight, cropRect.bottom - referenceRect.top)
+    return right > left && bottom > top ? {left, right, top, bottom} : null
+}
+
+/**
+ * Clip a projected axis to a rectangle and return its visible segment interval.
+ *
+ * @param {{x: number, y: number}} start - Projected axis origin.
+ * @param {{x: number, y: number}} end - Projected axis endpoint.
+ * @param {{left: number, right: number, top: number, bottom: number}} bounds - Allowed screen rectangle.
+ * @returns {{start: number, end: number}|null} Segment interval inside the rectangle.
+ */
+const segmentIntervalInBoundsFrom = (start, end, bounds) => {
+    const deltaX = end.x - start.x
+    const deltaY = end.y - start.y
+    const constraints = [
+        [-deltaX, start.x - bounds.left],
+        [deltaX, bounds.right - start.x],
+        [-deltaY, start.y - bounds.top],
+        [deltaY, bounds.bottom - start.y],
+    ]
+    let minimum = 0
+    let maximum = 1
+    for (const [direction, distance] of constraints) {
+        if (direction === 0) {
+            if (distance < 0) {
+                return null
+            }
+            continue
+        }
+        const ratio = distance / direction
+        if (direction < 0) {
+            minimum = Math.max(minimum, ratio)
+        }
+        else {
+            maximum = Math.min(maximum, ratio)
+        }
+        if (minimum > maximum) {
+            return null
+        }
+    }
+    return {start: minimum, end: maximum}
+}
+
+/**
+ * Keep the displayed cone tip inside the video crop while preserving camera settings.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {HTMLElement} overlay - DOM guide overlay.
+ * @param {Object} record - Mounted guide record.
+ * @param {number} coneHeading - Cone bearing in radians.
+ * @param {number} requestedLength - Display length after altitude scaling.
+ * @returns {number} Crop-constrained display length in metres.
+ */
+const coneLengthWithinCropFrom = (viewer, overlay, record, coneHeading, requestedLength) => {
+    const cropBounds = cropBoundsFrom(viewer, overlay, record.cropElement)
+    if (!record.screenLocked || !cropBounds || !Number.isFinite(requestedLength) || requestedLength <= 0) {
+        return requestedLength
+    }
+
+    const inset = Math.min(
+        CAMERA_ANGLE_GUIDE_CROP_TIP_INSET_PIXELS,
+        (cropBounds.right - cropBounds.left) / 2,
+        (cropBounds.bottom - cropBounds.top) / 2,
+    )
+    const bounds = {
+        left: cropBounds.left + inset,
+        right: cropBounds.right - inset,
+        top: cropBounds.top + inset,
+        bottom: cropBounds.bottom - inset,
+    }
+    const start = projectGuidePosition(viewer, overlay, record.anchor, record.screenProjectionFrame)
+    const requestedTip = projectGuidePosition(
+        viewer,
+        overlay,
+        positionAtHeading(record.transform, coneHeading, requestedLength),
+        record.screenProjectionFrame,
+    )
+    if (!start || !requestedTip) {
+        return requestedLength
+    }
+    const tipIsInside = requestedTip.x >= bounds.left && requestedTip.x <= bounds.right
+        && requestedTip.y >= bounds.top && requestedTip.y <= bounds.bottom
+    if (tipIsInside) {
+        return requestedLength
+    }
+
+    const interval = segmentIntervalInBoundsFrom(start, requestedTip, bounds)
+    if (!interval) {
+        return requestedLength
+    }
+    const projectedLength = Math.hypot(requestedTip.x - start.x, requestedTip.y - start.y)
+    const insetRatio = projectedLength > 0
+        ? Math.min(0.5 / projectedLength, (interval.end - interval.start) / 2)
+        : 0
+    const targetRatio = Math.max(interval.start, interval.end - insetRatio)
+    let minimumLength = 0
+    let maximumLength = requestedLength
+    let constrainedLength = requestedLength * targetRatio
+    for (let iteration = 0; iteration < 18; iteration += 1) {
+        const candidateLength = (minimumLength + maximumLength) / 2
+        const candidate = projectGuidePosition(
+            viewer,
+            overlay,
+            positionAtHeading(record.transform, coneHeading, candidateLength),
+            record.screenProjectionFrame,
+        )
+        if (!candidate) {
+            return requestedLength
+        }
+        const candidateRatio = projectedLength > 0
+            ? (((candidate.x - start.x) * (requestedTip.x - start.x))
+                + ((candidate.y - start.y) * (requestedTip.y - start.y))) / (projectedLength ** 2)
+            : 0
+        if (candidateRatio <= targetRatio) {
+            minimumLength = candidateLength
+            constrainedLength = candidateLength
+        }
+        else {
+            maximumLength = candidateLength
+        }
+    }
+    return Math.max(0.1, constrainedLength)
+}
 
 /**
  * Capture the Cesium projection used to stabilize the preparation guide.
@@ -1567,16 +1760,7 @@ const interpolateRouteProjectionStateFrom = (start, end, progress) => {
  * @returns {Cartesian3} World position on terrain, falling back to the ellipsoid surface.
  */
 const terrainClampedPositionFrom = (viewer, point) => {
-    let terrainHeight = null
-    try {
-        terrainHeight = viewer?.scene?.globe?.getHeight?.(
-            Cartographic.fromDegrees(point.longitude, point.latitude),
-        ) ?? null
-    }
-    catch {
-        terrainHeight = null
-    }
-
+    const terrainHeight = terrainHeightAtFrom(viewer, point)
     return Cartesian3.fromDegrees(
         point.longitude,
         point.latitude,
@@ -1967,6 +2151,7 @@ const isGuideWorldPositionVisible = (viewer, overlay, position, checkDepth, proj
  */
 const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     const {overlay, elements} = record
+    syncGuideAnchorToTerrain(viewer, record)
     elements.angleLabel.textContent = angleLabelFrom(record.guide.angleDegrees)
     const overlayRect = overlay.getBoundingClientRect?.() ?? {}
     const width = Number(overlayRect.width) || overlay.clientWidth || viewer.scene.canvas?.clientWidth || 1
@@ -2015,13 +2200,20 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
             Math.min(CAMERA_ANGLE_GUIDE_MAX_CONE_SCALE, record.guide.cameraAltitude / CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS),
         )
         : 1
+    const coneLength = coneLengthWithinCropFrom(
+        viewer,
+        overlay,
+        record,
+        coneHeading,
+        record.coneLength * coneScale,
+    )
     const geometry = coneGeometryFrom(
         viewer,
         record.anchor,
         record.transform,
         record.guide,
         coneHeading,
-        record.coneLength * coneScale,
+        coneLength,
         record.screenLocked ? record.preparationIconGap : null,
     )
     const routeProjectionState = updateRouteGuideOverlay(viewer, record, width, height, geometry.videoIconPosition)
@@ -3096,6 +3288,7 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}, c
 
     const record = Object.assign({}, worldGeometry, overlayParts, {
         guide,
+        cropElement: callbacks.cropElement ?? null,
         onCameraChange: callbacks.onCameraChange,
         screenLocked: callbacks.screenLocked === true,
         screenProjectionFrame: callbacks.screenLocked === true ? cameraProjectionFrameFrom(viewer) : null,
@@ -3186,6 +3379,9 @@ export const updateJourneyReplayCameraAngleGuide = (viewer, guide, callbacks = {
     }
     if (typeof callbacks.onCameraChange === 'function') {
         record.onCameraChange = callbacks.onCameraChange
+    }
+    if (Object.prototype.hasOwnProperty.call(callbacks, 'cropElement')) {
+        record.cropElement = callbacks.cropElement ?? null
     }
 
     const geometryChanged = guideGeometryKeyFrom(record.guide) !== guideGeometryKeyFrom(guide)

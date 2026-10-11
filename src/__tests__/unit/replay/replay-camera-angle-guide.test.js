@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -657,6 +657,97 @@ describe('replay camera angle map guide', () => {
         container.remove()
     })
 
+    it('keeps the preparation cone tip in the crop and anchors it to the trace at maximum zoom', () => {
+        const container = document.createElement('div')
+        const canvas = document.createElement('canvas')
+        const cropElement = document.createElement('div')
+        container.appendChild(canvas)
+        container.appendChild(cropElement)
+        document.body.appendChild(container)
+        container.getBoundingClientRect = () => ({left: 0, top: 0, width: 1000, height: 800, right: 1000, bottom: 800})
+        canvas.getBoundingClientRect = () => ({left: 0, top: 0, width: 1000, height: 800, right: 1000, bottom: 800})
+        cropElement.getBoundingClientRect = () => ({left: 450, top: 350, width: 100, height: 100, right: 550, bottom: 450})
+        Object.defineProperties(container, {
+            clientHeight: {configurable: true, value: 800},
+            clientWidth: {configurable: true, value: 1000},
+        })
+        Object.defineProperties(canvas, {
+            clientHeight: {configurable: true, value: 800},
+            clientWidth: {configurable: true, value: 1000},
+        })
+        const terrainHeight = 100
+        const viewer = {
+            container,
+            camera: {
+                getPixelSize: () => 1,
+                changed: {addEventListener: () => () => undefined},
+                moveStart: {addEventListener: () => () => undefined},
+                position: new Cartesian3(0, 0, 0),
+            },
+            scene: {
+                canvas,
+                drawingBufferHeight: 800,
+                drawingBufferWidth: 1000,
+                globe: {getHeight: () => terrainHeight},
+                cartesianToCanvasCoordinates: (position, result) => {
+                    const cartographic = Cartographic.fromCartesian(position)
+                    result.x = 500 + ((cartographic.longitude - (2 * Math.PI / 180))
+                        * Math.cos(48 * Math.PI / 180) * 6378137)
+                    result.y = 400 - ((cartographic.latitude - (48 * Math.PI / 180)) * 6378137)
+                        - (cartographic.height - terrainHeight)
+                    return result
+                },
+                postRender: {addEventListener: () => () => undefined},
+                requestRender: vi.fn(),
+            },
+        }
+        const journey = {
+            tracks: new Map([['track-1', {
+                content: {geometry: {type: 'LineString', coordinates: [[2, 48, terrainHeight], [2.003, 48, terrainHeight]]}},
+            }]]),
+        }
+        const initialGuide = resolveJourneyReplayCameraAngleGuide({
+            camera: {altitude: 6000, cameraAngle: 0},
+            journey,
+        })
+        const callbacks = {cropElement, screenLocked: true}
+        expect(mountJourneyReplayCameraAngleGuide(viewer, initialGuide, {}, callbacks)).toBe(true)
+
+        /**
+         * Assert the projected tip remains inside the inset crop and the axis begins at the route departure.
+         *
+         * @returns {void} No return value.
+         */
+        const expectGuideInsideCrop = () => {
+            const overlay = container.querySelector('.replay-camera-angle-guide-dom')
+            const tip = overlay.querySelector('[data-part="cone-tip-drag-target"]')
+            const cameraAxis = overlay.querySelector('[data-part="camera-position-axis"]')
+            const routeStart = overlay.querySelector('[data-part="journey-route-start"]')
+            const tipX = Number(tip.getAttribute('cx'))
+            const tipY = Number(tip.getAttribute('cy'))
+            expect(tipX).toBeGreaterThanOrEqual(462)
+            expect(tipX).toBeLessThanOrEqual(538)
+            expect(tipY).toBeGreaterThanOrEqual(362)
+            expect(tipY).toBeLessThanOrEqual(438)
+            expect(Number(cameraAxis.getAttribute('x1'))).toBeCloseTo(Number(routeStart.getAttribute('cx')), 6)
+            expect(Number(cameraAxis.getAttribute('y1'))).toBeCloseTo(Number(routeStart.getAttribute('cy')), 6)
+        }
+
+        expectGuideInsideCrop()
+        const modifiedGuide = resolveJourneyReplayCameraAngleGuide({
+            camera: {altitude: 6000, cameraAngle: 70},
+            journey,
+        })
+        expect(updateJourneyReplayCameraAngleGuide(viewer, modifiedGuide, {cropElement})).toBe(true)
+        expectGuideInsideCrop()
+
+        removeJourneyReplayCameraAngleGuide(viewer)
+        expect(mountJourneyReplayCameraAngleGuide(viewer, modifiedGuide, {}, callbacks)).toBe(true)
+        expectGuideInsideCrop()
+        removeJourneyReplayCameraAngleGuide(viewer)
+        container.remove()
+    })
+
     it('mounts a synchronized DOM cone with solid circular icons', () => {
         const container = document.createElement('div')
         const canvas = document.createElement('canvas')
@@ -836,7 +927,7 @@ describe('replay camera angle map guide', () => {
         expect(arrowMarker.getAttribute('markerHeight')).toBe('12')
         expect(arrowMarker.querySelector('path').getAttribute('d')).toBe('M 0 0 L 16 6 L 0 12 z')
         const projectedAnchor = viewer.scene.cartesianToCanvasCoordinates(
-            Cartesian3.fromDegrees(guide.anchor.longitude, guide.anchor.latitude, guide.coneHeight),
+            Cartesian3.fromDegrees(guide.anchor.longitude, guide.anchor.latitude, terrainHeight),
             {},
         )
         expect(Number(routeStartMarker.getAttribute('cx'))).toBeCloseTo(projectedAnchor.x, 6)
@@ -848,7 +939,7 @@ describe('replay camera angle map guide', () => {
         expect(projectedTerrainStart).toBeDefined()
         expect(projectedTerrainStart.height).toBeCloseTo(terrainHeight, 6)
         const projectedDirection = viewer.scene.cartesianToCanvasCoordinates(
-            Cartesian3.fromDegrees(guide.directionPoint.longitude, guide.directionPoint.latitude, guide.coneHeight),
+            Cartesian3.fromDegrees(guide.directionPoint.longitude, guide.directionPoint.latitude, terrainHeight),
             {},
         )
         const tangentX = projectedDirection.x - projectedAnchor.x
@@ -1080,6 +1171,7 @@ describe('replay camera angle map guide', () => {
         expect((labelOffsetX * cameraAxisX) + (labelOffsetY * cameraAxisY)).toBeGreaterThan(0)
         const labelRadius = Math.hypot(labelOffsetX, labelOffsetY)
         expect(labelRadius).toBeGreaterThan(Math.hypot(arcStartX, arcStartY))
+        expect(labelRadius - Math.hypot(arcStartX, arcStartY)).toBeCloseTo(12, 6)
         expect(labelRadius).toBeLessThan(Math.hypot(cameraAxisX, cameraAxisY))
         const coneVertices = outerPath.getAttribute('d').match(/^M ([-\d.]+) ([-\d.]+) L ([-\d.]+) ([-\d.]+) L ([-\d.]+) ([-\d.]+)/)
             .slice(1)

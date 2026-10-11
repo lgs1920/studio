@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@
  * Replay camera angle guide mounted on the interactive map.
  */
 
-import {REPLAY_DRAWER} from '@Core/constants'
+import {REPLAY_DRAWER, VIDEO_CROP_ZONE} from '@Core/constants'
 import {
     getJourneyReplaySettings,
     normalizeJourneyReplayCamera,
@@ -46,12 +46,44 @@ import {
     syncJourneySimpleReplayCamera,
 } from '@Core/ui/replay/ReplayUserModes'
 import {useOptionalSnapshot, useProxyValue} from '@Utils/ValtioUtils'
-import {useCallback, useEffect, useRef} from 'react'
+import {useCallback, useEffect, useRef, useSyncExternalStore} from 'react'
 import {useSnapshot} from 'valtio'
 
 const DEFAULT_REPLAY_ANGLE_GUIDE_SETTINGS = {
     camera: {cameraAngle: REPLAY_INITIAL_CAMERA_ANGLE},
     userMode: REPLAY_USER_MODE_BASIC,
+}
+const getCropElementSnapshot = () => typeof document === 'undefined'
+    ? null
+    : document.getElementById(VIDEO_CROP_ZONE)
+const getNoCropElementSnapshot = () => null
+const subscribeToNoCropElement = () => () => {}
+
+/**
+ * Observe the mounted crop DOM node so a Replay guide created in the same React
+ * commit as its cropper always receives the post-commit element reference.
+ *
+ * @param {Function} onChange - Notify React when the crop element is replaced.
+ * @returns {Function} Observer cleanup callback.
+ */
+const subscribeToCropElement = onChange => {
+    if (typeof document === 'undefined' || typeof globalThis.MutationObserver !== 'function') {
+        return subscribeToNoCropElement()
+    }
+    const observerRoot = document.getElementById('lgs-tools-ui') ?? document.body
+    if (!observerRoot) {
+        return subscribeToNoCropElement()
+    }
+    let currentElement = getCropElementSnapshot()
+    const observer = new globalThis.MutationObserver(() => {
+        const nextElement = getCropElementSnapshot()
+        if (nextElement !== currentElement) {
+            currentElement = nextElement
+            onChange()
+        }
+    })
+    observer.observe(observerRoot, {childList: true, subtree: true})
+    return () => observer.disconnect()
 }
 
 /**
@@ -90,6 +122,11 @@ export const JourneyReplayCameraAngleGuide = () => {
         && !replaying
         && (video.editing === true || drawers.open === REPLAY_DRAWER)
         && [REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT].includes(replaySettings.userMode)
+    const cropElement = useSyncExternalStore(
+        isPreparingReplay ? subscribeToCropElement : subscribeToNoCropElement,
+        isPreparingReplay ? getCropElementSnapshot : getNoCropElementSnapshot,
+        getNoCropElementSnapshot,
+    )
 
     useEffect(() => {
         _cameraSettings.current = camera
@@ -140,13 +177,14 @@ export const JourneyReplayCameraAngleGuide = () => {
         })
         if (!mountJourneyReplayCameraAngleGuide(viewer, guide, {}, {
             onCameraChange: updateCameraFromGuide,
+            cropElement,
             screenLocked: isPreparingReplay,
         })) {
             removeJourneyReplayCameraAngleGuide(viewer)
         }
 
         return () => removeJourneyReplayCameraAngleGuide(viewer)
-    }, [guideVisible, isPreparingReplay, journeySlug, updateCameraFromGuide])
+    }, [cropElement, guideVisible, isPreparingReplay, journeySlug, updateCameraFromGuide])
 
     useEffect(() => {
         if (!guideVisible) {
@@ -164,13 +202,17 @@ export const JourneyReplayCameraAngleGuide = () => {
             removeJourneyReplayCameraAngleGuide(viewer)
             return
         }
-        if (!updateJourneyReplayCameraAngleGuide(viewer, guide, {onCameraChange: updateCameraFromGuide})) {
+        const callbacks = {cropElement, onCameraChange: updateCameraFromGuide}
+        if (!updateJourneyReplayCameraAngleGuide(viewer, guide, callbacks)) {
             mountJourneyReplayCameraAngleGuide(viewer, guide, {}, {
                 onCameraChange: updateCameraFromGuide,
+                cropElement,
                 screenLocked: isPreparingReplay,
             })
         }
-    }, [camera.altitude, cameraAngle, guideVisible, isPreparingReplay, journeySlug, replaySample, updateCameraFromGuide])
+    }, [camera.altitude, cameraAngle, cropElement, guideVisible, isPreparingReplay, journeySlug, replaySample, updateCameraFromGuide,
+        replay.videoCropRect?.left, replay.videoCropRect?.top, replay.videoCropRect?.width, replay.videoCropRect?.height,
+    ])
 
     return null
 }
