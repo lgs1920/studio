@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2024-03-01
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -160,7 +160,7 @@ export class POIUtils {
         if (entity.billboard) {
             entity.billboard.show = entity.show
         }
-        lgs.viewer.scene.render()
+        lgs.viewer.scene.requestRender()
         return true
     }
 
@@ -273,7 +273,7 @@ export class POIUtils {
             container.add({...options, billboard: new BillboardGraphics(billboard)})
         }
 
-        lgs.viewer.scene.render()
+        lgs.viewer.scene.requestRender()
         return entity || container.getById(poi.id)
     }
 

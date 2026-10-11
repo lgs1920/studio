@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-12
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -53,7 +53,8 @@ describe('POIUtils replay visibility', () => {
                     get:    () => null,
                 },
                 scene: {
-                    render: vi.fn(),
+                    render:        vi.fn(),
+                    requestRender: vi.fn(),
                 },
             },
         }
@@ -153,5 +154,27 @@ describe('POIUtils replay visibility', () => {
 
         expect(entity.show).toBe(false)
         expect(propertyValue(entity.billboard.show)).toBe(false)
+        expect(globalThis.lgs.viewer.scene.render).not.toHaveBeenCalled()
+        expect(globalThis.lgs.viewer.scene.requestRender).toHaveBeenCalledTimes(2)
+    })
+
+    it('uses a canvas directly as a billboard image without serializing it', async () => {
+        const canvas = {width: 80, height: 60}
+
+        const entity = await POIUtils.draw({
+            id:        'poi-canvas-image',
+            longitude: 2,
+            latitude:  48,
+            height:    100,
+            visible:   true,
+            image: {
+                src:    canvas,
+                width:  40,
+                height: 30,
+            },
+        })
+
+        expect(propertyValue(entity.billboard.image)).toBe(canvas)
+        expect(globalThis.lgs.viewer.scene.requestRender).toHaveBeenCalledOnce()
     })
 })

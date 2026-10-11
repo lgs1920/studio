@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2025-02-16
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,9 +27,28 @@ import { snapdom }                                 from '@zumer/snapdom'
 import classNames                                  from 'classnames'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { proxy, useSnapshot }                      from 'valtio'
+import { createPOICanvasRenderQueue }              from '@Components/MainUI/MapPOI/poiCanvasRenderQueue'
 import './style.css'
 
 const EMPTY_REPLAY_PROXY = proxy({nearbyPois: []})
+const queuePOICanvasRender = createPOICanvasRenderQueue(2)
+const MAX_POI_CANVAS_SIDE = 4096
+const MAX_POI_CANVAS_PIXELS = 8_388_608
+
+const assertPOICanvasDimensions = (element, scale, ratio) => {
+    const bounds = element.getBoundingClientRect()
+    const width = Math.max(bounds.width, element.scrollWidth, element.offsetWidth)
+    const height = Math.max(bounds.height, element.scrollHeight, element.offsetHeight)
+    const pixelWidth = Math.ceil(width * scale * ratio)
+    const pixelHeight = Math.ceil(height * scale * ratio)
+
+    if (!Number.isFinite(pixelWidth) || !Number.isFinite(pixelHeight)
+        || pixelWidth <= 0 || pixelHeight <= 0
+        || pixelWidth > MAX_POI_CANVAS_SIDE || pixelHeight > MAX_POI_CANVAS_SIDE
+        || pixelWidth * pixelHeight > MAX_POI_CANVAS_PIXELS) {
+        throw new RangeError(`POI canvas dimensions exceed the safe limit (${pixelWidth} × ${pixelHeight})`)
+    }
+}
 
 /**
  * Renders the content of a Point of Interest (POI) for the map canvas or UI lists.
@@ -142,41 +161,49 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
 
         const renderRequestId = ++_renderRequestId.current
         __.requestAnimationFrame(() => {
-            try {
-                if (renderRequestId !== _renderRequestId.current || !$pois.list.get(pointId)) {
+            queuePOICanvasRender(_poiContent, async () => {
+                const isCurrentRender = () => renderRequestId === _renderRequestId.current
+                    && Boolean($pois.list.get(pointId))
+
+                if (!isCurrentRender()) {
                     return
                 }
 
                 const scale = 2
                 const ratio = window.devicePixelRatio || 1
+                const element = _poiContent.current
+                if (!element) {
+                    return
+                }
 
-                snapdom(_poiContent.current, {scale}).then(snap =>
-                                                               snap.toCanvas().then(canvas => {
-                                                                   const currentPoint = $pois.list.get(pointId)
-                                                                   if (renderRequestId !== _renderRequestId.current
-                                                                       || !currentPoint
-                                                                       || !currentPoint.visible
-                                                                       || currentPoint.tooClose === true) {
-                                                                       return
-                                                                   }
+                try {
+                    assertPOICanvasDimensions(element, scale, ratio)
+                    const snap = await snapdom(element, {scale})
+                    const canvas = await snap.toCanvas()
+                    const currentPoint = $pois.list.get(pointId)
+                    if (!isCurrentRender()
+                        || !currentPoint?.visible
+                        || currentPoint.tooClose === true) {
+                        return
+                    }
 
-                                                                   const mapPOI = new MapPOI(currentPoint)
-                                                                   mapPOI.image = {
-                                                                       src:    canvas.toDataURL(),
-                                                                       width:  canvas.width / scale / ratio,
-                                                                       height: canvas.height / scale / ratio,
-                                                                   }
-                                                                   mapPOI.pixelOffset = {
-                                                                       x: currentPoint.expanded ? -13 : 0,
-                                                                       y: 0,
-                                                                   }
-                                                                   mapPOI.utils.draw(mapPOI)
-                                                               }),
-                )
-            }
-            catch (error) {
-                console.error('Error rendering POI to canvas:', error)
-            }
+                    const mapPOI = new MapPOI(currentPoint)
+                    mapPOI.image = {
+                        // Cesium accepts canvases directly; a data URL needlessly copies the pixel buffer.
+                        src:    canvas,
+                        width:  canvas.width / scale / ratio,
+                        height: canvas.height / scale / ratio,
+                    }
+                    mapPOI.pixelOffset = {
+                        x: currentPoint.expanded ? -13 : 0,
+                        y: 0,
+                    }
+                    await mapPOI.utils.draw(mapPOI)
+                }
+                catch (error) {
+                    console.error(`Error rendering POI ${pointId} to canvas:`, error)
+                }
+            })
         })
     }, [useInMenu, point?.visible, replayMasked, hiddenBecauseTooClose, pointId, $pois.list])
 
