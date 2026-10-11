@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -588,6 +588,7 @@ describe('Widget snap behavior', () => {
         )
 
         const container = view.container.querySelector('.lgs-widget-container')
+        expect(view.container.querySelector('.lgs-widget')?.classList.contains('recording-locked')).toBe(false)
         expect(container?.classList.contains('replay-playback-input-blocked')).toBe(false)
         expect(container?.style.pointerEvents).toBe('auto')
         expect(latestMoveableProps().draggable).toBe(true)

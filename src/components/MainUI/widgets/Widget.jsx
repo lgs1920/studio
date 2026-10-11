@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -608,7 +608,7 @@ const WidgetHost = ({
     const interactionLocked = previewOnly
                               || (((video.preRecording && !config.isCropper) || video.exporting || video.snapshot || video.finalizing)
                                   && config.type === LGS_VISUAL_WIDGET)
-    const inputBlocked = replayPlaybackActive || previewOnly
+    const inputBlocked = previewOnly
                          || ((synchronizedRecording || video.snapshot || video.finalizing)
                              && config.type === LGS_VISUAL_WIDGET)
     // The crop surface is visual only. Moveable renders its handles in a
