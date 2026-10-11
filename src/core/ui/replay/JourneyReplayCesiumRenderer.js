@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -111,6 +111,8 @@ export class JourneyReplayCesiumRenderer {
     #maskedTrackSources = new Map()
     #traceGuide = null
     #traceGuideKey = null
+    #completedTracePositionsFactory = null
+    #dynamicTraceFrames = new Map()
     #traceHidden = false
     #traceVisible = true
     #renderTarget = null
@@ -309,6 +311,8 @@ export class JourneyReplayCesiumRenderer {
         this.#sourceAddPending = false
         this.#traceGuide = null
         this.#traceGuideKey = null
+        this.#invalidateDynamicTraceFrames()
+        this.#completedTracePositionsFactory = null
         this.#traceHidden = false
         this.#traceVisible = true
         this.#requestRender()
@@ -384,6 +388,8 @@ export class JourneyReplayCesiumRenderer {
         this.#cursorEffectCore = null
         this.#cursorEffectsEnabled = false
         this.#lineEntities.clear()
+        this.#invalidateDynamicTraceFrames()
+        this.#completedTracePositionsFactory = null
         this.#lastPathGeometryUpdate = 0
         this.#lastPathGeometryDistance = null
         this.#lastTraceStyleKey = null
@@ -399,6 +405,8 @@ export class JourneyReplayCesiumRenderer {
         this.#cursorEffectCore = null
         this.#cursorEffectsEnabled = false
         this.#lineEntities.clear()
+        this.#invalidateDynamicTraceFrames()
+        this.#completedTracePositionsFactory = null
         this.#lastPathGeometryUpdate = 0
         this.#lastPathGeometryDistance = null
         this.#sourceRaised = false
@@ -1044,21 +1052,88 @@ export class JourneyReplayCesiumRenderer {
         return TrackUtils.getTrackRenderStyle(track)
     }
 
-    #lastRenderedTracePosition = fallbackPosition => {
-        const completedRecords = Array.from(this.#lineEntities.entries())
-            .filter(([key, record]) => !key.startsWith(REMAINING_KEY_PREFIX)
-                                       && record?.geometryKey === 'dynamic'
-                                       && Array.isArray(record.lastPositions)
-                                       && record.lastPositions.length >= 2)
-            .sort(([, left], [, right]) => (right.lastRenderedProgress ?? 0) - (left.lastRenderedProgress ?? 0))
-        return completedRecords[0]?.[1]?.lastPositions?.at(-1) ?? fallbackPosition
+    /**
+     * Resolves the endpoint from the shared completed-trace frame for the current sample.
+     *
+     * @param {Cartesian3} fallbackPosition - Smoothed sample used when completed geometry is unavailable.
+     * @returns {Cartesian3} Position shared by the marker and completed trace.
+     */
+    #completedTracePositionForFrame = fallbackPosition => {
+        if (typeof this.#completedTracePositionsFactory !== 'function') {
+            return fallbackPosition
+        }
+
+        return this.#traceFrameForCurrentProgress(this.#completedTracePositionsFactory).positions.at(-1)
+            ?? fallbackPosition
     }
 
-    #cursorPositionFromRenderedTrace = fallbackPosition => {
+    /**
+     * Resolves the quantized progress shared by dynamic trace and marker properties.
+     *
+     * @returns {{progress: number, progressKey: number, progressStep: number}} Current trace progress state.
+     */
+    #dynamicTraceProgress = () => {
+        const progress = Math.max(0, Math.min(1, Number(this.#sample?.progress) || 0))
+        const progressStep = globalThis.lgs?.stores?.replay?.playing
+            ? DYNAMIC_POLYLINE_PROGRESS_STEP_PLAYING
+            : DYNAMIC_POLYLINE_PROGRESS_STEP
+
+        return {
+            progress,
+            progressKey: Math.round(progress / progressStep),
+            progressStep,
+        }
+    }
+
+    /**
+     * Clears dynamic trace snapshots so the next property evaluation rebuilds them.
+     *
+     * @returns {void}
+     */
+    #invalidateDynamicTraceFrames = () => {
+        this.#dynamicTraceFrames.clear()
+    }
+
+    /**
+     * Returns one geometry snapshot per dynamic trace factory and progress in the current frame.
+     *
+     * Sharing this snapshot removes property-evaluation order from marker alignment and keeps all
+     * material layers that use the same factory on the same quantized progress sample.
+     *
+     * @param {Function} positionsFactory - Builds trace positions from the current replay sample.
+     * @returns {{sampler: object|null, positionsFactory: Function, progressStep: number, progressKey: number, progress: number, positions: Array}} Shared trace frame.
+     */
+    #traceFrameForCurrentProgress = positionsFactory => {
+        const progressState = this.#dynamicTraceProgress()
+        const cachedFrame = this.#dynamicTraceFrames.get(positionsFactory)
+        if (
+            cachedFrame?.sampler !== this.#sampler
+            || cachedFrame.progressStep !== progressState.progressStep
+            || cachedFrame.progressKey !== progressState.progressKey
+        ) {
+            const positions = positionsFactory()
+            this.#dynamicTraceFrames.set(positionsFactory, {
+                sampler: this.#sampler,
+                positionsFactory,
+                ...progressState,
+                positions: Array.isArray(positions) && positions.length >= 2 ? positions : [],
+            })
+        }
+
+        return this.#dynamicTraceFrames.get(positionsFactory)
+    }
+
+    /**
+     * Creates the reactive cursor position that consumes the shared completed-trace frame.
+     *
+     * @param {Cartesian3} fallbackPosition - Smoothed sample used when completed geometry is unavailable.
+     * @returns {CallbackProperty} Cursor position synchronized with the completed trace.
+     */
+    #cursorPositionFromCompletedTrace = fallbackPosition => {
         this.#cursorTraceFallbackPosition = fallbackPosition
         if (!this.#cursorTracePositionProperty) {
             this.#cursorTracePositionProperty = new CallbackProperty((_time, result) => {
-                const position = this.#lastRenderedTracePosition(this.#cursorTraceFallbackPosition)
+                const position = this.#completedTracePositionForFrame(this.#cursorTraceFallbackPosition)
                 return Cartesian3.clone(position, result)
             }, false)
         }
@@ -1082,7 +1157,7 @@ export class JourneyReplayCesiumRenderer {
         const rawCursorPosition = Cartesian3.fromDegrees(longitude, latitude, 0)
         const tracePosition = this.#interpolatedSmoothedPosition(sample.progress) ?? rawCursorPosition
         const cursorPosition = syncToTrace
-            ? this.#cursorPositionFromRenderedTrace(tracePosition)
+            ? this.#cursorPositionFromCompletedTrace(tracePosition)
             : rawCursorPosition
         const pointSize = this.#metersToPixels(style.cursorDiameter * 2, tracePosition, 80) * 2
         const outlineWidth = Math.max(0, Number(style.cursorBorder) || 0)
@@ -1489,19 +1564,10 @@ export class JourneyReplayCesiumRenderer {
             lastPositions:    [],
         }
         const dynamicPositions = new CallbackProperty(() => {
-            const progress = Math.max(0, Math.min(1, Number(this.#sample?.progress) || 0))
-            const progressStep = globalThis.lgs?.stores?.replay?.playing
-                                 ? DYNAMIC_POLYLINE_PROGRESS_STEP_PLAYING
-                                 : DYNAMIC_POLYLINE_PROGRESS_STEP
-            const progressKey = Math.round(progress / progressStep)
-            if (dynamicRecord.lastProgressKey === progressKey) {
-                return dynamicRecord.lastPositions
-            }
-
-            const positions = dynamicRecord.positionsFactory()
-            dynamicRecord.lastProgressKey = progressKey
-            dynamicRecord.lastRenderedProgress = progress
-            dynamicRecord.lastPositions = Array.isArray(positions) && positions.length >= 2 ? positions : []
+            const frame = this.#traceFrameForCurrentProgress(dynamicRecord.positionsFactory)
+            dynamicRecord.lastProgressKey = frame.progressKey
+            dynamicRecord.lastRenderedProgress = frame.progress
+            dynamicRecord.lastPositions = frame.positions
             return dynamicRecord.lastPositions
         }, false)
 
@@ -1528,6 +1594,7 @@ export class JourneyReplayCesiumRenderer {
 
         const style = this.#style()
         const smoothedPositions = this.#smoothedGroundPositions()
+        this.#invalidateDynamicTraceFrames()
         if (smoothedPositions.length >= 2) {
             const fillWidth = style.fillWidth
             const borderWidth = fillWidth + (style.borderWidth * 2)
@@ -1542,6 +1609,7 @@ export class JourneyReplayCesiumRenderer {
             const playing = replayStore?.playing === true && replayStore?.recordingSync !== true
 
             if (staticGeometry) {
+                this.#completedTracePositionsFactory = null
                 const positions = this.#completedSmoothedPositions()
                 replayVideoTraceDebug('renderer.completed.stop.static', {
                     source: source.name ?? null,
@@ -1592,6 +1660,7 @@ export class JourneyReplayCesiumRenderer {
             }
 
             if (playing) {
+                this.#completedTracePositionsFactory = this.#liveCompletedSmoothedPositions
                 this.#upsertDynamicPolyline({
                     key:       'smoothed#border',
                     id:        `${source.name}#completed#smoothed#border`,
@@ -1623,6 +1692,7 @@ export class JourneyReplayCesiumRenderer {
                 return
             }
 
+            this.#completedTracePositionsFactory = this.#completedSmoothedPositions
             this.#upsertDynamicPolyline({
                 key:       'smoothed#border',
                 id:        `${source.name}#completed#smoothed#border`,
@@ -1655,6 +1725,7 @@ export class JourneyReplayCesiumRenderer {
             return
         }
 
+        this.#completedTracePositionsFactory = null
         const segments = this.#sampler.completedSegmentsAt(sample)
         const activeKeys = new Set()
 

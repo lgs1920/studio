@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -623,7 +623,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(Cartesian3.equals(renderedEnd, Cartesian3.fromDegrees(guideEnd.longitude, guideEnd.latitude, 0))).toBe(true)
     })
 
-    it('can align the export marker with the trace without forcing a geometry rebuild', () => {
+    it('keeps the marker aligned when Cesium evaluates it before the completed trace', () => {
         const dataSources = makeDataSources()
         installReplayGlobals({dataSources})
         const journey = makeJourney([
@@ -642,20 +642,32 @@ describe('JourneyReplayCesiumRenderer', () => {
         renderer.show({sampler, options: {smoothedGuide}})
         renderer.update({sample: sampler.atProgress(0.4), sampler, forceGeometry: true, showTrace: true})
         const completedFill = replayEntity(dataSources, '#completed#smoothed#fill')
-        const positionsProperty = completedFill?.polyline?.positions
-        const initialTraceEnd = propertyValue(positionsProperty).at(-1)
+        const completedBorder = replayEntity(dataSources, '#completed#smoothed#border')
+        const initialTraceEnd = propertyValue(completedFill?.polyline?.positions).at(-1)
 
         renderer.update({sample: sampler.atProgress(0.5), sampler, syncCursorToTrace: true})
 
-        const cursorBeforeTraceRender = propertyValue(replayEntity(dataSources, '#cursor')?.position)
-        const traceEnd = propertyValue(completedFill?.polyline?.positions).at(-1)
-        const cursorAfterTraceRender = propertyValue(replayEntity(dataSources, '#cursor')?.position)
+        const cursor = replayEntity(dataSources, '#cursor')
+        const cursorBeforeTraceRender = propertyValue(cursor?.position)
+        const tracePositions = propertyValue(completedFill?.polyline?.positions)
+        const borderPositions = propertyValue(completedBorder?.polyline?.positions)
+        const traceEnd = tracePositions.at(-1)
+        const cursorAfterTraceRender = propertyValue(cursor?.position)
         const cursorSize = propertyValue(replayEntity(dataSources, '#cursor')?.point?.pixelSize)
 
-        expect(completedFill?.polyline?.positions).toBe(positionsProperty)
-        expect(Cartesian3.equals(cursorBeforeTraceRender, initialTraceEnd)).toBe(true)
+        expect(Cartesian3.equals(cursorBeforeTraceRender, initialTraceEnd)).toBe(false)
+        expect(Cartesian3.equals(cursorBeforeTraceRender, traceEnd)).toBe(true)
         expect(Cartesian3.equals(cursorAfterTraceRender, traceEnd)).toBe(true)
+        expect(borderPositions).toBe(tracePositions)
+        expect(replaySource(dataSources)?.entities.values.filter(entity => String(entity.id).endsWith('#cursor'))).toHaveLength(1)
         expect(Number.isFinite(cursorSize)).toBe(true)
+
+        renderer.update({sample: sampler.atProgress(0.5001), sampler, syncCursorToTrace: true})
+
+        const cursorWithinProgressStep = propertyValue(cursor?.position)
+        const traceWithinProgressStep = propertyValue(completedFill?.polyline?.positions)
+        expect(traceWithinProgressStep).toBe(tracePositions)
+        expect(Cartesian3.equals(cursorWithinProgressStep, traceWithinProgressStep.at(-1))).toBe(true)
     })
 
     it('keeps the complete point set for the Interactive trace', () => {
