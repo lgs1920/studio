@@ -1082,8 +1082,12 @@ const coneLengthWithinCropFrom = (viewer, overlay, record, coneHeading, requeste
         return requestedLength
     }
 
+    const iconGap = Number.isFinite(record.preparationIconGap)
+        ? record.preparationIconGap
+        : iconGapFrom(viewer, record.anchor)
+    const endpointExtension = iconGap
     const inset = Math.min(
-        CAMERA_ANGLE_GUIDE_CROP_TIP_INSET_PIXELS,
+        CAMERA_ANGLE_GUIDE_CROP_TIP_INSET_PIXELS + (CAMERA_ANGLE_GUIDE_ICON_SIZE / 2),
         (cropBounds.right - cropBounds.left) / 2,
         (cropBounds.bottom - cropBounds.top) / 2,
     )
@@ -1097,7 +1101,7 @@ const coneLengthWithinCropFrom = (viewer, overlay, record, coneHeading, requeste
     const requestedTip = projectGuidePosition(
         viewer,
         overlay,
-        positionAtHeading(record.transform, coneHeading, requestedLength),
+        positionAtHeading(record.transform, coneHeading, requestedLength + endpointExtension),
         record.screenProjectionFrame,
     )
     if (!start || !requestedTip) {
@@ -1118,9 +1122,9 @@ const coneLengthWithinCropFrom = (viewer, overlay, record, coneHeading, requeste
         ? Math.min(0.5 / projectedLength, (interval.end - interval.start) / 2)
         : 0
     const targetRatio = Math.max(interval.start, interval.end - insetRatio)
-    let minimumLength = 0
-    let maximumLength = requestedLength
-    let constrainedLength = requestedLength * targetRatio
+    let minimumLength = endpointExtension
+    let maximumLength = requestedLength + endpointExtension
+    let constrainedLength = maximumLength * targetRatio
     for (let iteration = 0; iteration < 18; iteration += 1) {
         const candidateLength = (minimumLength + maximumLength) / 2
         const candidate = projectGuidePosition(
@@ -1144,7 +1148,7 @@ const coneLengthWithinCropFrom = (viewer, overlay, record, coneHeading, requeste
             maximumLength = candidateLength
         }
     }
-    return Math.max(0.1, constrainedLength)
+    return Math.max(0.1, constrainedLength - endpointExtension)
 }
 
 /**
