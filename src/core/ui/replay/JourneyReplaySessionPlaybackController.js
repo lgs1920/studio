@@ -41,6 +41,7 @@ import {
 }                                                                                          from '@Utils/cesium/TrackUtils'
 import { Journey }                                                                         from '@Core/Journey'
 import {currentReplayJourney, isJourneyReplayBasicMode}                                    from './ReplayUserModeConstants'
+import {flushJourneyReplayCameraPersistence}                                               from './ReplayUserModes'
 import {
     ArcType, Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate,
     EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, Math as CesiumMath, Matrix4,
@@ -319,8 +320,12 @@ export const prepareReplayCamera = async (mode, {
     if (!journey) {
         return false
     }
-    // Flush a pending wheel/drag edit before capturing the preparation settings.
-    call.updateCameraFromCesiumControls?.()
+    // Let Cesium finish a queued wheel gesture before reading its prepared pose.
+    const pendingCameraGesture = state.preparationCameraGesturePromise
+    if (pendingCameraGesture) {
+        await pendingCameraGesture
+    }
+    call.updateCameraFromCesiumControls?.({journey})
     const store = replayStore()
     const simplePreparation = isJourneyReplayBasicMode()
         && (store?.simplePreparationActive === true
@@ -374,8 +379,9 @@ export const prepareReplayCamera = async (mode, {
     // Later configuration reads must resolve the same values after its runtime
     // preparation flag is released, rather than an older journey baseline.
     if (isJourneyReplayBasicMode()) {
-        call.persistCameraSettings(cameraSettings)
+        call.persistCameraSettings(cameraSettings, {journey})
     }
+    await flushJourneyReplayCameraPersistence(journey)
     // Preparation owns configuration and guides, never the normal map camera.
     state.replayCameraPrepared = true
     call.cesiumScene?.()?.requestRender?.()

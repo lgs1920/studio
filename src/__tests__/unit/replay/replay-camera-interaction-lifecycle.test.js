@@ -188,7 +188,7 @@ describe('JourneyReplay camera interaction lifecycle', () => {
         }
     })
 
-    it('does not derive Replay camera settings from Cesium navigation during preparation', () => {
+    it('persists explicit preparation tilt and zoom while preserving the Replay angle', () => {
         const settings = defaultJourneyReplaySettings()
         const persistSettings = vi.fn()
         const syncCamera = vi.fn()
@@ -224,9 +224,79 @@ describe('JourneyReplay camera interaction lifecycle', () => {
         expect(updateCameraSettingsFromCesiumControls(mode, {longitude: 2, latitude: 48, progress: 0})).toBeNull()
         updateCameraFromCesiumControls(mode, {userInteraction: true})
 
-        expect(persistSettings).not.toHaveBeenCalled()
+        expect(persistSettings).toHaveBeenCalledOnce()
+        expect(persistSettings).toHaveBeenCalledWith(expect.objectContaining({
+            altitude: 1800,
+            pitch: -30,
+            cameraAngle: settings.camera.cameraAngle,
+        }), {journey: null})
         expect(syncCamera).not.toHaveBeenCalled()
-        expect(settings.camera).toEqual(globalThis.lgs.stores.replay.camera)
+    })
+
+    it('stores prepared ground-offset zoom relative to the rendered Replay target', () => {
+        const settings = defaultJourneyReplaySettings()
+        settings.simple = {camera: {...settings.camera, altitudeMode: 'ground-offset'}}
+        const persistSettings = vi.fn()
+        const sample = {longitude: 2, latitude: 48}
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                markerRenderHeightForSample: () => 1290,
+                persistCameraSettings: persistSettings,
+            },
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                cameraApplyingView: false,
+                cameraFlightActive: false,
+                cameraPointerActive: false,
+                cameraUserAdjusting: true,
+                preparationPointerPitch: -38 * Math.PI / 180,
+                preparationPointerHeight: 900,
+                replayPreparationSample: sample,
+            },
+        }
+        globalThis.lgs = {
+            settings: {ui: {replay: settings}},
+            stores: {
+                replay: {camera: settings.simple.camera, simplePreparationActive: true},
+                ui: {video: {editing: true}},
+            },
+            viewer: {camera: {
+                pitch: -38 * Math.PI / 180,
+                positionCartographic: {height: 1800},
+            }},
+        }
+
+        updateCameraFromCesiumControls(mode)
+
+        expect(persistSettings).toHaveBeenCalledWith(expect.objectContaining({
+            altitude: 510,
+            altitudeMode: 'ground-offset',
+            cameraAngle: settings.camera.cameraAngle,
+            pitch: settings.simple.camera.pitch,
+        }), {journey: null})
+    })
+
+    it('does not persist explicit-looking gestures outside video preparation', () => {
+        const persistSettings = vi.fn()
+        globalThis.lgs = {
+            settings: {ui: {replay: defaultJourneyReplaySettings()}},
+            stores: {replay: {}, ui: {video: {editing: false}}},
+            viewer: {camera: {pitch: -30 * Math.PI / 180, positionCartographic: {height: 1800}}},
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {persistCameraSettings: persistSettings},
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                cameraApplyingView: false,
+                cameraFlightActive: false,
+                cameraPointerActive: true,
+                cameraUserAdjusting: true,
+                preparationPointerPitch: -5 * Math.PI / 180,
+                preparationPointerHeight: 539,
+            },
+        }
+
+        updateCameraFromCesiumControls(mode)
+
+        expect(persistSettings).not.toHaveBeenCalled()
     })
 
     it('ignores unauthorised Cesium move events once replay is inactive', () => {

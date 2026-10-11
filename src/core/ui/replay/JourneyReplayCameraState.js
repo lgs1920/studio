@@ -40,6 +40,7 @@ import {
     clamp, lerp, hasFiniteLonLat, projectReplayTargetInCameraFrame, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
+    REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
     getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, toGlobalReplayCameraSettings,
 } from './JourneyReplayProgressionStyle'
@@ -677,8 +678,57 @@ export const persistCameraSettings =  (mode, updates, {journey = null} = {}) => 
 /** Keep normal Cesium navigation outside persisted Replay configuration. */
 export const updateCameraSettingsFromCesiumControls = () => null
 
-/** Keep direct Cesium camera gestures out of the independent Replay camera settings. */
-export const updateCameraFromCesiumControls = () => null
+/**
+ * Commit explicit preparation tilt and zoom gestures to the active Journey.
+ *
+ * @param {Object} mode - Replay camera mode.
+ * @param {Object} [options] - Gesture synchronization options.
+ * @param {Object|null} [options.journey=null] - Journey receiving the prepared camera.
+ * @returns {Object|null} The updated Replay camera settings, when a gesture changed them.
+ */
+export const updateCameraFromCesiumControls = (mode, {journey = null} = {}) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const replay = replayStore()
+    if (globalThis.lgs?.stores?.ui?.video?.editing !== true
+        || replay?.active || replay?.playing || replay?.paused || replay?.clipSequenceActive
+        || state.cameraApplyingView || state.cameraFlightActive
+        || (!state.cameraPointerActive && !state.cameraUserAdjusting)
+        || state.preparationPointerPitch === null || state.preparationPointerPitch === undefined) {
+        return null
+    }
+
+    const camera = globalThis.lgs?.viewer?.camera ?? globalThis.lgs?.camera
+    const pitch = finiteNumber(camera?.pitch)
+    const height = finiteNumber(camera?.positionCartographic?.height)
+    const pitchChanged = pitch !== null && Math.abs(pitch - state.preparationPointerPitch) >= 1e-7
+    const heightChanged = height !== null && state.preparationPointerHeight !== null
+        && state.preparationPointerHeight !== undefined
+        && Math.abs(height - state.preparationPointerHeight) >= 0.5
+    if (!pitchChanged && !heightChanged) {
+        return null
+    }
+
+    const current = currentJourneyReplayCameraSettings(journey ? {journey} : {})
+    const nextPitch = pitchChanged
+        ? clamp(Math.round(CesiumMath.toDegrees(pitch)), -89, -5)
+        : current.pitch
+    const sample = state.replayPreparationSample ?? replay?.sample
+    const markerHeight = sample ? finiteNumber(call.markerRenderHeightForSample?.(sample)) : null
+    const requestedAltitude = !heightChanged
+        ? current.altitude
+        : current.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
+            ? markerHeight === null ? current.altitude : height - markerHeight
+            : height
+    const altitude = clamp(Math.round(requestedAltitude), 10, 100000)
+    if (nextPitch === current.pitch && altitude === current.altitude) {
+        return null
+    }
+
+    const next = call.persistCameraSettings({...current, pitch: nextPitch, altitude}, {journey})
+    call.refreshReplayDiagnosticsOverlay?.()
+    return next ?? null
+}
 
 export const syncCameraDrawerFromSettings = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]

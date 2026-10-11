@@ -16,6 +16,7 @@
 
 import {
     defaultSimpleReplaySettings,
+    flushJourneyReplayCameraPersistence,
     hasExpertReplayConfiguration,
     initializeExpertReplayFromSimple,
     normalizeSimpleReplaySettings,
@@ -23,6 +24,7 @@ import {
     resolveSimpleReplaySettings,
     syncJourneyExpertReplayCamera,
     syncJourneyExpertReplayProgression,
+    syncJourneySimpleReplayCamera,
     REPLAY_USER_MODE_BASIC,
     REPLAY_USER_MODE_EXPERT,
 } from '@Core/ui/replay/ReplayUserModes'
@@ -369,6 +371,49 @@ describe('Replay user modes', () => {
             if (previousLgs === undefined) {
                 delete globalThis.lgs
             } else {
+                globalThis.lgs = previousLgs
+            }
+        }
+    })
+
+    it.each([REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT])('flushes pending %s camera persistence before recording', async userMode => {
+        const previousLgs = globalThis.lgs
+        const persistToDatabase = vi.fn(async () => {})
+        const camera = {altitude: 2630, pitch: -23, cameraAngle: -113}
+        const journey = userMode === REPLAY_USER_MODE_BASIC
+            ? {replay: {simple: {camera: {...camera}}}, persistToDatabase}
+            : {replay: {expert: {camera: {...camera}}}, persistToDatabase}
+        const replaySettings = {
+            userMode,
+            camera: {...camera},
+            simple: userMode === REPLAY_USER_MODE_BASIC ? {camera: {...camera}} : null,
+        }
+        globalThis.lgs = {
+            settings: {ui: {replay: replaySettings}},
+            stores: {replay: {userMode, simplePreparationActive: userMode === REPLAY_USER_MODE_BASIC}},
+            theJourney: journey,
+        }
+        vi.useFakeTimers()
+
+        try {
+            if (userMode === REPLAY_USER_MODE_BASIC) {
+                syncJourneySimpleReplayCamera(camera, journey)
+            }
+            else {
+                syncJourneyExpertReplayCamera(camera, journey)
+            }
+
+            await expect(flushJourneyReplayCameraPersistence(journey)).resolves.toBe(true)
+            expect(persistToDatabase).toHaveBeenCalledOnce()
+            vi.advanceTimersByTime(250)
+            expect(persistToDatabase).toHaveBeenCalledOnce()
+        }
+        finally {
+            vi.useRealTimers()
+            if (previousLgs === undefined) {
+                delete globalThis.lgs
+            }
+            else {
                 globalThis.lgs = previousLgs
             }
         }

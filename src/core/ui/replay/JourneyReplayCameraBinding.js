@@ -463,6 +463,11 @@ export const bindMarkerInteractions = (mode) => {
             if (preparation) {
                 call.updateCameraFromCesiumControls({userInteraction: true})
             }
+            if (preparation && deferPreparation && !state.preparationCameraGesturePromise) {
+                state.preparationCameraGesturePromise = new Promise(resolve => {
+                    state.preparationCameraGestureResolve = resolve
+                })
+            }
             state.cameraPointerActive = false
             if (state.cameraManualInteractionTimer !== null) {
                 clearTimeout(state.cameraManualInteractionTimer)
@@ -475,6 +480,10 @@ export const bindMarkerInteractions = (mode) => {
                 state.preparationPointerHeight = null
                 refreshToleranceCameraAfterManualMove()
                 call.stopCameraLiveSyncLoop()
+                const resolveGesture = state.preparationCameraGestureResolve
+                state.preparationCameraGestureResolve = null
+                state.preparationCameraGesturePromise = null
+                resolveGesture?.()
             }
             if (immediate || (preparation && !deferPreparation)) {
                 finish()
@@ -535,7 +544,15 @@ export const bindMarkerInteractions = (mode) => {
             camera.changed?.removeEventListener?.(cameraChanged)
             camera.moveStart.removeEventListener(moveStart)
             camera.moveEnd.removeEventListener(moveEnd)
+            if (state.cameraManualInteractionTimer !== null) {
+                clearTimeout(state.cameraManualInteractionTimer)
+                state.cameraManualInteractionTimer = null
+            }
             call.stopCameraLiveSyncLoop()
+            const resolveGesture = state.preparationCameraGestureResolve
+            state.preparationCameraGestureResolve = null
+            state.preparationCameraGesturePromise = null
+            resolveGesture?.()
             interactionTargets.forEach(target => {
                 target.removeEventListener?.('pointerdown', pointerDown, listenerOptions)
                 target.removeEventListener?.('pointerup', pointerUp, listenerOptions)

@@ -227,6 +227,35 @@ export const syncJourneySimpleReplayCamera = (camera, journeyOverride = null) =>
 }
 
 /**
+ * Persist a pending Simple or Expert camera edit before Replay recording starts.
+ *
+ * @param {Object|null} journey - Journey whose camera settings are being committed.
+ * @returns {Promise<boolean>} Whether a pending camera edit was persisted.
+ */
+export const flushJourneyReplayCameraPersistence = async journey => {
+    if (!journey || typeof journey.persistToDatabase !== 'function') {
+        return false
+    }
+
+    let pending = false
+    for (const timers of [simpleCameraPersistTimers, expertCameraPersistTimers]) {
+        const timer = timers.get(journey)
+        if (timer === undefined) {
+            continue
+        }
+        clearTimeout(timer)
+        timers.delete(journey)
+        pending = true
+    }
+    if (!pending) {
+        return false
+    }
+
+    await journey.persistToDatabase()
+    return true
+}
+
+/**
  * Synchronize Simple Replay trace style edits with explicit journey settings.
  *
  * @param {Object} trace - Complete trace settings.
