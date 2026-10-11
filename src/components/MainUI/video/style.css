@@ -8,16 +8,11 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-10
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-
-.widget-mount-error-dialog {
-    /* Shoelace's default dialog layer is below the on-map widget layers. */
-    --sl-z-index-dialog: var(--lgs-error-dialog-zindex);
-}
 
 .video-recording-settings-toolbar {
     font-size: var(--lgs-font-size-s);

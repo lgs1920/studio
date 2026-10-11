@@ -16,8 +16,9 @@
 
 import { ErrorDiagnosticDetails } from '@Components/Modals/ErrorDiagnosticDetails'
 import { collectErrorDiagnostic, formatErrorDiagnostic } from '@Utils/ErrorDiagnosticUtils'
-import { SlAlert, SlButton, SlDialog }                   from '@shoelace-style/shoelace/dist/react'
-import { WaIcon }                                        from '@awesome.me/webawesome/dist/react'
+import {
+    WaButton, WaCallout, WaDialog, WaIcon,
+}                                                       from '@awesome.me/webawesome/dist/react'
 import React                                            from 'react'
 import './style.css'
 
@@ -35,14 +36,14 @@ export const WidgetMountErrorDialog = ({open, error, action, onConfirm, onCancel
     })
     diagnostic.details = formatErrorDiagnostic(diagnostic)
     return (
-        <SlDialog
+        <WaDialog
             open={open}
             label={'Widgets not mounted'}
-            onSlRequestClose={onConfirm}
-            className={'lgs-theme lgs-error-dialog widget-mount-error-dialog'}
-            style={{'--sl-z-index-dialog': 'var(--lgs-error-dialog-zindex)'}}
+            onWaHide={onConfirm}
+            className={'wa-theme-lgs1920 lgs-error-dialog widget-mount-error-dialog'}
         >
-            <SlAlert variant="warning" open>
+            <WaCallout variant="warning" open>
+                <WaIcon slot="icon" name="triangle-exclamation" variant="regular"/>
                 <p>{`Some widgets could not be mounted in time for the ${action === 'record' ? 'record' : 'snapshot'}.`}</p>
                 {missing.length > 0 && (
                     <ul style={{listStyleType: '-', marginLeft: '0'}}>
@@ -51,25 +52,23 @@ export const WidgetMountErrorDialog = ({open, error, action, onConfirm, onCancel
                         ))}
                     </ul>
                 )}
-            </SlAlert>
+            </WaCallout>
 
             <ErrorDiagnosticDetails
                 diagnostic={diagnostic}
                 id="widget-mount-error-details"
             />
 
-            <div slot="footer">
-                <div className="buttons-bar">
-                    <SlButton variant="default" onClick={onCancel}>
-                        <WaIcon slot="prefix" name="xmark" variant="regular"/>
-                        {'Cancel'}
-                    </SlButton>
-                    <SlButton variant="primary" onClick={onConfirm}>
-                        <WaIcon slot="prefix" name={action === 'record' ? 'clapperboard-play' : 'image-polaroid'} variant="regular"/>
-                        {`${action === 'record' ? 'Record' : 'Snap it'} anyway`}
-                    </SlButton>
-                </div>
+            <div slot="footer" className="buttons-bar">
+                <WaButton variant="neutral" onClick={onCancel}>
+                    <WaIcon slot="start" name="xmark" variant="regular"/>
+                    {'Cancel'}
+                </WaButton>
+                <WaButton variant="brand" onClick={onConfirm}>
+                    <WaIcon slot="start" name={action === 'record' ? 'clapperboard-play' : 'image-polaroid'} variant="regular"/>
+                    {`${action === 'record' ? 'Record' : 'Snap it'} anyway`}
+                </WaButton>
             </div>
-        </SlDialog>
+        </WaDialog>
     )
 }
