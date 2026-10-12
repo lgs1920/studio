@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,10 +40,11 @@ import {
     getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplaySettings,
     toGlobalReplayCameraSettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
-import {REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModeConstants'
+import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModeConstants'
+import {JOURNEY_REPLAY_INTERNAL_CALL} from '@Core/ui/replay/JourneyReplayInternal'
 import { gpx }                                                         from '@tmcw/togeojson'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
-import { Cartesian3, Cartographic, Matrix4, Math as CesiumMath, Transforms } from 'cesium'
+import { Cartesian3, Cartographic, EasingFunction, Matrix4, Math as CesiumMath, Transforms } from 'cesium'
 import { proxy }                                                       from 'valtio'
 import { afterEach, describe, expect, it, vi }                                    from 'vitest'
 
@@ -1883,6 +1884,111 @@ describe('replay camera tracking', () => {
         }
     })
 
+    it.each([
+        {name: 'deterministic capture', logicalCamera: true, recordingSync: false, video: {preRecording: true}},
+        {name: 'armed recording link', logicalCamera: false, recordingSync: true, video: {}},
+    ])('interpolates Simple replay collision corrections on the $name clock', ({logicalCamera, recordingSync, video}) => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.01, 48, 120], [2.02, 48, 120]],
+            }),
+        ])
+        const previousLgs = globalThis.lgs
+        const replay = defaultJourneyReplaySettingsBase()
+        const canvas = {
+            clientWidth:         1000,
+            clientHeight:        1000,
+            addEventListener:    () => {},
+            removeEventListener: () => {},
+        }
+        const cameraPosition = Cartesian3.fromDegrees(2, 47.99, 1800)
+        const camera = {
+            heading:              0,
+            pitch:                -Math.PI / 4,
+            position:             cameraPosition,
+            positionWC:           cameraPosition,
+            positionCartographic: {height: 1800},
+            moveStart:            {addEventListener: () => {}, removeEventListener: () => {}},
+            moveEnd:              {addEventListener: () => {}, removeEventListener: () => {}},
+            cancelFlight:         () => {},
+            flyTo:                vi.fn(),
+            setView:              vi.fn(),
+            lookAtTransform:      () => {},
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas,
+            settings:   {
+                ui: {
+                    replay: {
+                        ...replay,
+                        userMode: REPLAY_USER_MODE_BASIC,
+                        recordingSync,
+                    },
+                },
+            },
+            stores: {
+                replay: proxy({
+                    progress:      0,
+                    userMode:      REPLAY_USER_MODE_BASIC,
+                    recordingSync,
+                    camera:        replay.camera,
+                }),
+                ui: {video},
+            },
+            viewer: {trackedEntity: null, canvas, camera},
+            scene:  {
+                canvas,
+                cartesianToCanvasCoordinates: () => ({x: 900, y: 500}),
+                requestRender:                () => {},
+                globe:                        {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new JourneyReplayMode({
+                controller: new JourneyReplayPlaybackController({
+                    requestFrame: () => 1,
+                    cancelFrame:  () => {},
+                    now:          () => 3000,
+                }),
+                renderer: {clear: () => {}, show: () => {}, update: () => {}},
+            })
+            mode.configure({duration: 60})
+            claimTrackingCamera(mode)
+
+            const cameraCall = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+            cameraCall.cameraCollisionForSample = () => ({hard: true})
+            cameraCall.cameraLookaheadSample = sample => ({
+                ...sample,
+                progress: Math.min(1, (sample.progress ?? 0) + 0.1),
+            })
+            const transition = vi.fn(() => true)
+            cameraCall.startDeterministicCameraTransition = transition
+            const applyFrame = vi.spyOn(cameraCall, 'applyCameraFrame')
+
+            mode.refreshCamera({
+                sample:      mode.controller.sampler.atProgress(0.25),
+                progress:    0.25,
+                duration:    60,
+                frameTimeMs: 15000,
+                source:      'playback',
+                logicalCamera,
+            })
+
+            expect(transition).toHaveBeenCalledTimes(1)
+            expect(transition.mock.calls[0][0].duration).toBeGreaterThanOrEqual(3)
+            expect(transition.mock.calls[0][0].sample.progress).toBeGreaterThan(0.25)
+            expect(applyFrame).not.toHaveBeenCalled()
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
     it('leaves normal map zoom alone when Replay only has a configured sampler', () => {
         vi.useFakeTimers()
         const journey = makeJourney([
@@ -2526,13 +2632,152 @@ describe('replay camera tracking', () => {
             expect(flyToCalls).toHaveLength(1)
 
             vi.advanceTimersByTime(120)
-            mode.seek(0.5)
+            mode.refreshCamera({
+                sample: mode.controller.sampler.atProgress(0.5),
+                progress: 0.5,
+                source: 'playback',
+            })
 
             expect(cancelFlightCalls).toBe(0)
             expect(flyToCalls).toHaveLength(1)
         }
         finally {
             vi.useRealTimers()
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('anticipates a sustained dynamic-zone exit and keeps its recenter transition active', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+            }),
+        ])
+        const previousLgs = globalThis.lgs
+        const replay = defaultJourneyReplaySettings()
+        const appCanvas = {
+            clientWidth:         1000,
+            clientHeight:        1000,
+            addEventListener:    () => {},
+            removeEventListener: () => {},
+        }
+        const flyToCalls = []
+        let cancelFlightCalls = 0
+        const camera = {
+            heading:              0.8,
+            pitch:                -Math.PI / 4,
+            positionCartographic: {height: 1800},
+            moveStart:            {addEventListener: () => {}, removeEventListener: () => {}},
+            moveEnd:              {addEventListener: () => {}, removeEventListener: () => {}},
+            cancelFlight:         () => { cancelFlightCalls += 1 },
+            flyTo:                options => flyToCalls.push(options),
+            lookAtTransform:      () => {},
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            canvas:     appCanvas,
+            settings:   {
+                ui: {
+                    replay: {
+                        ...replay,
+                        marker: {
+                            ...replay.marker,
+                            mode: REPLAY_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores: {
+                replay: proxy({progress: 0, camera: replay.camera}),
+            },
+            viewer: {
+                trackedEntity: null,
+                canvas:        appCanvas,
+                camera,
+            },
+            scene: {
+                canvas:                       appCanvas,
+                cartesianToCanvasCoordinates: () => ({x: 500, y: 500}),
+                requestRender:                () => {},
+                globe:                        {getHeight: () => 120},
+            },
+        }
+
+        try {
+            const mode = new JourneyReplayMode({
+                controller: new JourneyReplayPlaybackController({
+                    requestFrame: () => 1,
+                    cancelFrame:  () => {},
+                    now:          () => 0,
+                }),
+                renderer: {
+                    clear:  () => {},
+                    show:   () => {},
+                    update: () => {},
+                },
+            })
+            mode.configure()
+            claimTrackingCamera(mode)
+
+            const cameraCall = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+            let sustainedExit = false
+            cameraCall.cameraLookaheadSample = (sample, {lookaheadSeconds}) => ({
+                ...sample,
+                progress: lookaheadSeconds <= 1 ? sustainedExit ? 0.65 : 0.3 : 0.6,
+            })
+            cameraCall.trackingWindowPositionForSample = sample => (
+                (sample?.progress ?? 0) > 0.5
+                    ? {x: 990, y: 500}
+                    : {x: 500, y: 500}
+            )
+
+            mode.refreshCamera({
+                sample: {
+                    longitude:         2,
+                    latitude:          48,
+                    altitude:          120,
+                    height:            120,
+                    progress:          0,
+                    distanceFromStart: 0,
+                },
+            })
+
+            expect(flyToCalls).toHaveLength(0)
+
+            sustainedExit = true
+            mode.refreshCamera({
+                sample: {
+                    longitude:         2,
+                    latitude:          48,
+                    altitude:          120,
+                    height:            120,
+                    progress:          0,
+                    distanceFromStart: 0,
+                },
+            })
+
+            expect(flyToCalls).toHaveLength(1)
+            expect(flyToCalls[0].duration).toBeGreaterThanOrEqual(3)
+            expect(flyToCalls[0].easingFunction).toBe(EasingFunction.CUBIC_IN_OUT)
+
+            mode.refreshCamera({
+                sample: {
+                    longitude:         2,
+                    latitude:          48,
+                    altitude:          120,
+                    height:            120,
+                    progress:          0,
+                    distanceFromStart: 0,
+                },
+            })
+
+            expect(cancelFlightCalls).toBe(0)
+            expect(flyToCalls).toHaveLength(1)
+        }
+        finally {
             globalThis.lgs = previousLgs
         }
     })
@@ -2669,7 +2914,7 @@ describe('replay camera tracking', () => {
             expect(flyToCalls).toHaveLength(1)
             expect(Math.abs(Cartesian3.dot(delta, east))).toBeGreaterThan(200)
             expect(Cartesian3.dot(delta, north)).toBeLessThan(0)
-            expect(flyToCalls[0].duration).toBeLessThanOrEqual(1)
+            expect(flyToCalls[0].duration).toBeGreaterThanOrEqual(3)
         }
         finally {
             globalThis.lgs = previousLgs
@@ -2691,6 +2936,10 @@ describe('replay camera tracking', () => {
                                                              cameraAngle:  146,
                                                              pitch:        -45,
                                                              altitude:     1800,
+                                                             hysteresis: {
+                                                                 ...baseJourneyReplay.camera.hysteresis,
+                                                                 easing: 0.5,
+                                                             },
                                                          })
         setExpertReplayCamera(journey, cameraSettings)
         const appCanvas = {
@@ -2807,7 +3056,8 @@ describe('replay camera tracking', () => {
 
             expect(flyToCalls).toHaveLength(1)
             expect(Cartesian3.dot(delta, north)).toBeLessThan(-200)
-            expect(flyToCalls[0].duration).toBeLessThanOrEqual(1)
+            expect(flyToCalls[0].duration).toBeCloseTo(3)
+            expect(flyToCalls[0].easingFunction).toBe(EasingFunction.CUBIC_IN_OUT)
         }
         finally {
             globalThis.lgs = previousLgs
@@ -2937,7 +3187,7 @@ describe('replay camera tracking', () => {
             mode.refreshCamera({sample})
 
             expect(flyToCalls).toHaveLength(1)
-            expect(flyToCalls[0].duration).toBeLessThanOrEqual(1)
+            expect(flyToCalls[0].duration).toBeGreaterThanOrEqual(3)
         }
         finally {
             globalThis.lgs = previousLgs
@@ -3079,7 +3329,7 @@ describe('replay camera tracking', () => {
             expect(pickPositionCalls).toBeGreaterThan(0)
             expect(globePickCalls).toBe(0)
             expect(flyToCalls).toHaveLength(1)
-            expect(flyToCalls[0].duration).toBeLessThanOrEqual(1)
+            expect(flyToCalls[0].duration).toBeGreaterThanOrEqual(3)
         }
         finally {
             globalThis.lgs = previousLgs

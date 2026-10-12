@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,8 +68,8 @@ export const projectReplayTargetInCameraFrame = ({
 
     const canvasWidth = finiteNumber(viewport?.canvasWidth) ?? finiteNumber(viewport?.width)
     const canvasHeight = finiteNumber(viewport?.canvasHeight) ?? finiteNumber(viewport?.height)
-    const cropLeft = finiteNumber(viewport?.left) ?? 0
-    const cropTop = finiteNumber(viewport?.top) ?? 0
+    const cropLeft = (finiteNumber(viewport?.left) ?? 0) - (finiteNumber(viewport?.canvasLeft) ?? 0)
+    const cropTop = (finiteNumber(viewport?.top) ?? 0) - (finiteNumber(viewport?.canvasTop) ?? 0)
     if (canvasWidth === null || canvasHeight === null || canvasWidth <= 0 || canvasHeight <= 0) {
         return null
     }
@@ -84,7 +84,8 @@ export const projectReplayTargetInCameraFrame = ({
     }
 
     const safeFov = clamp(finiteNumber(verticalFovRadians) ?? (Math.PI / 3), Math.PI / 180, Math.PI - (Math.PI / 180))
-    const safeAspect = Math.max(Number.EPSILON, finiteNumber(aspectRatio) ?? (canvasWidth / canvasHeight))
+    const requestedAspect = finiteNumber(aspectRatio)
+    const safeAspect = requestedAspect > 0 ? requestedAspect : canvasWidth / canvasHeight
     const tangentY = Math.tan(safeFov / 2)
     const tangentX = tangentY * safeAspect
     const normalizedX = Cartesian3.dot(relative, right) / Math.max(depth * tangentX, Number.EPSILON)
@@ -430,6 +431,8 @@ export const replayNavigationZone = (ratio, viewportWidth, viewportHeight) => {
  * @param {number} [options.durationSeconds=60] - Full replay timeline length.
  * @param {number|null} [options.elapsedSeconds=null] - Current timeline time.
  * @param {number|null} [options.remainingSeconds=null] - Explicit remaining time.
+ * @param {number|null} [options.cropWidthMeters=null] - Crop width at the rendered marker height.
+ * @param {number|null} [options.distanceMeters=null] - Total Replay route distance.
  * @param {number} [options.transitionSeconds=2] - Requested camera transition.
  * @param {number|null} [options.frameIntervalMs=null] - Output frame interval.
  * @param {number|null} [options.fps=null] - Output FPS fallback.
@@ -444,6 +447,8 @@ export const replayAdaptiveTrackingTiming = ({
                                                  frameIntervalMs = null,
                                                  fps = null,
                                                  playbackRate = 1,
+                                                 cropWidthMeters = null,
+                                                 distanceMeters = null,
                                              } = {}) => {
     const safeDurationSeconds = Math.max(0.05, finiteNumber(durationSeconds) ?? 60)
     const safeTransitionSeconds = Math.max(0.05, finiteNumber(transitionSeconds) ?? 2)
@@ -485,11 +490,21 @@ export const replayAdaptiveTrackingTiming = ({
         shortCaptureWindowSeconds - effectiveTransitionSeconds,
     )
     const availableSeconds = Math.min(safeDurationSeconds, safeRemainingSeconds)
-    const adaptationRatio = clamp(
+    const temporalAdaptationRatio = clamp(
         (shortCaptureWindowSeconds - availableSeconds) / adaptationSpanSeconds,
         0,
         1,
     )
+    const cropWidth = finiteNumber(cropWidthMeters)
+    const routeDistance = finiteNumber(distanceMeters)
+    const replaySpeed = routeDistance > 0 ? routeDistance / safeDurationSeconds : 0
+    const cropCrossingSeconds = cropWidth > 0 && replaySpeed > 0 ? cropWidth / replaySpeed : null
+    // Begin correction earlier when the transition consumes a substantial part
+    // of the visible ground span. Duration alone cannot distinguish zoom levels.
+    const spatialAdaptationRatio = cropCrossingSeconds === null
+        ? 0
+        : clamp(2 * effectiveTransitionSeconds / cropCrossingSeconds, 0, 1)
+    const adaptationRatio = Math.max(temporalAdaptationRatio, spatialAdaptationRatio)
     const minimumTransitionSeconds = Math.min(
         safeTransitionSeconds,
         Math.max(Math.min(frameLeadSeconds, safeTransitionSeconds), safeRemainingSeconds),
@@ -509,6 +524,7 @@ export const replayAdaptiveTrackingTiming = ({
         effectiveTransitionSeconds,
         shortCaptureWindowSeconds,
         adaptationRatio,
+        cropCrossingSeconds,
         minimumZoneRatios: {
             // Navigation has a single Z1. Dynamic's outer Z1 and inner Z2
             // both stop at 30%, so nesting remains valid at the floor.

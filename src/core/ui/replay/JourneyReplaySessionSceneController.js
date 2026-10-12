@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -1035,7 +1035,7 @@ export const bindRenderer = (mode, ) => {
                     traceUpdateStep('sync-nearby-pois.begin')
                     void call.syncNearbyPOIsForSample(detail.sample ?? null)
                     traceUpdateStep('sync-nearby-pois.end')
-                    if (!videoCaptureActive && state.lastPlaybackUpdateProgressKey === playbackProgressKey) {
+                    if (!videoCaptureActive && detail.source !== 'scrub' && state.lastPlaybackUpdateProgressKey === playbackProgressKey) {
                         updateReplayFrameRenderContract({
                             logicalFrame: detail?.logicalFrame,
                         })
@@ -1052,7 +1052,7 @@ export const bindRenderer = (mode, ) => {
                     })
                     call.updateCamera({
                         ...detail,
-                        source:        'playback',
+                        source:        detail.source === 'scrub' ? 'scrub' : 'playback',
                         logicalCamera: videoCaptureActive,
                     })
                     call.recordReplayCameraAltitude()

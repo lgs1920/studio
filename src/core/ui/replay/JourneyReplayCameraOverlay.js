@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -527,26 +527,35 @@ export const viewportRectForCesiumSurface = (mode) => {
 
         const cropRect = call.videoCropRect()
         if (cropRect) {
-            return cropRect
+            const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
+            const canvas = viewer?.canvas ?? call.cesiumScene?.()?.canvas ?? globalThis.lgs?.canvas
+            const canvasRect = canvas?.getBoundingClientRect?.()
+            return {
+                ...cropRect,
+                canvasLeft: finiteNumber(canvasRect?.left) ?? 0,
+                canvasTop: finiteNumber(canvasRect?.top) ?? 0,
+                canvasWidth: Number(canvasRect?.width) || Number(canvas?.clientWidth) || cropRect.width,
+                canvasHeight: Number(canvasRect?.height) || Number(canvas?.clientHeight) || cropRect.height,
+            }
         }
 
         const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
         const scene = call.cesiumScene?.() ?? globalThis.lgs?.scene ?? viewer?.scene
         const canvas = viewer?.canvas ?? scene?.canvas ?? globalThis.lgs?.canvas
         const rect = canvas?.getBoundingClientRect?.()
+        const width = Number(rect?.width) || Number(canvas?.clientWidth)
+            || Number(viewer?.container?.clientWidth) || Number(globalThis.innerWidth) || 0
+        const height = Number(rect?.height) || Number(canvas?.clientHeight)
+            || Number(viewer?.container?.clientHeight) || Number(globalThis.innerHeight) || 0
         return {
             left:   finiteNumber(rect?.left) ?? 0,
             top:    finiteNumber(rect?.top) ?? 0,
-            width:  finiteNumber(rect?.width)
-                    ?? finiteNumber(canvas?.clientWidth)
-                    ?? finiteNumber(viewer?.container?.clientWidth)
-                    ?? finiteNumber(globalThis.innerWidth)
-                    ?? 0,
-            height: finiteNumber(rect?.height)
-                    ?? finiteNumber(canvas?.clientHeight)
-                    ?? finiteNumber(viewer?.container?.clientHeight)
-                    ?? finiteNumber(globalThis.innerHeight)
-                    ?? 0,
+            width,
+            height,
+            canvasLeft: finiteNumber(rect?.left) ?? 0,
+            canvasTop: finiteNumber(rect?.top) ?? 0,
+            canvasWidth: width,
+            canvasHeight: height,
         }
     }
 

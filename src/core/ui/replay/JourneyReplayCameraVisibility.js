@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -218,6 +218,7 @@ export const cameraViewWithRedirectState = (mode, view, redirectState = null) =>
 
 /**
  * Resolve a metric lookahead sample for replay camera tracking.
+ * Advance on the configured Replay clock, not the original GPX recording clock.
  *
  * @param {object} mode - Replay mode.
  * @param {object} sample - Current replay sample.
@@ -231,8 +232,6 @@ export const cameraLookaheadSample = (mode, sample, {
     minimumMeters = CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS,
 } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
         const currentDistance = finiteNumber(sample?.distanceFromStart)
         if (currentDistance === null || !state.sampler?.atDistance) {
             return null
@@ -243,12 +242,26 @@ export const cameraLookaheadSample = (mode, sample, {
             0,
             finiteNumber(minimumMeters) ?? CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS,
         )
-        const next = typeof state.sampler.lookaheadAtProgress === 'function'
+        const durationSeconds = finiteNumber(state.controller?.duration)
+        const direction = (finiteNumber(state.controller?.direction) ?? 1) < 0 ? -1 : 1
+        const replayProgress = finiteNumber(sample?.progress)
+            ?? (currentDistance / Math.max(1, finiteNumber(state.sampler.totalDistance) ?? 0))
+        const predicted = durationSeconds > 0 && typeof state.sampler.atProgress === 'function'
+            ? state.sampler.atProgress(clamp(
+                replayProgress + (direction * Math.max(0, seconds ?? 1) / durationSeconds),
+                0,
+                1,
+            ))
+            : typeof state.sampler.lookaheadAtProgress === 'function'
             ? state.sampler.lookaheadAtProgress(sample.progress, {
                 seconds: seconds ?? 1,
                 minimumMeters: metricFloor,
             })
             : state.sampler.atDistance(currentDistance + metricFloor)
+        const predictedDistance = finiteNumber(predicted?.distanceFromStart)
+        const next = predictedDistance !== null && (predictedDistance - currentDistance) * direction < metricFloor
+            ? state.sampler.atDistance(currentDistance + direction * metricFloor)
+            : predicted
         if (!next || Math.abs((finiteNumber(next?.distanceFromStart) ?? 0) - currentDistance) <= 0.0001) {
             return null
         }
@@ -631,7 +644,7 @@ export const cameraViewVisibilityForSample = (mode, {
                                                                     source,
                                                                     cameraSettings,
                                                                     markerSettings,
-                                                                    cameraAnchorSample: cameraMotion?.zigzagSimplified ? cameraMotion.sample : null,
+                                                                    cameraAnchorSample: cameraMotion?.cameraAnchorAdjusted ? cameraMotion.sample : null,
                                                                     axisHeading: cameraMotion?.heading ?? null,
                                                                     previousHeading: nominalView?.heading,
                                                                     previousPitch:   nominalView?.pitch,

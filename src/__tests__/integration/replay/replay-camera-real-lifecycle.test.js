@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-10
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,9 @@ import {JourneyReplayPlaybackController} from '@Core/ui/replay/JourneyReplayPlay
 import {isCameraOwnedByReplay} from '@Core/ui/replay/ReplayCameraOwnership'
 import {resolveJourneyReplayCameraAngleGuide} from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
 import {defaultJourneyReplaySettings} from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {makeJourney, makeTrack} from '../../unit/replay/replay-phase1-fixtures'
+import {projectReplayTargetInCameraFrame} from '@Core/ui/replay/JourneyReplayCameraMath'
 
 /** Read the actual Cesium basis and reference frame, excluding mutable aliases. */
 const readPose = camera => ({
@@ -110,6 +112,48 @@ afterEach(() => {
 })
 
 describe('Replay with the real Cesium camera', () => {
+    it.each([539, 3454, 7000])('contains the real marker in an offset crop during a ten-second Simple export at height %s', async altitude => {
+        const {camera, mode, journey, settings} = installScene({userMode: 'basic', altitude, pitch: -30})
+        const coordinates = Array.from({length: 21}, (_, index) => [2 + index * 0.02, 48 + Math.sin(index) * 0.02, 120])
+        journey.tracks = new Map([['track#journey#gpx#main', makeTrack({slug: 'track#journey#gpx#main', coordinates})]])
+        settings.simple.duration = 10
+        settings.simple.camera.canFixHiddenMarker = false
+        journey.replay.simple.camera.canFixHiddenMarker = false
+        const viewport = {left: 180, top: 100, width: 640, height: 480, canvasWidth: 1000, canvasHeight: 800}
+        camera.frustum.aspectRatio = 1.25
+        mode[JOURNEY_REPLAY_INTERNAL_CALL].viewportRectForCesiumSurface = () => viewport
+        try {
+            mode.beginReplayCameraExport()
+            lgs.stores.ui.video.exporting = true
+            await mode.preparePlaybackSceneForExport({journey})
+            for (let index = 0; index <= 300; index += 1) {
+                const sample = await mode.renderReplayExportFrame({
+                    phase: {kind: 'replay', progress: index / 300},
+                    frame: {frameTimeMs: index * 1000 / 30, frameIntervalMs: 1000 / 30, isLast: index === 300},
+                })
+                const point = projectReplayTargetInCameraFrame({
+                    frame: {destination: camera.positionWC, direction: camera.directionWC, up: camera.upWC},
+                    target: mode[JOURNEY_REPLAY_INTERNAL_CALL].markerRenderCartesianForSample(sample),
+                    viewport,
+                    verticalFovRadians: camera.frustum.fovy,
+                    aspectRatio: camera.frustum.aspectRatio,
+                })
+                expect(point).not.toBeNull()
+                expect(point.x).toBeGreaterThanOrEqual(0)
+                expect(point.x).toBeLessThanOrEqual(viewport.width)
+                expect(point.y).toBeGreaterThanOrEqual(0)
+                expect(point.y).toBeLessThanOrEqual(viewport.height)
+            }
+            expect(journey.replay.simple.camera.altitude).toBe(altitude)
+            expect(journey.replay.simple.camera.pitch).toBe(-30)
+        }
+        finally {
+            mode.endReplayCameraExport()
+            mode.dispose()
+            await mode.waitForSceneRestore()
+        }
+    })
+
     it.each(['basic', 'expert'])('seeds first %s Replay H/P from the live Cesium camera and starts at zero azimuth', async userMode => {
         const {camera, mode, journey, settings} = installScene({userMode, journeyCameraSaved: false})
         const cesiumHeight = camera.positionCartographic.height
@@ -332,9 +376,12 @@ describe('Replay with the real Cesium camera', () => {
             expect(Cartesian3.distance(camera.positionWC, target)).toBeLessThan(10)
             expect(lgs.stores.replay.camera).toMatchObject({pitch: -45, altitude: 539, cameraAngle: -112})
             if (entry === 'playback') {
+                mode[JOURNEY_REPLAY_INTERNAL_STATE].lastNavigationRecenterProgress = 0.8
                 await mode.seek(0.5)
+                expect(mode[JOURNEY_REPLAY_INTERNAL_STATE].lastNavigationRecenterProgress).toBeNull()
                 const sample = lgs.stores.replay.sample
-                const trackedTarget = Cartesian3.fromDegrees(sample.longitude, sample.latitude, 1180)
+                const cameraAnchor = mode.lastReplayLogicalFrame?.cameraPose?.cameraAnchorSample ?? sample
+                const trackedTarget = Cartesian3.fromDegrees(cameraAnchor.longitude, cameraAnchor.latitude, 1180)
                 const trackedLocal = Matrix4.inverseTransformation(Transforms.eastNorthUpToFixedFrame(trackedTarget), new Matrix4())
                 const trackedDirection = Matrix4.multiplyByPointAsVector(trackedLocal, camera.directionWC, new Cartesian3())
                 expect(Math.asin(trackedDirection.z)).toBeCloseTo(-Math.PI / 4, 8)
@@ -539,8 +586,15 @@ describe('Replay with the real Cesium camera', () => {
                 if (progress === 0) {
                     expect(Math.atan2(direction.x, direction.y)).toBeCloseTo(Math.atan2(Math.sin(guide.cameraHeading), Math.cos(guide.cameraHeading)), 4)
                 }
-                expect(Math.asin(direction.z), `pitch at ${progress}`).toBeCloseTo(-23 * Math.PI / 180, 8)
-                expect(position.z, `height at ${progress}`).toBeCloseTo(3515 - terrainHeight, 5)
+                // The capture clock now eases hard Navigation corrections for
+                // three seconds; intermediate frames can still be settling.
+                expect(Math.asin(direction.z), `pitch at ${progress}`).toBeCloseTo(-23 * Math.PI / 180, progress === 1 ? 8 : 4)
+                if (progress > 0 && progress < 1) {
+                    expect(Math.abs(position.z - (3515 - terrainHeight)), `height at ${progress}`).toBeLessThan(1)
+                }
+                else {
+                    expect(position.z, `height at ${progress}`).toBeCloseTo(3515 - terrainHeight, 5)
+                }
                 expect(journey.replay.simple.camera).toMatchObject({pitch: -23, altitude: 3515, cameraAngle: -113})
             }
         }
@@ -612,6 +666,126 @@ describe('Replay with the real Cesium camera', () => {
             await mode.restorePlaybackScene({force: true})
             mode.endReplayCameraExport()
             expectPose(camera, normal)
+            mode.dispose()
+            await mode.waitForSceneRestore()
+        }
+    })
+
+    it('applies camera-only anchor smoothing through the actual Simple export boundary', async () => {
+        const {camera, mode, journey, settings} = installScene({userMode: 'basic', altitude: 3515, pitch: -23})
+        settings.simple.camera.canFixHiddenMarker = false
+        journey.replay.simple.camera.canFixHiddenMarker = false
+        try {
+            mode.beginReplayCameraExport()
+            lgs.stores.ui.video.exporting = true
+            await mode.preparePlaybackSceneForExport({journey})
+            const cameraCall = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+            cameraCall.cameraCollisionForFrame = () => ({hard: false})
+            const cameraMotion = vi.spyOn(mode.sampler, 'cameraMotionAtProgress').mockImplementation(progress => ({
+                heading: Math.PI / 4,
+                sample: {...mode.sampler.atProgress(progress), longitude: 2.005},
+                cameraAnchorAdjusted: true,
+            }))
+
+            await mode.renderReplayExportFrame({
+                phase: {kind: 'replay', progress: 1},
+                frame: {frameTimeMs: 10000, frameIntervalMs: 1000 / 30, isLast: true},
+            })
+
+            expect(cameraMotion).toHaveBeenCalled()
+            const pose = mode.lastReplayLogicalFrame.cameraPose
+            expect(pose.cameraAnchorSample?.longitude).toBe(2.005)
+            const expectedFrame = cameraCall.cameraRecenterFrame({
+                ...pose,
+                cameraSettings: journey.replay.simple.camera,
+            })
+            expect(Cartesian3.distance(camera.positionWC, expectedFrame.destination)).toBeLessThan(0.0001)
+        }
+        finally {
+            mode.endReplayCameraExport()
+            mode.dispose()
+            await mode.waitForSceneRestore()
+        }
+    })
+
+    it('anticipates an untimed Simple route and eases both position and orientation over three seconds', async () => {
+        const {camera, mode, journey, settings} = installScene({userMode: 'basic', altitude: 3515, pitch: -23})
+        settings.simple.duration = 10
+        settings.simple.camera.canFixHiddenMarker = false
+        journey.replay.simple.camera.canFixHiddenMarker = false
+        try {
+            mode.beginReplayCameraExport()
+            lgs.stores.ui.video.exporting = true
+            await mode.preparePlaybackSceneForExport({journey})
+            const cameraCall = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+            cameraCall.cameraCollisionForFrame = ({sample}) => ({hard: sample.progress >= 0.45})
+            /** Render a fixed Replay timestamp through the production export method. */
+            const renderAt = seconds => mode.renderReplayExportFrame({
+                phase: {kind: 'replay', progress: seconds / 10},
+                frame: {frameTimeMs: seconds * 1000, frameIntervalMs: 1000 / 30},
+            })
+            await renderAt(0)
+            const initialPose = readPose(camera)
+            await renderAt(2)
+            expectPose(camera, initialPose)
+            const before = readPose(camera)
+            await renderAt(2.3)
+            const transition = mode[JOURNEY_REPLAY_INTERNAL_STATE].deterministicCameraTransition
+
+            expect(transition).not.toBeNull()
+            expect(transition.endAt - transition.startAt).toBe(3000)
+            expect(transition.sample.progress).toBeCloseTo(0.53, 6)
+            // Starting a correction must not rotate immediately toward its future target.
+            expect(Cartesian3.angleBetween(before.direction, camera.directionWC)).toBeLessThan(1e-8)
+            expect(Cartesian3.distance(before.position, camera.positionWC)).toBeLessThan(0.0001)
+
+            const poses = [readPose(camera)]
+            for (let frame = 1; frame <= 90; frame += 1) {
+                await renderAt(2.3 + frame / 30)
+                poses.push(readPose(camera))
+            }
+            const totalTravel = Cartesian3.distance(poses[0].position, poses[90].position)
+            const positionSteps = poses.slice(1).map((pose, index) => Cartesian3.distance(pose.position, poses[index].position))
+            const angularSteps = poses.slice(1).map((pose, index) => Cartesian3.angleBetween(pose.direction, poses[index].direction))
+            expect(totalTravel).toBeGreaterThan(100)
+            expect(Math.max(...positionSteps)).toBeLessThan(totalTravel * 0.03)
+            expect(Math.max(...angularSteps)).toBeLessThan(Math.PI / 180)
+        }
+        finally {
+            mode.endReplayCameraExport()
+            mode.dispose()
+            await mode.waitForSceneRestore()
+        }
+    })
+
+    it('eases the exact final Simple pose instead of snapping an unfinished recenter', async () => {
+        const {camera, mode, journey, settings} = installScene({userMode: 'basic', altitude: 3515, pitch: -23})
+        settings.simple.duration = 10
+        settings.simple.camera.canFixHiddenMarker = false
+        journey.replay.simple.camera.canFixHiddenMarker = false
+        try {
+            mode.beginReplayCameraExport()
+            lgs.stores.ui.video.exporting = true
+            await mode.preparePlaybackSceneForExport({journey})
+            const poses = []
+            for (let index = 0; index <= 300; index += 1) {
+                await mode.renderReplayExportFrame({
+                    phase: {kind: 'replay', progress: index / 300},
+                    frame: {frameTimeMs: index * 1000 / 30, frameIntervalMs: 1000 / 30, isLast: index === 300},
+                })
+                poses.push(readPose(camera))
+                if (index === 210) {
+                    expect(mode[JOURNEY_REPLAY_INTERNAL_STATE].deterministicCameraTransition?.finishAtReplayEnd).toBe(true)
+                }
+            }
+            const angularSteps = poses.slice(211).map((pose, index) => Cartesian3.angleBetween(pose.direction, poses[index + 210].direction))
+            expect(Math.max(...angularSteps)).toBeLessThan(Math.PI / 180)
+            const pose = mode.lastReplayLogicalFrame.cameraPose
+            const frame = mode[JOURNEY_REPLAY_INTERNAL_CALL].cameraRecenterFrame({...pose, cameraSettings: journey.replay.simple.camera})
+            expect(Cartesian3.distance(camera.positionWC, frame.destination)).toBeLessThan(0.0001)
+        }
+        finally {
+            mode.endReplayCameraExport()
             mode.dispose()
             await mode.waitForSceneRestore()
         }

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@
  */
 
 
-import {ArcType, Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate, EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, Matrix4, PolylineDashMaterialProperty, SampledPositionProperty, SceneTransforms, Transforms, VerticalOrigin, Math as CesiumMath} from 'cesium'
+import {ArcType, Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate, EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, Matrix3, Matrix4, Quaternion, PolylineDashMaterialProperty, SampledPositionProperty, SceneTransforms, Transforms, VerticalOrigin, Math as CesiumMath} from 'cesium'
 import {REPLAY_DRAWER} from '@Core/constants'
 import {Journey} from '@Core/Journey'
 import {CameraUtils} from '@Utils/cesium/CameraUtils'
@@ -218,14 +218,17 @@ export const applyCameraFrame =  (mode, frame) => {
  * @param {Object} mode - Replay session mode.
  * @param {Object|null} frame - Qualified Cesium transfer frame.
  * @param {Object|null} target - Cesium target position.
+ * @param {Object} [options] - Canonical orientation policy.
+ * @param {boolean} [options.preserveOrientation=false] - Preserve an interpolated transient aim.
  * @returns {boolean} Whether the canonical command was applied.
  */
-export const applyReplayCameraTransitionFrame = (mode, frame, target) => {
+export const applyReplayCameraTransitionFrame = (mode, frame, target, {preserveOrientation = false} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     const command = replayCameraCommandForCesiumFrame({
         frame,
         target,
+        preserveOrientation,
         source: 'replay-transition',
     })
     const camera = replayCameraFor(mode)
@@ -251,11 +254,38 @@ export const applyReplayCameraTransitionFrame = (mode, frame, target) => {
     }
 }
 
-export const interpolateCameraFrame = (mode, 
+/** Convert an orthogonal world-space camera basis to a rotation quaternion. */
+const cameraFrameQuaternion = frame => {
+    const direction = safeCartesian3Normalize(frame.direction, Cartesian3.UNIT_Y)
+    const right = safeCartesian3Normalize(Cartesian3.cross(direction, frame.up, new Cartesian3()), Cartesian3.UNIT_X)
+    const up = safeCartesian3Normalize(Cartesian3.cross(right, direction, new Cartesian3()), Cartesian3.UNIT_Z)
+    const rotation = new Matrix3()
+    Matrix3.setColumn(rotation, 0, right, rotation)
+    Matrix3.setColumn(rotation, 1, up, rotation)
+    Matrix3.setColumn(rotation, 2, Cartesian3.negate(direction, new Cartesian3()), rotation)
+    return Quaternion.fromRotationMatrix(rotation, new Quaternion())
+}
+
+/** Interpolate the complete camera orientation along the shortest rotation arc. */
+const interpolateCameraOrientation = (start, end, ratio) => {
+    if (ratio <= 0 || ratio >= 1) {
+        const endpoint = ratio <= 0 ? start : end
+        return {direction: Cartesian3.clone(endpoint.direction), up: Cartesian3.clone(endpoint.up)}
+    }
+    const quaternion = Quaternion.slerp(cameraFrameQuaternion(start), cameraFrameQuaternion(end), ratio, new Quaternion())
+    const rotation = Matrix3.fromQuaternion(quaternion, new Matrix3())
+    return {
+        direction: Cartesian3.negate(Matrix3.getColumn(rotation, 2, new Cartesian3()), new Cartesian3()),
+        up: Matrix3.getColumn(rotation, 1, new Cartesian3()),
+    }
+}
+
+/** Interpolate a qualified camera position and its optional eased orientation. */
+export const interpolateCameraFrame = (mode,
         start,
         end,
         ratio = 1,
-        {startVelocity = null, endVelocity = null, durationMs = 0, path = null, target = null} = {},
+        {startVelocity = null, endVelocity = null, durationMs = 0, path = null, target = null, interpolateOrientation = false} = {},
     ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -273,15 +303,20 @@ export const interpolateCameraFrame = (mode,
         const rawRatio = clamp(ratio, 0, 1)
         const easedRatio = smoothClipProgress(rawRatio)
         const hasVelocity = startVelocity || endVelocity
+        // Tracking corrections must ease orientation too. A path that looks
+        // immediately at its final target otherwise rotates on its first frame.
+        const orientation = interpolateOrientation
+            ? interpolateCameraOrientation(start, end, easedRatio)
+            : null
         if (!hasVelocity) {
             const sampledFrame = path ? cameraTransferFrameAt(path, target, easedRatio) : null
             return {
                 destination: sampledFrame?.destination ?? path?.sampleAt?.(easedRatio) ?? safeCartesian3Lerp(start.destination, end.destination, easedRatio),
-                direction:   sampledFrame?.direction ?? safeCartesian3Normalize(
+                direction:   orientation?.direction ?? sampledFrame?.direction ?? safeCartesian3Normalize(
                     safeCartesian3Lerp(start.direction, end.direction, easedRatio),
                     start.direction,
                 ),
-                up:          sampledFrame?.up ?? safeCartesian3Normalize(
+                up:          orientation?.up ?? sampledFrame?.up ?? safeCartesian3Normalize(
                     safeCartesian3Lerp(start.up, end.up, easedRatio),
                     start.up,
                 ),
@@ -324,13 +359,13 @@ export const interpolateCameraFrame = (mode,
                 startVelocity?.destination,
                 endVelocity?.destination,
             ),
-            direction: sampledFrame?.direction ?? safeCartesian3Normalize(interpolate(
+            direction: orientation?.direction ?? sampledFrame?.direction ?? safeCartesian3Normalize(interpolate(
                 start.direction,
                 end.direction,
                 startVelocity?.direction,
                 endVelocity?.direction,
             ), start.direction),
-            up: sampledFrame?.up ?? safeCartesian3Normalize(interpolate(
+            up: orientation?.up ?? sampledFrame?.up ?? safeCartesian3Normalize(interpolate(
                 start.up,
                 end.up,
                 startVelocity?.up,
@@ -421,6 +456,7 @@ export const cameraTransitionVelocity = (mode, transition, logicalNow) => {
         }
     }
 
+/** Start a camera transfer at one logical Replay timestamp with exact pose endpoints. */
 export const startDeterministicCameraTransition = (mode, {
                                                sample,
                                                heading,
@@ -429,6 +465,8 @@ export const startDeterministicCameraTransition = (mode, {
                                                endFrame,
                                                pathMode = null,
                                                preserveCameraPath = false,
+                                               interpolateOrientation = false,
+                                               finishAtReplayEnd = false,
                                                duration = 0,
                                                logicalNow = 0,
                                                trackingMode = REPLAY_MARKER_MODE_NAVIGATION,
@@ -584,7 +622,7 @@ export const startDeterministicCameraTransition = (mode, {
                     source:         'playback',
                     cameraSettings:  replayCameraSettings,
                     markerSettings:  replayMarkerSettings,
-                    cameraAnchorSample: cameraMotion?.zigzagSimplified ? cameraMotion.sample : null,
+                    cameraAnchorSample: cameraMotion?.cameraAnchorAdjusted ? cameraMotion.sample : null,
                     axisHeading: cameraMotion?.heading ?? null,
                     motionProfile:   replayMotionProfile,
                     collision:      true,
@@ -637,6 +675,8 @@ export const startDeterministicCameraTransition = (mode, {
             heading,
             pitch,
             path: transferPath,
+            interpolateOrientation,
+            finishAtReplayEnd,
         }
 
         return call.applyDeterministicCameraTransition(logicalNow)
@@ -664,9 +704,12 @@ export const applyDeterministicCameraTransition =  (mode, logicalNow) => {
                 durationMs:    span,
                 path:          transition.path,
                 target:        transition.target,
+                interpolateOrientation: transition.interpolateOrientation === true,
             },
         )
-        const applied = call.applyReplayCameraTransitionFrame?.(frame, transition.target)
+        const applied = call.applyReplayCameraTransitionFrame?.(frame, transition.target, {
+            preserveOrientation: transition.interpolateOrientation === true,
+        })
                      || call.applyCameraFrame(frame)
         if (ratio >= 1 && applied) {
             state.deterministicCameraTransition = null

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@
  */
 
 
-import {Cartesian3, Matrix4} from 'cesium'
+import {Cartesian3, EasingFunction, Matrix4} from 'cesium'
 import {
     replayCesiumCameraDestinationAboveTerrain,
     replayCesiumCameraFrameAboveTerrain,
@@ -98,6 +98,7 @@ export const recenterCameraToSample = (mode, {
                                    cameraHeight = null,
                                    instant = false,
                                    duration = 1.0,
+                                   easingFunction = EasingFunction.CUBIC_IN_OUT,
                                    deterministic = false,
                                    logicalNow = null,
                                    force = false,
@@ -179,6 +180,7 @@ export const recenterCameraToSample = (mode, {
             cameraSettings,
             cameraHeight:   frame.currentHeight,
             duration,
+            easingFunction,
             endFrame:       frame,
             transitionGuard,
         })
@@ -203,6 +205,7 @@ export const startCameraTransition = (mode, {
                                         cameraHeight = null,
                                         endFrame = null,
                                         duration = REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
+                                        easingFunction = EasingFunction.CUBIC_IN_OUT,
                                         transitionGuard = null,
                                     }) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -305,6 +308,7 @@ export const startCameraTransition = (mode, {
                         target: frame.target,
                         scene: call.cesiumScene?.(),
                         duration: Math.max(0, Number(duration) || 0),
+                        easingFunction,
                         cadence: interactiveTiming ? 'time' : 'frame',
                         complete: () => settle(true),
                         cancel:   () => settle(false),
@@ -331,6 +335,7 @@ export const startCameraTransition = (mode, {
                             up:        endUp,
                         },
                         duration: Math.max(0, Number(duration) || 0),
+                        easingFunction,
                         ...(currentHeight === null
                             ? {}
                             : {maximumHeight: Math.max(currentHeight, finiteNumber(frame.currentHeight) ?? currentHeight)}),

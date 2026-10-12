@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -384,7 +384,7 @@ export class JourneyReplayPlaybackController {
         }
         const sample = this.currentSample()
         this.#syncStore(sample, {force: true})
-        this.#emit(REPLAY_EVENT_UPDATE, sample)
+        this.#emit(REPLAY_EVENT_UPDATE, sample, 'scrub')
         return sample
     }
 
@@ -453,7 +453,8 @@ export class JourneyReplayPlaybackController {
         this.#schedule()
     }
 
-    #eventDetail = sample => {
+    /** Build one frame detail with its playback or explicit scrub source. */
+    #eventDetail = (sample, source = 'replay-clock') => {
         const runtimeFrame = globalThis.lgs?.stores?.replay?.dynamicFrameState ?? null
         const logicalFrame = createJourneyReplayLogicalFrame({
             sample,
@@ -462,7 +463,7 @@ export class JourneyReplayPlaybackController {
             frameTimeMs:     runtimeFrame?.frameTimeMs,
             frameIntervalMs: runtimeFrame?.frameIntervalMs,
             phase:           runtimeFrame?.phase,
-            source:          'replay-clock',
+            source,
         })
 
         return {
@@ -478,11 +479,13 @@ export class JourneyReplayPlaybackController {
             frameTimeMs:     logicalFrame.frameTimeMs,
             frameIntervalMs: logicalFrame.frameIntervalMs,
             logicalFrame,
+            source,
         }
     }
 
-    #emit = (event, sample) => {
-        const detail = this.#eventDetail(sample)
+    /** Publish one canonical clock event and preserve explicit seek intent. */
+    #emit = (event, sample, source = 'replay-clock') => {
+        const detail = this.#eventDetail(sample, source)
         this.#listeners.get(event)?.forEach(callback => {
             try {
                 callback(detail)

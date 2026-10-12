@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -1108,6 +1108,7 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
                 call.updateCamera({
                     sample,
                     progress,
+                    source: 'replay-export',
                     frameTimeMs: finiteNumber(frame?.frameTimeMs)
                                  ?? finiteNumber(phase?.frameTimeMs)
                                  ?? 0,

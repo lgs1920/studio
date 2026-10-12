@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -348,7 +348,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
             cameraSettings,
             markerSettings,
             collision: true,
-            cameraAnchorSample: cameraMotion?.zigzagSimplified ? cameraMotion.sample : null,
+            cameraAnchorSample: cameraMotion?.cameraAnchorAdjusted ? cameraMotion.sample : null,
             axisHeading: cameraMotion?.heading ?? null,
             previousHeading: null,
             previousPitch: null,
@@ -545,7 +545,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
             cameraSettings,
             markerSettings,
             collision: true,
-            cameraAnchorSample: cameraMotion?.zigzagSimplified ? cameraMotion.sample : null,
+            cameraAnchorSample: cameraMotion?.cameraAnchorAdjusted ? cameraMotion.sample : null,
             axisHeading: cameraMotion?.heading ?? null,
             previousHeading: null,
             previousPitch: null,

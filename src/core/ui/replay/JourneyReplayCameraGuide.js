@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,6 +40,9 @@ import {resolveJourneyReplayLogicalCameraRoll} from './JourneyReplayLogicalCamer
 import {
     replayCameraCropWidthMeters,
     replayCameraHeadingLookaheadSeconds,
+    replayCameraHeadingWindowMeters,
+    replayCameraPositionSmoothingWindowMeters,
+    REPLAY_CAMERA_HEADING_MAX_PATH_RATIO,
 } from './JourneyReplayCameraMotionSmoothing'
 
 import {
@@ -639,6 +642,26 @@ export const smoothedGuide = (mode) => {
     }))
 }
 
+const replayCameraHeadingDistanceOptions = (mode, lookaheadSeconds) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const sampler = state.sampler
+    const minimumMeters = replayCameraHeadingWindowMeters({
+        totalDistanceMeters: sampler?.totalDistance,
+        durationSeconds: state.controller?.duration,
+        lookaheadSeconds,
+        minimumMeters: CAMERA_NAVIGATION_HEADING_MIN_WINDOW_METERS,
+    })
+    const maximumMeters = Math.max(
+        0,
+        (finiteNumber(sampler?.totalDistance) ?? 0) * REPLAY_CAMERA_HEADING_MAX_PATH_RATIO,
+    )
+    const positionSmoothingMeters = replayCameraPositionSmoothingWindowMeters({
+        totalDistanceMeters: sampler?.totalDistance,
+        durationSeconds: state.controller?.duration,
+    })
+    return {minimumMeters, maximumMeters, positionSmoothingMeters}
+}
+
 export const guideTimeForProgress =  (mode, progress) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -734,10 +757,11 @@ export const headingFromPositionProperty =  (mode, progress, {
         const safeProgress = clamp(Number(progress) || 0, 0, 1)
         if (typeof state.sampler?.headingAtProgress === 'function') {
             const lookaheadSeconds = replayCameraHeadingLookaheadSeconds(easing)
+            const headingDistance = replayCameraHeadingDistanceOptions(mode, lookaheadSeconds)
             return state.sampler.headingAtProgress(safeProgress, {
                 lookaheadSeconds,
                 windowSeconds:   lookaheadSeconds,
-                minimumMeters:   CAMERA_NAVIGATION_HEADING_MIN_WINDOW_METERS,
+                ...headingDistance,
             })
         }
         const guide = call.buildCameraGuide()
@@ -807,7 +831,8 @@ export const cameraMotionAtProgress = (mode, {
     const viewportWidth = finiteNumber(viewport?.canvasWidth) ?? finiteNumber(viewport?.width)
     const cropWidth = finiteNumber(viewport?.width)
     const cropWidthRatio = viewportWidth > 0 && cropWidth > 0 ? cropWidth / viewportWidth : 1
-    const targetHeight = finiteNumber(sample.altitude ?? sample.height) ?? 0
+    const targetHeight = finiteNumber(call.markerRenderHeightForSample?.(sample))
+        ?? finiteNumber(sample.altitude ?? sample.height) ?? 0
     const configuredHeight = finiteNumber(cameraSettings.altitude)
     const pitchRadians = degreesToRadians(cameraSettings.pitch)
     const cropZoneWidthAtTargetHeight = referenceTargetHeight => replayCameraCropWidthMeters({
@@ -822,6 +847,7 @@ export const cameraMotionAtProgress = (mode, {
     })
     const cropZoneWidthMeters = cropZoneWidthAtTargetHeight(targetHeight)
     const lookaheadSeconds = replayCameraHeadingLookaheadSeconds(cameraSettings?.hysteresis?.easing)
+    const headingDistance = replayCameraHeadingDistanceOptions(mode, lookaheadSeconds)
     return sampler.cameraMotionAtProgress(progress, {
         cropZoneWidthMeters,
         cropZoneWidthMetersForSection: section => cropZoneWidthAtTargetHeight(
@@ -829,7 +855,7 @@ export const cameraMotionAtProgress = (mode, {
         ),
         lookaheadSeconds,
         windowSeconds: lookaheadSeconds,
-        minimumMeters: CAMERA_NAVIGATION_HEADING_MIN_WINDOW_METERS,
+        ...headingDistance,
     })
 }
 

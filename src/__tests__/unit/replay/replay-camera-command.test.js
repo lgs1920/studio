@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -67,6 +67,21 @@ describe('replay camera command', () => {
         expect(Cartesian3.magnitude(frame.direction)).toBeCloseTo(1, 8)
         expect(Cartesian3.magnitude(frame.up)).toBeCloseTo(1, 8)
         expect(Cartesian3.dot(frame.direction, frame.up)).toBeCloseTo(0, 8)
+    })
+
+    it('preserves an interpolated transition aim that has not reached the route target yet', () => {
+        const originalFrame = replayCesiumCameraFrameForCommand(createCommandFixture({heading: 1.2, pitch: -0.65, roll: 0.18}))
+        const futureTarget = Cartesian3.fromDegrees(0.01, 0.01, 100)
+        const command = replayCameraCommandForCesiumFrame({
+            frame: originalFrame,
+            target: futureTarget,
+            preserveOrientation: true,
+        })
+        const applied = replayCesiumCameraFrameForCommand(command)
+
+        expect(Cartesian3.distance(applied.destination, originalFrame.destination)).toBeLessThan(0.0001)
+        expect(Cartesian3.angleBetween(applied.direction, originalFrame.direction)).toBeLessThan(1e-8)
+        expect(Cartesian3.angleBetween(applied.up, originalFrame.up)).toBeLessThan(1e-8)
     })
 
     it('round-trips a qualified Cesium transition frame through the canonical command', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -49,11 +49,15 @@ const isCartesian3Like = value => Boolean(value)
     && [value.x, value.y, value.z].every(component => Number.isFinite(component))
 
 const normalizeCartesian3 = (value, fallback = Cartesian3.UNIT_Z) => {
-    if (isCartesian3Like(value)) {
+    if (isCartesian3Like(value) && Cartesian3.magnitudeSquared(value) > Number.EPSILON) {
         return Cartesian3.normalize(value, new Cartesian3())
     }
 
-    return isCartesian3Like(fallback) ? Cartesian3.clone(fallback, new Cartesian3()) : new Cartesian3(0, 0, 1)
+    if (isCartesian3Like(fallback) && Cartesian3.magnitudeSquared(fallback) > Number.EPSILON) {
+        return Cartesian3.clone(fallback, new Cartesian3())
+    }
+
+    return new Cartesian3(0, 0, 1)
 }
 
 const lerpCartesian3 = (start, end, ratio) => {
@@ -385,11 +389,19 @@ export const buildCameraTransferPath = ({
         antiCollisionBounds,
         safetyProfile,
         frameResolver,
+        /**
+         * Animate the camera along the transfer path.
+         *
+         * @param {object} options - Transfer animation options.
+         * @param {Function|null} [options.easingFunction=null] - Optional progress easing function.
+         * @returns {Function|boolean} Cancellation function or false when unavailable.
+         */
         flyTo: ({
                     camera,
                     target,
                     orientation = null,
                     duration = 1,
+                    easingFunction = null,
                     complete = null,
                     cancel = null,
                     beforeFrame = null,
@@ -426,7 +438,11 @@ export const buildCameraTransferPath = ({
                     return
                 }
 
-                const ratio = clamp(((globalThis.performance?.now?.() ?? Date.now()) - startTime) / durationMs, 0, 1)
+                const linearRatio = clamp(((globalThis.performance?.now?.() ?? Date.now()) - startTime) / durationMs, 0, 1)
+                const easedRatio = typeof easingFunction === 'function'
+                    ? easingFunction(linearRatio)
+                    : linearRatio
+                const ratio = clamp(finiteNumber(easedRatio) ?? linearRatio, 0, 1)
                 const view = cameraTransferViewAt(path, target, ratio, orientation)
                 if (view) {
                     const safeView = replayCesiumCameraViewAboveTerrain({

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,6 +38,11 @@ import {
     getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplaySettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {cameraMotionAtProgress}                                          from '@Core/ui/replay/JourneyReplayCameraGuide'
+import {
+    replayCameraCropWidthMeters,
+    replayCameraHeadingWindowMeters,
+    replayCameraPositionSmoothingWindowMeters,
+}                                                                      from '@Core/ui/replay/JourneyReplayCameraMotionSmoothing'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE}      from '@Core/ui/replay/JourneyReplayInternal'
 import { gpx }                                                         from '@tmcw/togeojson'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
@@ -398,10 +403,142 @@ describe('replay phase 1 sampler', () => {
         expect(cameraMotion.zigzagAmplitudeMeters).toBeLessThan(500)
         expect(Math.abs(cameraMotion.sample.latitude)).toBeLessThan(0.00001)
         expect(Math.abs(routeSample.latitude)).toBeGreaterThan(0.00001)
-        expect(cameraMotion.heading).toBeCloseTo(Math.PI / 2, 2)
+        expect(cameraMotion.heading).toBeCloseTo(Math.PI / 2, 1)
         expect(sampler.cameraMotionAtProgress(0.45, {
             cropZoneWidthMeters: cameraMotion.zigzagAmplitudeMeters * 2,
         }).zigzagSimplified).toBe(false)
+    })
+
+    it('keeps the anticipated heading when a camera anchor simplifies a local zigzag', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#zigzag-anchor-heading',
+                coordinates: [
+                    [0, 0, 0],
+                    [0, 0.01, 0],
+                    [0.001, 0.0102, 0],
+                    [0.002, 0.0098, 0],
+                    [0.003, 0.0102, 0],
+                    [0.004, 0.0098, 0],
+                    [0.005, 0.0102, 0],
+                    [0.005, 0.02, 0],
+                ],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const progress = 0.5
+        const options = {
+            cropZoneWidthMeters: 10000,
+            lookaheadSeconds:   4,
+            windowSeconds:      4,
+            minimumMeters:      5000,
+            maximumMeters:      5000,
+        }
+        const motion = sampler.cameraMotionAtProgress(progress, options)
+        const anticipatedHeading = sampler.headingAtProgress(progress, options)
+        const routeOverallHeading = Math.atan2(0.005, 0.02)
+
+        expect(motion.zigzagSimplified).toBe(true)
+        expect(motion.heading).toBeCloseTo(anticipatedHeading, 8)
+        expect(Math.abs(replayAngularDelta(motion.heading, routeOverallHeading))).toBeLessThan(0.25)
+        expect(Math.abs(replayAngularDelta(motion.heading, Math.PI / 2))).toBeGreaterThan(0.7)
+    })
+
+    it('scales camera heading anticipation to the configured Replay duration', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#duration-aware-camera-heading',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.1, 0, 0],
+                    [0.1, 0.01, 0],
+                    [0.2, 0.01, 0],
+                ],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                sampler,
+                controller: {duration: 10},
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                cesiumViewer: () => ({camera: {frustum: {aspectRatio: 1.33, fovy: Math.PI / 3}}}),
+                constrainedReplayProjectionViewport: () => ({
+                    width: 1000,
+                    height: 750,
+                    canvasWidth: 1000,
+                    canvasHeight: 750,
+                }),
+            },
+        }
+        const cameraSettings = {
+            altitude: 10000,
+            altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
+            pitch: -90,
+            hysteresis: {easing: 0.3},
+        }
+        const progress = 0.475
+        const lookaheadSeconds = 3.4
+        const headingWindowMeters = replayCameraHeadingWindowMeters({
+            totalDistanceMeters: sampler.totalDistance,
+            durationSeconds: 10,
+            lookaheadSeconds,
+            minimumMeters: 400,
+        })
+        const positionSmoothingWindowMeters = replayCameraPositionSmoothingWindowMeters({
+            totalDistanceMeters: sampler.totalDistance,
+            durationSeconds: 10,
+        })
+        const expectedHeading = sampler.headingAtProgress(progress, {
+            lookaheadSeconds,
+            windowSeconds: lookaheadSeconds,
+            minimumMeters: headingWindowMeters,
+            maximumMeters: headingWindowMeters,
+        })
+        const motion = cameraMotionAtProgress(mode, {
+            sample: sampler.atProgress(progress),
+            progress,
+            cameraSettings,
+        })
+        const startSample = sampler.atProgress(0)
+        const startMotion = cameraMotionAtProgress(mode, {
+            sample: startSample,
+            progress: 0,
+            cameraSettings,
+        })
+        const endSample = sampler.atProgress(1)
+        const endMotion = cameraMotionAtProgress(mode, {
+            sample: endSample,
+            progress: 1,
+            cameraSettings,
+        })
+        const routeSample = sampler.atProgress(progress)
+        const anchorOffsetMeters = Math.hypot(
+            (motion.sample.longitude - routeSample.longitude) * 111320 * Math.cos(routeSample.latitude * Math.PI / 180),
+            (motion.sample.latitude - routeSample.latitude) * 111320,
+        )
+        const cropWidthMeters = replayCameraCropWidthMeters({
+            cameraHeight: cameraSettings.altitude,
+            targetHeight: routeSample.altitude,
+            pitchRadians: -Math.PI / 2,
+            verticalFovRadians: Math.PI / 3,
+            aspectRatio: 1000 / 750,
+            cropWidthRatio: 1,
+        })
+
+        expect(headingWindowMeters).toBeGreaterThan(400)
+        expect(positionSmoothingWindowMeters).toBeGreaterThan(0)
+        expect(motion.heading).toBeCloseTo(expectedHeading, 8)
+        expect(motion.cameraAnchorAdjusted).toBe(true)
+        expect(anchorOffsetMeters).toBeGreaterThan(1)
+        expect(anchorOffsetMeters).toBeLessThanOrEqual((cropWidthMeters * 0.25) + 1)
+        expect(motion.sample.altitude).toBeCloseTo(routeSample.altitude, 8)
+        expect(startMotion.cameraAnchorAdjusted).toBe(false)
+        expect(startMotion.sample.longitude).toBeCloseTo(startSample.longitude, 8)
+        expect(endMotion.cameraAnchorAdjusted).toBe(false)
+        expect(endMotion.sample.longitude).toBeCloseTo(endSample.longitude, 8)
+        expect(sampler.atProgress(progress).longitude).toBeCloseTo(routeSample.longitude, 8)
     })
 
     it('keeps a zigzag width decision stable across altitude changes within the section', () => {
@@ -579,6 +716,39 @@ describe('replay phase 1 sampler', () => {
         expect(headings[2]).toBeGreaterThan(headings[3])
         expect(headings[3]).toBeGreaterThan(headings[4])
         expect(headings[0] - headings[4]).toBeGreaterThan(0.35)
+    })
+
+    it('keeps camera heading continuous when the anticipation window spans a closed loop', () => {
+        const coordinates = Array.from({length: 121}, (_, index) => {
+            const angle = (Math.PI * 2 * index) / 120
+            return [
+                0.001 * Math.cos(angle),
+                0.001 * Math.sin(angle),
+                0,
+            ]
+        })
+        const sampler = new JourneyReplayPathSampler({
+            journey: makeJourney([
+                makeTrack({
+                    slug: 'track#journey#gpx#closed-camera-loop',
+                    coordinates,
+                }),
+            ]),
+        })
+        const headings = Array.from({length: 61}, (_, index) => sampler.cameraMotionAtProgress(
+            0.2 + (index * 0.01),
+            {
+                cropZoneWidthMeters: 1,
+                lookaheadSeconds:   3.4,
+                windowSeconds:      3.4,
+                minimumMeters:      400,
+            },
+        ).heading)
+        const maximumHeadingStep = Math.max(...headings.slice(1).map((heading, index) => (
+            Math.abs(replayAngularDelta(headings[index], heading))
+        )))
+
+        expect(maximumHeadingStep).toBeLessThan(0.1)
     })
 
     it('does not let a later compact zigzag delay anticipation of a sharp turn', () => {

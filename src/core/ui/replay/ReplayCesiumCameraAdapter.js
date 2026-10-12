@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -270,11 +270,13 @@ export const replayCesiumCameraFrameForCommand = command => {
  * command seam without persisting Cesium vectors in replay definitions.
  *
  * @param {Object} options - Cesium frame, geographic target, and metadata.
+ * @param {boolean} [options.preserveOrientation=false] - Preserve a transient interpolated aim.
  * @returns {Object|null} Canonical camera command.
  */
 export const replayCameraCommandForCesiumFrame = ({
     frame = null,
     target = null,
+    preserveOrientation = false,
     source = 'cesium-frame',
 } = {}) => {
     const destination = frame?.destination
@@ -287,17 +289,31 @@ export const replayCameraCommandForCesiumFrame = ({
         return null
     }
 
-    const targetCartographic = Cartographic.fromCartesian(target)
+    // A tracking transition can still be rotating toward its final target.
+    // Encode its actual aim at the same range instead of rebuilding an instant
+    // look-at toward that target and discarding the interpolated direction.
+    const frameDirection = frame?.direction
+    const commandTarget = preserveOrientation
+        && frameDirection
+        && [frameDirection.x, frameDirection.y, frameDirection.z].every(Number.isFinite)
+        && Cartesian3.magnitudeSquared(frameDirection) > Number.EPSILON
+        ? Cartesian3.add(destination, Cartesian3.multiplyByScalar(
+            Cartesian3.normalize(frameDirection, new Cartesian3()),
+            rangeMeters,
+            new Cartesian3(),
+        ), new Cartesian3())
+        : target
+    const targetCartographic = Cartographic.fromCartesian(commandTarget)
     if (!targetCartographic) {
         return null
     }
 
-    const transform = Transforms.eastNorthUpToFixedFrame(target)
+    const transform = Transforms.eastNorthUpToFixedFrame(commandTarget)
     const east = Matrix4.getColumn(transform, 0, new Cartesian3())
     const north = Matrix4.getColumn(transform, 1, new Cartesian3())
     const localUp = Matrix4.getColumn(transform, 2, new Cartesian3())
     const direction = Cartesian3.normalize(
-        Cartesian3.subtract(target, destination, new Cartesian3()),
+        Cartesian3.subtract(commandTarget, destination, new Cartesian3()),
         new Cartesian3(),
     )
     const heading = Math.atan2(

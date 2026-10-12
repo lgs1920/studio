@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-11
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,10 @@ export const REPLAY_SIMPLE_CAMERA_MIN_EASING = 0.3
 export const REPLAY_CAMERA_HEADING_LOOKAHEAD_MIN_SECONDS = 2.5
 /** Longest route-heading anticipation horizon, in seconds. */
 export const REPLAY_CAMERA_HEADING_LOOKAHEAD_MAX_SECONDS = 4
+/** Maximum fraction of a route used for one side of the camera heading window. */
+export const REPLAY_CAMERA_HEADING_MAX_PATH_RATIO = 0.3
+/** Route-time window used to soften camera-anchor movement through tight turns. */
+export const REPLAY_CAMERA_POSITION_SMOOTHING_SECONDS = 0.5
 
 /**
  * Convert an optional value to a finite number.
@@ -63,6 +67,73 @@ export const replayCameraHeadingLookaheadSeconds = easing => {
     const normalized = easingValue === null ? 0 : clamp(easingValue / 0.5, 0, 1)
     return REPLAY_CAMERA_HEADING_LOOKAHEAD_MIN_SECONDS
         + ((REPLAY_CAMERA_HEADING_LOOKAHEAD_MAX_SECONDS - REPLAY_CAMERA_HEADING_LOOKAHEAD_MIN_SECONDS) * normalized)
+}
+
+/**
+ * Convert the Replay camera heading horizon into route distance. Playback moves
+ * linearly through route progress, so GPX files without timestamps must use the
+ * configured Replay duration instead of falling back to a fixed few hundred
+ * metres. Cap the distance so very short replays do not use most of the route
+ * as one heading sample.
+ *
+ * @param {object} options - Active path and Replay timing.
+ * @param {number} options.totalDistanceMeters - Full route distance.
+ * @param {number} options.durationSeconds - Configured route playback duration.
+ * @param {number} options.lookaheadSeconds - Camera heading horizon.
+ * @param {number} [options.minimumMeters=400] - Existing minimum heading distance.
+ * @returns {number} Minimum route distance used to resolve the heading.
+ */
+export const replayCameraHeadingWindowMeters = ({
+    totalDistanceMeters,
+    durationSeconds,
+    lookaheadSeconds,
+    minimumMeters = 400,
+} = {}) => {
+    const totalDistance = Math.max(0, finiteNumber(totalDistanceMeters) ?? 0)
+    const duration = Math.max(0, finiteNumber(durationSeconds) ?? 0)
+    const lookahead = Math.max(0, finiteNumber(lookaheadSeconds) ?? 0)
+    const minimum = Math.max(0, finiteNumber(minimumMeters) ?? 400)
+    if (totalDistance <= 0) {
+        return minimum
+    }
+
+    const maximumDistance = totalDistance * REPLAY_CAMERA_HEADING_MAX_PATH_RATIO
+    const effectiveMinimum = Math.min(minimum, maximumDistance)
+    if (duration <= 0 || lookahead <= 0) {
+        return effectiveMinimum
+    }
+
+    const replayPaceDistance = (totalDistance / duration) * lookahead
+    return Math.max(effectiveMinimum, Math.min(replayPaceDistance, maximumDistance))
+}
+
+/**
+ * Convert a short camera-position smoothing horizon into route distance.
+ * Playback speed is derived from the Replay duration so the same path receives
+ * proportionate smoothing at different video durations.
+ *
+ * @param {object} options - Active path and Replay timing.
+ * @param {number} options.totalDistanceMeters - Full route distance.
+ * @param {number} options.durationSeconds - Configured route playback duration.
+ * @param {number} [options.smoothingSeconds=REPLAY_CAMERA_POSITION_SMOOTHING_SECONDS] - Smoothing window in seconds.
+ * @returns {number} Route distance covered in the smoothing window.
+ */
+export const replayCameraPositionSmoothingWindowMeters = ({
+    totalDistanceMeters,
+    durationSeconds,
+    smoothingSeconds = REPLAY_CAMERA_POSITION_SMOOTHING_SECONDS,
+} = {}) => {
+    const totalDistance = Math.max(0, finiteNumber(totalDistanceMeters) ?? 0)
+    const duration = Math.max(0, finiteNumber(durationSeconds) ?? 0)
+    const smoothing = Math.max(0, finiteNumber(smoothingSeconds) ?? 0)
+    if (totalDistance <= 0 || duration <= 0 || smoothing <= 0) {
+        return 0
+    }
+
+    return Math.min(
+        (totalDistance / duration) * smoothing,
+        totalDistance * REPLAY_CAMERA_HEADING_MAX_PATH_RATIO,
+    )
 }
 
 /**

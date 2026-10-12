@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {Cartesian3, Cartographic, Matrix4, Math as CesiumMath, Transforms} from 'cesium'
+import {Cartesian3, Cartographic, EasingFunction, Matrix4, Math as CesiumMath, Transforms} from 'cesium'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@Utils/UIToast', () => ({
@@ -352,6 +352,19 @@ describe('Journey replay camera paths', () => {
         }
     })
 
+    it('builds a finite direct transfer path when the start and end positions match', () => {
+        const position = Cartesian3.fromDegrees(2, 48, 1800)
+        const path = buildCameraTransferPath({start: position, end: position, mode: 'direct'})
+
+        expect(path.sampleAt(0)).toEqual(position)
+        expect(path.sampleAt(1)).toEqual(position)
+        expect(path.samples.every(sample => (
+            Number.isFinite(sample.x)
+            && Number.isFinite(sample.y)
+            && Number.isFinite(sample.z)
+        ))).toBe(true)
+    })
+
     it('raises long transfers enough to preserve a higher clip endpoint', () => {
         expect(resolveCameraTransferLiftMeters({
             distanceMeters: 100_000,
@@ -474,6 +487,37 @@ describe('Journey replay camera paths', () => {
         finally {
             vi.useRealTimers()
         }
+    })
+
+    it('eases camera transfer paths with the supplied progress function', () => {
+        let now = 0
+        const frames = []
+        vi.stubGlobal('performance', {now: () => now})
+        vi.stubGlobal('requestAnimationFrame', callback => {
+            frames.push(callback)
+            return frames.length
+        })
+        vi.stubGlobal('cancelAnimationFrame', vi.fn())
+
+        const camera = {setView: vi.fn()}
+        const path = buildCameraTransferPath({
+            start: new Cartesian3(0, 0, 0),
+            end:   new Cartesian3(100, 0, 0),
+            mode:  'direct',
+        })
+        const cancel = path.flyTo({
+            camera,
+            orientation: {heading: 0, pitch: -1, roll: 0},
+            duration: 1,
+            easingFunction: EasingFunction.CUBIC_IN_OUT,
+        })
+
+        frames.shift()()
+        now = 250
+        frames.shift()()
+
+        expect(camera.setView.mock.lastCall[0].destination.x).toBeCloseTo(6.25)
+        cancel()
     })
 
     it('uses time cadence when requested for camera transfers', async () => {
@@ -659,6 +703,22 @@ describe('Journey replay camera paths', () => {
         expect(frame.destination.x).toBeCloseTo(20, 6)
         expect(frame.destination.y).toBeCloseTo(5, 6)
         expect(frame.destination.z).toBeCloseTo(7, 6)
+    })
+
+    it('keeps a half-turn orientation interpolation finite and continuous', () => {
+        const {mode} = makeMode()
+        const start = {destination: new Cartesian3(1, 2, 3), direction: new Cartesian3(1, 0, 0), up: new Cartesian3(0, 0, 1)}
+        const end = {...start, direction: new Cartesian3(-1, 0, 0)}
+        const frames = [0, 0.25, 0.5, 0.75, 1].map(ratio => interpolateCameraFrame(mode, start, end, ratio, {interpolateOrientation: true}))
+
+        expect(frames[0].direction).toEqual(start.direction)
+        expect(frames[4].direction).toEqual(end.direction)
+        for (const frame of frames) {
+            expect(Cartesian3.magnitude(frame.direction)).toBeCloseTo(1, 8)
+            expect(Cartesian3.magnitude(frame.up)).toBeCloseTo(1, 8)
+            expect(Cartesian3.dot(frame.direction, frame.up)).toBeCloseTo(0, 8)
+        }
+        expect(Cartesian3.angleBetween(start.direction, frames[2].direction)).toBeCloseTo(Math.PI / 2, 8)
     })
 
     it('stores the same path plan inside deterministic replay transitions', () => {
@@ -2135,12 +2195,21 @@ describe('Journey replay camera paths', () => {
             else {
                 expect(call.cameraCollisionForSample).not.toHaveBeenCalled()
             }
-            expect(call.applyCameraFrame).toHaveBeenCalledOnce()
+            if (markerMode === REPLAY_MARKER_MODE_NAVIGATION) {
+                expect(call.startDeterministicCameraTransition).toHaveBeenCalledWith(expect.objectContaining({
+                    duration: expect.any(Number),
+                }))
+                expect(call.applyCameraFrame).not.toHaveBeenCalled()
+            }
+            else {
+                expect(call.applyCameraFrame).toHaveBeenCalledOnce()
+                expect(call.startDeterministicCameraTransition).not.toHaveBeenCalled()
+            }
             expect(call.applyDeterministicCameraFollower).not.toHaveBeenCalled()
         }
     })
 
-    it('gives an active deterministic transition exclusive ownership of the camera frame', () => {
+    it.each([500, 11000])('gives an active transition ownership even with clip-offset time %s', frameTimeMs => {
         vi.stubGlobal('lgs', {
             settings: {
                 ui: {
@@ -2179,9 +2248,10 @@ describe('Journey replay camera paths', () => {
         }
 
         state.cameraMode = REPLAY_MARKER_MODE_NAVIGATION
+        state.controller = {duration: 10}
         state.deterministicCameraTransition = {
             startAt: 0,
-            endAt:   1000,
+            endAt:   13000,
         }
         call.cameraViewForSample = vi.fn(() => nominalView)
         call.cameraLookaheadSample = vi.fn(() => ({
@@ -2198,7 +2268,7 @@ describe('Journey replay camera paths', () => {
             progress: 0.5,
             source:   'playback',
             logicalCamera: true,
-            frameTimeMs: 500,
+            frameTimeMs,
         })
 
         expect(call.applyDeterministicCameraTransition).toHaveBeenCalledOnce()
@@ -2206,7 +2276,7 @@ describe('Journey replay camera paths', () => {
         expect(call.applyCameraFrame).not.toHaveBeenCalled()
     })
 
-    it('targets the current marker when Navigation is already outside Z1', () => {
+    it('anticipates the route when Navigation is already outside Z1', () => {
         vi.stubGlobal('lgs', {
             settings: {
                 ui: {
@@ -2260,13 +2330,13 @@ describe('Journey replay camera paths', () => {
         })
 
         expect(call.cameraRecenterFrame).toHaveBeenCalledWith(expect.objectContaining({
-            sample: anchorSample,
+            sample: futureSample,
         }))
         expect(call.applyCameraFrame).toHaveBeenCalledOnce()
         expect(call.recenterCameraToSample).not.toHaveBeenCalled()
     })
 
-    it('keeps the predictive Navigation target aligned with the two-second transition', () => {
+    it('keeps the predictive Navigation target aligned with the three-second transition', () => {
         vi.stubGlobal('lgs', {
             settings: {
                 ui: {
@@ -2332,9 +2402,9 @@ describe('Journey replay camera paths', () => {
         })
 
         expect(lookaheadSeconds).toEqual([
-            2,
+            3,
             REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_LOOKAHEAD_SECONDS,
-            2,
+            3,
         ])
         expect(lookaheadMinimumMeters).toEqual([
             REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS,
@@ -2344,7 +2414,7 @@ describe('Journey replay camera paths', () => {
         expect(REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS).toBe(0)
         expect(call.startDeterministicCameraTransition).toHaveBeenCalledWith(expect.objectContaining({
             sample: futureSample,
-            duration: 2,
+            duration: 3,
         }))
     })
 
@@ -2557,11 +2627,12 @@ describe('Journey replay camera paths', () => {
             source:   'playback',
         })
 
-        expect(call.cameraLookaheadSample).toHaveBeenCalledWith(anchorSample, expect.objectContaining({
+        expect(call.cameraLookaheadSample).toHaveBeenCalledWith(zigzagSample, expect.objectContaining({
             lookaheadSeconds: REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_LOOKAHEAD_SECONDS,
             minimumMeters:    REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS,
         }))
         expect(call.recenterCameraToSample).not.toHaveBeenCalled()
+        expect(call.startDeterministicCameraTransition).not.toHaveBeenCalled()
     })
 
     it('uses one deterministic transition for a predictive-only Navigation correction', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,8 @@
 
 import {logicalCoordinateSegmentsFromTrack, logicalTrackPathFromJourney} from './JourneyReplayLogicalTrackPath'
 import { JourneyReplayTurfPath } from './JourneyReplayTurfPath'
+import {smoothReplayCameraAnchorSample} from './JourneyReplayCameraAnchorSmoothing'
+import {REPLAY_CAMERA_HEADING_MAX_PATH_RATIO} from './JourneyReplayCameraMotionSmoothing'
 
 const LINE_STRING = 'LineString'
 const MULTI_LINE_STRING = 'MultiLineString'
@@ -224,46 +226,6 @@ const cloneSample = sample => sample ? {
 const interpolateValue = (start, end, ratio) => start + ((end - start) * ratio)
 
 /**
- * Resolve the shortest signed angular delta between two headings.
- *
- * @param {number} start - Start heading in radians.
- * @param {number} end - End heading in radians.
- * @returns {number} Shortest signed delta in radians.
- */
-const angularDelta = (start, end) => {
-    if (!Number.isFinite(start) || !Number.isFinite(end)) {
-        return null
-    }
-
-    const fullTurn = Math.PI * 2
-    return ((end - start + Math.PI) % fullTurn + fullTurn) % fullTurn - Math.PI
-}
-
-/**
- * Interpolate between two headings along the shortest angular path.
- *
- * @param {number} start - Starting heading in radians.
- * @param {number} end - Destination heading in radians.
- * @param {number} ratio - Interpolation ratio.
- * @returns {number} Interpolated heading in radians.
- */
-const interpolateHeading = (start, end, ratio) => {
-    const delta = angularDelta(start, end)
-    return delta === null ? start : start + (delta * clamp(ratio, 0, 1))
-}
-
-/**
- * Smooth a normalized transition ratio with a cubic ease-in/ease-out curve.
- *
- * @param {number} ratio - Normalized transition ratio.
- * @returns {number} Smoothed ratio.
- */
-const smoothStep = ratio => {
-    const value = clamp(ratio, 0, 1)
-    return value * value * (3 - (2 * value))
-}
-
-/**
  * Resolve a local geodesic heading between two replay samples.
  *
  * @param {object|null} start - Start sample.
@@ -296,84 +258,6 @@ const headingBetweenSamples = (start, end) => {
     }
 
     return Math.atan2(east, north)
-}
-
-/**
- * Project a geographic sample into a local east/north metric frame.
- *
- * @param {Object} origin - Projection origin.
- * @param {Object} sample - Geographic sample to project.
- * @returns {{x: number, y: number}|null} Local metric coordinates.
- */
-const projectToLocalMeters = (origin, sample) => {
-    const originLongitude = finiteNumber(origin?.longitude)
-    const originLatitude = finiteNumber(origin?.latitude)
-    const longitude = finiteNumber(sample?.longitude)
-    const latitude = finiteNumber(sample?.latitude)
-    if ([originLongitude, originLatitude, longitude, latitude].some(value => value === null)) {
-        return null
-    }
-
-    const radians = Math.PI / 180
-    const earthRadiusMeters = 6_371_008.8
-    const latitudeScale = Math.cos(originLatitude * radians)
-    return {
-        x: (longitude - originLongitude) * radians * earthRadiusMeters * latitudeScale,
-        y: (latitude - originLatitude) * radians * earthRadiusMeters,
-    }
-}
-
-/**
- * Resolve a stable path heading from a spatial window using the beta.2 PCA
- * method, oriented by the future route chord to preserve turn anticipation.
- *
- * @param {Object[]} samples - Ordered samples in the spatial window.
- * @param {Object} current - Current replay sample.
- * @param {Object} future - Future replay sample.
- * @returns {number|null} Stable heading in radians.
- */
-const headingFromWindowSamples = (samples, current, future) => {
-    if (!Array.isArray(samples) || samples.length < 2) {
-        return headingBetweenSamples(current, future)
-    }
-
-    const origin = samples[Math.floor(samples.length / 2)] ?? current
-    const localPoints = samples
-        .map(sample => projectToLocalMeters(origin, sample))
-        .filter(Boolean)
-    if (localPoints.length < 2) {
-        return headingBetweenSamples(current, future)
-    }
-
-    const meanX = localPoints.reduce((sum, point) => sum + point.x, 0) / localPoints.length
-    const meanY = localPoints.reduce((sum, point) => sum + point.y, 0) / localPoints.length
-    let covarianceXX = 0
-    let covarianceXY = 0
-    let covarianceYY = 0
-    localPoints.forEach(point => {
-        const deltaX = point.x - meanX
-        const deltaY = point.y - meanY
-        covarianceXX += deltaX * deltaX
-        covarianceXY += deltaX * deltaY
-        covarianceYY += deltaY * deltaY
-    })
-
-    if (covarianceXX + covarianceYY <= Number.EPSILON) {
-        return headingBetweenSamples(current, future)
-    }
-
-    const axisAngle = 0.5 * Math.atan2(
-        2 * covarianceXY,
-        covarianceXX - covarianceYY,
-    )
-    let heading = Math.atan2(Math.cos(axisAngle), Math.sin(axisAngle))
-    const futureHeading = headingBetweenSamples(current, future)
-    const orientationDelta = angularDelta(heading, futureHeading)
-    if (orientationDelta !== null && Math.abs(orientationDelta) > (Math.PI / 2)) {
-        heading += Math.PI
-    }
-
-    return heading
 }
 
 const interpolateNullableValue = (start, end, ratio) => {
@@ -819,7 +703,11 @@ export class JourneyReplayPathSampler {
      * @param {number} [options.minimumMeters=120] - Minimum metric horizon.
      * @returns {Object|null} Predicted replay sample.
      */
-    lookaheadAtProgress = (progress = 0, {seconds = 1, minimumMeters = 120} = {}) => {
+    lookaheadAtProgress = (progress = 0, {
+        seconds = 1,
+        minimumMeters = 120,
+        maximumMeters = null,
+    } = {}) => {
         const anchor = this.atProgress(progress)
         if (!anchor || this.#samples.length < 2 || this.#totalDistance <= 0) {
             return anchor
@@ -827,6 +715,10 @@ export class JourneyReplayPathSampler {
 
         const safeSeconds = Math.max(0, finiteNumber(seconds) ?? 0)
         const safeMinimumMeters = Math.max(0, finiteNumber(minimumMeters) ?? 0)
+        const maximum = finiteNumber(maximumMeters)
+        const safeMaximumMeters = maximum === null
+            ? Infinity
+            : Math.max(0, maximum)
         const anchorDistance = anchor.distanceFromStart
         const speedProbeMeters = Math.min(
             Math.max(20, safeMinimumMeters),
@@ -842,28 +734,30 @@ export class JourneyReplayPathSampler {
         const localSpeed = timeDeltaSeconds > 0
             ? Math.max(0, (probeDistance - anchorDistance) / timeDeltaSeconds)
             : 0
-        const predictedDistance = anchorDistance + Math.max(
-            safeMinimumMeters,
-            localSpeed * safeSeconds,
+        const predictedDistance = anchorDistance + Math.min(
+            safeMaximumMeters,
+            Math.max(safeMinimumMeters, localSpeed * safeSeconds),
         )
 
         return this.atDistance(Math.min(this.#totalDistance, predictedDistance))
     }
 
     /**
-     * Resolve a stable route heading from a Turf metric window at replay progress.
+     * Resolve an anticipated route heading from a metric path window.
      *
      * @param {number} progress - Normalized replay progress.
      * @param {object} options - Heading prediction options.
      * @param {number} [options.lookaheadSeconds=0] - Future tangent horizon.
      * @param {number} [options.windowSeconds=0] - Chord window used to anticipate turns.
      * @param {number} [options.minimumMeters=120] - Minimum local heading distance.
+     * @param {number|null} [options.maximumMeters=null] - Maximum local heading distance.
      * @returns {number} Heading in radians, clockwise from north.
      */
     headingAtProgress = (progress = 0, {
         lookaheadSeconds = 0,
         windowSeconds = 0,
         minimumMeters = 120,
+        maximumMeters = null,
     } = {}) => {
         const safeLookaheadSeconds = Math.max(0, finiteNumber(lookaheadSeconds) ?? 0)
         const safeWindowSeconds = Math.max(0, finiteNumber(windowSeconds) ?? 0)
@@ -872,6 +766,18 @@ export class JourneyReplayPathSampler {
         if (!anchor) {
             return 0
         }
+
+        const segment = this.#segmentForDistance(anchor.distanceFromStart)
+        const segmentDistance = Math.max(
+            0,
+            (segment?.endDistance ?? this.#totalDistance) - (segment?.startDistance ?? 0),
+        )
+        const segmentMaximumMeters = segmentDistance * REPLAY_CAMERA_HEADING_MAX_PATH_RATIO
+        const requestedMaximumMeters = finiteNumber(maximumMeters)
+        const safeMaximumMeters = requestedMaximumMeters === null
+            ? segmentMaximumMeters
+            : Math.min(segmentMaximumMeters, Math.max(0, requestedMaximumMeters))
+        const headingMinimumMeters = Math.min(safeMinimumMeters, safeMaximumMeters)
 
         if (safeLookaheadSeconds <= 0) {
             const segment = this.#segmentForDistance(anchor.distanceFromStart)
@@ -887,17 +793,15 @@ export class JourneyReplayPathSampler {
 
         const future = this.lookaheadAtProgress(progress, {
             seconds:       safeLookaheadSeconds,
-            minimumMeters: safeMinimumMeters,
+            minimumMeters: headingMinimumMeters,
+            maximumMeters: safeMaximumMeters,
         })
         if (!future) {
             return 0
         }
 
-        // beta.2 used a 400 m spatial window. Keep the horizon metric and
-        // deterministic, while allowing callers to request a smaller window
-        // for short synthetic paths and tests.
         const futureDistance = Math.max(
-            safeMinimumMeters,
+            headingMinimumMeters,
             (future.distanceFromStart ?? 0) - (anchor.distanceFromStart ?? 0),
         )
         const pastWindowRatio = safeLookaheadSeconds > 0 && safeWindowSeconds > 0
@@ -907,19 +811,14 @@ export class JourneyReplayPathSampler {
             0,
             (anchor.distanceFromStart ?? 0) - (futureDistance * pastWindowRatio),
         )
-        const sampleCount = 9
-        const windowSamples = Array.from({length: sampleCount}, (_, index) => {
-            const ratio = index / (sampleCount - 1)
-            return this.atDistance(
-                pastDistance + ((future.distanceFromStart - pastDistance) * ratio),
-            )
-        }).filter(Boolean)
-        const stableHeading = headingFromWindowSamples(windowSamples, anchor, future)
-        if (stableHeading !== null) {
-            return stableHeading
-        }
+        const past = this.atDistance(pastDistance)
 
-        return headingBetweenSamples(anchor, future) ?? 0
+        // A principal axis can rotate arbitrarily when a loop makes both PCA
+        // eigenvalues similar. The metric chord keeps the heading continuous
+        // while preserving the requested anticipation window.
+        return headingBetweenSamples(past, future)
+            ?? headingBetweenSamples(anchor, future)
+            ?? this.headingAtProgress(progress)
     }
 
     /**
@@ -931,6 +830,8 @@ export class JourneyReplayPathSampler {
      * @param {number} progress - Normalized Replay progress.
      * @param {object} options - Crop width and heading anticipation.
      * @param {Function|null} [options.cropZoneWidthMetersForSection] - Stable crop width resolver per candidate.
+     * @param {number|null} [options.maximumMeters=null] - Maximum route-heading lookahead distance.
+     * @param {number} [options.positionSmoothingMeters=0] - Spatial smoothing window derived from Replay duration.
      * @returns {{sample: Object, heading: number, zigzagSimplified: boolean}|null}
      * Camera anchor sample and stable heading.
      */
@@ -940,6 +841,8 @@ export class JourneyReplayPathSampler {
         lookaheadSeconds = 2.5,
         windowSeconds = lookaheadSeconds,
         minimumMeters = 400,
+        maximumMeters = null,
+        positionSmoothingMeters = 0,
     } = {}) => {
         const sample = this.atProgress(progress)
         if (!sample) {
@@ -955,8 +858,12 @@ export class JourneyReplayPathSampler {
         )
         const distance = finiteNumber(sample.distanceFromStart) ?? 0
         const safeMinimumMeters = Math.max(0, finiteNumber(minimumMeters) ?? 400)
-        const anticipationForCropWidth = width => Math.max(
+        const safeMinimumAnticipationMeters = Math.min(
             safeMinimumMeters,
+            REPLAY_CAMERA_MAX_ANTICIPATION_METERS,
+        )
+        const anticipationForCropWidth = width => Math.max(
+            safeMinimumAnticipationMeters,
             Math.min(REPLAY_CAMERA_MAX_ANTICIPATION_METERS, width * 0.1),
         )
         const isInAnticipationRange = (candidate, anticipationMeters) => {
@@ -994,52 +901,58 @@ export class JourneyReplayPathSampler {
         const anticipatedHeading = this.headingAtProgress(progress, {
             lookaheadSeconds,
             windowSeconds,
-            minimumMeters: anticipationMeters,
+            minimumMeters: safeMinimumMeters,
+            maximumMeters,
         })
+        const currentSegment = this.#segmentForDistance(sample.distanceFromStart)
+        const smoothedCameraAnchor = currentSegment
+            ? smoothReplayCameraAnchorSample({
+                sample,
+                smoothingWindowMeters: positionSmoothingMeters,
+                maximumOffsetMeters: cropWidth * 0.25,
+                segmentStartDistance: currentSegment.startDistance,
+                segmentEndDistance: currentSegment.endDistance,
+                cameraZigzagSections: this.#cameraZigzagSections,
+                sampleAtDistance: distance => this.atDistance(distance),
+                cropZoneWidthMetersForSection,
+                fallbackCropWidthMeters: cropWidth,
+            })
+            : {sample, adjusted: false}
 
         if (!section) {
             return {
-                sample,
+                sample: smoothedCameraAnchor.sample,
                 heading: anticipatedHeading,
                 zigzagSimplified: false,
+                cameraAnchorAdjusted: smoothedCameraAnchor.adjusted,
             }
         }
 
-        const start = this.#samples[section.startIndex]
-        const end = this.#samples[section.endIndex]
         const sectionDistance = Math.max(Number.EPSILON, section.endDistance - section.startDistance)
         const isInsideSection = distance >= section.startDistance && distance <= section.endDistance
         const ratio = clamp((distance - section.startDistance) / sectionDistance, 0, 1)
         const position = section.chordPath.positionAtDistance(section.chordPath.totalDistance * ratio)
+        const start = this.#samples[section.startIndex]
+        const end = this.#samples[section.endIndex]
         const altitude = interpolateValue(start.altitude ?? 0, end.altitude ?? 0, ratio)
-        const chordHeading = headingBetweenSamples(start, end) ?? anticipatedHeading
-        const entryStartDistance = Math.max(
-            section.startBoundaryDistance,
-            section.startDistance - anticipationMeters,
-        )
-        const exitEndDistance = Math.min(
-            section.endBoundaryDistance,
-            section.endDistance + anticipationMeters,
-        )
-        const entryDistance = section.startDistance - entryStartDistance
-        const exitDistance = exitEndDistance - section.endDistance
-        const headingEntryRatio = smoothStep(
-            entryDistance > 0 ? (distance - entryStartDistance) / entryDistance : 1,
-        )
-        const headingExitRatio = smoothStep(
-            exitDistance > 0 ? (exitEndDistance - distance) / exitDistance : 1,
-        )
-        const headingBlend = Math.min(headingEntryRatio, headingExitRatio)
-        return {
-            sample: isInsideSection ? {
+        const simplifiedSample = isInsideSection ? {
                 ...sample,
                 longitude: position.longitude,
                 latitude:  position.latitude,
                 altitude,
                 height: altitude,
-            } : sample,
-            heading: interpolateHeading(anticipatedHeading, chordHeading, headingBlend),
+            } : sample
+        const cameraAnchorSample = smoothedCameraAnchor.adjusted
+            ? smoothedCameraAnchor.sample
+            : simplifiedSample
+        return {
+            sample: cameraAnchorSample,
+            // Keep the route heading continuous across separately detected
+            // zigzags. Their camera-only chord should not override or restart
+            // the broader, replay-paced heading window.
+            heading: anticipatedHeading,
             zigzagSimplified: true,
+            cameraAnchorAdjusted: isInsideSection || smoothedCameraAnchor.adjusted,
             zigzagAmplitudeMeters: section.amplitudeMeters,
             zigzagAnticipationMeters: anticipationMeters,
         }
