@@ -35,6 +35,7 @@ export class ReplayVideoRenderSession {
     #definition = null
     #renderPlan = null
     #frameResolver = null
+    #preparedFrameSampleResolver = null
 
     constructor({
                     controller = null,
@@ -128,6 +129,16 @@ export class ReplayVideoRenderSession {
     }
 
     /**
+     * Attach a resolver for route samples prepared progressively in a worker.
+     *
+     * @param {Function|null} resolver - Resolves a route sample for one frame.
+     * @returns {void}
+     */
+    setPreparedFrameSampleResolver = resolver => {
+        this.#preparedFrameSampleResolver = typeof resolver === 'function' ? resolver : null
+    }
+
+    /**
      * Render a single frame.
      *
      * The session resolves the frame, seeks the replay, refreshes the sample,
@@ -139,7 +150,11 @@ export class ReplayVideoRenderSession {
      */
     renderFrame = async (frameIndex = 0, options = {}) => {
         const frame = this.#timeline.frameAtIndex(frameIndex)
-        await this.#seek?.(frame.progress, frame, options)
+        const frameOptions = Object.assign({}, options)
+        if (this.#preparedFrameSampleResolver) {
+            frameOptions.sample = await this.#preparedFrameSampleResolver(frameIndex, frame)
+        }
+        await this.#seek?.(frame.progress, frame, frameOptions)
         const intent = await this.#frameResolver.resolveFrame({
             frame,
             phase: options.phase,
@@ -148,6 +163,7 @@ export class ReplayVideoRenderSession {
             source: this.#renderMode,
             cameraPose: options.cameraPose,
             cameraFrame: options.cameraFrame,
+            sample: frameOptions.sample,
             resolved: options.intentResolved,
         })
         const nextSample = intent.replay?.sample ?? null

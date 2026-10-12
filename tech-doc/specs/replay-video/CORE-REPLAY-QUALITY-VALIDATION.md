@@ -123,6 +123,8 @@ narrow crop, and at least one high-resolution output profile.
 - Keep tile-cache preparation, prewarming, and bounded per-frame tile waits.
 - Recheck readiness after a synchronous ready-view render; keep missing-tile
   waits asynchronous and preserve normal recording render scheduling.
+- Use the same ordered worker-prepared journey samples in Dry run and Record;
+  verify frames start after the first batch without waiting for the full route.
 - Do not allocate a working capture canvas, wait for widget bitmap readiness,
   capture widget pixels, compose images, probe codecs, or create encoded output.
 - Publish progress and frame counts without a monitor image preview.

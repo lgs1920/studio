@@ -102,6 +102,10 @@ const REPLAY_TILE_PREWARM_MAX_SAMPLES = 3
 const REPLAY_EXPORT_CODEC_KEEPALIVE_INTERVAL_MS = 5000
 const REPLAY_EXPORT_CODEC_KEEPALIVE_TIMESTAMP_STEP_SECONDS = 0.000001
 const REPLAY_DRY_RUN_BROWSER_YIELD_INTERVAL_MS = 50
+const REPLAY_FRAME_SAMPLE_WORKER_MIN_FRAME_COUNT = 120
+const REPLAY_FRAME_SAMPLE_WORKER_MAX_FRAME_COUNT = 36000
+const REPLAY_FRAME_SAMPLE_WORKER_MAX_ROUTE_SAMPLE_COUNT = 50000
+const REPLAY_FRAME_SAMPLE_WORKER_TIMEOUT_MS = 15000
 const EXPORT_PROGRESS_UPDATE_FRAME_STEP = 1
 const EXPORT_PROGRESS_FRAME_SAMPLE_WINDOW = 30
 
@@ -291,6 +295,185 @@ const prewarmReplayScenePrefix = async ({
         replayVideoTraceDebug('export.tile-prewarm.end', {
             prewarmed,
         })
+    }
+}
+
+/**
+ * Create a worker client that resolves route samples progressively as export frames render.
+ *
+ * @param {object} options - Worker preparation options.
+ * @param {object|null} options.sampler - Journey path sampler.
+ * @param {object|null} options.timeline - Canonical video timeline.
+ * @param {AbortSignal|null} options.signal - Optional cancellation signal.
+ * @returns {{resolveSampleForFrame: Function, dispose: Function, getProcessingMillis: Function}|null} Worker client.
+ */
+const createReplayFrameSampleWorkerClient = ({sampler = null, timeline = null, signal = null} = {}) => {
+    const routeSamples = sampler?.samples
+    if (typeof Worker !== 'function'
+        || !Array.isArray(routeSamples)
+        || routeSamples.length < 2
+        || routeSamples.length > REPLAY_FRAME_SAMPLE_WORKER_MAX_ROUTE_SAMPLE_COUNT
+        || !(Number(sampler?.totalDistance) > 0)
+        || !timeline) {
+        return null
+    }
+
+    const frameTimeline = new ReplayFrameTimeline({
+        durationMillis: timeline.durationMillis,
+        fps: timeline.fps,
+        direction: 1,
+    })
+    if (frameTimeline.frameCount < REPLAY_FRAME_SAMPLE_WORKER_MIN_FRAME_COUNT
+        || frameTimeline.frameCount > REPLAY_FRAME_SAMPLE_WORKER_MAX_FRAME_COUNT) {
+        return null
+    }
+
+    const batchSize = 120
+    const lookaheadFrames = 24
+    const samplesByIndex = new Map()
+    const waitersByIndex = new Map()
+    let worker = null
+    let timeoutId = null
+    let nextIndexToRequest = 0
+    let requestedThroughIndex = -1
+    let processingMillis = 0
+    let workerFailed = false
+    let disposed = false
+
+    /** Resolve the progress associated with one canonical export frame. */
+    const progressAtIndex = index => {
+        const frame = frameTimeline.frameAtIndex(index)
+        const phase = resolveReplayVideoFramePhase({timeline, frame})
+        return phase?.kind === 'replay'
+            ? phase.progress ?? frame.progress
+            : phase?.anchorProgress ?? phase?.progress ?? frame.progress
+    }
+
+    /** Resolve a frame on the main thread after worker failure or cancellation. */
+    const fallbackSample = index => sampler.atProgress(progressAtIndex(index))
+
+    /** Resolve any frame waiters covered by a returned batch. */
+    const resolveWaiters = (index, sample) => {
+        const waiters = waitersByIndex.get(index) ?? []
+        waitersByIndex.delete(index)
+        waiters.forEach(resolve => resolve(sample))
+    }
+
+    /** Stop the worker and settle queued requests through the main-thread sampler. */
+    const failWorker = () => {
+        if (workerFailed) {
+            return
+        }
+        workerFailed = true
+        clearTimeout(timeoutId)
+        timeoutId = null
+        worker?.terminate()
+        worker = null
+        waitersByIndex.forEach((waiters, index) => {
+            const sample = fallbackSample(index)
+            waiters.forEach(resolve => resolve(sample))
+        })
+        waitersByIndex.clear()
+    }
+
+    /** Request the next contiguous batch when playback has entered its lookahead. */
+    const requestNextBatch = () => {
+        if (!worker || workerFailed || disposed || nextIndexToRequest >= frameTimeline.frameCount
+            || nextIndexToRequest > requestedThroughIndex) {
+            return
+        }
+        const startIndex = nextIndexToRequest
+        const count = Math.min(batchSize, frameTimeline.frameCount - startIndex)
+        const progresses = Array.from({length: count}, (_, offset) => progressAtIndex(startIndex + offset))
+        nextIndexToRequest += count
+        try {
+            clearTimeout(timeoutId)
+            timeoutId = setTimeout(failWorker, REPLAY_FRAME_SAMPLE_WORKER_TIMEOUT_MS)
+            worker.postMessage({type: 'batch', startIndex, progresses})
+        }
+        catch {
+            failWorker()
+        }
+    }
+
+    /** Handle a completed batch, then request another only when rendering needs it. */
+    const handleMessage = event => {
+        const {type, startIndex, samples} = event.data ?? {}
+        if (type !== 'batch' || !Array.isArray(samples)) {
+            failWorker()
+            return
+        }
+        clearTimeout(timeoutId)
+        timeoutId = null
+        processingMillis += Number(event.data?.processingMillis) || 0
+        samples.forEach((sample, offset) => {
+            const index = Number(startIndex) + offset
+            samplesByIndex.set(index, sample)
+            resolveWaiters(index, sample)
+        })
+        requestNextBatch()
+    }
+
+    /** Resolve one render frame, requesting ahead by a small bounded window. */
+    const resolveSampleForFrame = (frameIndex, frame) => {
+        const index = Math.max(0, Math.min(frameTimeline.frameCount - 1, Math.trunc(Number(frameIndex) || 0)))
+        const cachedSample = samplesByIndex.get(index)
+        if (cachedSample) {
+            samplesByIndex.delete(index)
+            requestedThroughIndex = Math.max(requestedThroughIndex, index + lookaheadFrames)
+            requestNextBatch()
+            return Promise.resolve(cachedSample)
+        }
+        if (workerFailed || disposed || !worker) {
+            return Promise.resolve(sampler.atProgress(Number.isFinite(frame?.progress) ? frame.progress : progressAtIndex(index)))
+        }
+        requestedThroughIndex = Math.max(requestedThroughIndex, index + lookaheadFrames)
+        const pending = new Promise(resolve => {
+            const waiters = waitersByIndex.get(index) ?? []
+            waiters.push(resolve)
+            waitersByIndex.set(index, waiters)
+        })
+        requestNextBatch()
+        return pending
+    }
+
+    /** Terminate worker resources after export completion. */
+    const dispose = () => {
+        disposed = true
+        clearTimeout(timeoutId)
+        timeoutId = null
+        worker?.terminate()
+        worker = null
+        waitersByIndex.forEach((waiters, index) => {
+            const sample = fallbackSample(index)
+            waiters.forEach(resolve => resolve(sample))
+        })
+        waitersByIndex.clear()
+        signal?.removeEventListener('abort', failWorker)
+    }
+
+    try {
+        worker = new Worker(new URL('./ReplayFrameSamples.worker.js', import.meta.url), {type: 'module'})
+        worker.addEventListener('message', handleMessage)
+        worker.addEventListener('error', failWorker)
+        worker.postMessage({type: 'initialize', samples: routeSamples, totalDistance: sampler.totalDistance})
+        signal?.addEventListener('abort', failWorker, {once: true})
+        if (signal?.aborted) {
+            failWorker()
+        }
+        else {
+            requestedThroughIndex = batchSize - 1
+            requestNextBatch()
+        }
+    }
+    catch {
+        failWorker()
+    }
+
+    return {
+        resolveSampleForFrame,
+        dispose,
+        getProcessingMillis: () => processingMillis,
     }
 }
 
@@ -1667,9 +1850,9 @@ export const prepareReplayDeferredExportPlan = ({
             fps,
             direction: 1,
         },
-        seek: (progress, frame = null) => {
+        seek: (progress, frame = null, options = {}) => {
             const phase = resolveReplayVideoFramePhase({timeline: videoTimeline, frame})
-            return controller?.seek?.(phase.progress)
+            return controller?.seek?.(phase.progress, options.sample)
         },
         resolveSample: frame => {
             const phase = resolveReplayVideoFramePhase({timeline: videoTimeline, frame})
@@ -1946,6 +2129,11 @@ export const runReplayDeferredMp4Export = async ({
     if (!exporter || !plan) {
         throw new Error('ReplayDeferredExporter could not prepare an export plan.')
     }
+    const replayFrameSampleWorker = createReplayFrameSampleWorkerClient({
+        sampler: controller?.sampler ?? null,
+        timeline: plan.videoTimeline,
+        signal,
+    })
     if (!isDryRun && plan.runtime?.warmPromise) {
         try {
             await plan.runtime.warmPromise
@@ -2024,6 +2212,7 @@ export const runReplayDeferredMp4Export = async ({
     const exportStartedAt = runtimeNow()
     const monitorMode = isDryRun ? 'dry-run' : 'export'
     const dryRunTimings = {cameraTraceMillis: 0, widgetStateMillis: 0, tileReadinessMillis: 0}
+    let replayFrameSampleWorkerMillis = 0
     const flushReplayRenderTarget = () => {
         const scene = replayMode?.cesiumScene?.()
                       ?? globalThis.lgs?.scene
@@ -2248,6 +2437,10 @@ export const runReplayDeferredMp4Export = async ({
             signal,
         })
 
+        if (replayFrameSampleWorker) {
+            exporter.session?.setPreparedFrameSampleResolver?.(replayFrameSampleWorker.resolveSampleForFrame)
+        }
+
         const result = await exporter.exportMp4({
             signal,
             shouldStop: () => plan.runtime?.exportStopRequested === true,
@@ -2293,6 +2486,7 @@ export const runReplayDeferredMp4Export = async ({
                         plan,
                         replay,
                         controller,
+                        resolvedSample: frame.sample,
                     }) ?? frameSample
                 }
                 else {
@@ -2522,6 +2716,7 @@ export const runReplayDeferredMp4Export = async ({
             const totalMillis = Math.max(0, runtimeNow() - exportStartedAt)
             const timings = {
                 ...dryRunTimings,
+                samplePreparationWorkerMillis: replayFrameSampleWorker?.getProcessingMillis?.() ?? replayFrameSampleWorkerMillis,
                 frameCount: renderedFrameCount,
                 totalMillis,
                 otherMillis: Math.max(0, totalMillis - dryRunTimings.cameraTraceMillis
@@ -2533,6 +2728,7 @@ export const runReplayDeferredMp4Export = async ({
                 'Camera and trace': Math.round(timings.cameraTraceMillis),
                 'Widget state': Math.round(timings.widgetStateMillis),
                 'Tile readiness': Math.round(timings.tileReadinessMillis),
+                'Route sample prep (worker CPU)': Math.round(timings.samplePreparationWorkerMillis),
                 'Preparation, frame resolution, UI yields and pauses': Math.round(timings.otherMillis),
                 Total: Math.round(timings.totalMillis),
             })
@@ -2564,6 +2760,7 @@ export const runReplayDeferredMp4Export = async ({
         }
     }
     finally {
+        replayFrameSampleWorker?.dispose?.()
         stopReplayRecordingMonitor()
         for (const mirror of captureMirrors) {
             mirror.setFrameDriven(false)

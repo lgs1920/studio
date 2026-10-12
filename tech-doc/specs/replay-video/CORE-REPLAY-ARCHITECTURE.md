@@ -47,10 +47,15 @@ frames, and estimated remaining time without copying a preview image.
 Video quality and FPS preferences remain unchanged for the next recording.
 Ready views can render synchronously in Dry run to avoid waiting for the next
 browser animation frame. Readiness is checked again after rendering; missing
-tiles retain asynchronous, cancellable waits. Recording retains its existing
-render scheduling. Completed Dry runs report console timing totals for camera
-and trace updates, widget-state publication, tile readiness, and other work
-(including preparation, frame resolution, UI yields, and pauses).
+tiles retain asynchronous, cancellable waits. Record and Dry run request
+ordered route samples from a module worker in small batches while the scene is
+prepared and frames render, then apply each sample at its matching frame. The
+first batch gates the first rendered frame; later batches are requested
+progressively. Cesium camera changes and tile
+readiness remain on the main thread. Completed Dry runs report console timing
+totals for camera and trace updates, widget-state publication, tile readiness,
+and other work (including preparation, frame resolution, UI yields, and
+pauses), along with worker CPU time for route-sample preparation.
 Dry run validates Replay execution, not widget capture fidelity.
 
 ## Normal map and Replay camera ownership

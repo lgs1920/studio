@@ -187,20 +187,14 @@ import {
 } from './JourneyReplaySessionShared'
 
 /**
- * Ensure enabled Expert Replay diagnostics are visible before linked playback
- * or export starts, and remove any stale overlay during Simple Replay.
+ * Ensure enabled Replay diagnostics are visible before linked playback or
+ * export starts.
  *
  * @param {object} mode - Replay mode.
  * @returns {boolean} Whether Replay diagnostics were enabled.
  */
 const ensureReplayVideoDiagnosticsOverlay = mode => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-    if (isJourneyReplayBasicMode()) {
-        call.removeToleranceZoneOverlay()
-        call.setToleranceZoneOverlayVisible(false)
-        return false
-    }
-
     if (!call.isReplayVideoLinked()) {
         return false
     }
@@ -1059,7 +1053,12 @@ export const endReplayCameraExport = (mode, ) => {
         state.logicalCameraTrajectory = false
     }
 
-export const renderReplayExportFrame = async (mode, {phase = null, frame = null, controller = mode[JOURNEY_REPLAY_INTERNAL_STATE].controller} = {}) => {
+export const renderReplayExportFrame = async (mode, {
+    phase = null,
+    frame = null,
+    controller = mode[JOURNEY_REPLAY_INTERNAL_STATE].controller,
+    resolvedSample = undefined,
+} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         const activeController = controller ?? state.controller
@@ -1071,7 +1070,7 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
             state.renderingReplayExportFrame = true
             let sample = null
             try {
-                sample = activeController?.seek?.(progress)
+                sample = activeController?.seek?.(progress, resolvedSample)
                          ?? state.sampler?.atProgress?.(progress)
                          ?? activeController?.currentSample?.()
                          ?? null
@@ -1135,7 +1134,7 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
         state.renderingReplayExportFrame = true
         let sample = null
         try {
-            sample = activeController?.seek?.(anchorProgress)
+            sample = activeController?.seek?.(anchorProgress, resolvedSample)
                      ?? state.sampler?.atProgress?.(anchorProgress)
                      ?? activeController?.currentSample?.()
                      ?? null

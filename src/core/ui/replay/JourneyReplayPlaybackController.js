@@ -377,12 +377,12 @@ export class JourneyReplayPlaybackController {
         return sample
     }
 
-    seek = (progress) => {
+    seek = (progress, resolvedSample = undefined) => {
         this.#progress = clamp(Number(progress) || 0, 0, 1)
         if (this.#running && !this.#paused) {
             this.#startedAt = this.#now() - this.#elapsedFromProgress(this.#progress) - this.#pauseDuration
         }
-        const sample = this.currentSample()
+        const sample = resolvedSample === undefined ? this.currentSample() : resolvedSample
         this.#syncStore(sample, {force: true})
         this.#emit(REPLAY_EVENT_UPDATE, sample, 'scrub')
         return sample

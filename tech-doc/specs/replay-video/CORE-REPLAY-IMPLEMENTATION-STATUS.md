@@ -70,7 +70,9 @@ Simple/Expert support is present but incomplete:
 - Opt-in Simple Replay Dry run over the complete deterministic timeline, with
   camera/trace/widget-state updates, tile prewarming and bounded tile readiness.
   It skips widget bitmap capture, image composition, and media output; its
-  compact monitor reports progress and frame counts without a preview.
+  compact monitor reports progress and frame counts without a preview. Record
+  and Dry run share worker-prepared route samples in frame order, with small
+  batches allowing frame rendering to start before the full route is sampled.
 - Versioned replay definition, render plan, frame intent, and frame result
   contracts.
 - Shared frame resolution and publication boundaries for Replay playback,
