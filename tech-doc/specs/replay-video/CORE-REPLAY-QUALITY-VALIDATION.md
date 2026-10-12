@@ -3,7 +3,7 @@
 Status: validation contract for interactive Replay and deterministic Replay
 video export
 
-Date: 2026-08-24
+Date: 2026-10-12
 
 ## Purpose
 
@@ -47,8 +47,39 @@ narrow crop, and at least one high-resolution output profile.
 - Start clip endpoints equal the replay-entry command.
 - Stop clips preserve continuity and land on their declared endpoint.
 - Navigation and Dynamic crop decisions are deterministic for the same inputs.
+- Dynamic tracking anticipates a sustained trigger-zone exit from two future
+  projections before the marker reaches the boundary. Navigation confirms its
+  predictive collision with a 3-second base transition horizon. Live tolerance
+  and visibility corrections use a cubic ease-in/out flight of at least 3
+  seconds, preserve a longer configured Ease duration, and do not restart while
+  the same transition remains active. Deterministic Simple Replay capture must
+  interpolate hard Navigation corrections over at least 3 replay-time seconds
+  rather than applying them as an immediate camera frame.
+- Untimed routes and GPX recordings spanning many hours use the selected Replay
+  duration for prediction. Confirmation samples lie after the predicted exit.
+- Exercise `renderReplayExportFrame` itself and verify it invokes camera-anchor
+  smoothing. With a real Cesium Camera, inspect every frame of a correction:
+  the first frame preserves position and orientation, subsequent movement is
+  gradual, and the canonical adapter preserves the interpolated aim.
+- Explicit seeks cancel transitions and apply the requested sample without
+  playback anticipation. Camera smoothing bounds use rendered terrain height.
+- Validate current-marker containment during every Navigation transition and
+  held pose at low, medium and high prepared heights, using a long untimed
+  10-second route and an offset crop smaller than the canvas. Anticipation must
+  respond to the height/pitch-derived ground span and route speed. Crop checks
+  use CSS canvas dimensions and origin even at high drawing-buffer DPR. Safety
+  translation must preserve orientation, frustum and camera height and must
+  never qualify a future or smoothed marker in place of the rendered marker.
+- Navigation holds the same applied pose between corrections in live playback
+  and export. Check the last three seconds image by image: final alignment must
+  be eased and retain the exact endpoint, including reverse playback. Absolute
+  video time containing start clips does not imply Replay completion.
 - Replay camera height, pitch, and heading/offset resolve to the expected
   target-relative camera range and angle in both Simple and Expert.
+- Long untimed journeys remain smooth at both short and ordinary Replay
+  durations. Check per-frame camera-anchor movement and heading, confirm the
+  smoothing-pass offset stays within one quarter of the projected crop width,
+  and confirm the trace and marker remain on the unmodified route sample.
 - Each product export frame applies its camera command to the main Studio
   viewer before the viewer canvas is copied into the output frame.
 - The export camera does not come from a second Cesium viewer or a stale
@@ -85,12 +116,30 @@ narrow crop, and at least one high-resolution output profile.
 
 ## Required visual validation
 
+### Simple Replay Dry run
+
+- Traverse every configured logical frame and start/stop phase with the normal
+  camera, trace, and published widget state.
+- Keep tile-cache preparation, prewarming, and bounded per-frame tile waits.
+- Recheck readiness after a synchronous ready-view render; keep missing-tile
+  waits asynchronous and preserve normal recording render scheduling.
+- Do not allocate a working capture canvas, wait for widget bitmap readiness,
+  capture widget pixels, compose images, probe codecs, or create encoded output.
+- Publish progress and frame counts without a monitor image preview.
+- Preserve pause, cancellation, and terminal camera/scene restoration.
+- Visually inspect a real Dry run with imagery and terrain/3D Tiles before
+  declaring its scene appearance and completion/cancellation cleanup validated.
+
+### Video export
+
 For every change affecting camera, trace, clips, readiness, crop, overlays,
 render hosts, or encoding:
 
 1. generate a real deferred-export video from an applicable reference journey;
 2. inspect trace visibility and progression;
-3. inspect camera movement and phase transitions;
+3. inspect camera movement and phase transitions, comparing a 10-second Replay
+   of a long untimed route with a normal-duration Replay and reviewing tight
+   turns and elevation changes at both speeds;
 4. inspect first and final frames;
 5. inspect terrain and 3D Tiles replacement or missing-detail artifacts;
 6. record output dimensions, frame count, duration, export time, and browser;

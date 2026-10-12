@@ -51,6 +51,46 @@ Preserve these boundaries:
   or infer Replay settings from that normal view. Playback saves the current normal view before applying the configured
   Replay pose, then restores that view and its Cesium reference frame on every terminal path. Keep the normal
   return snapshot separate from the Replay entry pose and export context.
+- Keep camera-motion smoothing separate from the journey sample used by the
+  trace, marker, visibility checks, and crop progression. Scale heading
+  anticipation and the short camera-anchor smoothing window from Replay
+  duration, and cap the smoothing-pass offset to one quarter of the active
+  projected crop width. Preserve the independent tight-zigzag rule: replace a
+  camera-only path section with a chord only when its cross-track amplitude is
+  below half the projected crop width. Test long untimed journeys at short and
+  ordinary durations, then visually inspect a real Replay export.
+  Dynamic tracking must confirm a sustained trigger-zone exit with two future
+  projections and start correcting before the marker reaches the boundary.
+  Navigation must preserve its predictive collision check with a 3-second
+  base transition horizon. Live tolerance and visibility corrections need a
+  cubic ease-in/out flight of at least 3 seconds and must preserve any longer
+  active Ease duration without restarting the same transition on every frame.
+  Deterministic Simple Replay must interpolate hard Navigation corrections on
+  replay time for at least 3 seconds instead of applying an immediate camera frame.
+  Convert tracking lookahead seconds through the configured Replay duration,
+  never GPX recording speed; untimed routes must still anticipate. Confirm a
+  predicted exit with a sample after the prediction. Verify smoothing through
+  the production `renderReplayExportFrame` boundary, including its explicit
+  source. A three-second position path is insufficient if its orientation or
+  canonical Cesium conversion immediately looks at the final target: preserve
+  the transient interpolated aim and test every frame with a real Cesium Camera.
+  Keep tracking corrections direct with exact endpoints, retain clip path
+  policies, and distinguish explicit scrubs from playback updates.
+  Navigation export must hold its applied pose between corrections just like
+  live playback. Do not undo a correction by reapplying the nominal pose each
+  frame. Ease into the exact final pose during the last three Replay seconds;
+  test the penultimate and last frames rather than snapping an unfinished
+  transition. Use Replay progress and direction for completion, not clip-offset
+  video timestamps or GPX recording duration.
+  Keep normal tracking and clip transition timing independent.
+  Include prepared Replay height, rendered target altitude, pitch, frustum,
+  crop width and route speed in tracking anticipation. Keep current-marker crop
+  checks active during transitions and held Navigation poses. A future target
+  cannot qualify the current marker. If the eased candidate leaves the crop,
+  translate it minimally without resetting its orientation or changing zoom.
+  Project with full CSS canvas dimensions and its origin, not crop dimensions
+  or physical drawing-buffer pixels. Test a long untimed 10-second route at
+  multiple zoom levels with an offset crop, checking every actual Camera pose.
   During video preparation only, explicit mouse tilt and zoom on the map are Replay pitch and height inputs. Compare against gesture-start values, wait for pending wheel movement to settle, and commit the final pose to the active Journey before Record. Flush its debounced database write, then verify playback and export resolve that same Journey pose rather than stale runtime defaults. Preserve the cone angle. Constant altitude stores absolute prepared height and ground offset stores height minus the rendered Replay target height. Automatic camera events, unchanged gestures, playback/capture, and ordinary map navigation never persist Replay configuration. Suspend normal
   map persistence while Replay borrows its camera and reject overlapping async
   reads. Validate public drawer refresh, timeline seek, start, pause, resume, stop,

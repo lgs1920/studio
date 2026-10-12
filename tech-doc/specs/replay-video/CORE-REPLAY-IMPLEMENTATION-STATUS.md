@@ -2,7 +2,7 @@
 
 Status: current implementation inventory
 
-Date: 2026-10-10
+Date: 2026-10-12
 
 ## Purpose
 
@@ -67,6 +67,10 @@ Simple/Expert support is present but incomplete:
 
 ## Implemented on `refactor/replay-architecture`
 
+- Opt-in Simple Replay Dry run over the complete deterministic timeline, with
+  camera/trace/widget-state updates, tile prewarming and bounded tile readiness.
+  It skips widget bitmap capture, image composition, and media output; its
+  compact monitor reports progress and frame counts without a preview.
 - Versioned replay definition, render plan, frame intent, and frame result
   contracts.
 - Shared frame resolution and publication boundaries for Replay playback,
@@ -103,11 +107,47 @@ Simple/Expert support is present but incomplete:
 - Crop-aware isolated export camera frustums and readiness identity for 2D,
   terrain, and 3D Tiles capture.
 - Frame-accurate export trace updates and deterministic Navigation camera updates.
-- Shared Replay camera-heading anticipation for Simple and Expert playback and
-  export. Simple has a minimum Ease of `0.3`; Expert uses its saved Ease. The
-  sampler replaces tight alternating turns with a camera-only chord when their
-  cross-track spread is below half the projected crop width. Trace, marker, and
-  visibility constraints continue to use the original route sample.
+- Shared Replay camera-motion smoothing for Simple and Expert playback and
+  export. Heading anticipation and a short camera-anchor smoothing window scale
+  with Replay duration. The smoothing-pass offset stays within one quarter of
+  the projected crop width; the trace, marker, and visibility constraints use
+  the original route sample. Tight alternating turns still use the separate
+  camera-only chord rule when their cross-track spread is below half the
+  projected crop width. Simple has a minimum Ease of `0.3`; Expert uses its
+  saved Ease. Long untimed journeys at short playback durations still need
+  visual export validation.
+- Dynamic tracking confirms a sustained exit with two future route projections
+  and starts its correction before the marker reaches the trigger boundary.
+  Navigation retains its confirmed predictive collision check with a
+  3-second base transition horizon. Live tolerance and visibility corrections
+  use a cubic ease-in/out camera flight of at least 3 seconds, preserving any
+  longer duration from the active camera Ease. Deterministic Simple Replay
+  capture interpolates hard Navigation corrections for at least 3 replay-time
+  seconds. Normal frame tracking and clip timing keep their existing behavior.
+- Tracking anticipation uses the selected Replay duration for both timed and
+  untimed GPX routes. Navigation confirms beyond its predicted exit. Production
+  export invokes camera-anchor smoothing explicitly. Navigation transitions
+  interpolate orientation through the canonical Cesium command adapter instead
+  of rotating to the final target on their first frame. Real-Cesium-camera
+  regression tests inspect every frame of a three-second correction; real video
+  validation remains pending while the automated browser cannot create WebGL.
+- Navigation capture preserves its held camera pose between corrections and
+  reserves the final three Replay seconds for a smooth exact endpoint. Camera
+  timing follows Replay progress independently of GPX recording duration and
+  absolute clip-offset timestamps. A numerical run of the supplied 9,566-point,
+  178.7 km untimed route at 30 FPS measured maximum direction changes of 0.67
+  degrees per sample for a 10-second Replay and 0.75 degrees for a 30-second
+  Replay with flat terrain, height 3454 m, pitch -30 degrees, and angle 65 degrees.
+  This camera-only measurement is not a rendered video validation.
+- Crop containment remains active through Navigation transitions and held
+  poses. Tracking anticipation now includes the Replay height/pitch-derived
+  visible ground span and route speed. Candidate projections distinguish the
+  full CSS canvas from an offset crop. Safety corrections translate without
+  changing orientation, frustum or geodetic height. A camera-only numerical
+  check of the 9,566-point reference route at heights 539, 3454 and 7000 m,
+  pitch -30 degrees, and an offset 640-by-480 crop inside a 1000-by-800 canvas
+  found no off-crop marker positions at either 10 or 30 seconds and 30 FPS.
+  This is not rendered Dry run or video validation.
 - Widget buttons remain interactive during ordinary Replay playback. Replay
   no longer applies the visual-recording input lock to every widget; crop
   framing and layout interaction policies remain in effect.
@@ -145,6 +185,7 @@ subject to the validation gates below.
 | Status | Target | Work item | Detailed specification |
 | --- | --- | --- | --- |
 | PARTIAL / TODO | 1.0.0 | Complete synchronized replay-start camera editing while preserving the implemented canonical camera and clip continuity | [Start camera editor](../../todo/CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md) |
+| PARTIAL / TODO | 1.0.0 | Validate Simple Replay Dry run visually on a real reference journey and confirm completion and cancellation cleanup in a WebGL browser | [Dry run issue #533](https://github.com/lgs1920/studio/issues/533) |
 | TODO | 1.0.0 | Validate isolated Replay export on fixed imagery, terrain, and 3D Tiles journeys; prove camera parity, resource teardown, and visual quality | [Replay quality validation](CORE-REPLAY-QUALITY-VALIDATION.md) |
 | IMPLEMENTED | 1.0.0 | Deliver linked Replay preparation as a compact controlled Timeline preview | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
 | PARTIAL / TODO | 1.0.0 follow-up | Connect remaining Timeline domain commands, Action Mode, clip double-click navigation, and persisted visibility/order changes | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |

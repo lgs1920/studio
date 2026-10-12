@@ -2,7 +2,7 @@
 
 Status: current implementation inventory; see the implementation status for known gaps
 
-Date: 2026-10-11
+Date: 2026-10-12
 
 ## Purpose
 
@@ -34,6 +34,24 @@ safety adjustment leaves the persisted altitude and altitude mode unchanged.
 Start/stop clips may define their own camera movement.
 Completed videos open in the standard preview and sharing dialog.
 `ReplayMediaCapture` handles screenshots and completed-media handoff.
+
+Simple Replay offers an opt-in Dry run preference in the video settings popup.
+It traverses the same fixed-timestamp timeline, including start and stop clips,
+and applies the same camera, trace, and logical widget state. Tile prewarming
+and bounded per-frame tile readiness remain enabled according to the configured
+readiness policy. Dry run skips widget capture readiness, bitmap capture,
+output-canvas composition, codec selection, and media handoff. Widgets consume
+published state through normal React batching because no capture reads their
+pixels. The monitor displays an integer progress percentage, processed/total
+frames, and estimated remaining time without copying a preview image.
+Video quality and FPS preferences remain unchanged for the next recording.
+Ready views can render synchronously in Dry run to avoid waiting for the next
+browser animation frame. Readiness is checked again after rendering; missing
+tiles retain asynchronous, cancellable waits. Recording retains its existing
+render scheduling. Completed Dry runs report console timing totals for camera
+and trace updates, widget-state publication, tile readiness, and other work
+(including preparation, frame resolution, UI yields, and pauses).
+Dry run validates Replay execution, not widget capture fidelity.
 
 ## Normal map and Replay camera ownership
 
@@ -147,6 +165,60 @@ terrain visibility, pitch correction, and transitions. Canonical
 clip boundaries.
 `ReplayCesiumCameraAdapter` is the deterministic Cesium application boundary.
 
+Camera motion uses Replay duration to scale route-heading anticipation and a
+short spatial smoothing window for the camera-only anchor. That smoothing pass
+caps its offset at one quarter of the currently projected crop width. It does
+not change the canonical route sample used by the trace, marker, visibility
+checks, or crop progression. Tight-zigzag chord simplification remains a
+separate camera-only rule and applies only when the section's cross-track
+amplitude is below half of the projected crop width.
+
+Live Dynamic tracking predicts a sustained exit from its trigger zone using two
+future route projections, then begins the correction before the marker reaches
+the boundary. Navigation keeps its confirmed predictive collision check with a
+3-second base transition horizon. Live tolerance and visibility corrections
+use a cubic ease-in/out camera flight lasting at least 3 seconds. Preserve
+any longer duration selected by the active camera Ease. Deterministic Simple
+Replay capture interpolates hard Navigation corrections on replay time for at
+least 3 seconds instead of applying an immediate camera frame. This correction
+timing does not change clip timing.
+
+Tracking lookahead converts seconds to progress using the configured Replay
+duration, including for untimed GPX routes. GPX recording speed does not define
+camera anticipation. Navigation confirms a predicted exit with a later sample
+beyond that prediction, rather than a sample closer to the current marker.
+The production export supplies its `replay-export` source so camera-anchor
+smoothing runs on recorded frames as well as live playback. Crop-width limits
+use rendered terrain target height.
+
+Tracking adaptation also compares the distance traversed during the transition
+with the visible ground span. That span derives from the prepared Replay
+height, rendered target altitude, pitch, camera frustum and crop-to-canvas ratio.
+The same duration therefore anticipates earlier at a tighter zoom. Crop
+projections retain the full canvas CSS dimensions and origin, independently of
+the smaller crop and physical drawing-buffer pixel density.
+
+Every Navigation update qualifies the current, unmodified marker against the
+crop, including while a three-second transition is active or a pose is held.
+If necessary, a minimal horizontal translation places it at the inner crop
+margin. This final safety correction preserves the interpolated orientation,
+frustum and geodetic camera height rather than rotating instantly or zooming out.
+Anticipated route samples never replace the real marker for this containment
+check. The path endpoints remain exact when they already contain the marker.
+
+Navigation corrections use direct paths with exact position endpoints and
+quaternion interpolation of direction and up. Their canonical command encodes
+the transient interpolated aim instead of forcing an immediate look-at toward
+the future route target. Clip transfers retain their own path and target-lock
+policies. Explicit scrubbing cancels active transitions and applies the requested
+sample without playback lookahead.
+Navigation export reapplies its held camera pose while the marker remains inside
+its zone, matching live playback instead of replacing that pose with the nominal
+view on every frame. The final three Replay seconds ease toward the exact route
+endpoint so the last frame does not snap out of an unfinished correction. Replay
+progress, including playback direction, determines completion; an absolute video
+timestamp containing start clips must not end camera tracking prematurely.
+
 Interactive playback may use live camera behavior. Deferred export uses
 logical frame time and applies a camera result for every deterministic frame.
 Wall-clock throttling must never decide whether an export camera frame is
@@ -253,6 +325,13 @@ the monitor from displaying an intermediate cleared frame. The monitor retains a
 stable snapshot of that frame and reconnects its preview whenever React mounts a
 new canvas, including when the surface moves to or returns from Document PiP.
 Canvas recognition accepts same-origin canvases from the PiP window realm.
+
+Dry run omits the frame preview and fits its host height to its progress and
+controls through the widget manager's `resizeToContent` contract. Initialization
+constrains both persisted and runtime dimensions before positioning, preserving
+the monitor width and position without carrying over the preview's empty height.
+Returning to recording enforces the preview content's minimum height while
+allowing the user to enlarge it. Collapsed host dimensions remain independent.
 
 The surface is a read-only projection of replay and recording authorities. It
 does not resolve frames, drive the replay clock, move either camera, qualify the
