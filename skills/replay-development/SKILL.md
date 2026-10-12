@@ -59,6 +59,10 @@ Preserve these boundaries:
   camera-only path section with a chord only when its cross-track amplitude is
   below half the projected crop width. Test long untimed journeys at short and
   ordinary durations, then visually inspect a real Replay export.
+  Simple Replay keeps Navigation tracking. Its diagnostic overlay must use the
+  exact adaptive Navigation trigger zone evaluated by the runtime collision
+  check, plus the matching inner recenter threshold; verify the visible zone
+  at low and high camera heights and crop sizes.
   Dynamic tracking must confirm a sustained trigger-zone exit with two future
   projections and start correcting before the marker reaches the boundary.
   Navigation must preserve its predictive collision check with a 3-second

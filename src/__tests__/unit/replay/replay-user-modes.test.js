@@ -90,6 +90,23 @@ describe('Replay user modes', () => {
         expect(resolved.camera.altitudeMode).toBe('constant')
     })
 
+    it('keeps Simple Replay in Navigation mode and enables zone diagnostics', () => {
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_BASIC}}},
+            stores: {replay: {simplePreparationActive: false}},
+        })
+        const journey = {replay: {simple: {marker: {mode: 'navigation'}}}}
+
+        try {
+            expect(getJourneyReplaySettings({journey}).marker.mode).toBe('navigation')
+            expect(getJourneyReplaySettings({journey}).camera.debug).toBe(true)
+            expect(currentJourneyReplayCameraSettings({journey}).debug).toBe(true)
+        }
+        finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
     it.each(['constant', 'ground-offset'])('resolves the prepared Simple pitch and %s altitude from its Journey', altitudeMode => {
         const camera = {altitude: 2630, pitch: -23, cameraAngle: -113, altitudeMode}
         expect(normalizeSimpleReplaySettings({camera}).camera).toMatchObject(camera)
@@ -194,15 +211,15 @@ describe('Replay user modes', () => {
         }
     })
 
-    it.each([false, true])('disables Simple runtime diagnostics when persisted settings enable them, preparation: %s', simplePreparationActive => {
+    it.each([false, true])('enables Simple runtime diagnostics without changing persisted settings, preparation: %s', simplePreparationActive => {
         vi.stubGlobal('lgs', {
             settings: {ui: {replay: {userMode: 'basic', simple: {camera: {debug: true}}}}},
             stores: {replay: {simplePreparationActive, camera: {debug: true}}},
             theJourney: {replay: {simple: {camera: {debug: true}}}},
         })
         try {
-            expect(getJourneyReplaySettings().camera.debug).toBe(false)
-            expect(currentJourneyReplayCameraSettings().debug).toBe(false)
+            expect(getJourneyReplaySettings().camera.debug).toBe(true)
+            expect(currentJourneyReplayCameraSettings().debug).toBe(true)
             expect(lgs.theJourney.replay.simple.camera.debug).toBe(true)
         }
         finally {

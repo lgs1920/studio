@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -258,7 +258,7 @@ export const replayStore = () => globalThis.lgs?.stores?.replay
  *
  * Simple preparation updates the runtime camera while effective settings may
  * still reflect the configured values. Prefer the prepared camera during that
- * phase while disabling diagnostics throughout Simple Replay.
+ * phase and keep runtime diagnostics available in Simple Replay.
  *
  * @param {Object} [options] - Replay settings resolution options.
  * @returns {Object} Normalized camera settings for the current Replay.
@@ -284,7 +284,7 @@ export const currentJourneyReplayCameraSettings = (options = {}) => {
 
     return normalizeJourneyReplayCamera({
         ...runtimeCamera,
-        debug: !isJourneyReplayBasicMode() && normalizedCamera.debug === true,
+        debug: isJourneyReplayBasicMode() || normalizedCamera.debug === true,
     })
 }
 

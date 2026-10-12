@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -856,7 +856,7 @@ export const getJourneyReplaySettings = ({journey = currentReplayJourney()} = {}
                 duration: simple.duration,
                 includeHiddenTracks: simple.includeHiddenTracks,
                 readiness: normalizeJourneyReplayReadiness(simple.readiness),
-                camera: {...simple.camera, debug: false},
+                camera: {...simple.camera, debug: true},
                 marker: simple.marker,
                 trace: simple.trace,
                 progression: simple.presentation.progression,

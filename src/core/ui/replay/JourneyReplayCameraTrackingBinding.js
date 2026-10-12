@@ -573,7 +573,8 @@ const updateCameraTracking = (mode, {
     }
 
     const settings = getJourneyReplaySettings()
-    // Simple playback owns its Navigation policy, independent of the Expert marker mode.
+    // Simple playback retains its configured Navigation policy independently
+    // from Expert marker-mode settings.
     const markerSettings = normalizeJourneyReplayMarker(
         isJourneyReplayBasicMode()
             ? settings.marker
@@ -720,7 +721,6 @@ const updateCameraTracking = (mode, {
         })
     }
 
-    call.updateToleranceZoneOverlay(cameraSettings.hysteresis)
     if (source === 'start' && immediateToleranceRecenter) {
         resetCameraTransportState(state)
         resetReplayCameraPitchCorrection(mode)
@@ -765,6 +765,12 @@ const updateCameraTracking = (mode, {
         cropWidthMeters,
         distanceMeters: state.sampler?.totalDistance,
     })
+    const runtimeTracking = replayRuntimeTrackingSettings(
+        cameraSettings,
+        trackingViewport,
+        adaptiveTrackingTiming,
+    )
+    call.updateToleranceZoneOverlay(cameraSettings.hysteresis, runtimeTracking)
     const frameLeadSeconds = replayCameraFrameLeadSeconds({
         fps: globalThis.lgs?.stores?.replay?.captureFps,
         frameIntervalMs: logicalFrameIntervalMillis,
@@ -917,12 +923,7 @@ const updateCameraTracking = (mode, {
                 pitchCorrection.weightedRedirectState,
             )
             : navigationCameraView
-        const viewport = call.viewportRectForCesiumSurface()
-        const runtimeTracking = replayRuntimeTrackingSettings(
-            cameraSettings,
-            viewport,
-            adaptiveTrackingTiming,
-        )
+        const viewport = trackingViewport
         const navigationTransitionSeconds = Math.max(
             REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS,
             runtimeTracking.timing?.minimumTransitionSeconds
@@ -1105,12 +1106,7 @@ const updateCameraTracking = (mode, {
     }
 
     if (markerSettings.mode === REPLAY_MARKER_MODE_HYSTERESIS) {
-        const viewport = call.viewportRectForCesiumSurface()
-        const runtimeTracking = replayRuntimeTrackingSettings(
-            cameraSettings,
-            viewport,
-            adaptiveTrackingTiming,
-        )
+        const viewport = trackingViewport
         const currentScreen = call.trackingWindowPositionForSample(nominalView.sample)
         const hasViewport = (viewport?.width ?? 0) > 0 && (viewport?.height ?? 0) > 0
         const currentInsideTrigger = hasViewport

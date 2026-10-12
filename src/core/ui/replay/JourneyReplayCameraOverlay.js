@@ -311,9 +311,10 @@ const drawReplayDiagnosticsOverlayCanvas = ({
  *
  * @param {object} hysteresis - Replay camera hysteresis settings.
  * @param {object} rect - Viewport rectangle in CSS pixels.
+ * @param {object|null} activeRuntimeTracking - Tracking zones used by camera collision checks.
  * @returns {object|null} Diagnostic geometry or null when it is unavailable.
  */
-const resolveReplayDiagnosticsGeometry = (hysteresis, rect) => {
+const resolveReplayDiagnosticsGeometry = (hysteresis, rect, activeRuntimeTracking = null) => {
     if (!rect?.width || !rect?.height || !hysteresis) {
         return null
     }
@@ -321,19 +322,21 @@ const resolveReplayDiagnosticsGeometry = (hysteresis, rect) => {
     const replaySettings = getJourneyReplaySettings()
     const marker = normalizeJourneyReplayMarker(replaySettings.marker)
     const cameraSettings = currentJourneyReplayCameraSettings()
-    const runtimeTracking = replayRuntimeTrackingSettings(cameraSettings, rect)
+    const runtimeTracking = activeRuntimeTracking
+        ?? replayRuntimeTrackingSettings(cameraSettings, rect)
     const outerBounds = marker.mode === REPLAY_MARKER_MODE_NAVIGATION
-                        ? replayToleranceZoneBounds(replayCenteredSquareZone(
-                            runtimeTracking.navigation.triggerZone.width,
-                            rect.width,
-                            rect.height,
-                        ))
+                        ? replayToleranceZoneBounds(runtimeTracking.navigation.triggerZone)
                         : marker.mode === REPLAY_MARKER_MODE_HYSTERESIS
                           ? replayToleranceZoneBounds(runtimeTracking.dynamic.triggerZone)
                           : replayToleranceZoneBounds(hysteresis.zone)
     const innerBounds = marker.mode === REPLAY_MARKER_MODE_HYSTERESIS
-                        ? replayToleranceZoneBounds(runtimeTracking.dynamic.targetZone)
-                        : null
+        ? replayToleranceZoneBounds(runtimeTracking.dynamic.targetZone)
+        : marker.mode === REPLAY_MARKER_MODE_NAVIGATION
+          ? replayInnerToleranceZoneBounds(
+              outerBounds,
+              finiteNumber(hysteresis.marginRatio) ?? 0.12,
+          )
+          : null
 
     return {
         rect,
@@ -369,7 +372,11 @@ export const refreshReplayDiagnosticsOverlay = mode => {
         return false
     }
 
-    const geometry = resolveReplayDiagnosticsGeometry(state.lastToleranceZoneHysteresis, call.viewportRectForCesiumSurface())
+    const geometry = resolveReplayDiagnosticsGeometry(
+        state.lastToleranceZoneHysteresis,
+        call.viewportRectForCesiumSurface(),
+        state.lastToleranceZoneRuntimeTracking,
+    )
     if (!geometry) {
         return false
     }
@@ -559,11 +566,12 @@ export const viewportRectForCesiumSurface = (mode) => {
         }
     }
 
-export const updateToleranceZoneOverlay =  (mode, hysteresis) => {
+export const updateToleranceZoneOverlay =  (mode, hysteresis, runtimeTracking = null) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
     state.lastToleranceZoneHysteresis = hysteresis
+    state.lastToleranceZoneRuntimeTracking = runtimeTracking
     if (!state.toleranceZoneOverlayVisible) {
         removeToleranceZoneOverlay(mode)
         return
@@ -577,7 +585,11 @@ export const updateToleranceZoneOverlay =  (mode, hysteresis) => {
         return
     }
 
-    const geometry = resolveReplayDiagnosticsGeometry(hysteresis, call.viewportRectForCesiumSurface())
+    const geometry = resolveReplayDiagnosticsGeometry(
+        hysteresis,
+        call.viewportRectForCesiumSurface(),
+        runtimeTracking,
+    )
     if (!geometry) {
         return
     }
