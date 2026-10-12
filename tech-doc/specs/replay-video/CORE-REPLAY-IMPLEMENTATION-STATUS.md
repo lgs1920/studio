@@ -48,6 +48,13 @@ to the standard preview and sharing dialog. All video files are created by
 Replay MP4 export. `ReplayMediaCapture` handles still screenshots and media
 handoff; it does not encode video.
 
+Simple Replay additionally has an opt-in Dry run setting. It walks the complete
+configured timeline with camera, trace, and logical widget updates. Tile
+prewarming and per-frame readiness remain enabled. Widget capture readiness,
+bitmap capture, output image composition, and encoding are skipped. Its compact
+monitor displays integer progress and frame counts without an image preview.
+Saved video quality and FPS preferences remain unchanged.
+
 Simple/Expert support is present but incomplete:
 
 - Expert camera and progression settings are initialized from Simple settings

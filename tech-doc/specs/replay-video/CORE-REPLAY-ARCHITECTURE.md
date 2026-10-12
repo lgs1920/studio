@@ -277,6 +277,9 @@ time.
 `ReplayDeferredExporter` contains the deferred-export orchestration for
 preparation, frame rendering,
 readiness, overlay composition, encoding, cancellation, and cleanup.
+Its Simple Replay Dry run mode keeps logical frame updates, tile prewarming,
+bounded tile readiness, cancellation, and cleanup. It skips widget capture,
+output-canvas composition, codec probing, and media creation.
 `ReplayVideoOverlayComposer` maps logical widget and crop coordinates to the
 physical output surface. Mediabunny encodes the product frame timeline and must
 not become a replay clock.
