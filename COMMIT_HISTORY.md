@@ -3498,3 +3498,15 @@
 ## 2026-10-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/b1fc5d0901386960d2bc3ba9b4b7375b431bc522)
 
 - Recorded automatically from Git history.
+
+## 2026-10-12 — [`fix(replay): stream route samples during export`](https://github.com/lgs1920/studio/commit/6f2371d593989d9d39dec02aa27e78b5847faf37)
+
+- Recorded automatically from Git history.
+
+## 2026-10-12 — [`fix(replay): show Simple Navigation tracking zones`](https://github.com/lgs1920/studio/commit/af6b96757b02e7d5e44bd8d416f90e971cb144ff)
+
+- Recorded automatically from Git history.
+
+## 2026-10-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/6cfdd0b80d509f154569c806c95fafbf5627d1d0)
+
+- Recorded automatically from Git history.
