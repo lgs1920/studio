@@ -3414,3 +3414,87 @@
 ## 2026-10-11 — [`chore: FA duotone logo`](https://github.com/lgs1920/studio/commit/edf41bd88bd51a34feb0c3eb4282ac4424b67dba)
 
 - Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-10-11 — [`chore(webawesome): migrate to Free package`](https://github.com/lgs1920/studio/commit/f084af3f0705517181fae3458394a72b0a1535d9)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`refactor(widgets): migrate mount error dialog to Web Awesome`](https://github.com/lgs1920/studio/commit/5466c5d8a115c570c3530a99bd189000b4c669ae)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`feat(replay): source Simple defaults from product config`](https://github.com/lgs1920/studio/commit/c4e7d8e6aab9efa738978432fdedd422bce1f29e)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`fix(replay): isolate replay camera settings from Cesium controls`](https://github.com/lgs1920/studio/commit/8909d8b1b448b10da6b6a432a6dbafa503d2a3b7)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`fix(replay): keep preparation cone inside crop after reload`](https://github.com/lgs1920/studio/commit/01e884000387f862994712153e1a93d23c4dd674)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`fix(replay): diagnose incomplete widget captures`](https://github.com/lgs1920/studio/commit/4f89e38668b8ce4f7e8e816f0977ee5e50958d76)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`fix(widgets): keep mount error dialog clickable`](https://github.com/lgs1920/studio/commit/57bd2978588d7a3f2963d67a9ad5374407e312af)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`feat(replay): align preparation controls with active mode`](https://github.com/lgs1920/studio/commit/f7674bf954a7690dc374f61864c57c650159f078)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`fix(replay): restore camera across preparation lifecycle`](https://github.com/lgs1920/studio/commit/9fc6f1484e61f04260241c9c1d140f539e76a840)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`fix(replay): keep camera guide icon within crop`](https://github.com/lgs1920/studio/commit/fbb7d8d2d60122923491d2b250e6e3721aa1a7bb)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`fix(replay): sync cursor with completed trace`](https://github.com/lgs1920/studio/commit/835fc127a93410c3aa8b6e63554aaad1c2384800)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`docs: clarify replay camera ownership rules`](https://github.com/lgs1920/studio/commit/cc2e53b8e9778e52e24803b914485a345f055f79)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`docs: clarify journey loading TODO`](https://github.com/lgs1920/studio/commit/c5d47f86655c83851e33cd903d58d0111777a44e)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`fix(replay): persist prepared camera gestures`](https://github.com/lgs1920/studio/commit/b6ec9d907784c1eb27c5416c46796158b9c25171)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`docs(replay): guard prepared camera persistence`](https://github.com/lgs1920/studio/commit/ec4bb97b01f8deaa79189438a871d6253d490539)
+
+- Recorded automatically from Git history.
+
+## 2026-10-11 — [`docs(rules): require replay pose flush before record`](https://github.com/lgs1920/studio/commit/8f55393d2526b725faa646a6cba72901db194757)
+
+- Recorded automatically from Git history.
+
+## 2026-10-12 — [`fix(replay): smooth camera tracking and preserve crop framing`](https://github.com/lgs1920/studio/commit/2f1a76b402f369707168d5fe49f4785aa50b0fa9)
+
+- Recorded automatically from Git history.
+
+## 2026-10-12 — [`feat(replay): add deterministic dry run monitoring`](https://github.com/lgs1920/studio/commit/f9b87b193a7d4df93d5b7b6934c1c67155b7180b)
+
+- Recorded automatically from Git history.
+
+## 2026-10-12 — [`docs(replay): refresh camera and dry run guidance`](https://github.com/lgs1920/studio/commit/cfc7e9b43a65490a8e551a382a2f9f9a14c1d750)
+
+- Recorded automatically from Git history.
+
+## 2026-10-12 — [`docs(rules): document replay camera smoothing bounds`](https://github.com/lgs1920/studio/commit/916dbf7bfa188557075e7ccc6af21bb03989567b)
+
+- Recorded automatically from Git history.
+
+## 2026-10-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/b1fc5d0901386960d2bc3ba9b4b7375b431bc522)
+
+- Recorded automatically from Git history.
