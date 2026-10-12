@@ -3510,3 +3510,20 @@
 ## 2026-10-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/6cfdd0b80d509f154569c806c95fafbf5627d1d0)
 
 - Recorded automatically from Git history.
+
+## 2026-10-12 — [`feat(replay): add simple replay dry run`](https://github.com/lgs1920/studio/commit/0b20ec3fbec0903c92dfd1ac388e1124e5c69612)
+
+- Recorded automatically from Git history.
+
+## 2026-10-12 — [`Merge branch 'feature/issue-533-simple-replay-dry-run' into 1.0.0`](https://github.com/lgs1920/studio/commit/d5b3cf59bd044eb6b9c006f29efbc8e5b0a59390)
+
+- # Conflicts:
+- #	src/__tests__/integration/replay/replay-deferred-exporter.test.js
+- #	src/__tests__/ui/replay/replay-recording-monitor.test.jsx
+- #	src/core/ui/replay/ReplayDeferredExporter.js
+- #	tech-doc/specs/replay-video/CORE-REPLAY-ARCHITECTURE.md
+- #	tech-doc/specs/replay-video/CORE-REPLAY-IMPLEMENTATION-STATUS.md
+
+## 2026-10-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/fee0f8e49e7bec58115a3f1565f66c65e2111832)
+
+- Recorded automatically from Git history.
