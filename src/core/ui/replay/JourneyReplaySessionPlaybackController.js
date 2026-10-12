@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -1059,7 +1059,12 @@ export const endReplayCameraExport = (mode, ) => {
         state.logicalCameraTrajectory = false
     }
 
-export const renderReplayExportFrame = async (mode, {phase = null, frame = null, controller = mode[JOURNEY_REPLAY_INTERNAL_STATE].controller} = {}) => {
+export const renderReplayExportFrame = async (mode, {
+    phase = null,
+    frame = null,
+    controller = mode[JOURNEY_REPLAY_INTERNAL_STATE].controller,
+    resolvedSample = undefined,
+} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         const activeController = controller ?? state.controller
@@ -1071,7 +1076,7 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
             state.renderingReplayExportFrame = true
             let sample = null
             try {
-                sample = activeController?.seek?.(progress)
+                sample = activeController?.seek?.(progress, resolvedSample)
                          ?? state.sampler?.atProgress?.(progress)
                          ?? activeController?.currentSample?.()
                          ?? null
@@ -1134,7 +1139,7 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
         state.renderingReplayExportFrame = true
         let sample = null
         try {
-            sample = activeController?.seek?.(anchorProgress)
+            sample = activeController?.seek?.(anchorProgress, resolvedSample)
                      ?? state.sampler?.atProgress?.(anchorProgress)
                      ?? activeController?.currentSample?.()
                      ?? null

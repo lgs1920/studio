@@ -48,6 +48,13 @@ to the standard preview and sharing dialog. All video files are created by
 Replay MP4 export. `ReplayMediaCapture` handles still screenshots and media
 handoff; it does not encode video.
 
+Simple Replay additionally has an opt-in Dry run setting. It walks the complete
+configured timeline with camera, trace, and logical widget updates. Tile
+prewarming and per-frame readiness remain enabled. Widget capture readiness,
+bitmap capture, output image composition, and encoding are skipped. Its compact
+monitor displays integer progress and frame counts without an image preview.
+Saved video quality and FPS preferences remain unchanged.
+
 Simple/Expert support is present but incomplete:
 
 - Expert camera and progression settings are initialized from Simple settings
@@ -67,6 +74,10 @@ Simple/Expert support is present but incomplete:
 
 ## Implemented on `refactor/replay-architecture`
 
+- Opt-in Simple Replay Dry run with logical frame updates, tile prewarming and
+  bounded tile readiness, without widget capture, image composition, or media
+  output. Record and Dry run share worker-prepared route samples in frame order;
+  small batches allow frame rendering to start before the full route is sampled.
 - Versioned replay definition, render plan, frame intent, and frame result
   contracts.
 - Shared frame resolution and publication boundaries for Replay playback,
@@ -145,6 +156,7 @@ subject to the validation gates below.
 | Status | Target | Work item | Detailed specification |
 | --- | --- | --- | --- |
 | PARTIAL / TODO | 1.0.0 | Complete synchronized replay-start camera editing while preserving the implemented canonical camera and clip continuity | [Start camera editor](../../todo/CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md) |
+| PARTIAL / TODO | 1.0.0 | Validate Simple Replay Dry run visually on a real reference journey and confirm completion and cancellation cleanup in a WebGL browser | [Dry run issue #533](https://github.com/lgs1920/studio/issues/533) |
 | TODO | 1.0.0 | Validate isolated Replay export on fixed imagery, terrain, and 3D Tiles journeys; prove camera parity, resource teardown, and visual quality | [Replay quality validation](CORE-REPLAY-QUALITY-VALIDATION.md) |
 | IMPLEMENTED | 1.0.0 | Deliver linked Replay preparation as a compact controlled Timeline preview | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
 | PARTIAL / TODO | 1.0.0 follow-up | Connect remaining Timeline domain commands, Action Mode, clip double-click navigation, and persisted visibility/order changes | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |

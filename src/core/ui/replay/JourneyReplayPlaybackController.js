@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -377,12 +377,12 @@ export class JourneyReplayPlaybackController {
         return sample
     }
 
-    seek = (progress) => {
+    seek = (progress, resolvedSample = undefined) => {
         this.#progress = clamp(Number(progress) || 0, 0, 1)
         if (this.#running && !this.#paused) {
             this.#startedAt = this.#now() - this.#elapsedFromProgress(this.#progress) - this.#pauseDuration
         }
-        const sample = this.currentSample()
+        const sample = resolvedSample === undefined ? this.currentSample() : resolvedSample
         this.#syncStore(sample, {force: true})
         this.#emit(REPLAY_EVENT_UPDATE, sample)
         return sample

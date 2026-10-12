@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -183,11 +183,11 @@ const MonitorIconButton = ({id, label, tooltipLabel = label, showTitle = true, i
  * @param {number} props.percentage - Rounded progress percentage.
  * @returns {JSX.Element} Web Awesome progress bar.
  */
-const ReplayRecordingProgress = ({percentage}) => (
+const ReplayRecordingProgress = ({percentage, label = 'Recording progress'}) => (
     <WaProgressBar
         className="replay-recording-progress"
         value={percentage}
-        label={`Recording progress: ${percentage}%`}
+        label={`${label}: ${percentage}%`}
     >
         {percentage}%
     </WaProgressBar>
@@ -207,6 +207,7 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
     const _pictureInPictureCleanup = useRef(null)
     const [pictureInPictureWindow, setPictureInPictureWindow] = useState(null)
     const recordingActive = snapshot.active === true
+    const isDryRun = snapshot.mode === 'dry-run'
 
     useEffect(() => {
         if (recordingActive) {
@@ -258,7 +259,7 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
         transient:      true,
         canReduce:      true,
         resizable:      true,
-        min:            {width: 360, height: 280},
+        min:            {width: 360, height: isDryRun ? 120 : 280},
         max:            {width: 1280, height: 900},
         preserveChildrenWhenCollapsed: true,
         contextMenu:    {
@@ -268,7 +269,7 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
             canPosition: true,
         },
         zIndex:         MONITOR_WIDGET_Z_INDEX,
-    }), [])
+    }), [isDryRun])
 
     const setPreviewCanvas = useCallback(canvas => {
         _previewCleanup.current?.()
@@ -299,7 +300,7 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
         try {
             const externalWindow = await globalThis.documentPictureInPicture.requestWindow({
                 width:  RECORDING_PICTURE_IN_PICTURE_WIDTH,
-                height: RECORDING_PICTURE_IN_PICTURE_HEIGHT,
+                height: isDryRun ? 160 : RECORDING_PICTURE_IN_PICTURE_HEIGHT,
             })
             const body = preparePictureInPictureDocument(externalWindow)
             if (!body) {
@@ -321,7 +322,7 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
         catch {
             // The inline monitor remains available when Document PiP is rejected.
         }
-    }, [closePictureInPicture, handlePictureInPictureClosed])
+    }, [closePictureInPicture, handlePictureInPictureClosed, isDryRun])
 
     const togglePause = useCallback(() => {
         const runtime = globalThis.lgs?.stores?.replay?.deferredExportPlan?.runtime
@@ -375,13 +376,16 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                                    : snapshot.elapsedMillis
     const remainingMillis = snapshot.estimatedRemainingMillis !== null
                             ? snapshot.estimatedRemainingMillis
-                            : (totalVideoDuration !== null
+                            : (!isDryRun && totalVideoDuration !== null
                                 ? Math.max(0, totalVideoDuration - generatedVideoDuration)
                                 : null)
     const remainingLabel = remainingMillis === null ? '--:--' : formatDuration(remainingMillis)
-    const generatedVideoLabel = totalVideoDuration === null
+    const generatedVideoLabel = isDryRun
+                                ? `${progress}%`
+                                : totalVideoDuration === null
                                 ? formatDuration(generatedVideoDuration)
                                 : `${formatDuration(generatedVideoDuration)} / ${formatDuration(totalVideoDuration)}`
+    const generatedVideoTitle = isDryRun ? 'Frames checked percentage' : 'Generated video duration'
     const isPreparing = snapshot.phase === 'preparing'
     const isFinalizing = snapshot.phase === 'finalizing'
                          || progress >= 100
@@ -389,7 +393,9 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                           ? 'finalizing'
                           : (isPreparing ? 'preparing' : 'recording')
     const indicatorAnimation = 'beat-fade'
-    const title = isFinalizing ? 'Finalizing' : (isPreparing ? 'Preparing' : 'Recording')
+    const title = isDryRun
+        ? isFinalizing ? 'Dry run complete' : (isPreparing ? 'Preparing dry run' : 'Dry run')
+        : isFinalizing ? 'Finalizing' : (isPreparing ? 'Preparing' : 'Recording')
     const titleClassName = isPreparing || isFinalizing ? ' blinking' : ''
     const surface = (
         <aside
@@ -399,12 +405,12 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
             <div className="replay-recording-monitor-header">
                 {recordingActive && (
                     <WaIcon
-                        name="circle"
-                        family="duotone"
+                        name={isDryRun ? 'bolt' : 'circle'}
+                        family={isDryRun ? undefined : 'duotone'}
                         variant="regular"
                         animation={snapshot.paused ? 'fade' : indicatorAnimation}
                         className={`video-recorder-indicator ${indicatorState}${snapshot.paused ? ' paused' : ''}`}
-                        label={snapshot.phase ?? 'Recording'}
+                        label={snapshot.phase ?? (isDryRun ? 'Dry run' : 'Recording')}
                     />
                 )}
                 <span className={`replay-recording-monitor-title${titleClassName}`}>
@@ -413,24 +419,35 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
             </div>
             {recordingActive && (
                 <>
-                    <div className="replay-recording-monitor-preview">
-                        <canvas ref={setPreviewCanvas} aria-label="Latest encoded recording frame"/>
-                    </div>
+                    {!isDryRun && (
+                        <div className="replay-recording-monitor-preview">
+                            <canvas ref={setPreviewCanvas} aria-label="Latest encoded recording frame"/>
+                        </div>
+                    )}
                     <div className="replay-recording-monitor-metrics">
-                        <span className="replay-recording-monitor-metric-remaining" title="Remaining time">
-                            <WaIcon name="stopwatch" variant="regular" label="Remaining time"/>
+                        <span className="replay-recording-monitor-metric-remaining" title={isDryRun ? 'Estimated time remaining' : 'Remaining time'}>
+                            <WaIcon name="stopwatch" variant="regular" label={isDryRun ? 'Estimated time remaining' : 'Remaining time'}/>
                             <strong className="replay-recording-monitor-remaining-value">{remainingLabel}</strong>
                         </span>
-                        <span className="replay-recording-monitor-metric-duration" title="Generated video duration">
-                            <WaIcon name="films" variant="regular" label="Generated video duration"/>
+                        <span className="replay-recording-monitor-metric-duration" title={generatedVideoTitle}>
+                            <WaIcon name="films" variant="regular" label={generatedVideoTitle}/>
                             {generatedVideoLabel}
                         </span>
-                        <span className="replay-recording-monitor-metric-size" title="Encoded size">
-                            <WaIcon name="hard-drive" variant="regular" label="Encoded size"/>
-                            {formatBytes(snapshot.size)}
-                        </span>
+                        {isDryRun
+                            ? (
+                                <span className="replay-recording-monitor-metric-size" title="Frames checked">
+                                    <WaIcon name="check" variant="regular" label="Frames checked"/>
+                                    {`${snapshot.processedFrames} / ${snapshot.frameCount ?? '--'}`}
+                                </span>
+                            )
+                            : (
+                                <span className="replay-recording-monitor-metric-size" title="Encoded size">
+                                    <WaIcon name="hard-drive" variant="regular" label="Encoded size"/>
+                                    {formatBytes(snapshot.size)}
+                                </span>
+                            )}
                     </div>
-                    <ReplayRecordingProgress percentage={progress}/>
+                    <ReplayRecordingProgress percentage={progress} label={isDryRun ? 'Dry run progress' : 'Recording progress'}/>
                     <div className="replay-recording-monitor-controls">
                         <div className="replay-recording-monitor-control-group replay-recording-monitor-control-group-start">
                             <MonitorIconButton
@@ -444,25 +461,29 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                         <div className="replay-recording-monitor-control-group replay-recording-monitor-control-group-center">
                             <MonitorIconButton
                                 id="replay-monitor-pause"
-                                label={snapshot.paused ? 'Resume recording' : 'Pause recording'}
+                                label={snapshot.paused
+                                    ? isDryRun ? 'Resume Dry run' : 'Resume recording'
+                                    : isDryRun ? 'Pause Dry run' : 'Pause recording'}
                                 tooltipLabel={snapshot.paused ? 'Resume' : 'Pause'}
                                 showTitle={false}
                                 icon={snapshot.paused ? 'play' : 'pause'}
                                 appearance="plain"
                                 onClick={togglePause}
                             />
-                            <MonitorIconButton
-                                id="replay-monitor-stop"
-                                label="Stop recording and save or share"
-                                tooltipLabel="Stop"
-                                showTitle={false}
-                                icon="stop"
-                                appearance="plain"
-                                onClick={stopRecording}
-                            />
+                            {!isDryRun && (
+                                <MonitorIconButton
+                                    id="replay-monitor-stop"
+                                    label="Stop recording and save or share"
+                                    tooltipLabel="Stop"
+                                    showTitle={false}
+                                    icon="stop"
+                                    appearance="plain"
+                                    onClick={stopRecording}
+                                />
+                            )}
                             <MonitorIconButton
                                 id="replay-monitor-cancel"
-                                label="Cancel recording and close Replay"
+                                label={isDryRun ? 'Cancel Dry run and return to preparation' : 'Cancel recording and close Replay'}
                                 tooltipLabel="Cancel"
                                 showTitle={false}
                                 icon="xmark"

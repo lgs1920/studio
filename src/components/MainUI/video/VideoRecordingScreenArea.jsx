@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-30
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,7 +34,10 @@ import {
     REPLAY_DEFERRED_EXPORT_READY_EVENT,
     stopReplayRecordingMonitor,
 } from '@Core/ui/replay/ReplayRecordingMonitor'
-import { exportReplayDeferredMp4 } from '@Core/ui/replay/ReplayDeferredExporter'
+import {
+    exportReplayDeferredDryRun,
+    exportReplayDeferredMp4,
+} from '@Core/ui/replay/ReplayDeferredExporter'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import {REPLAY_VIDEO_FPS, REPLAY_VIDEO_QUALITY} from '@Core/ui/replay/ReplayVideoSettings'
 import { WidgetMountErrorDialog } from '@Components/MainUI/video/WidgetMountErrorDialog'
@@ -147,9 +150,10 @@ export const VideoRecordingScreenArea = memo(() => {
 
     const exportJourneyReplayFrameByFrame = useCallback(async ({renderSpec, startToken}) => {
         const abortController = new AbortController()
+        const dryRun = $video.dryRun === true
         const recordingDate = new Date()
         const journeyTitle = lgs.theJourney?.title?.trim() || ''
-        const mediaMetadata = {
+        const mediaMetadata = dryRun ? null : {
             status: 'ready',
             artist: lgs.servers.studio.name,
             date: recordingDate,
@@ -169,7 +173,7 @@ export const VideoRecordingScreenArea = memo(() => {
         })
 
         try {
-            const exportPromise = exportReplayDeferredMp4({
+            const exportOptions = {
                 replay:       lgs.stores.replay,
                 journey:      lgs.theJourney,
                 controller:   __.ui.replay?.controller,
@@ -182,13 +186,21 @@ export const VideoRecordingScreenArea = memo(() => {
                 signal:       abortController.signal,
                 abortController,
                 mediaMetadata,
-                filename:     `${journeyTitle || lgs.theJourney?.slug || 'replay'}.mp4`,
-            })
+            }
+            const exportPromise = dryRun
+                ? exportReplayDeferredDryRun(exportOptions)
+                : exportReplayDeferredMp4({
+                    ...exportOptions,
+                    filename: `${journeyTitle || lgs.theJourney?.slug || 'replay'}.mp4`,
+                })
             const exportRuntime = lgs.stores.replay.deferredExportPlan?.runtime
             if (exportRuntime) {
                 exportRuntime.exportPromise = exportPromise
             }
             const result = await exportPromise
+            if (dryRun) {
+                return
+            }
 
             if (!(result?.blob instanceof Blob) || result.blob.size <= 0) {
                 throw new Error('Replay export did not produce a video file.')
@@ -232,7 +244,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 )
                 console.trace('[Replay video] Error toast emitted here')
                 UIToast.error({
-                    caption: 'Replay video',
+                    caption: dryRun ? 'Replay dry run' : 'Replay video',
                     text: error?.message ?? 'Replay video could not be generated.',
                 })
             }
@@ -245,6 +257,7 @@ export const VideoRecordingScreenArea = memo(() => {
                     finalizing:   false,
                     paused:       false,
                     editing:      true,
+                    dryRun:       false,
                 })
                 restoreVideoCaptureUi()
             }
@@ -283,6 +296,16 @@ export const VideoRecordingScreenArea = memo(() => {
             $video.settings = {quality: $video.quality, fps: $video.fps}
             const videoFrame = await syncVideoCropFrame('before-replay-export')
             if (!videoFrame || startToken !== _recordingStartToken.current) {
+                if (startToken === _recordingStartToken.current) {
+                    Object.assign($video, {
+                        preRecording: false,
+                        exporting: false,
+                        finalizing: false,
+                        editing: true,
+                        dryRun: false,
+                    })
+                    restoreVideoCaptureUi()
+                }
                 return
             }
 
@@ -297,7 +320,7 @@ export const VideoRecordingScreenArea = memo(() => {
         }
         catch (error) {
             if (startToken === _recordingStartToken.current) {
-                Object.assign($video, {preRecording: false, exporting: false, finalizing: false, editing: true})
+                Object.assign($video, {preRecording: false, exporting: false, finalizing: false, editing: true, dryRun: false})
                 restoreVideoCaptureUi()
             }
             UIToast.error({caption: 'Replay video', text: error?.message ?? 'Replay video could not be started.'})
@@ -481,6 +504,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 $video.preRecording = false
                 $video.finalizing = false
                 $video.editing = true
+                $video.dryRun = false
             }}/>
             <DefinedCropZone className="lgs-on-map-theme-vars" context={$video.cropper} infoComponent={<VideoSettingsInfo/>} ref={_cropZone}/>
             <VideoSceneWidgetsPortal context={lgs.stores.ui.video.cropper}/>

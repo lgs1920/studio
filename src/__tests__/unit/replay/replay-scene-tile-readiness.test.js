@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-17
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,6 +38,8 @@ const createEvent = () => {
             return () => listeners.delete(listener)
         },
         emit: (...args) => listeners.forEach(listener => listener(...args)),
+        /** Return the number of active event subscriptions. */
+        listenerCount: () => listeners.size,
     }
 }
 
@@ -166,6 +168,59 @@ describe('ReplaySceneTileReadiness', () => {
         expect(scene.requestRender).toHaveBeenCalledOnce()
     })
 
+    it('keeps pending tile waits asynchronous when ready views use direct rendering', async () => {
+        const postRender = createEvent()
+        const tileLoadProgressEvent = createEvent()
+        const scene = {
+            globe: {tilesLoaded: false, tileLoadProgressEvent},
+            postRender,
+            primitives: createCollection([]),
+            requestRender: vi.fn(),
+        }
+        const renderNow = vi.fn(() => postRender.emit(scene))
+        let completed = false
+        const readiness = waitForReplaySceneTilesReady({scene, maxMillis: 200, renderNow})
+            .then(ready => {
+                completed = true
+                return ready
+            })
+
+        expect(completed).toBe(false)
+        expect(renderNow).not.toHaveBeenCalled()
+        scene.globe.tilesLoaded = true
+        tileLoadProgressEvent.emit(0)
+
+        await expect(readiness).resolves.toBe(true)
+        expect(renderNow).toHaveBeenCalledOnce()
+        expect(postRender.listenerCount()).toBe(0)
+        expect(tileLoadProgressEvent.listenerCount()).toBe(0)
+    })
+
+    it('cleans up ready-view listeners and timers when direct rendering fails', async () => {
+        vi.useFakeTimers()
+        const postRender = createEvent()
+        const scene = {
+            globe: {tilesLoaded: true},
+            postRender,
+            primitives: createCollection([]),
+            requestRender: vi.fn(),
+        }
+        const error = new Error('Scene render failed')
+
+        try {
+            await expect(waitForReplaySceneTilesReady({
+                scene,
+                maxMillis: 200,
+                renderNow: () => { throw error },
+            })).rejects.toBe(error)
+            expect(postRender.listenerCount()).toBe(0)
+            expect(vi.getTimerCount()).toBe(0)
+        }
+        finally {
+            vi.useRealTimers()
+        }
+    })
+
     it('waits for 2D imagery readiness and a rendered frame', async () => {
         const tileLoadProgressEvent = createEvent()
         const postRender = createEvent()
@@ -271,7 +326,7 @@ describe('ReplaySceneTileReadiness', () => {
         await expect(waitForReplaySceneTilesReady({scene, maxMillis: 10})).resolves.toBe(false)
     })
 
-    it('reuses a ready camera footprint until Cesium reports new tile work', async () => {
+    it.each([false, true])('reuses a ready camera footprint until new tile work (direct rendering: %s)', async directRendering => {
         const postRender = createEvent()
         const tileLoadProgressEvent = createEvent()
         const scene = {
@@ -295,9 +350,16 @@ describe('ReplaySceneTileReadiness', () => {
             drawingBufferHeight: 360,
             postRender,
             primitives: createCollection([]),
-            requestRender: vi.fn(() => postRender.emit(scene)),
+            requestRender: vi.fn(() => {
+                if (!directRendering) {
+                    postRender.emit(scene)
+                }
+            }),
+            render: vi.fn(() => postRender.emit(scene)),
         }
-        const coordinator = createReplaySceneTileReadinessCoordinator(scene)
+        const coordinator = createReplaySceneTileReadinessCoordinator(scene, {
+            renderNow: directRendering ? () => scene.render() : null,
+        })
 
         await expect(coordinator.prepareForCapture({maxMillis: 200})).resolves.toBe(true)
         await expect(coordinator.prepareForCapture({maxMillis: 200})).resolves.toBe(true)
@@ -306,6 +368,7 @@ describe('ReplaySceneTileReadiness', () => {
         scene.camera.frustum.replayCropProjectionKey = 'crop-b'
         await expect(coordinator.prepareForCapture({maxMillis: 200})).resolves.toBe(true)
         expect(scene.requestRender).toHaveBeenCalledTimes(3)
+        expect(scene.render).toHaveBeenCalledTimes(directRendering ? 3 : 0)
 
         scene.globe.tilesLoaded = false
         tileLoadProgressEvent.emit(2)

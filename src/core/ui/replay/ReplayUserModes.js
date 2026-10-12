@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -348,6 +348,7 @@ export const defaultSimpleReplaySettings = () => {
     return {
         ...defaults,
         camera,
+        dryRun: false,
     }
 }
 
@@ -373,6 +374,7 @@ export const normalizeSimpleReplaySettings = (settings = {}) => {
     })
     return {
         duration: normalizeSimpleReplayDuration(settings?.duration ?? defaults.duration),
+        dryRun: settings?.dryRun === true,
         camera,
         presentation: {
             progression: normalizeJourneyReplayProgressionStyle(defaults.presentation.progression),
@@ -399,6 +401,8 @@ export const resolveSimpleReplaySettings = ({journey, user, product} = {}) => no
     ...product,
     ...user,
     ...journey,
+    // Dry run is an application preference, not a Journey-owned Replay setting.
+    dryRun: user?.dryRun === true,
     camera: {
         ...(product?.camera ?? {}),
         ...(user?.camera ?? {}),

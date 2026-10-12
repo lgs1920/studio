@@ -85,6 +85,24 @@ narrow crop, and at least one high-resolution output profile.
 
 ## Required visual validation
 
+### Simple Replay Dry run
+
+- Traverse every configured logical frame and start/stop phase with the normal
+  camera, trace, and published widget state.
+- Keep tile-cache preparation, prewarming, and bounded per-frame tile waits.
+- Recheck readiness after a synchronous ready-view render; keep missing-tile
+  waits asynchronous and preserve normal recording render scheduling.
+- Use the same ordered worker-prepared journey samples in Dry run and Record;
+  verify frames start after the first batch without waiting for the full route.
+- Do not allocate a working capture canvas, wait for widget bitmap readiness,
+  capture widget pixels, compose images, probe codecs, or create encoded output.
+- Publish progress and frame counts without a monitor image preview.
+- Preserve pause, cancellation, and terminal camera/scene restoration.
+- Visually inspect a real Dry run with imagery and terrain/3D Tiles before
+  declaring its scene appearance and completion/cancellation cleanup validated.
+
+### Video export
+
 For every change affecting camera, trace, clips, readiness, crop, overlays,
 render hosts, or encoding:
 

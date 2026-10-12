@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,6 +35,7 @@ export class ReplayVideoRenderSession {
     #definition = null
     #renderPlan = null
     #frameResolver = null
+    #preparedFrameSampleResolver = null
 
     constructor({
                     controller = null,
@@ -128,6 +129,16 @@ export class ReplayVideoRenderSession {
     }
 
     /**
+     * Attach a resolver for route samples prepared progressively in a worker.
+     *
+     * @param {Function|null} resolver - Resolves a route sample for one frame.
+     * @returns {void}
+     */
+    setPreparedFrameSampleResolver = resolver => {
+        this.#preparedFrameSampleResolver = typeof resolver === 'function' ? resolver : null
+    }
+
+    /**
      * Render a single frame.
      *
      * The session resolves the frame, seeks the replay, refreshes the sample,
@@ -139,7 +150,11 @@ export class ReplayVideoRenderSession {
      */
     renderFrame = async (frameIndex = 0, options = {}) => {
         const frame = this.#timeline.frameAtIndex(frameIndex)
-        await this.#seek?.(frame.progress, frame, options)
+        const frameOptions = Object.assign({}, options)
+        if (this.#preparedFrameSampleResolver) {
+            frameOptions.sample = await this.#preparedFrameSampleResolver(frameIndex, frame)
+        }
+        await this.#seek?.(frame.progress, frame, frameOptions)
         const intent = await this.#frameResolver.resolveFrame({
             frame,
             phase: options.phase,
@@ -148,6 +163,7 @@ export class ReplayVideoRenderSession {
             source: this.#renderMode,
             cameraPose: options.cameraPose,
             cameraFrame: options.cameraFrame,
+            sample: frameOptions.sample,
             resolved: options.intentResolved,
         })
         const nextSample = intent.replay?.sample ?? null
@@ -201,21 +217,66 @@ export class ReplayVideoRenderSession {
      */
     renderAll = async ({signal = null, onFrame = null, shouldStop = null} = {}) => {
         const frames = []
+        await this.renderEach({
+            signal,
+            shouldStop,
+            onFrame: async rendered => {
+                frames.push(rendered)
+                if (typeof onFrame === 'function') {
+                    await onFrame(rendered)
+                }
+            },
+        })
+
+        return frames
+    }
+
+    /**
+     * Render every frame sequentially without retaining completed frames.
+     *
+     * @param {{signal?: AbortSignal|null, onFrame?: Function|null, shouldStop?: Function|null, yieldBetweenFrames?: boolean, yieldIntervalMs?: number, yieldToBrowser?: Function|null}} options
+     * @returns {Promise<number>} Number of rendered frames.
+     */
+    renderEach = async ({
+                           signal = null,
+                           onFrame = null,
+                           shouldStop = null,
+                           yieldBetweenFrames = false,
+                           yieldIntervalMs = 0,
+                           yieldToBrowser = null,
+                       } = {}) => {
+        let renderedCount = 0
+        let lastYieldAt = globalThis.performance?.now?.() ?? Date.now()
+        const safeYieldIntervalMs = Math.max(0, Number(yieldIntervalMs) || 0)
         for (let index = 0; index < this.#timeline.frameCount; index += 1) {
             if (signal?.aborted) {
                 break
             }
 
             const rendered = await this.renderFrame(index, {signal})
-            frames.push(rendered)
+            renderedCount += 1
             if (typeof onFrame === 'function') {
                 await onFrame(rendered)
             }
-            if (frames.length > 0 && typeof shouldStop === 'function' && shouldStop(rendered, frames.length)) {
+            if (renderedCount > 0 && typeof shouldStop === 'function' && shouldStop(rendered, renderedCount)) {
                 break
+            }
+            const now = globalThis.performance?.now?.() ?? Date.now()
+            const yieldIntervalElapsed = safeYieldIntervalMs <= 0 || now - lastYieldAt >= safeYieldIntervalMs
+            if (yieldBetweenFrames
+                && renderedCount < this.#timeline.frameCount
+                && !signal?.aborted
+                && yieldIntervalElapsed) {
+                if (typeof yieldToBrowser === 'function') {
+                    await yieldToBrowser()
+                }
+                else {
+                    await new Promise(resolve => globalThis.setTimeout(resolve, 0))
+                }
+                lastYieldAt = globalThis.performance?.now?.() ?? Date.now()
             }
         }
 
-        return frames
+        return renderedCount
     }
 }

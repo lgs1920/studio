@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -101,6 +101,48 @@ describe('ReplayRecordingMonitor', () => {
         const disconnectReplacement = connectReplayRecordingMonitorPreview(replacementCanvas)
         expect(replacementDrawImage).toHaveBeenCalledWith(stableFrame, 0, 0, 320, 180)
         disconnectReplacement()
+    })
+
+    it('updates every Dry run frame without copying or retaining preview images', () => {
+        const targetCanvas = document.createElement('canvas')
+        const drawImage = vi.fn()
+        const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+        const getPreviewContext = vi.spyOn(targetCanvas, 'getContext').mockReturnValue({drawImage})
+        const frames = Array.from({length: 4}, () => document.createElement('canvas'))
+        frames.forEach(canvas => {
+            canvas.width = 320
+            canvas.height = 180
+        })
+
+        startReplayRecordingMonitor({mode: 'dry-run', frameCount: 4})
+        const started = getReplayRecordingMonitorSnapshot()
+        const disconnect = connectReplayRecordingMonitorPreview(targetCanvas)
+
+        try {
+            frames.forEach((canvas, index) => {
+                const published = publishReplayRecordingMonitorFrame({
+                    canvas,
+                    progress: (index + 1) / frames.length,
+                    frameIndex: index,
+                    frameCount: frames.length,
+                    processedFrames: index + 1,
+                })
+                expect(published).toMatchObject({
+                    mode: 'dry-run',
+                    progress: (index + 1) / frames.length,
+                    frameIndex: index,
+                    processedFrames: index + 1,
+                    frameCanvas: null,
+                    frameVersion: started.frameVersion,
+                })
+            })
+            expect(getContext).not.toHaveBeenCalled()
+            expect(getPreviewContext).not.toHaveBeenCalled()
+            expect(drawImage).not.toHaveBeenCalled()
+        }
+        finally {
+            disconnect()
+        }
     })
 
     it('accepts preview canvases from another window realm', () => {

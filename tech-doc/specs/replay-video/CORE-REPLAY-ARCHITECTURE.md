@@ -35,6 +35,28 @@ Start/stop clips may define their own camera movement.
 Completed videos open in the standard preview and sharing dialog.
 `ReplayMediaCapture` handles screenshots and completed-media handoff.
 
+Simple Replay offers an opt-in Dry run preference in the video settings popup.
+It traverses the same fixed-timestamp timeline, including start and stop clips,
+and applies the same camera, trace, and logical widget state. Tile prewarming
+and bounded per-frame tile readiness remain enabled according to the configured
+readiness policy. Dry run skips widget capture readiness, bitmap capture,
+output-canvas composition, codec selection, and media handoff. Widgets consume
+published state through normal React batching because no capture reads their
+pixels. The monitor displays an integer progress percentage, processed/total
+frames, and estimated remaining time without copying a preview image.
+Video quality and FPS preferences remain unchanged for the next recording.
+Ready views can render synchronously in Dry run to avoid waiting for the next
+browser animation frame. Readiness is checked again after rendering; missing
+tiles retain asynchronous, cancellable waits. Record and Dry run request
+ordered route samples from a module worker in small batches while the scene is
+prepared and frames render, then apply each sample at its matching frame. The
+first batch gates the first rendered frame; later batches are requested
+progressively. Cesium camera changes and tile
+readiness remain on the main thread. Completed Dry runs report console timing
+totals for camera and trace updates, widget-state publication, tile readiness,
+and other work, along with worker CPU time for route-sample preparation.
+Dry run validates Replay execution, not widget capture fidelity.
+
 ## Normal map and Replay camera ownership
 
 Persisted Replay camera settings belong to the selected journey and are edited
@@ -200,6 +222,9 @@ time.
 `ReplayDeferredExporter` contains the deferred-export orchestration for
 preparation, frame rendering,
 readiness, overlay composition, encoding, cancellation, and cleanup.
+Its Simple Replay Dry run mode keeps logical frame updates, tile prewarming,
+bounded tile readiness, cancellation, and cleanup. It skips widget capture,
+output-canvas composition, codec probing, and media creation.
 `ReplayVideoOverlayComposer` maps logical widget and crop coordinates to the
 physical output surface. Mediabunny encodes the product frame timeline and must
 not become a replay clock.
