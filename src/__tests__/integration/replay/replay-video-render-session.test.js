@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -97,6 +97,68 @@ describe('ReplayVideoRenderSession', () => {
         expect(frames.map(frame => frame.index)).toEqual([0, 1, 2])
         expect(onFrame).toHaveBeenCalledTimes(3)
         expect(render).toHaveBeenCalledTimes(3)
+    })
+
+    it('can traverse every frame without collecting frame objects', async () => {
+        const render = vi.fn(async ({frame}) => ({index: frame.index}))
+        const onFrame = vi.fn()
+        const session = new ReplayVideoRenderSession({
+            timeline: {durationMillis: 1000, fps: 10},
+            render,
+        })
+
+        const renderedCount = await session.renderEach({onFrame})
+
+        expect(renderedCount).toBe(11)
+        expect(onFrame).toHaveBeenCalledTimes(11)
+        expect(render).toHaveBeenCalledTimes(11)
+        expect(onFrame.mock.calls[0][0].index).toBe(0)
+        expect(onFrame.mock.calls.at(-1)[0].index).toBe(10)
+    })
+
+    it('yields to the browser between frames when requested', async () => {
+        const render = vi.fn(async ({frame}) => ({index: frame.index}))
+        const yieldToBrowser = vi.fn(async () => {})
+        const session = new ReplayVideoRenderSession({
+            timeline: {durationMillis: 1000, fps: 10},
+            render,
+        })
+
+        const renderedCount = await session.renderEach({
+            yieldBetweenFrames: true,
+            yieldToBrowser,
+        })
+
+        expect(renderedCount).toBe(11)
+        expect(yieldToBrowser).toHaveBeenCalledTimes(10)
+    })
+
+    it('batches browser task yields by elapsed work time', async () => {
+        let now = 0
+        const nowSpy = vi.spyOn(performance, 'now').mockImplementation(() => now)
+        const render = vi.fn(async ({frame}) => {
+            now += 10
+            return {index: frame.index}
+        })
+        const yieldToBrowser = vi.fn(async () => {})
+        const session = new ReplayVideoRenderSession({
+            timeline: {durationMillis: 1000, fps: 10},
+            render,
+        })
+
+        try {
+            const renderedCount = await session.renderEach({
+                yieldBetweenFrames: true,
+                yieldIntervalMs: 50,
+                yieldToBrowser,
+            })
+
+            expect(renderedCount).toBe(11)
+            expect(yieldToBrowser).toHaveBeenCalledTimes(2)
+        }
+        finally {
+            nowSpy.mockRestore()
+        }
     })
 
     it('can render a single frame deterministically', async () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,7 +32,13 @@ vi.mock('@Components/MainUI/video/toolbox/VideoPresetToolbar', () => ({
 
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
-    WaIcon: ({name}) => <span data-icon={name}/>,
+    WaIcon: ({name, variant}) => <span data-icon={name} data-variant={variant}/>,
+    WaSwitch: ({children, checked, className, onChange}) => (
+        <label className={className}>
+            <input type="checkbox" checked={checked} onChange={onChange}/>
+            {children}
+        </label>
+    ),
     WaTooltip: ({children, for: targetId}) => <span data-tooltip-for={targetId}>{children}</span>,
 }))
 
@@ -47,6 +53,7 @@ import {
     prepareVideoCaptureUi,
     prepareVideoEditingUi,
 } from '@Components/MainUI/video/videoEditingCleanup'
+import { VideoSettingsInfo } from '@Components/MainUI/video/VideoSettingsInfo'
 import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar'
 
 describe('VideoRecordingSettingsToolbar', () => {
@@ -94,6 +101,7 @@ describe('VideoRecordingSettingsToolbar', () => {
                         editing: true,
                         recording: false,
                         preRecording: false,
+                        dryRunSelection: null,
                         snapshot: false,
                         finalizing: false,
                         fps: 0,
@@ -228,6 +236,51 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(globalThis.lgs.settings.ui.replay.simple.camera.cameraAngle).toBe(0)
         expect(globalThis.lgs.settings.ui.replay.duration).toBe(20)
         expect(globalThis.lgs.stores.replay.duration).toBe(20)
+    })
+
+    it('persists Simple Replay Dry run and hides quality choices without changing video preferences', async () => {
+        globalThis.lgs.stores.replay.simplePreparationActive = true
+        render(<><VideoRecordingSettingsToolbar/><VideoSettingsInfo/></>)
+
+        expect(screen.getByText('High · 30 FPS')).not.toBeNull()
+        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
+        expect(screen.getByText('Preset')).not.toBeNull()
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('checkbox', {name: 'Dry run'}))
+            await Promise.resolve()
+        })
+
+        expect(globalThis.lgs.settings.ui.replay.simple.dryRun).toBe(true)
+        expect(globalThis.lgs.settings.ui.video).toMatchObject({fps: 0, quality: 1})
+        await vi.waitFor(() => {
+            expect(document.querySelector('.simple-replay-settings-summary')?.textContent).toContain('Dry run')
+            expect(document.querySelector('.video-settings-info')?.textContent).toContain('Mode : Dry run')
+        })
+        expect(screen.getByTestId('settings-popup')).not.toBeNull()
+        expect(document.querySelector('.simple-replay-settings-summary')?.textContent).not.toContain('FPS')
+        expect(document.querySelector('.simple-replay-settings-summary [data-icon="bolt"]')?.getAttribute('data-variant')).toBe('regular')
+        expect(document.querySelector('[aria-label="Dry run"] [data-icon="bolt"]')?.getAttribute('data-variant')).toBe('regular')
+        expect(document.querySelector('[aria-label="Video preset"]')).toBeNull()
+        expect(screen.queryByTestId('preset-popup-content')).toBeNull()
+        expect(screen.getAllByText('Dry run')).not.toHaveLength(0)
+        expect(screen.getByRole('button', {name: 'Run Dry run'})).not.toBeNull()
+    })
+
+    it('starts Simple Replay Dry run without requiring the media recorder', async () => {
+        globalThis.lgs.stores.replay.simplePreparationActive = true
+        globalThis.lgs.settings.ui.replay.simple.dryRun = true
+        delete globalThis.__.mediaCapture
+        render(<VideoRecordingSettingsToolbar/>)
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Run Dry run'}))
+        })
+
+        await vi.waitFor(() => expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true))
+        expect(globalThis.lgs.stores.ui.video.dryRun).toBe(true)
+        expect(globalThis.lgs.stores.ui.video).toMatchObject({fps: 0, quality: 1})
+        expect(prepareVideoCaptureUi).toHaveBeenCalledOnce()
     })
 
     it('uses the Simple Replay gear popup for the Expert timeline without duration', () => {

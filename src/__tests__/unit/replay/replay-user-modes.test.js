@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -302,6 +302,7 @@ describe('Replay user modes', () => {
 
     it('defaults Simple Replay to 15 seconds and accepts only the supported durations', () => {
         expect(defaultSimpleReplaySettings().duration).toBe(15)
+        expect(defaultSimpleReplaySettings().dryRun).toBe(false)
         expect(normalizeSimpleReplaySettings({duration: 10}).duration).toBe(10)
         expect(normalizeSimpleReplaySettings({duration: 20}).duration).toBe(20)
         expect(normalizeSimpleReplaySettings({duration: 25}).duration).toBe(15)
@@ -311,6 +312,21 @@ describe('Replay user modes', () => {
             journey: {duration: 30},
         })
         expect(resolved.duration).toBe(30)
+    })
+
+    it('persists Dry run as a user Simple Replay preference and ignores Journey values', () => {
+        const savedUserSettings = {dryRun: true}
+        const restoredUserSettings = normalizeSimpleReplaySettings(savedUserSettings)
+
+        expect(restoredUserSettings.dryRun).toBe(true)
+        expect(resolveSimpleReplaySettings({
+            user: restoredUserSettings,
+            journey: {dryRun: false},
+        }).dryRun).toBe(true)
+        expect(resolveSimpleReplaySettings({
+            user: {dryRun: false},
+            journey: {dryRun: true},
+        }).dryRun).toBe(false)
     })
 
     it('initializes Expert once and preserves it on mode switches', () => {

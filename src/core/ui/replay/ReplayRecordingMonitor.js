@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -173,6 +173,7 @@ export const startReplayRecordingMonitor = ({
 
 /**
  * Publish one composed frame from the recording pipeline.
+ * Dry run publishes frame progress without copying or retaining preview images.
  *
  * @param {Object} frame - Composed canvas and frame metadata.
  * @returns {Object} Current monitor snapshot.
@@ -190,20 +191,27 @@ export const publishReplayRecordingMonitorFrame = ({
         return snapshot
     }
 
-    const frameCanvas = snapshotReplayMonitorFrame(canvas)
-    copyReplayMonitorFrame(frameCanvas, monitorPreviewCanvas)
+    const publishedMode = mode ?? state.mode
+    const nextProgress = hasFiniteNumber(progress) ? Math.max(0, Math.min(1, Number(progress))) : state.progress
+    const shouldPublishPreview = publishedMode !== 'dry-run'
+    let frameCanvas = null
+
+    if (shouldPublishPreview) {
+        frameCanvas = snapshotReplayMonitorFrame(canvas)
+        copyReplayMonitorFrame(frameCanvas, monitorPreviewCanvas)
+    }
 
     state = {
         ...state,
         active: true,
-        mode: mode ?? state.mode,
+        mode: publishedMode,
         phase: phase ?? state.phase,
-        progress: hasFiniteNumber(progress) ? Math.max(0, Math.min(1, Number(progress))) : state.progress,
+        progress: nextProgress,
         frameIndex: hasFiniteNumber(frameIndex) ? Number(frameIndex) : state.frameIndex,
         frameCount: hasFiniteNumber(frameCount) ? Number(frameCount) : state.frameCount,
         processedFrames: hasFiniteNumber(processedFrames) ? Number(processedFrames) : state.processedFrames,
         frameCanvas,
-        frameVersion: state.frameVersion + 1,
+        frameVersion: state.frameVersion + (shouldPublishPreview ? 1 : 0),
     }
     notify()
     return snapshot

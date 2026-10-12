@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react'
+import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
 
@@ -49,7 +49,7 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({appearance, children, size: _size, variant: _variant, ...props}) => (
         <button type="button" data-appearance={appearance} {...props}>{children}</button>
     ),
-    WaIcon: ({animation, className, label, library, name}) => <span className={className} data-animation={animation} data-icon={name} data-icon-library={library} data-label={label}/>,
+    WaIcon: ({animation, className, family, label, library, name, variant}) => <span className={className} data-animation={animation} data-icon={name} data-icon-family={family} data-icon-library={library} data-icon-variant={variant} data-label={label}/>,
     WaDivider: ({className}) => <hr className={className}/>,
     WaProgressBar: ({children, label, value, ...props}) => (
         <div
@@ -186,6 +186,7 @@ describe('ReplayRecordingMonitorWidget', () => {
 
         expect(screen.getByText('Recording')).not.toBeNull()
         expect(screen.getByText('00:07')).not.toBeNull()
+        expect(screen.getByLabelText('Latest encoded recording frame')).not.toBeNull()
         expect(screen.getByText('00:04 / 00:10')).not.toBeNull()
         expect(screen.getByText('1.5 MB')).not.toBeNull()
         expect(screen.getByText('40%')).not.toBeNull()
@@ -282,6 +283,96 @@ describe('ReplayRecordingMonitorWidget', () => {
             expect(document.querySelector('.video-recorder-indicator.finalizing')).not.toBeNull()
             expect(document.querySelector('.video-recorder-indicator')?.dataset.animation).toBe('beat-fade')
         })
+    })
+
+    it('labels Dry run progress and does not offer a partial-save stop action', () => {
+        startReplayRecordingMonitor({
+            mode: 'dry-run',
+            frameCount: 9,
+            videoDurationMillis: 10000,
+        })
+        updateReplayRecordingMonitor({
+            phase: 'checking',
+            progress: 4 / 9,
+            processedFrames: 4,
+            elapsedMillis: 4200,
+            estimatedRemainingMillis: 6000,
+        })
+
+        render(<ReplayRecordingMonitorWidget/>)
+
+        expect(screen.getByText('Dry run')).not.toBeNull()
+        expect(document.querySelector('.replay-recording-monitor-preview')).toBeNull()
+        expect(widgetHarness.config.min).toEqual({width: 360, height: 120})
+        expect(widgetHarness.config.resizeToContent).toEqual({
+            target: '.replay-recording-monitor', height: true, minHeight: true,
+        })
+        expect(document.querySelector('.replay-recording-monitor.is-dry-run')).not.toBeNull()
+        expect(document.querySelector('.video-recorder-indicator')?.getAttribute('data-icon')).toBe('bolt')
+        expect(document.querySelector('.video-recorder-indicator')?.getAttribute('data-icon-variant')).toBe('regular')
+        expect(document.querySelector('.video-recorder-indicator')?.hasAttribute('data-icon-family')).toBe(false)
+        expect(screen.getByTitle('Frames checked percentage').textContent).toBe('44%')
+        expect(screen.queryByTitle('Dry run elapsed time')).toBeNull()
+        expect(screen.queryByText('00:04')).toBeNull()
+        expect(screen.getByTitle('Estimated time remaining').textContent).toContain('00:06')
+        expect(screen.getByText('4 / 9')).not.toBeNull()
+        expect(screen.getByRole('progressbar', {name: 'Dry run progress: 44%'})).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Pause Dry run'})).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Cancel Dry run and return to preparation'})).not.toBeNull()
+        expect(screen.queryByRole('button', {name: 'Stop recording and save or share'})).toBeNull()
+        expect(screen.queryByText('Encoded size')).toBeNull()
+    })
+
+    it('updates the host sizing contract when switching between frame preview and Dry run', () => {
+        startReplayRecordingMonitor({mode: 'export'})
+        render(<ReplayRecordingMonitorWidget/>)
+        const positionKey = widgetHarness.config.positionKey
+        const widgetId = widgetHarness.config.id
+
+        expect(widgetHarness.config.resizeToContent.height).toBe(false)
+        expect(screen.getByLabelText('Latest encoded recording frame')).not.toBeNull()
+
+        act(() => startReplayRecordingMonitor({mode: 'dry-run', frameCount: 9}))
+
+        expect(widgetHarness.config.resizeToContent.height).toBe(true)
+        expect(widgetHarness.config.positionKey).toBe(positionKey)
+        expect(widgetHarness.config.id).toBe(widgetId)
+        expect(screen.queryByLabelText('Latest encoded recording frame')).toBeNull()
+
+        act(() => startReplayRecordingMonitor({mode: 'export'}))
+
+        expect(widgetHarness.config.resizeToContent.height).toBe(false)
+        expect(widgetHarness.config.resizeToContent.minHeight).toBe(true)
+        expect(widgetHarness.config.positionKey).toBe(positionKey)
+        expect(widgetHarness.config.min.height).toBe(280)
+        expect(document.querySelector('.replay-recording-monitor.is-dry-run')).toBeNull()
+        expect(screen.getByLabelText('Latest encoded recording frame')).not.toBeNull()
+    })
+
+    it('keeps the Dry run Picture-in-Picture window compact and progress-only', async () => {
+        const externalDocument = document.implementation.createHTMLDocument('Dry run')
+        const externalWindow = {
+            document: externalDocument,
+            close: vi.fn(),
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+        }
+        globalThis.documentPictureInPicture = {
+            requestWindow: vi.fn().mockResolvedValue(externalWindow),
+        }
+        startReplayRecordingMonitor({mode: 'dry-run', frameCount: 9})
+        updateReplayRecordingMonitor({progress: 4 / 9, processedFrames: 4})
+
+        render(<ReplayRecordingMonitorWidget/>)
+        fireEvent.click(screen.getByRole('button', {name: 'Open Recording window in Picture-in-Picture'}))
+
+        await waitFor(() => {
+            expect(externalDocument.body.querySelector('.replay-recording-monitor')).not.toBeNull()
+        })
+        expect(globalThis.documentPictureInPicture.requestWindow).toHaveBeenCalledWith({width: 480, height: 160})
+        expect(externalDocument.body.querySelector('canvas')).toBeNull()
+        expect(externalDocument.body.querySelector('[title="Frames checked percentage"]').textContent).toBe('44%')
+        expect(externalDocument.body.textContent).toContain('4 / 9')
     })
 
     it('keeps Replay export in Recording while the video store is finalizing', () => {

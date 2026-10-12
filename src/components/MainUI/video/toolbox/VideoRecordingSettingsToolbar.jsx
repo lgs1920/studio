@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,7 +34,7 @@ import {
     toGlobalReplayCameraSettings,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {isJourneyReplayDryRunActive} from '@Core/ui/replay/JourneyReplayRuntime'
-import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
+import { WaButton, WaIcon, WaSwitch, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { memo, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
 import { VideoRecordingSettingsMenuContent } from './VideoRecordingSettingsMenus'
@@ -76,7 +76,9 @@ export const VideoRecordingSettingsToolbar = memo(({
                               && !video.finalizing
     const simplePreparation = replay.simplePreparationActive === true
     const compactReplaySettings = simplePreparation || timelineSettings
-    const dryRunActive = timelineSettings && isJourneyReplayDryRunActive(replay, video)
+    const dryRunEnabled = simplePreparation
+                          && (video.dryRunSelection ?? replaySettings?.simple?.dryRun) === true
+    const linkedPlaybackActive = timelineSettings && isJourneyReplayDryRunActive(replay, video)
     const showVideoOptions = mode !== 'actions'
     const showActions = mode !== 'video-options'
 
@@ -177,7 +179,7 @@ export const VideoRecordingSettingsToolbar = memo(({
         if (timelineSettings && isJourneyReplayDryRunActive($replay, $video)) {
             return
         }
-        if (!__.mediaCapture) {
+        if (!__.mediaCapture && !dryRunEnabled) {
             console.warn('[VideoRecordingSettingsToolbar] Recorder not initialized')
             return
         }
@@ -196,8 +198,24 @@ export const VideoRecordingSettingsToolbar = memo(({
             preRecording: true,
             finalizing:   false,
             paused:       false,
+            dryRun:       dryRunEnabled,
         })
-    }, [$replay, $video, syncCropFrame, timelineSettings])
+    }, [$replay, $video, dryRunEnabled, syncCropFrame, timelineSettings])
+
+    /**
+     * Persist the Simple Replay Dry run preference without touching video quality.
+     * @param {Event} event - Dry run switch change event.
+     * @returns {void} Nothing.
+     */
+    const handleDryRunChange = useCallback(event => {
+        const checked = event.currentTarget?.checked ?? event.target?.checked
+        const simple = lgs.settings.ui.replay.simple ?? {}
+        lgs.settings.ui.replay.simple = {
+            ...simple,
+            dryRun: checked === true,
+        }
+        $video.dryRunSelection = checked === true
+    }, [$video])
 
     /**
      * Store the selected Simple Replay duration for playback and export.
@@ -315,8 +333,10 @@ export const VideoRecordingSettingsToolbar = memo(({
                     <span>{currentRatio?.label ?? video.ratio}</span>
                 </span>
                 <span className="simple-replay-settings-summary__item">
-                    <WaIcon name="ranking-star" label=""/>
-                    <span>{`${currentQuality} · ${currentFPS} FPS`}</span>
+                    <WaIcon name={dryRunEnabled ? 'bolt' : 'ranking-star'}
+                            variant={dryRunEnabled ? 'regular' : undefined}
+                            label=""/>
+                    <span>{dryRunEnabled ? 'Dry run' : `${currentQuality} · ${currentFPS} FPS`}</span>
                 </span>
                 {simplePreparation && (
                     <span className="simple-replay-settings-summary__item">
@@ -345,15 +365,31 @@ export const VideoRecordingSettingsToolbar = memo(({
                                                            unifiedChoices
                                                            mainTheme={mainTheme}/>
                     </div>
-                    <div className="simple-replay-settings-row" role="group" aria-label="Video preset">
-                        <WaIcon name="ranking-star" label=""/>
-                        <span className="simple-replay-settings-row__label">{'Preset'}</span>
-                        <VideoRecordingSettingsMenuContent menu="preset"
-                                                           context={$cropper}
-                                                           cropzoneId={VIDEO_CROP_ZONE}
-                                                           compactSimple
-                                                           mainTheme={mainTheme}/>
-                    </div>
+                    {simplePreparation && (
+                        <div className="simple-replay-settings-row" role="group" aria-label="Dry run">
+                            <WaIcon name="bolt" variant="regular" label=""/>
+                            <WaSwitch
+                                className="simple-replay-dry-run-switch"
+                                size="xs"
+                                label-at-start
+                                checked={dryRunEnabled}
+                                onChange={handleDryRunChange}
+                            >
+                                {'Dry run'}
+                            </WaSwitch>
+                        </div>
+                    )}
+                    {!dryRunEnabled && (
+                        <div className="simple-replay-settings-row" role="group" aria-label="Video preset">
+                            <WaIcon name="ranking-star" label=""/>
+                            <span className="simple-replay-settings-row__label">{'Preset'}</span>
+                            <VideoRecordingSettingsMenuContent menu="preset"
+                                                               context={$cropper}
+                                                               cropzoneId={VIDEO_CROP_ZONE}
+                                                               compactSimple
+                                                               mainTheme={mainTheme}/>
+                        </div>
+                    )}
                     {simplePreparation && (
                         <div className="simple-replay-settings-row" role="group" aria-label="Duration">
                             <WaIcon name="clock" label=""/>
@@ -469,19 +505,23 @@ export const VideoRecordingSettingsToolbar = memo(({
 
                 {showActions && compactReplaySettings ? (
                     <>
-                        <WaTooltip for="video-start-recording" placement="top">{'Start Record'}</WaTooltip>
+                        <WaTooltip for="video-start-recording" placement="top">
+                            {dryRunEnabled ? 'Start Dry run' : 'Start Record'}
+                        </WaTooltip>
                         <WaButton
                             id="video-start-recording"
                             size="s"
                             variant="brand"
                             appearance="plain"
                             className="video-recording-settings-action video-recorder-start-recording"
-                            aria-label="Record"
-                            disabled={dryRunActive}
+                            aria-label={dryRunEnabled ? 'Run Dry run' : 'Record'}
+                            disabled={linkedPlaybackActive}
                             onClick={() => void handleReplayRecording()}
                         >
-                            <WaIcon name="clapperboard-play" label=""/>
-                            <span>{'Record'}</span>
+                            <WaIcon name={dryRunEnabled ? 'bolt' : 'clapperboard-play'}
+                                    variant={dryRunEnabled ? 'regular' : undefined}
+                                    label=""/>
+                            <span>{dryRunEnabled ? 'Dry run' : 'Record'}</span>
                         </WaButton>
                     </>
                 ) : null}

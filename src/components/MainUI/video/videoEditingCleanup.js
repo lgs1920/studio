@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -72,6 +72,8 @@ export const cancelVideoEditing = () => {
     }
     lgs.stores.replay.preparationTimeline = null
     videoStore.editing = false
+    videoStore.dryRun = false
+    videoStore.dryRunSelection = null
     __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, true)
 
     restoreVideoCaptureUi()
@@ -115,6 +117,8 @@ export const cancelVideoRecording = async ({invalidateRecording = null} = {}) =>
             Object.assign(videoStore, {
                 preRecording: false,
                 exporting:  false,
+                dryRun:     false,
+                dryRunSelection: null,
                 snapshot:     false,
                 paused:       false,
                 size:         0,

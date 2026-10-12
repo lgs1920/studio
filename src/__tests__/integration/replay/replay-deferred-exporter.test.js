@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,16 +25,25 @@ import {
     resolveReplayDeferredExportPlan,
     waitForReplayWidgetsReady,
     runReplayDeferredMp4Export,
+    exportReplayDeferredDryRun,
     isReplayExportFrameSettled,
 } from '@Core/ui/replay/ReplayDeferredExporter'
 import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import {REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModeConstants'
+import * as replayOverlayComposer from '@Core/ui/replay/ReplayVideoOverlayComposer'
+import * as replayTileReadiness from '@Core/ui/replay/ReplaySceneTileReadiness'
+import * as replayWidgetFrames from '@Core/ui/replay/ReplayWidgetFrameRenderers'
+import {
+    getReplayRecordingMonitorSnapshot,
+    subscribeReplayRecordingMonitor,
+} from '@Core/ui/replay/ReplayRecordingMonitor'
 
 const mediabunnyMocks = vi.hoisted(() => ({
     failNextCanvasAdd: false,
     canvasAddCount:     0,
+    codecProbeCount:    0,
 }))
 
 describe('isReplayExportFrameSettled', () => {
@@ -138,8 +147,14 @@ vi.mock('mediabunny', () => {
         QUALITY_HIGH: 1,
         QUALITY_MEDIUM: 1,
         QUALITY_VERY_HIGH: 1,
-        canEncodeVideo: vi.fn(() => Promise.resolve(true)),
-        getEncodableVideoCodecs: vi.fn(() => Promise.resolve(['vp9'])),
+        canEncodeVideo: vi.fn(() => {
+            mediabunnyMocks.codecProbeCount += 1
+            return Promise.resolve(true)
+        }),
+        getEncodableVideoCodecs: vi.fn(() => {
+            mediabunnyMocks.codecProbeCount += 1
+            return Promise.resolve(['vp9'])
+        }),
     }
 })
 
@@ -178,6 +193,7 @@ afterEach(() => {
     CanvasOverlayComposer.instances.length = 0
     mediabunnyMocks.failNextCanvasAdd = false
     mediabunnyMocks.canvasAddCount = 0
+    mediabunnyMocks.codecProbeCount = 0
 })
 
 describe('ReplayDeferredExporter', () => {
@@ -566,6 +582,96 @@ describe('ReplayDeferredExporter', () => {
         expect(Output.instances.at(-1).setMetadataTags).toHaveBeenCalledWith(mediaMetadata)
     })
 
+    it('traverses a dry run without allocating capture canvases or encoder output', async () => {
+        Output.instances.length = 0
+        const renderedIndexes = []
+        const onFrame = vi.fn()
+        const yieldToBrowser = vi.fn(async () => {})
+        const buildCanvas = vi.fn(() => {
+            throw new Error('Dry run must not allocate a capture canvas.')
+        })
+        const exporter = new ReplayDeferredExporter({
+            timeline: {durationMillis: 1000, fps: 10},
+        })
+
+        const result = await exporter.exportMp4({
+            dryRun: true,
+            label: 'simple-replay-dry-run',
+            dimensions: {width: 640, height: 360},
+            buildCanvas,
+            renderFrame: async ({frame}) => {
+                renderedIndexes.push(frame.index)
+            },
+            onFrame,
+            yieldIntervalMs: 0,
+            yieldToBrowser,
+        })
+
+        expect(result).toMatchObject({dryRun: true, frameCount: 11, renderedFrameCount: 11})
+        expect(result).not.toHaveProperty('frames')
+        expect(result).not.toHaveProperty('blob')
+        expect(renderedIndexes).toEqual(Array.from({length: 11}, (_value, index) => index))
+        expect(onFrame).toHaveBeenCalledTimes(11)
+        expect(buildCanvas).not.toHaveBeenCalled()
+        expect(yieldToBrowser).toHaveBeenCalledTimes(10)
+        expect(Output.instances).toHaveLength(0)
+        expect(mediabunnyMocks.canvasAddCount).toBe(0)
+        expect(mediabunnyMocks.codecProbeCount).toBe(0)
+    })
+
+    it('cancels a dry run after the current frame without creating output', async () => {
+        Output.instances.length = 0
+        const abortController = new AbortController()
+        const renderFrame = vi.fn(({frame}) => {
+            if (frame.index === 0) {
+                abortController.abort()
+            }
+        })
+        const exporter = new ReplayDeferredExporter({
+            timeline: {durationMillis: 1000, fps: 10},
+        })
+
+        await expect(exporter.exportMp4({
+            dryRun: true,
+            dimensions: {width: 640, height: 360},
+            signal: abortController.signal,
+            buildCanvas: () => ({
+                width: 0,
+                height: 0,
+                getContext: () => ({}),
+            }),
+            renderFrame,
+        })).rejects.toMatchObject({name: 'AbortError'})
+
+        expect(renderFrame).toHaveBeenCalledTimes(1)
+        expect(Output.instances).toHaveLength(0)
+        expect(mediabunnyMocks.codecProbeCount).toBe(0)
+    })
+
+    it('propagates logical Replay frame errors during dry run', async () => {
+        Output.instances.length = 0
+        const error = new Error('Replay camera frame update failed.')
+        const exporter = new ReplayDeferredExporter({
+            timeline: {durationMillis: 1000, fps: 10},
+        })
+
+        await expect(exporter.exportMp4({
+            dryRun: true,
+            dimensions: {width: 640, height: 360},
+            buildCanvas: () => ({
+                width: 0,
+                height: 0,
+                getContext: () => ({}),
+            }),
+            renderFrame: async () => {
+                throw error
+            },
+        })).rejects.toBe(error)
+
+        expect(Output.instances).toHaveLength(0)
+        expect(mediabunnyMocks.codecProbeCount).toBe(0)
+    })
+
     it('finalizes a shareable partial mp4 after a graceful stop request', async () => {
         Output.instances.length = 0
         const renderedFrameIndexes = []
@@ -932,6 +1038,212 @@ describe('ReplayDeferredExporter', () => {
             width:  1280,
             height: 720,
         })
+    })
+
+    it('traverses start, replay, and stop clips in Dry run without creating a video', async () => {
+        Output.instances.length = 0
+        let now = 0
+        const performanceNow = vi.spyOn(globalThis.performance, 'now').mockImplementation(() => now)
+        const monitorSnapshots = []
+        const unsubscribeMonitor = subscribeReplayRecordingMonitor(() => {
+            monitorSnapshots.push(getReplayRecordingMonitorSnapshot())
+        })
+        const captureSpies = [
+            vi.spyOn(replayOverlayComposer, 'getVisibleReplayVideoWidgetKeys'),
+            vi.spyOn(replayOverlayComposer, 'isReplayVideoWidgetReady'),
+            vi.spyOn(replayOverlayComposer, 'flushReplayVideoOverlayCanvases'),
+            vi.spyOn(replayWidgetFrames, 'commitReplayWidgetFrame'),
+        ]
+        const consoleInfo = vi.spyOn(console, 'info').mockImplementation(() => {})
+        const consoleTable = vi.spyOn(console, 'table').mockImplementation(() => {})
+        let releaseFirstFrameTiles
+        let signalFirstFrameTileWait
+        let frameTileWaitCount = 0
+        const firstFrameTiles = new Promise(resolve => { releaseFirstFrameTiles = resolve })
+        const firstFrameTileWait = new Promise(resolve => { signalFirstFrameTileWait = resolve })
+        const tileCoordinator = {
+            prepareForCapture: vi.fn(async ({maxMillis}) => {
+                if (maxMillis === 75) {
+                    frameTileWaitCount += 1
+                    if (frameTileWaitCount === 1) {
+                        signalFirstFrameTileWait()
+                        await firstFrameTiles
+                    }
+                }
+                now += 20
+            }),
+            dispose: vi.fn(),
+        }
+        const restoreTileCache = vi.fn()
+        const scene = {camera: {}, render: vi.fn()}
+        const prepareTileCache = vi.spyOn(replayTileReadiness, 'prepareReplaySceneTileCache')
+            .mockReturnValue(restoreTileCache)
+        const createTileCoordinator = vi.spyOn(replayTileReadiness, 'createReplaySceneTileReadinessCoordinator')
+            .mockReturnValue(tileCoordinator)
+        const sourceCanvas = document.createElement('canvas')
+        sourceCanvas.width = 320
+        sourceCanvas.height = 180
+        sourceCanvas.getBoundingClientRect = vi.fn(() => ({
+            left: 0,
+            top: 0,
+            width: 320,
+            height: 180,
+        }))
+        const buildCanvas = vi.fn(() => {
+            throw new Error('Dry run must not allocate a capture canvas.')
+        })
+        const renderReplayExportFrame = vi.fn(({phase}) => {
+            now += 40
+            return {progress: phase.progress}
+        })
+        const restorePlaybackScene = vi.fn(async () => undefined)
+        const preparePlaybackSceneForExport = vi.fn(async () => {
+            now += 5000
+            return true
+        })
+        const yieldToBrowser = vi.fn(async () => {})
+        const uiToast = {success: vi.fn()}
+        const replayMode = {
+            preparePlaybackSceneForExport,
+            renderReplayExportFrame,
+            restorePlaybackScene,
+            cesiumScene: () => scene,
+        }
+        const replay = {
+            journeySlug: 'journey-dry-run',
+            trackSlug: 'track-dry-run',
+            progress: 0,
+            durationMillis: 1000,
+            videoCropRect: {left: 0, top: 0, width: 320, height: 180},
+            clips: {
+                catalog: {
+                    'zoom-in': {slots: ['start']},
+                    landing: {slots: ['stop']},
+                },
+                start: [{clipId: 'zoom-in', params: {duration: 1}}],
+                stop: [{clipId: 'landing', params: {duration: 1}}],
+            },
+        }
+        const controller = {
+            duration: 1,
+            direction: 1,
+            progress: 0,
+            sampler: {atProgress: progress => ({progress})},
+            currentSample: () => ({progress: 0}),
+            seek: vi.fn(),
+        }
+        globalThis.lgs = {
+            canvas: sourceCanvas,
+            settings: {
+                ui: {
+                    replay: {userMode: REPLAY_USER_MODE_EXPERT},
+                    video: {fps: 0, quality: 0},
+                },
+            },
+            stores: {
+                ui: {
+                    video: {fps: 0, quality: 0},
+                    widget: {list: new Map()},
+                },
+            },
+            theJourney: {slug: 'journey-dry-run'},
+        }
+        globalThis.__ = {
+            device: {browser: 'chromium'},
+            ui: {
+                replay: replayMode,
+                widgetCache: {getAll: vi.fn(() => new Map())},
+                widgetManager: {
+                    getElementById: vi.fn(() => null),
+                    getWidgetConfig: vi.fn(() => ({})),
+                },
+            },
+        }
+
+        let result
+        let dryRunPromise
+        try {
+            dryRunPromise = exportReplayDeferredDryRun({
+                replay,
+                journey: {slug: 'journey-dry-run'},
+                controller,
+                replayMode,
+                fps: 10,
+                dimensions: {width: 320, height: 180},
+                sourceCanvas,
+                buildCanvas,
+                yieldIntervalMs: 0,
+                yieldToBrowser,
+                uiToast,
+                tileReadinessTimeoutMs: 75,
+            })
+            await Promise.race([
+                firstFrameTileWait,
+                dryRunPromise.then(() => {
+                    throw new Error('Dry run completed without waiting for the first frame tiles.')
+                }),
+            ])
+            expect(renderReplayExportFrame).toHaveBeenCalledTimes(5)
+            expect(getReplayRecordingMonitorSnapshot().processedFrames).toBe(0)
+            releaseFirstFrameTiles()
+            result = await dryRunPromise
+            captureSpies.forEach(spy => expect(spy).not.toHaveBeenCalled())
+            expect(prepareTileCache).toHaveBeenCalledOnce()
+            expect(createTileCoordinator).toHaveBeenCalledOnce()
+            createTileCoordinator.mock.calls[0][1].renderNow()
+            expect(scene.render).toHaveBeenCalledOnce()
+            expect(consoleTable).toHaveBeenCalledOnce()
+        }
+        finally {
+            releaseFirstFrameTiles()
+            await dryRunPromise?.catch(() => {})
+            unsubscribeMonitor()
+            performanceNow.mockRestore()
+            captureSpies.forEach(spy => spy.mockRestore())
+            prepareTileCache.mockRestore()
+            createTileCoordinator.mockRestore()
+            consoleInfo.mockRestore()
+            consoleTable.mockRestore()
+        }
+
+        const phases = renderReplayExportFrame.mock.calls.slice(-result.plan.manifest.frameCount)
+            .map(([frame]) => frame.phase.kind)
+        expect(result).toMatchObject({dryRun: true, frameCount: result.plan.manifest.frameCount})
+        expect(result).not.toHaveProperty('frames')
+        expect(result).not.toHaveProperty('blob')
+        expect(result.timings).toMatchObject({
+            frameCount: result.plan.manifest.frameCount,
+            cameraTraceMillis: result.plan.manifest.frameCount * 40,
+            widgetStateMillis: 0,
+            tileReadinessMillis: result.plan.manifest.frameCount * 20,
+            otherMillis: 5220,
+            totalMillis: 5220 + result.plan.manifest.frameCount * 60,
+        })
+        expect(phases).toContain('pre-replay')
+        expect(phases).toContain('replay')
+        expect(phases).toContain('post-replay')
+        expect(renderReplayExportFrame).toHaveBeenCalledTimes(result.plan.manifest.frameCount + 4)
+        expect(tileCoordinator.prepareForCapture.mock.calls.filter(([options]) => options.maxMillis === 100)).toHaveLength(3)
+        expect(frameTileWaitCount).toBe(result.plan.manifest.frameCount)
+        expect(tileCoordinator.dispose).toHaveBeenCalledOnce()
+        expect(restoreTileCache).toHaveBeenCalledOnce()
+        expect(yieldToBrowser).toHaveBeenCalledTimes(result.plan.manifest.frameCount - 1)
+        expect(restorePlaybackScene).toHaveBeenCalledTimes(2)
+        expect(preparePlaybackSceneForExport).toHaveBeenCalledOnce()
+        expect(buildCanvas).not.toHaveBeenCalled()
+        expect(CanvasOverlayComposer).not.toHaveBeenCalled()
+        expect(result.plan.runtime.exportElapsedMillis).toBe(5220 + result.plan.manifest.frameCount * 60)
+        expect(result.plan.runtime.exportAverageFrameMillis).toBeCloseTo(60, 1)
+        expect(result.plan.runtime.exportEstimatedTotalMillis).toBeCloseTo(result.plan.manifest.frameCount * 60, 1)
+        expect(monitorSnapshots.find(snapshot => snapshot.mode === 'dry-run' && snapshot.processedFrames > 0)).toMatchObject({
+            elapsedMillis: 5280,
+            estimatedRemainingMillis: null,
+        })
+        expect(uiToast.success).toHaveBeenCalledWith(expect.objectContaining({
+            caption: 'Replay dry run',
+        }))
+        expect(Output.instances).toHaveLength(0)
+        expect(mediabunnyMocks.codecProbeCount).toBe(0)
     })
 
     it('renders product Replay export from the main Studio Cesium canvas through every clip phase', async () => {

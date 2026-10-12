@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-26
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { COMPASS_WIDGET, CREDITS_WIDGET, LGS_VISUAL_WIDGET, LOGO_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { v4 as uuid }        from 'uuid'
-import { fitWidgetDimensionsToBounds, isNonDistortingWidget } from './widgetResizeUtils'
+import { constrainWidgetDimensions, fitWidgetDimensionsToBounds, isNonDistortingWidget } from './widgetResizeUtils'
 
 /**
  * Handles widget layout, control box visibility, and setup routines.
@@ -396,6 +396,19 @@ export class WidgetCoreControls {
         else if (config.isCropper) {
             defaultWidth = Number.isFinite(config.cropDimensions?.width) ? config.cropDimensions.width : (widget.width || 200)
             defaultHeight = Number.isFinite(config.cropDimensions?.height) ? config.cropDimensions.height : (widget.height || 200)
+        }
+
+        // Restored dimensions must respect the current content contract before positioning.
+        if (!config.isCropper && !config.collapsed && config.resizable
+            && config.constrainResizeToContent !== false && config.resizeToContent) {
+            const dimensions = constrainWidgetDimensions({
+                config,
+                element,
+                width: defaultWidth,
+                height: defaultHeight,
+            })
+            defaultWidth = dimensions.width
+            defaultHeight = dimensions.height
         }
 
         config.dimensions = {width: defaultWidth, height: defaultHeight}

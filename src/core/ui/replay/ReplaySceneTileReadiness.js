@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-17
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -452,9 +452,10 @@ export const prepareReplaySceneTileCache = (
  * @param {object|null} scene - Cesium scene.
  * @param {number} timeoutMs - Maximum wait duration.
  * @param {AbortSignal|null} signal - Optional cancellation signal.
+ * @param {Function|null} renderNow - Optional synchronous draw for ready-view validation.
  * @returns {Promise<boolean>} Whether a post-render event was observed.
  */
-const waitForReplayPostRender = async (scene, timeoutMs, signal) => {
+const waitForReplayPostRender = async (scene, timeoutMs, signal, renderNow = null) => {
     if (signal?.aborted) {
         throw createAbortError()
     }
@@ -495,7 +496,15 @@ const waitForReplayPostRender = async (scene, timeoutMs, signal) => {
         }
 
         timeoutId = setTimeout(() => resolveOnce(false), safeTimeoutMs)
-        requestReplaySceneRender(scene)
+        try {
+            requestReplaySceneRender(scene)
+            if (!settled && typeof renderNow === 'function') {
+                renderNow()
+            }
+        }
+        catch (error) {
+            rejectOnce(error)
+        }
     })
 }
 
@@ -580,6 +589,7 @@ const waitForReplayTileSignal = async (scene, tilesets, imageryLayers, timeoutMs
  * @param {object|null} [options.scene=null] - Cesium scene.
  * @param {number} [options.maxMillis=5000] - Maximum wall-clock wait.
  * @param {AbortSignal|null} [options.signal=null] - Optional cancellation signal.
+ * @param {Function|null} [options.renderNow=null] - Synchronous draw after tile readiness.
  * @returns {Promise<boolean>} True when ready, false when the frame timeout expires.
  * @throws {Error} When tile loading fails or the wait is aborted.
  */
@@ -587,6 +597,7 @@ export const waitForReplaySceneTilesReady = async ({
                                                        scene = null,
                                                        maxMillis = 5000,
                                                        signal = null,
+                                                       renderNow = null,
                                                    } = {}) => {
     if (!scene) {
         return true
@@ -608,7 +619,7 @@ export const waitForReplaySceneTilesReady = async ({
     }
 
     if (areReplaySceneTilesReady(scene, tilesets)) {
-        await waitForReplayPostRender(scene, Math.max(0, deadline - Date.now()), signal)
+        await waitForReplayPostRender(scene, Math.max(0, deadline - Date.now()), signal, renderNow)
         if (refreshTileSources()) {
             return true
         }
@@ -620,7 +631,7 @@ export const waitForReplaySceneTilesReady = async ({
         }
 
         if (refreshTileSources()) {
-            await waitForReplayPostRender(scene, Math.max(0, deadline - Date.now()), signal)
+            await waitForReplayPostRender(scene, Math.max(0, deadline - Date.now()), signal, renderNow)
             if (refreshTileSources()) {
                 return true
             }
@@ -645,6 +656,7 @@ export const waitForReplaySceneTilesReady = async ({
  * @param {number} [options.maxMillis=5000] - Maximum wall-clock wait.
  * @param {AbortSignal|null} [options.signal=null] - Optional cancellation signal.
  * @param {boolean} [options.disableMovementRequestDeferral=true] - Disable 3D request deferral for a new tileset source.
+ * @param {Function|null} [options.renderNow=null] - Synchronous draw after tile readiness.
  * @returns {Promise<boolean>} True when ready, false when the frame timeout expires.
  * @throws {Error} When tile loading fails or the wait is aborted.
  */
@@ -653,6 +665,7 @@ export const prepareReplaySceneTilesForCapture = async ({
                                                            maxMillis = 5000,
                                                            signal = null,
                                                            disableMovementRequestDeferral = true,
+                                                           renderNow = null,
                                                        } = {}) => {
     if (!scene || signal?.aborted) {
         if (signal?.aborted) {
@@ -670,7 +683,7 @@ export const prepareReplaySceneTilesForCapture = async ({
         prepareTilesets()
     }
     try {
-        return await waitForReplaySceneTilesReady({scene, maxMillis, signal})
+        return await waitForReplaySceneTilesReady({scene, maxMillis, signal, renderNow})
     }
     finally {
         removePrepareListener?.()
@@ -690,6 +703,7 @@ export const prepareReplaySceneTilesForCapture = async ({
  * @param {object} [options] - Coordinator options.
  * @param {number} [options.knownFootprintRenderTimeoutMs=250] - Render budget for a known footprint.
  * @param {number} [options.newFootprintReadinessTimeoutMs=1000] - Readiness budget for a moving camera footprint.
+ * @param {Function|null} [options.renderNow=null] - Synchronous draw for ready footprints.
  * @returns {{prepareForCapture: Function, dispose: Function}|null} Readiness coordinator.
  */
 export const createReplaySceneTileReadinessCoordinator = (
@@ -702,6 +716,7 @@ export const createReplaySceneTileReadinessCoordinator = (
         movingTimeoutMs = undefined,
         settledTimeoutMs = 5000,
         prewarmEnabled = true,
+        renderNow = null,
     } = {},
 ) => {
     if (!scene) {
@@ -800,7 +815,7 @@ export const createReplaySceneTileReadinessCoordinator = (
                                                                      })
 
         if (knownVersion === invalidationVersion) {
-            const rendered = await waitForReplayPostRender(scene, safeKnownTimeout, signal)
+            const rendered = await waitForReplayPostRender(scene, safeKnownTimeout, signal, renderNow)
             refreshSources()
             if (rendered && areReplaySceneTilesReady(scene)
                 && replayCameraFootprintKey(scene) === footprintKey
@@ -814,6 +829,7 @@ export const createReplaySceneTileReadinessCoordinator = (
             maxMillis: effectiveMaxMillis,
             signal,
             disableMovementRequestDeferral,
+            renderNow,
         })
         preparedSourceGeneration = sourceGeneration
         refreshSources()
