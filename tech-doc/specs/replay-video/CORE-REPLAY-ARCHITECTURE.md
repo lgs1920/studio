@@ -74,7 +74,12 @@ through Replay controls. During video preparation, explicit mouse tilt and zoom
 on the map also edit Replay pitch and height. Gesture-start values distinguish
 these inputs from automatic camera movements and unchanged gestures. Pointer
 release commits drag edits synchronously, and preparation flushes pending wheel
-updates before Record. Constant altitude stores absolute prepared height. Ground
+updates before Record. Drag and wheel inertia remain pending until camera height
+and pitch stop changing across a quiet observation interval, or Cesium reports
+the end of movement. Interactive Play waits for the same final gesture value.
+Stop, errors, preparation exit, and disposal cancel pending input before restoring
+the map; a cancelled preparation cannot resume playback later.
+Constant altitude stores absolute prepared height. Ground
 offset stores that height minus the rendered Replay target height. Neither input
 rewrites the cone angle. Ordinary Cesium navigation and playback/capture
 camera feedback never write Replay settings.
@@ -114,6 +119,10 @@ earlier preview, while retaining its normal-camera return snapshot. Recording
 cleanup cannot persist the older baseline over newer preparation edits. Pending
 cleanup also preserves edits made while a new preparation is active, before
 that preparation has been validated.
+Terminal cleanup never persists a playback camera baseline. Outside preparation,
+it reloads runtime controls from the currently selected Journey's camera data.
+This also preserves newer saved edits and prevents an old session from writing
+its height or pitch into another Journey after selection changes.
 Simple Replay disables camera diagnostics, including when persisted or prepared
 settings enable them. Expert Replay exposes the diagnostics setting.
 Diagnostics label ground offset separately from absolute Replay height.

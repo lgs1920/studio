@@ -18,3 +18,11 @@ Workflow:
 6. Exercise public camera lifecycle controls with a real Cesium `Camera`, not only `setView` spies. Test mode changes, clip transitions, preparation adjustments, camera visibility, crop alignment, pivot restoration, and Replay export frame capture.
 
 Do not mutate the Cesium camera from unrelated UI components or add competing animation loops.
+
+Preparation gesture completion must observe the final camera pose, including
+wheel and drag inertia; a fixed delay after input is insufficient. Interactive
+Play and Record wait for this boundary. Cancel pending input before automatic
+camera restoration and invalidate queued starts on stop, error, exit, or disposal.
+Terminal cleanup reloads runtime controls from the active Journey but never
+persists an old playback baseline. Verify newer edits and Journey changes during
+cleanup with real Cesium camera lifecycle tests.

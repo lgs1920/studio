@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import {releaseReplayCameraOwnership} from '@Core/ui/replay/ReplayCameraOwnership'
 import {captureCameraState} from '@Core/ui/replay/JourneyReplaySessionSceneController'
+import {projectReplayTargetInCameraFrame} from '@Core/ui/replay/JourneyReplayCameraMath'
 import { REPLAY_DRAWER }                                           from '@Core/constants'
 import { createJourneyReplayClipInstance }                                from '@Core/ui/replay/JourneyReplayClips'
 import {
@@ -1206,16 +1207,21 @@ describe('replay camera tracking', () => {
             mode.start()
 
             const target = Cartesian3.fromDegrees(2, 48, 120)
-            const expectedDirection = Cartesian3.normalize(
-                Cartesian3.subtract(target, setViewCalls[0].destination, new Cartesian3()),
-                new Cartesian3(),
-            )
-
             expect(flyToCalls).toHaveLength(0)
             expect(setViewCalls).toHaveLength(1)
-            expect(setViewCalls[0].orientation.direction.x).toBeCloseTo(expectedDirection.x, 6)
-            expect(setViewCalls[0].orientation.direction.y).toBeCloseTo(expectedDirection.y, 6)
-            expect(setViewCalls[0].orientation.direction.z).toBeCloseTo(expectedDirection.z, 6)
+            // An off-crop departure moves to the safe margin, preserving its
+            // prepared orientation rather than forcing it to the crop center.
+            const projectedTarget = projectReplayTargetInCameraFrame({
+                frame: {
+                    destination: setViewCalls[0].destination,
+                    direction: setViewCalls[0].orientation.direction,
+                    up: setViewCalls[0].orientation.up,
+                },
+                target,
+                viewport: {width: 1000, height: 1000},
+            })
+            expect(projectedTarget.x).toBeCloseTo(120, 3)
+            expect(projectedTarget.y).toBeCloseTo(500, 3)
         }
         finally {
             globalThis.lgs = previousLgs

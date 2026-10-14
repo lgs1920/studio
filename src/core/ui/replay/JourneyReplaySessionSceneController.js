@@ -175,6 +175,7 @@ export const stop = (mode, options = {}) => {
         disposeReplaySceneFrameQualifier(mode)
         state.clipSequenceToken++
         state.preserveStartCameraComposition = false
+        call.cancelPreparationCameraGesture?.()
         call.stopStopClipPOIMaskLoop()
         if (replayOwnedCameraFor(mode)) {
             call.cancelActiveCameraFlight()
@@ -294,6 +295,7 @@ export const resetCameraController = (mode, {
 } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        call.cancelPreparationCameraGesture?.()
         call.stopCameraLiveSyncLoop()
         state.cameraGuide = null
         state.cameraGuideSourceKey = null
@@ -575,13 +577,11 @@ export const markPlaybackCameraUserAdjusted = (mode, ) => {
         }
     }
 
-/** Restore the Replay baseline without reading the physical map camera. */
-export const restorePlaybackCameraSettings = (mode, {force = false} = {}) => {
+/** Restore runtime settings from the active Journey without persisting an old playback baseline. */
+export const restorePlaybackCameraSettings = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         const store = replayStore()
         const initialCamera = state.playbackStartCameraSettings
-        const cameraUserAdjusted = store?.cameraUserAdjusted === true
         state.playbackStartCameraSettings = null
 
         if (store) {
@@ -596,23 +596,18 @@ export const restorePlaybackCameraSettings = (mode, {force = false} = {}) => {
         // started. Restoring its map view must not overwrite the new Replay edits.
         const preparationActive = store?.simplePreparationActive === true
             || globalThis.lgs?.stores?.ui?.video?.editing === true
-        if (cameraUserAdjusted || preparationActive) {
+        if (preparationActive) {
             return null
         }
 
-        if (initialCamera.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET) {
-            return call.persistCameraSettings(initialCamera)
+        // Explicit preparation edits already own Journey persistence. Terminal
+        // cleanup may run after a Journey or mode change and must never save
+        // the previous session's height/pitch into that new configuration.
+        const configuredCamera = currentJourneyReplayCameraSettings()
+        if (store) {
+            store.camera = configuredCamera
         }
-
-        if (force) {
-            return call.persistCameraSettings(initialCamera)
-        }
-
-        if (!cameraUserAdjusted) {
-            return call.persistCameraSettings(initialCamera)
-        }
-
-        return null
+        return configuredCamera
     }
 
 export const restoreJourneyReplayDrawerAfterPlayback = (mode, ) => {
@@ -789,6 +784,7 @@ export const abortPlaybackAfterListenerError = (mode, error) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         state.clipSequenceToken++
+        call.cancelPreparationCameraGesture?.()
         call.stopStopClipPOIMaskLoop()
         call.cancelActiveCameraFlight()
         state.controller.stop({emit: false, clearProgress: false})

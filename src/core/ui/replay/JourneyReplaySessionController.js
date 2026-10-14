@@ -1115,6 +1115,7 @@ export class JourneyReplaySessionController {
             bindCesiumCameraBridge: (...args) => JourneyReplayCameraController.bindCesiumCameraBridge(this, ...args),
             startCameraLiveSyncLoop: (...args) => JourneyReplayCameraController.startCameraLiveSyncLoop(this, ...args),
             stopCameraLiveSyncLoop: (...args) => JourneyReplayCameraController.stopCameraLiveSyncLoop(this, ...args),
+            cancelPreparationCameraGesture: (...args) => JourneyReplayCameraController.cancelPreparationCameraGesture(this, ...args),
             // The session bridge is the physical camera ownership boundary.
             updateCamera: (...args) => replayOwnedCameraFor(this) && replayOwnedCameraFor(this) === replayCameraFor(this)
                 ? JourneyReplayCameraController.updateCamera(this, ...args)

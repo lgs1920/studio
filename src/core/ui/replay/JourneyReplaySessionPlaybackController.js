@@ -317,7 +317,9 @@ export const prepareReplayCamera = async (mode, {
     // Let Cesium finish a queued wheel gesture before reading its prepared pose.
     const pendingCameraGesture = state.preparationCameraGesturePromise
     if (pendingCameraGesture) {
-        await pendingCameraGesture
+        if (await pendingCameraGesture === false) {
+            return false
+        }
     }
     call.updateCameraFromCesiumControls?.({journey})
     const store = replayStore()
@@ -451,6 +453,7 @@ export const leaveReplayPreparation = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     state.preparationTransitionToken = (state.preparationTransitionToken ?? 0) + 1
+    call.cancelPreparationCameraGesture?.()
 
     if (state.controller?.running || state.controller?.paused) {
         state.controller.stop({emit: false, clearProgress: true})
@@ -487,6 +490,13 @@ export const leaveReplayPreparation = (mode) => {
     return restored
 }
 
+/**
+ * Start playback after any pending preparation zoom has settled and persisted.
+ *
+ * @param {Object} mode - Replay session.
+ * @param {Object} options - Journey and playback options.
+ * @returns {Object|Promise<Object|null>|null} First sample, or deferred startup for a pending gesture.
+ */
 export const start = (mode, options = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -494,6 +504,22 @@ export const start = (mode, options = {}) => {
     if (!journey) {
         return null
     }
+    const pendingCameraGesture = state.preparationCameraGesturePromise
+    if (pendingCameraGesture) {
+        const token = ++state.clipSequenceToken
+        const selectedJourney = currentReplayJourney()
+        // Keep Cesium input alive until it settles. Stop/disposal invalidates
+        // this request before a playback camera lease can be acquired.
+        return pendingCameraGesture.then(settled => {
+            if (settled === false || token !== state.clipSequenceToken
+                || selectedJourney !== currentReplayJourney()) {
+                return null
+            }
+            return call.start({...options, journey})
+        })
+    }
+    call.updateCameraFromCesiumControls?.({journey})
+    call.cancelPreparationCameraGesture?.()
     const startStartedAt = globalThis.performance?.now?.() ?? Date.now()
     const traceStartStep = (step, extra = {}) => {
         replayVideoTraceDebug('interactive.replay.start.stage', {
@@ -1028,12 +1054,7 @@ export const beginReplayCameraExport = (mode, ) => {
         state.replayExportCameraActive = true
         state.logicalCameraTrajectory = true
         state.exportPathCompilationBypassTraced = false
-        state.cameraUserAdjusting = false
-        state.cameraPointerActive = false
-        if (state.cameraManualInteractionTimer !== null) {
-            globalThis.clearTimeout?.(state.cameraManualInteractionTimer)
-            state.cameraManualInteractionTimer = null
-        }
+        call.cancelPreparationCameraGesture?.()
         call.cancelCameraBezierTransition(false)
     }
 

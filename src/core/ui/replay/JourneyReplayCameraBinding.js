@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,6 +45,8 @@ import {replayCameraFor} from './ReplayRenderTarget'
 
 const CAMERA_TRANSFER_MIN_LIFT_METERS = 120
 const CAMERA_TRANSFER_DISTANCE_LIFT_RATIO = 0.18
+// Observe a quiet camera interval rather than timing gesture completion from the input event.
+const PREPARATION_CAMERA_SETTLE_INTERVAL_MS = 120
 
 /**
  * Resolve the vertical clearance used by a long camera transfer.
@@ -374,6 +376,31 @@ export const startCameraTransition = (mode, {
         })
     }
 
+/**
+ * Cancel preparation input before automatic camera writes or scene teardown.
+ *
+ * @param {Object} mode - Replay session owning the input lifecycle.
+ * @returns {void}
+ */
+export const cancelPreparationCameraGesture = mode => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    if (state.cameraManualInteractionTimer !== null) {
+        clearTimeout(state.cameraManualInteractionTimer)
+        state.cameraManualInteractionTimer = null
+    }
+    state.cameraPointerActive = false
+    state.cameraUserAdjusting = false
+    state.preparationPointerPitch = null
+    state.preparationPointerHeight = null
+    call.stopCameraLiveSyncLoop?.()
+    const resolveGesture = state.preparationCameraGestureResolve
+    state.preparationCameraGestureResolve = null
+    state.preparationCameraGesturePromise = null
+    resolveGesture?.(false)
+}
+
+/** Bind explicit map gestures and release their timers and listeners with the Replay session. */
 export const bindMarkerInteractions = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -436,7 +463,8 @@ export const bindMarkerInteractions = (mode) => {
             if (!pointer && state.cameraApplyingView) {
                 return
             }
-            if (state.cameraManualInteractionTimer !== null) {
+            if (state.cameraManualInteractionTimer !== null
+                && (pointer || !state.preparationCameraGesturePromise)) {
                 clearTimeout(state.cameraManualInteractionTimer)
                 state.cameraManualInteractionTimer = null
             }
@@ -468,7 +496,12 @@ export const bindMarkerInteractions = (mode) => {
             if (preparation) {
                 call.updateCameraFromCesiumControls({userInteraction: true})
             }
-            if (preparation && deferPreparation && !state.preparationCameraGesturePromise) {
+            const preparationPoseChanged = preparation && (
+                Math.abs(camera.pitch - state.preparationPointerPitch) >= 1e-7
+                || Math.abs(camera.positionCartographic?.height - state.preparationPointerHeight) >= 0.5
+            )
+            const waitForPreparation = preparation && !immediate && (deferPreparation || preparationPoseChanged)
+            if (waitForPreparation && !state.preparationCameraGesturePromise) {
                 state.preparationCameraGesturePromise = new Promise(resolve => {
                     state.preparationCameraGestureResolve = resolve
                 })
@@ -477,7 +510,23 @@ export const bindMarkerInteractions = (mode) => {
             if (state.cameraManualInteractionTimer !== null) {
                 clearTimeout(state.cameraManualInteractionTimer)
             }
+            let settlingPitch = finiteNumber(camera.pitch)
+            let settlingHeight = finiteNumber(camera.positionCartographic?.height)
+            /** Commit the final pose only after camera inertia has stopped changing it. */
             const finish = () => {
+                if (waitForPreparation) {
+                    const pitch = finiteNumber(camera.pitch)
+                    const height = finiteNumber(camera.positionCartographic?.height)
+                    const moving = Math.abs(pitch - settlingPitch) >= 1e-9
+                        || Math.abs(height - settlingHeight) >= 0.001
+                    settlingPitch = pitch
+                    settlingHeight = height
+                    if (moving) {
+                        call.updateCameraFromCesiumControls({userInteraction: true})
+                        state.cameraManualInteractionTimer = setTimeout(finish, PREPARATION_CAMERA_SETTLE_INTERVAL_MS)
+                        return
+                    }
+                }
                 state.cameraManualInteractionTimer = null
                 call.updateCameraFromCesiumControls({userInteraction: true})
                 state.cameraUserAdjusting = false
@@ -488,13 +537,13 @@ export const bindMarkerInteractions = (mode) => {
                 const resolveGesture = state.preparationCameraGestureResolve
                 state.preparationCameraGestureResolve = null
                 state.preparationCameraGesturePromise = null
-                resolveGesture?.()
+                resolveGesture?.(true)
             }
-            if (immediate || (preparation && !deferPreparation)) {
+            if (immediate || (preparation && !waitForPreparation)) {
                 finish()
                 return
             }
-            state.cameraManualInteractionTimer = setTimeout(finish, 120)
+            state.cameraManualInteractionTimer = setTimeout(finish, PREPARATION_CAMERA_SETTLE_INTERVAL_MS)
         }
         const moveStart = () => {
             if (!state.cameraPointerActive && !state.cameraUserAdjusting) {
@@ -549,15 +598,7 @@ export const bindMarkerInteractions = (mode) => {
             camera.changed?.removeEventListener?.(cameraChanged)
             camera.moveStart.removeEventListener(moveStart)
             camera.moveEnd.removeEventListener(moveEnd)
-            if (state.cameraManualInteractionTimer !== null) {
-                clearTimeout(state.cameraManualInteractionTimer)
-                state.cameraManualInteractionTimer = null
-            }
-            call.stopCameraLiveSyncLoop()
-            const resolveGesture = state.preparationCameraGestureResolve
-            state.preparationCameraGestureResolve = null
-            state.preparationCameraGesturePromise = null
-            resolveGesture?.()
+            cancelPreparationCameraGesture(mode)
             interactionTargets.forEach(target => {
                 target.removeEventListener?.('pointerdown', pointerDown, listenerOptions)
                 target.removeEventListener?.('pointerup', pointerUp, listenerOptions)

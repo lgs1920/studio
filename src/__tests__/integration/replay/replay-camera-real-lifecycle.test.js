@@ -211,6 +211,7 @@ describe('Replay with the real Cesium camera', () => {
             camera.setView({destination: Cartesian3.fromDegrees(2, 47.995, 3454), orientation: {heading: 1.7, pitch: -Math.PI / 6, roll: 0}})
             canvas.dispatchEvent(new MouseEvent('pointerup', {bubbles: true}))
             const selectedAltitude = altitudeMode === 'constant' ? 3454 : 485
+            camera.moveEnd.raiseEvent()
             expect(lgs.stores.replay.camera).toMatchObject({pitch: -30, altitude: selectedAltitude, altitudeMode, cameraAngle: 65})
             await mode.prepareReplayCamera()
             expect(journey.replay.simple.camera).toMatchObject({
@@ -243,6 +244,7 @@ describe('Replay with the real Cesium camera', () => {
             camera.setView({destination: Cartesian3.fromDegrees(2, 47.995, 3454), orientation: {heading: 1.7, pitch: -Math.PI / 6, roll: 0}})
             canvas.dispatchEvent(new MouseEvent('pointerup', {bubbles: true}))
             const selectedAltitude = altitudeMode === 'constant' ? 3454 : 485
+            camera.moveEnd.raiseEvent()
             expect(lgs.stores.replay.camera).toMatchObject({altitude: selectedAltitude, altitudeMode, pitch: -30, cameraAngle: 65})
             await mode.prepareReplayCamera()
             mode.start()
@@ -278,7 +280,7 @@ describe('Replay with the real Cesium camera', () => {
             // Cesium applies wheel movement after dispatch, on the scene update.
             camera.setView({destination: Cartesian3.fromDegrees(2, 47.995, 3454), orientation: {heading: camera.heading, pitch: camera.pitch, roll: camera.roll}})
             const preparing = mode.prepareReplayCamera()
-            await vi.advanceTimersByTimeAsync(120)
+            camera.moveEnd.raiseEvent()
             await preparing
             expect(lgs.stores.replay.camera).toMatchObject({altitude: 3454, pitch: -30, cameraAngle: 65})
             expect(journey.replay.simple.camera).toMatchObject({altitude: 3454, pitch: -30, cameraAngle: 65})
@@ -287,6 +289,162 @@ describe('Replay with the real Cesium camera', () => {
             mode.dispose()
             await mode.waitForSceneRestore()
             vi.useRealTimers()
+        }
+    })
+
+    it.each([
+        ['basic', 'constant', 'wheel'], ['basic', 'ground-offset', 'wheel'],
+        ['expert', 'constant', 'wheel'], ['expert', 'ground-offset', 'wheel'],
+        ['basic', 'constant', 'drag'], ['basic', 'ground-offset', 'drag'],
+        ['expert', 'constant', 'drag'], ['expert', 'ground-offset', 'drag'],
+    ])('waits for the final inertial zoom before preparing %s Replay (%s, %s)', async (userMode, altitudeMode, gesture) => {
+        const {camera, mode, journey, settings} = installScene({userMode, altitude: 539, pitch: -30})
+        const replayKey = userMode === 'basic' ? 'simple' : 'expert'
+        journey.replay[replayKey].camera.altitudeMode = altitudeMode
+        const settingsCamera = userMode === 'basic' ? settings.simple.camera : settings.camera
+        settingsCamera.altitudeMode = altitudeMode
+        lgs.stores.replay.camera.altitudeMode = altitudeMode
+        vi.useFakeTimers()
+        try {
+            await mode.enterReplayPreparation({journey})
+            const canvas = lgs.viewer.canvas
+            if (gesture === 'wheel') {
+                canvas.dispatchEvent(new WheelEvent('wheel'))
+            }
+            else {
+                canvas.dispatchEvent(new MouseEvent('pointerdown', {bubbles: true}))
+            }
+            camera.setView({destination: Cartesian3.fromDegrees(2, 47.995, 2630), orientation: {heading: camera.heading, pitch: camera.pitch, roll: camera.roll}})
+            if (gesture === 'drag') {
+                canvas.dispatchEvent(new MouseEvent('pointerup', {bubbles: true}))
+                camera.setView({destination: Cartesian3.fromDegrees(2, 47.995, 2800), orientation: {heading: camera.heading, pitch: camera.pitch, roll: camera.roll}})
+            }
+            let prepared = false
+            const preparation = mode.prepareReplayCamera().then(result => {
+                prepared = true
+                return result
+            })
+
+            await vi.advanceTimersByTimeAsync(120)
+            expect(prepared).toBe(false)
+            // Zoom inertia continues after the former fixed gesture timeout.
+            camera.setView({destination: Cartesian3.fromDegrees(2, 47.995, 3515), orientation: {heading: camera.heading, pitch: camera.pitch, roll: camera.roll}})
+            await vi.advanceTimersByTimeAsync(120)
+            expect(prepared).toBe(false)
+            await vi.advanceTimersByTimeAsync(120)
+            expect(await preparation).toBe(true)
+            expect(journey.replay[replayKey].camera).toMatchObject({
+                altitude: altitudeMode === 'constant' ? 3515 : 3395,
+                altitudeMode,
+                pitch: -30,
+                cameraAngle: 65,
+            })
+        }
+        finally {
+            mode.dispose()
+            await mode.waitForSceneRestore()
+            vi.useRealTimers()
+        }
+    })
+
+    it.each(['basic', 'expert'])('starts %s playback only after the preparation zoom settles', async userMode => {
+        const {camera, mode, journey, controller} = installScene({userMode, altitude: 539, pitch: -30})
+        const replayKey = userMode === 'basic' ? 'simple' : 'expert'
+        vi.useFakeTimers()
+        try {
+            await mode.enterReplayPreparation({journey})
+            lgs.viewer.canvas.dispatchEvent(new WheelEvent('wheel'))
+            camera.setView({destination: Cartesian3.fromDegrees(2, 47.995, 2630), orientation: {heading: camera.heading, pitch: camera.pitch, roll: camera.roll}})
+            const starting = mode.start({journey})
+            expect(controller.playing).toBe(false)
+            await vi.advanceTimersByTimeAsync(120)
+            expect(controller.playing).toBe(false)
+            camera.setView({destination: Cartesian3.fromDegrees(2, 47.995, 3515), orientation: {heading: camera.heading, pitch: camera.pitch, roll: camera.roll}})
+            await vi.advanceTimersByTimeAsync(240)
+            expect(await starting).not.toBeNull()
+            expect(controller.playing).toBe(true)
+            // The target-local camera frame adds a small ellipsoid-curvature
+            // difference, but must not reuse the previous 539 m zoom.
+            expect(Math.abs(camera.positionCartographic.height - 3515)).toBeLessThan(5)
+            expect(journey.replay[replayKey].camera.altitude).toBe(3515)
+        }
+        finally {
+            mode.dispose()
+            await mode.waitForSceneRestore()
+            vi.useRealTimers()
+        }
+    })
+
+    it.each(['basic', 'expert'])('cancels pending %s zoom preparation and startup before restoring the map', async userMode => {
+        const {camera, mode, journey, controller} = installScene({userMode, altitude: 539, pitch: -30})
+        const replayKey = userMode === 'basic' ? 'simple' : 'expert'
+        vi.useFakeTimers()
+        try {
+            await mode.enterReplayPreparation({journey})
+            lgs.viewer.canvas.dispatchEvent(new WheelEvent('wheel'))
+            const preparing = mode.prepareReplayCamera({journey})
+            const starting = mode.start({journey})
+            mode.stop({emit: false})
+            expect(await preparing).toBe(false)
+            expect(await starting).toBeNull()
+            await mode.waitForSceneRestore()
+            camera.setView({destination: Cartesian3.fromDegrees(2, 47.995, 9000)})
+            await vi.advanceTimersByTimeAsync(360)
+            expect(controller.playing).toBe(false)
+            expect(journey.replay[replayKey].camera.altitude).toBe(539)
+            expect(mode[JOURNEY_REPLAY_INTERNAL_STATE].preparationCameraGesturePromise).toBeNull()
+        }
+        finally {
+            mode.dispose()
+            await mode.waitForSceneRestore()
+            vi.useRealTimers()
+        }
+    })
+
+    it.each([
+        ['basic', 'stop', true], ['basic', 'error', true],
+        ['expert', 'stop', true], ['expert', 'error', true],
+        ['basic', 'stop', false], ['basic', 'error', false],
+        ['expert', 'stop', false], ['expert', 'error', false],
+    ])('keeps the latest Journey zoom when %s Replay exits through %s (Journey changed: %s)', async (userMode, terminal, changeJourney) => {
+        const {mode, journey, renderer, controller} = installScene({userMode, altitude: 539, pitch: -5})
+        const replayKey = userMode === 'basic' ? 'simple' : 'expert'
+        lgs.stores.replay.simplePreparationActive = false
+        lgs.stores.ui.video.editing = false
+        const selectedJourney = changeJourney
+            ? makeJourney([makeTrack({slug: 'track#selected#gpx#main', coordinates: [[3, 49, 120], [3.01, 49.01, 130]]})])
+            : journey
+        if (changeJourney) {
+            selectedJourney.slug = 'selected#gpx'
+        }
+        const savedCamera = {...journey.replay[replayKey].camera, altitude: 3454, pitch: -30}
+        try {
+            mode.start({journey})
+            // A newer Journey configuration can arrive before terminal cleanup,
+            // even after the preparation UI has switched to recording.
+            selectedJourney.replay = {[replayKey]: {camera: savedCamera}}
+            lgs.theJourney = selectedJourney
+            lgs.stores.main.theJourney = selectedJourney
+            lgs.stores.replay.cameraUserAdjusted = true
+            if (terminal === 'error') {
+                renderer.update.mockImplementationOnce(() => { throw new Error('Rendering failed') })
+                mode.seek(0.2)
+            }
+            else {
+                mode.stop({emit: false})
+            }
+            await mode.waitForSceneRestore()
+
+            expect(controller.playing).toBe(false)
+            expect(selectedJourney.replay[replayKey].camera).toMatchObject({altitude: 3454, pitch: -30})
+            if (changeJourney) {
+                expect(journey.replay[replayKey].camera).toMatchObject({altitude: 539, pitch: -5})
+            }
+            expect(lgs.stores.replay.camera).toMatchObject({altitude: 3454, pitch: -30})
+        }
+        finally {
+            mode.dispose()
+            await mode.waitForSceneRestore()
         }
     })
 
@@ -306,6 +464,7 @@ describe('Replay with the real Cesium camera', () => {
             // changed threshold or wait for the delayed live-sync frame.
             canvas.dispatchEvent(new MouseEvent('pointerup', {bubbles: true}))
             expect(lgs.stores.replay.camera).toMatchObject({pitch: -45, altitude: 2630, cameraAngle: 65})
+            camera.moveEnd.raiseEvent()
             expect(Cartesian3.distance(camera.directionWC, preparedPose.direction)).toBeGreaterThan(0.1)
             const manualPreparationPose = readPose(camera)
             await mode.prepareReplayCamera()

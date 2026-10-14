@@ -47,6 +47,12 @@ narrow crop, and at least one high-resolution output profile.
 ### Camera
 
 - The first replay camera does not depend on an unrelated preview pose.
+- Preparation and interactive Play wait for the final inertial wheel or drag
+  zoom, including movement that continues beyond the first input debounce.
+  Verify constant altitude and ground offset in Simple and Expert. Cancellation
+  resolves pending preparation/start requests without applying or saving the
+  restored map view. Stop and rendering errors must preserve newer Journey
+  camera values, including when the selected Journey changes before cleanup.
 - Every deterministic export frame applies its resolved camera command.
 - Start clip endpoints equal the replay-entry command.
 - Stop clips preserve continuity and land on their declared endpoint.

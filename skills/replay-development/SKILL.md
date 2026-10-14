@@ -111,3 +111,10 @@ prerequisite, and request only what is needed to resume. Do not claim completion
 or waive visual validation. Do not run `bun run dev` manually.
 Update architecture or status documentation when ownership, contracts, or
 delivery state changes.
+
+For prepared zoom regressions, observe camera stability across wheel and drag
+inertia rather than treating the first input timeout as completion. Interactive
+Play and Record must consume that same final pose. Stop and error paths cancel
+pending gestures and queued starts before restoring the map. Cleanup may hydrate
+runtime controls from the active Journey but must never persist a prior playback
+baseline into newer edits or another Journey.
