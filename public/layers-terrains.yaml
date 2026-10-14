@@ -32,7 +32,7 @@ providers:
       ## WorldTerrain
       - name: World Terrain
         id: reearth-world
-        image: reearth-world.png
+        image: reearth-provider.png
         usage:
           type: free
           doc: 'https://github.com/reearth/reearth-terrain'
@@ -598,7 +598,7 @@ providers:
       ## Terrain
       - name: MapTiler Terrain
         id: mpt-terrain
-        image: mpt-terrain.png
+        image: maptiler-provider.png
         usage:
           type: freemium
           signin: https://cloud.maptiler.com/maps/
