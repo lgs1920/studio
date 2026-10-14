@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2024-05-02
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@ import { getTrackRenderContent }                         from '@Utils/cesium/tra
 import { normalizeTrackRenderStyle }                     from '@Utils/cesium/trackRenderStyle'
 import { Mobility }                                      from '@Utils/Mobility'
 import { DISTANCE_UNITS, ELEVATION_UNITS }               from '@Utils/UnitUtils'
-import * as echarts                                      from 'echarts/core'
+import { echarts }                                        from '@Core/ui/EChartsCore'
 
 import { ProfileTrackMarker } from '../ProfileTrackMarker'
 import { Track }              from '../Track'

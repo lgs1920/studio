@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-02
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,9 +30,9 @@ import {
 import { resolveReplayVisibilityState } from '@Core/ui/replay/ReplayOverlayResolver'
 import { registerReplayWidgetFrameRenderer } from '@Core/ui/replay/ReplayWidgetFrameRenderers'
 import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION, POINT, TIME } from '@Core/ui/Profiler'
+import { echarts } from '@Core/ui/ECharts'
 import { INTERNATIONAL } from '@Utils/UnitUtils'
 import { colord }        from 'colord'
-import * as echarts                                from 'echarts'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { subscribe, useSnapshot } from 'valtio'
 import { usePreviewChartResize } from '@Components/MainUI/widgets/editor/usePreviewChartResize'
