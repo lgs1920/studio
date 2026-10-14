@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -470,11 +470,92 @@ afterEach(() => {
             },
         })
 
-        expect(exportController.seek).toHaveBeenCalledWith(0.75)
+        expect(exportController.seek).toHaveBeenCalledWith(0.75, undefined)
         expect(renderer.update).toHaveBeenCalledWith(expect.objectContaining({
             sample: exportSample,
             forceGeometry: true,
             syncCursorToTrace: true,
+        }))
+    })
+
+    it('keeps dry-run trace geometry on the interactive cadence and forces record frames', async () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+            }),
+        ])
+        installReplayGlobals(journey)
+
+        const renderer = {
+            clear:      vi.fn(),
+            show:       vi.fn(),
+            update:     vi.fn(),
+            hideCursor: vi.fn(),
+        }
+        const mode = new JourneyReplayMode({
+            controller: new JourneyReplayPlaybackController({
+                requestFrame: () => 1,
+                cancelFrame:  () => {},
+                now:          () => 0,
+            }),
+            renderer,
+        })
+        const exportSample = {
+            longitude: 2,
+            latitude:  48,
+            altitude:  125,
+            height:    125,
+            progress:  0.75,
+        }
+        const exportController = {
+            progress: 0.75,
+            seek: vi.fn(() => exportSample),
+        }
+        const phase = {
+            kind: 'replay',
+            slot: 'replay',
+            progress: 0.75,
+            localMillis: 750,
+        }
+
+        mode.configure({duration: 1})
+        renderer.update.mockClear()
+
+        await mode.renderReplayExportFrame({
+            dryRun: true,
+            controller: exportController,
+            phase,
+            frame: {index: 4, isFirst: false, isLast: false, frameTimeMs: 400},
+        })
+
+        expect(renderer.update).toHaveBeenLastCalledWith(expect.objectContaining({
+            forceGeometry: false,
+            allowPlaybackGeometryUpdate: true,
+            syncCursorToTrace: true,
+        }))
+
+        await mode.renderReplayExportFrame({
+            dryRun: true,
+            controller: exportController,
+            phase,
+            frame: {index: 9, isFirst: false, isLast: true, frameTimeMs: 900},
+        })
+
+        expect(renderer.update).toHaveBeenLastCalledWith(expect.objectContaining({
+            forceGeometry: true,
+            allowPlaybackGeometryUpdate: true,
+        }))
+
+        await mode.renderReplayExportFrame({
+            controller: exportController,
+            phase,
+            frame: {index: 4, isFirst: false, isLast: false, frameTimeMs: 400},
+        })
+
+        expect(renderer.update).toHaveBeenLastCalledWith(expect.objectContaining({
+            forceGeometry: true,
+            allowPlaybackGeometryUpdate: false,
         }))
     })
 

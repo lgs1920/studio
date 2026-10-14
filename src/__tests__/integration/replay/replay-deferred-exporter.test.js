@@ -1312,9 +1312,18 @@ describe('ReplayDeferredExporter', () => {
 
         const phases = renderReplayExportFrame.mock.calls.slice(-result.plan.manifest.frameCount)
             .map(([frame]) => frame.phase.kind)
+        const dryRunFrameCalls = renderReplayExportFrame.mock.calls.slice(-result.plan.manifest.frameCount)
+        const progressSnapshots = monitorSnapshots.filter(snapshot => snapshot.mode === 'dry-run'
+            && snapshot.processedFrames > 0)
         expect(result).toMatchObject({dryRun: true, frameCount: result.plan.manifest.frameCount})
         expect(result).not.toHaveProperty('frames')
         expect(result).not.toHaveProperty('blob')
+        expect(dryRunFrameCalls.every(([options]) => options.dryRun === true)).toBe(true)
+        expect(progressSnapshots.length).toBeLessThan(result.plan.manifest.frameCount)
+        expect(progressSnapshots.at(-1)).toMatchObject({
+            progress: 1,
+            processedFrames: result.plan.manifest.frameCount,
+        })
         expect(result.timings).toMatchObject({
             frameCount: result.plan.manifest.frameCount,
             cameraTraceMillis: result.plan.manifest.frameCount * 40,
@@ -1615,7 +1624,125 @@ describe('ReplayDeferredExporter', () => {
         }
         finally {
             performanceNow.mockRestore()
+            tileReadinessCoordinatorFactory.mockRestore()
         }
+    })
+
+    it('fails isolated Replay export without falling back to the visible canvas', async () => {
+        const sourceCanvas = document.createElement('canvas')
+        sourceCanvas.width = 320
+        sourceCanvas.height = 180
+        const camera = {
+            heading: 0.5,
+            pitch: -0.5,
+            roll: 0,
+            frustum: new PerspectiveFrustum({
+                fov: Math.PI / 3,
+                aspectRatio: 320 / 180,
+                near: 1,
+                far: 10000,
+            }),
+            positionCartographic: {longitude: 1, latitude: 0.5, height: 1000},
+        }
+        const mainScene = {
+            mode: 3,
+            camera,
+            globe: {},
+            fog: {},
+            render: vi.fn(),
+            requestRender: vi.fn(),
+        }
+        const restorePlaybackScene = vi.fn(async () => undefined)
+        const setRenderTarget = vi.fn()
+        const clearRenderTarget = vi.fn()
+        const renderReplayExportFrame = vi.fn()
+        const isolatedRenderHost = {
+            initialize: vi.fn(async () => {
+                throw new Error('WebGL context unavailable')
+            }),
+            destroy: vi.fn(),
+        }
+        const isolatedRenderHostFactory = vi.fn(() => isolatedRenderHost)
+        const buildCanvas = vi.fn(() => ({
+            width: 320,
+            height: 180,
+            getContext: () => ({clearRect: vi.fn(), drawImage: vi.fn()}),
+        }))
+        const replayMode = {
+            restorePlaybackScene,
+            setRenderTarget,
+            clearRenderTarget,
+            renderReplayExportFrame,
+            cesiumScene: () => mainScene,
+        }
+        globalThis.lgs = {
+            canvas: sourceCanvas,
+            scene: mainScene,
+            viewer: {
+                scene: mainScene,
+                camera,
+                terrainProvider: {id: 'terrain'},
+                imageryLayers: {length: 0, get: vi.fn()},
+            },
+            stores: {ui: {video: {fps: 10, quality: 0}}},
+            theJourney: {slug: 'journey-a'},
+        }
+        globalThis.__ = {
+            device: {browser: 'chromium'},
+            ui: {
+                replay: replayMode,
+                widgetCache: {getAll: vi.fn(() => new Map())},
+                widgetManager: {
+                    getElementById: vi.fn(() => null),
+                    getWidgetConfig: vi.fn(() => ({})),
+                },
+            },
+        }
+
+        let exportError = null
+        try {
+            await runReplayDeferredMp4Export({
+                replay: {
+                    progress: 0,
+                    durationMillis: 1000,
+                    videoCropRect: {left: 0, top: 0, width: 320, height: 180},
+                    clips: {catalog: {}, start: [], stop: []},
+                },
+                journey: {slug: 'journey-a'},
+                controller: {
+                    duration: 1,
+                    direction: 1,
+                    progress: 0,
+                    sampler: {atProgress: progress => ({progress})},
+                    currentSample: () => ({progress: 0}),
+                    seek: vi.fn(),
+                },
+                fps: 10,
+                dimensions: {width: 320, height: 180},
+                sourceCanvas,
+                buildCanvas,
+                download: vi.fn(),
+                renderHostMode: 'isolated',
+                isolatedRenderHostFactory,
+            })
+        }
+        catch (error) {
+            exportError = error
+        }
+
+        expect(exportError).toMatchObject({
+            message: 'Isolated Replay rendering could not be initialized.',
+            cause: expect.objectContaining({message: 'WebGL context unavailable'}),
+        })
+        expect(isolatedRenderHostFactory).toHaveBeenCalledOnce()
+        expect(isolatedRenderHost.destroy).toHaveBeenCalledOnce()
+        expect(setRenderTarget).not.toHaveBeenCalled()
+        expect(clearRenderTarget).not.toHaveBeenCalled()
+        expect(renderReplayExportFrame).not.toHaveBeenCalled()
+        expect(buildCanvas).not.toHaveBeenCalled()
+        expect(CanvasOverlayComposer).not.toHaveBeenCalled()
+        expect(mainScene.render).not.toHaveBeenCalled()
+        expect(restorePlaybackScene).toHaveBeenCalledTimes(2)
     })
 
     it('restores the Interactive scene when export preparation fails', async () => {

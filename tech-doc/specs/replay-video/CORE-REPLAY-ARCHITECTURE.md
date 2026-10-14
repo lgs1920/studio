@@ -35,6 +35,15 @@ Start/stop clips may define their own camera movement.
 Completed videos open in the standard preview and sharing dialog.
 `ReplayMediaCapture` handles screenshots and completed-media handoff.
 
+The Simple settings popup offers 10, 15, 20, 30, 45, and 60-second durations, border/fill
+color swatches, and trace/marker size choices of 1, 1.5, and 2.3 times the
+product baseline. Explicit appearance choices are stored in
+`simple.presentation.sizeScale`, `fillColor`, and `borderColor`, on the Journey
+and in the application defaults. Product dimensions remain unscaled in the
+normalized progression; the Simple renderer applies the factor at rendering
+time, after projection limits for the marker. Color inputs update every choice
+preview and the active Replay immediately. Expert appearance remains independent.
+
 Simple Replay offers an opt-in Dry run preference in the video settings popup.
 It traverses the same fixed-timestamp timeline, including start and stop clips,
 and applies the same camera, trace, and logical widget state. Tile prewarming

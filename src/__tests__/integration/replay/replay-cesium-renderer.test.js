@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,8 +42,9 @@ const makeTrack = ({slug, coordinates}) => ({
     },
 })
 
-const makeJourney = tracks => ({
-    slug:   'journey#gpx',
+/** Create a test Journey with a stable slug and track collection. */
+const makeJourney = (tracks, slug = 'journey#gpx') => ({
+    slug,
     tracks: new Map(tracks.map(track => [track.slug, track])),
 })
 
@@ -222,9 +223,46 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(visibleTraceEntities(dataSources).length).toBeGreaterThan(0)
     })
 
+    it('removes the previous replay source and marker when the renderer switches journeys', () => {
+        const dataSources = makeDataSources()
+        installReplayGlobals({dataSources})
+        const firstJourney = makeJourney([
+            makeTrack({
+                slug:        'track#first#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
+            }),
+        ], 'first#gpx')
+        const firstSampler = new JourneyReplayPathSampler({journey: firstJourney})
+        const renderer = new JourneyReplayCesiumRenderer()
+
+        renderer.show({sampler: firstSampler})
+        renderer.update({sample: firstSampler.atProgress(0.5), sampler: firstSampler, forceGeometry: true})
+        expect(dataSources.getByName('replay#first#gpx')).toHaveLength(1)
+        expect(dataSources.getByName('replay#first#gpx')[0].entities.values.some(entity => String(entity.id).endsWith('#cursor'))).toBe(true)
+
+        const secondJourney = makeJourney([
+            makeTrack({
+                slug:        'track#second#gpx#main',
+                coordinates: [[3, 49, 220], [3.001, 49.001, 230], [3.002, 49.002, 240]],
+            }),
+        ], 'second#gpx')
+        const secondSampler = new JourneyReplayPathSampler({journey: secondJourney})
+
+        renderer.update({sample: secondSampler.atProgress(0.5), sampler: secondSampler, forceGeometry: true})
+
+        expect(dataSources.getByName('replay#first#gpx')).toHaveLength(0)
+        expect(dataSources.getByName('replay#second#gpx')).toHaveLength(1)
+        const replaySources = dataSources.items.filter(source => source.name.startsWith('replay#'))
+        const cursors = replaySources.flatMap(source => source.entities.values)
+            .filter(entity => String(entity.id).endsWith('#cursor'))
+        expect(cursors).toHaveLength(1)
+        renderer.clear()
+    })
+
     it('renders the replay marker fill and border on one Cesium point', () => {
         const dataSources = makeDataSources()
         const replay = defaultJourneyReplaySettings()
+        replay.userMode = 'expert'
         replay.progression = {
             ...replay.progression,
             fill:   {...replay.progression.fill, color: '#ff2525', opacity: 1, width: 6},
@@ -290,9 +328,40 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(propertyValue(cursor?.point?.color)?.toCssColorString()).toBe(Color.fromCssColorString('#ff2525').toCssColorString())
     })
 
+    it.each([1.5, 2.3])('scales the actual Simple marker and trace by %s from the projected baseline', scale => {
+        const dataSources = makeDataSources()
+        const replay = defaultJourneyReplaySettings()
+        replay.userMode = 'basic'
+        replay.simple = {presentation: {sizeScale: 1}}
+        installReplayGlobals({dataSources, replay})
+        globalThis.lgs.stores.replay.simplePreparationActive = true
+        const journey = makeJourney([makeTrack({
+            slug: 'track#journey#gpx#main',
+            coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
+        })])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const renderer = new JourneyReplayCesiumRenderer()
+        renderer.show({sampler})
+        const sample = sampler.atProgress(0.5)
+        renderer.update({sample, sampler, forceGeometry: true})
+        const baselinePointSize = propertyValue(replayEntity(dataSources, '#cursor').point.pixelSize)
+        const baselineLineWidth = propertyValue(replayEntity(dataSources, '#fill').polyline.width)
+        const baselineOutline = propertyValue(replayEntity(dataSources, '#cursor').point.outlineWidth)
+        replay.simple.presentation = {sizeScale: scale, fillColor: '#008000', borderColor: '#0000ff'}
+        renderer.update({sample, sampler, forceGeometry: true})
+        const cursor = replayEntity(dataSources, '#cursor')
+        expect(propertyValue(cursor.point.pixelSize)).toBeCloseTo(baselinePointSize * scale)
+        expect(propertyValue(cursor.point.outlineWidth)).toBeCloseTo(baselineOutline * scale)
+        expect(propertyValue(replayEntity(dataSources, '#fill').polyline.width)).toBeCloseTo(baselineLineWidth * scale)
+        expect(propertyValue(cursor.point.color).toCssColorString()).toBe(Color.fromCssColorString('#008000').toCssColorString())
+        expect(propertyValue(cursor.point.outlineColor).toCssColorString()).toBe(Color.fromCssColorString('#0000ff').toCssColorString())
+        renderer.clear()
+    })
+
     it('uses fill and border opacity for the shared Glow effect', () => {
         const dataSources = makeDataSources()
         const replay = defaultJourneyReplaySettings()
+        replay.userMode = 'expert'
         replay.progression = {
             ...replay.progression,
             effect: {mode: REPLAY_EFFECT_GLOW},
@@ -367,6 +436,7 @@ describe('JourneyReplayCesiumRenderer', () => {
     it('falls back to the trace color and composes Neon marker layers without a native point effect', () => {
         const dataSources = makeDataSources()
         const replay = defaultJourneyReplaySettings()
+        replay.userMode = 'expert'
         replay.progression = {
             ...replay.progression,
             effect: {mode: REPLAY_EFFECT_NEON},
@@ -448,6 +518,7 @@ describe('JourneyReplayCesiumRenderer', () => {
     it('updates dynamic effect materials when the replay style changes during playback', () => {
         const dataSources = makeDataSources()
         const replay = defaultJourneyReplaySettings()
+        replay.userMode = 'expert'
         replay.progression = {
             ...replay.progression,
             effect: {mode: REPLAY_EFFECT_GLOW},
@@ -479,6 +550,7 @@ describe('JourneyReplayCesiumRenderer', () => {
     it('renders a static completed trace for stop clip frames', () => {
         const dataSources = makeDataSources()
         const replay = defaultJourneyReplaySettings()
+        replay.userMode = 'expert'
         replay.progression = {
             ...replay.progression,
             fill:   {...replay.progression.fill, color: '#123456'},
@@ -623,6 +695,57 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(Cartesian3.equals(renderedEnd, Cartesian3.fromDegrees(guideEnd.longitude, guideEnd.latitude, 0))).toBe(true)
     })
 
+    it('allows dry-run geometry through the interactive playback thresholds', () => {
+        const dataSources = makeDataSources()
+        installReplayGlobals({dataSources})
+        globalThis.lgs.stores.replay.playing = true
+        const completedSegmentsAt = vi.fn(() => [])
+        const remainingSegmentsAt = vi.fn(() => [])
+        const sampler = {
+            journey: {slug: 'journey#gpx', tracks: new Map()},
+            samples: [],
+            segments: [],
+            totalDistance: 1000,
+            completedSegmentsAt,
+            remainingSegmentsAt,
+        }
+        const renderer = new JourneyReplayCesiumRenderer()
+        const initialSample = {
+            longitude: 2,
+            latitude: 48,
+            progress: 0.1,
+            distanceFromStart: 100,
+        }
+        renderer.show({sampler})
+        renderer.update({sample: initialSample, sampler, forceGeometry: true})
+        const performanceNow = vi.spyOn(globalThis.performance, 'now').mockReturnValue(100)
+
+        renderer.update({sample: initialSample, sampler, allowPlaybackGeometryUpdate: true})
+        const geometryUpdateCount = completedSegmentsAt.mock.calls.length
+        renderer.update({
+            sample: {...initialSample, progress: 0.101, distanceFromStart: 101},
+            sampler,
+            allowPlaybackGeometryUpdate: true,
+        })
+
+        expect(geometryUpdateCount).toBeGreaterThan(0)
+        expect(completedSegmentsAt).toHaveBeenCalledTimes(geometryUpdateCount)
+
+        renderer.update({
+            sample: {...initialSample, progress: 0.102, distanceFromStart: 102},
+            sampler,
+        })
+        expect(completedSegmentsAt).toHaveBeenCalledTimes(geometryUpdateCount)
+
+        renderer.update({
+            sample: {...initialSample, progress: 0.102, distanceFromStart: 102},
+            sampler,
+            forceGeometry: true,
+        })
+        expect(completedSegmentsAt).toHaveBeenCalledTimes(geometryUpdateCount + 1)
+        performanceNow.mockRestore()
+    })
+
     it('keeps the marker aligned when Cesium evaluates it before the completed trace', () => {
         const dataSources = makeDataSources()
         installReplayGlobals({dataSources})
@@ -715,6 +838,7 @@ describe('JourneyReplayCesiumRenderer', () => {
     it('does not resurrect the remaining trace for stop clip frames', () => {
         const dataSources = makeDataSources()
         const replay = defaultJourneyReplaySettings()
+        replay.userMode = 'expert'
         replay.trace = {
             ...replay.trace,
             mode: REPLAY_TRACE_MODE_FULL,

@@ -93,6 +93,7 @@ import {
     BufferTarget, canEncodeVideo, CanvasSource, getEncodableVideoCodecs, Mp4OutputFormat, Output, QUALITY_HIGH,
     QUALITY_MEDIUM, QUALITY_VERY_HIGH,
 }                              from 'mediabunny'
+import {ref}                  from 'valtio'
 
 const VIDEO_CODEC_PROBE_TIMEOUT_MS = 2500
 export const DEFAULT_REPLAY_SCENE_TILE_READINESS_TIMEOUT_MS = 5000
@@ -102,6 +103,7 @@ const REPLAY_TILE_PREWARM_MAX_SAMPLES = 3
 const REPLAY_EXPORT_CODEC_KEEPALIVE_INTERVAL_MS = 5000
 const REPLAY_EXPORT_CODEC_KEEPALIVE_TIMESTAMP_STEP_SECONDS = 0.000001
 const REPLAY_DRY_RUN_BROWSER_YIELD_INTERVAL_MS = 50
+const REPLAY_DRY_RUN_PROGRESS_UPDATE_INTERVAL_MS = 100
 const REPLAY_FRAME_SAMPLE_WORKER_MIN_FRAME_COUNT = 120
 const REPLAY_FRAME_SAMPLE_WORKER_MAX_FRAME_COUNT = 36000
 const REPLAY_FRAME_SAMPLE_WORKER_MAX_ROUTE_SAMPLE_COUNT = 50000
@@ -267,6 +269,7 @@ const defaultIsolatedReplayRenderHostFactory = options => new IsolatedReplayRend
  * @param {object|null} options.replayMode - Replay mode facade.
  * @param {object|null} options.coordinator - Tile readiness coordinator.
  * @param {number} options.lookaheadMs - Camera tile preloading horizon.
+ * @param {boolean} options.dryRun - Whether to use the lighter dry-run trace cadence.
  * @param {AbortSignal|null} options.signal - Optional cancellation signal.
  * @returns {Promise<void>} Promise resolved when pre-warming is complete.
  */
@@ -277,6 +280,7 @@ const prewarmReplayScenePrefix = async ({
                                            replayMode = null,
                                            coordinator = null,
                                            lookaheadMs = REPLAY_TILE_PREWARM_LOOKAHEAD_MS,
+                                           dryRun = false,
                                            signal = null,
                                        } = {}) => {
     const scene = replayMode?.cesiumScene?.()
@@ -329,6 +333,7 @@ const prewarmReplayScenePrefix = async ({
                 plan,
                 replay,
                 controller,
+                dryRun,
             })
             await coordinator.prepareForCapture({
                 maxMillis: 100,
@@ -354,6 +359,7 @@ const prewarmReplayScenePrefix = async ({
             plan,
             replay,
             controller,
+            dryRun,
         })
         replayVideoTraceDebug('export.tile-prewarm.end', {
             prewarmed,
@@ -1230,7 +1236,22 @@ const waitForReplayExportResume = async ({plan = null, signal = null} = {}) => {
     }
 }
 
-const updateReplayExportCreationProgress = ({plan = null, frame = null, force = false} = {}) => {
+/**
+ * Update export timing and progress, optionally limiting publication frequency.
+ *
+ * @param {object} options - Progress update inputs.
+ * @param {object|null} options.plan - Deferred export plan.
+ * @param {object|null} options.frame - Most recently processed frame.
+ * @param {boolean} options.force - Whether to publish regardless of the interval.
+ * @param {number} options.minimumIntervalMs - Minimum time between progress updates.
+ * @returns {object|null} Updated runtime, or null when an interval skips the update.
+ */
+const updateReplayExportCreationProgress = ({
+                                                plan = null,
+                                                frame = null,
+                                                force = false,
+                                                minimumIntervalMs = 0,
+                                            } = {}) => {
     if (!plan?.runtime) {
         return null
     }
@@ -1242,38 +1263,43 @@ const updateReplayExportCreationProgress = ({plan = null, frame = null, force = 
                             : finiteNumber(plan.runtime.exportProcessedFrames, 0)
     const safeFrameCount = frameCount !== null && frameCount > 0 ? frameCount : null
     const isLastFrame = safeFrameCount !== null && processedFrames >= safeFrameCount
+    const safeMinimumIntervalMs = Math.max(0, finiteNumber(minimumIntervalMs, 0) ?? 0)
+    const previousUpdateAt = finiteNumber(plan.runtime.exportLastProgressAt, null)
+    const now = safeMinimumIntervalMs > 0 ? runtimeNow() : null
+    const isIntervalElapsed = safeMinimumIntervalMs === 0
+                              || previousUpdateAt === null
+                              || (now - previousUpdateAt) >= safeMinimumIntervalMs
     const shouldUpdate = force
                          || processedFrames <= 1
                          || isLastFrame
-                         || processedFrames % EXPORT_PROGRESS_UPDATE_FRAME_STEP === 0
+                         || (processedFrames % EXPORT_PROGRESS_UPDATE_FRAME_STEP === 0 && isIntervalElapsed)
 
     if (!shouldUpdate) {
-        return plan.runtime
+        return null
     }
 
     const runtime = plan.runtime
-    const now = runtimeNow()
-    const pausedDurationMillis = replayExportPausedDurationMillis({runtime, now})
-    const elapsedMillis = replayExportActiveElapsedMillis({runtime, now})
+    const updateAt = now ?? runtimeNow()
+    const pausedDurationMillis = replayExportPausedDurationMillis({runtime, now: updateAt})
+    const elapsedMillis = replayExportActiveElapsedMillis({runtime, now: updateAt})
     const frameTimingStartedAt = runtime.exportFrameTimingStartedAt === null
-                                 ? now
-                                 : finiteNumber(runtime.exportFrameTimingStartedAt, now)
+                                 ? updateAt
+                                 : finiteNumber(runtime.exportFrameTimingStartedAt, updateAt)
     const frameTimingPausedDurationAtStart = runtime.exportFrameTimingPausedDurationAtStart === null
                                              ? pausedDurationMillis
                                              : finiteNumber(runtime.exportFrameTimingPausedDurationAtStart, pausedDurationMillis)
     const frameElapsedMillis = Math.max(
         0,
-        now - frameTimingStartedAt - Math.max(0, pausedDurationMillis - frameTimingPausedDurationAtStart),
+        updateAt - frameTimingStartedAt - Math.max(0, pausedDurationMillis - frameTimingPausedDurationAtStart),
     )
     const progress = safeFrameCount !== null
                      ? clampProgress(processedFrames / safeFrameCount)
                      : clampProgress(frame?.progress)
-    const previousUpdateAt = finiteNumber(runtime.exportLastProgressAt, null)
     const previousProcessedFrames = finiteNumber(runtime.exportLastProgressProcessedFrames, 0) ?? 0
     const previousPausedDurationMillis = finiteNumber(runtime.exportLastProgressPausedDurationMillis, 0) ?? 0
     const frameDelta = Math.max(0, processedFrames - previousProcessedFrames)
     const activeDeltaMillis = previousProcessedFrames > 0 && previousUpdateAt !== null
-                              ? Math.max(0, now - previousUpdateAt - Math.max(0, pausedDurationMillis - previousPausedDurationMillis))
+                              ? Math.max(0, updateAt - previousUpdateAt - Math.max(0, pausedDurationMillis - previousPausedDurationMillis))
                               : 0
     const nextSamples = Array.isArray(runtime.exportFrameDurationSamples)
                         ? [...runtime.exportFrameDurationSamples]
@@ -1321,10 +1347,10 @@ const updateReplayExportCreationProgress = ({plan = null, frame = null, force = 
         exportFrameDurationSamples:     nextSamples,
         exportFrameTimingStartedAt: frameTimingStartedAt,
         exportFrameTimingPausedDurationAtStart: frameTimingPausedDurationAtStart,
-        exportLastProgressAt:                   now,
+        exportLastProgressAt:                   updateAt,
         exportLastProgressProcessedFrames:      processedFrames,
         exportLastProgressPausedDurationMillis: pausedDurationMillis,
-        exportUpdatedAt:                now,
+        exportUpdatedAt:                updateAt,
     })
 
     return runtime
@@ -2027,7 +2053,9 @@ export const prepareReplayDeferredExportPlan = ({
             },
         }),
     }
-    plan.exporter = exporter
+    // Keep the class instance out of Valtio's deep proxying. Its private fields
+    // require methods and getters to run with the original instance as `this`.
+    plan.exporter = ref(exporter)
     plan.videoTimeline = videoTimeline
     plan.exportWindow = exportWindow
 
@@ -2150,12 +2178,27 @@ export const resolveReplayDeferredExportPlan = ({
         replayDurationMillis: currentDurationMillis,
         sourceCanvas,
     })
-    if (existingPlan?.runtime?.contextKey === currentContext.contextKey) {
+    const existingExporter = existingPlan?.exporter ?? null
+    let canReuseExistingPlan = existingPlan?.runtime?.contextKey === currentContext.contextKey
+
+    if (canReuseExistingPlan) {
+        try {
+            canReuseExistingPlan = existingExporter instanceof ReplayDeferredExporter
+                                  && existingExporter.timeline instanceof ReplayFrameTimeline
+        }
+        catch {
+            // A plan created before the exporter was marked as a Valtio ref may
+            // contain a proxy that cannot access the class's private fields.
+            canReuseExistingPlan = false
+        }
+    }
+
+    if (canReuseExistingPlan) {
         if (mediaMetadata !== null && mediaMetadata !== undefined) {
             existingPlan.mediaMetadata = mediaMetadata
         }
         return {
-            exporter: existingPlan.exporter ?? null,
+            exporter: existingExporter,
             plan:     existingPlan,
             context:  currentContext,
             reused:   true,
@@ -2393,75 +2436,77 @@ export const runReplayDeferredMp4Export = async ({
         }
 
 
-        const isolatedHostSupported = renderHostMode === 'isolated'
-                                      && typeof replayMode?.setRenderTarget === 'function'
-                                      && typeof replayMode?.clearRenderTarget === 'function'
-                                      && typeof isolatedRenderHostFactory === 'function'
-        if (isolatedHostSupported) {
+        if (renderHostMode === 'isolated') {
+            const isolatedHostSupported = typeof replayMode?.setRenderTarget === 'function'
+                                          && typeof replayMode?.clearRenderTarget === 'function'
+                                          && typeof isolatedRenderHostFactory === 'function'
+            if (!isolatedHostSupported) {
+                throw new Error('Isolated Replay rendering is required, but this Replay session cannot use an isolated render target.')
+            }
+
             const descriptor = captureReplaySceneDescriptor()
-            if (descriptor) {
-                const cropRect = outputRenderSpec?.cropRect
-                                 ?? normalizeReplayVideoCropRect(plan.runtime?.context?.cropRect ?? replay?.videoCropRect ?? null)
-                try {
-                    const outputDpr = cropRect
-                        ? Math.max(1, Math.min(
-                            outputDimensions.width / Math.max(1, cropRect.width),
-                            outputDimensions.height / Math.max(1, cropRect.height),
-                        ))
-                        : 1
-                    isolatedViewportDimensions = {
-                        width: outputDimensions.width / outputDpr,
-                        height: outputDimensions.height / outputDpr,
-                    }
-                    isolatedRenderHost = isolatedRenderHostFactory({
-                        dimensions: outputDimensions,
-                        viewportDimensions: isolatedViewportDimensions,
-                        descriptor,
-                        cropProjection,
-                        readiness: normalizeJourneyReplayReadiness(
-                            replay?.readiness
-                            ?? globalThis.lgs?.settings?.ui?.replay?.readiness,
-                        ),
-                    })
-                    await isolatedRenderHost.initialize()
-                    isolatedRenderTarget = isolatedRenderHost.renderTarget?.() ?? null
-                    if (!isolatedRenderTarget) {
-                        throw new Error('The isolated Replay render host did not expose a render target')
-                    }
-                    replayMode.setRenderTarget(isolatedRenderTarget)
-                    replayVideoTraceDebug('export.render-host.isolated.ready', {
-                        outputWidth: outputDimensions.width,
-                        outputHeight: outputDimensions.height,
-                        viewportWidth: isolatedViewportDimensions.width,
-                        viewportHeight: isolatedViewportDimensions.height,
-                    })
+            if (!descriptor) {
+                throw new Error('Isolated Replay rendering requires an active Cesium scene.')
+            }
+
+            const cropRect = outputRenderSpec?.cropRect
+                             ?? normalizeReplayVideoCropRect(plan.runtime?.context?.cropRect ?? replay?.videoCropRect ?? null)
+            try {
+                const outputDpr = cropRect
+                    ? Math.max(1, Math.min(
+                        outputDimensions.width / Math.max(1, cropRect.width),
+                        outputDimensions.height / Math.max(1, cropRect.height),
+                    ))
+                    : 1
+                isolatedViewportDimensions = {
+                    width: outputDimensions.width / outputDpr,
+                    height: outputDimensions.height / outputDpr,
                 }
-                catch (error) {
-                    if (isolatedRenderTarget) {
-                        try {
-                            replayMode.clearRenderTarget(isolatedRenderTarget)
-                        }
-                        catch {
-                            // Continue with host teardown and the visible fallback.
-                        }
-                    }
+                isolatedRenderHost = isolatedRenderHostFactory({
+                    dimensions: outputDimensions,
+                    viewportDimensions: isolatedViewportDimensions,
+                    descriptor,
+                    cropProjection,
+                    readiness: normalizeJourneyReplayReadiness(
+                        replay?.readiness
+                        ?? globalThis.lgs?.settings?.ui?.replay?.readiness,
+                    ),
+                })
+                await isolatedRenderHost.initialize()
+                isolatedRenderTarget = isolatedRenderHost.renderTarget?.() ?? null
+                if (!isolatedRenderTarget) {
+                    throw new Error('The isolated Replay render host did not expose a render target')
+                }
+                replayMode.setRenderTarget(isolatedRenderTarget)
+                replayVideoTraceDebug('export.render-host.isolated.ready', {
+                    outputWidth: outputDimensions.width,
+                    outputHeight: outputDimensions.height,
+                    viewportWidth: isolatedViewportDimensions.width,
+                    viewportHeight: isolatedViewportDimensions.height,
+                })
+            }
+            catch (error) {
+                if (isolatedRenderTarget) {
                     try {
-                        isolatedRenderHost?.destroy?.()
+                        replayMode.clearRenderTarget(isolatedRenderTarget)
                     }
                     catch {
-                        // The visible fallback must remain available after teardown failure.
+                        // Continue cleanup if releasing a partially installed target fails.
                     }
-                    isolatedRenderHost = null
-                    isolatedRenderTarget = null
-                    isolatedViewportDimensions = null
-                    replayVideoTraceDebug('export.render-host.isolated.fallback', {
-                        message: error?.message ?? String(error),
-                    })
-                    uiToast?.warning?.({
-                        caption: 'Replay video',
-                        text:    'Isolated Replay rendering is unavailable. The visible map will be used.',
-                    })
                 }
+                try {
+                    isolatedRenderHost?.destroy?.()
+                }
+                catch {
+                    // The original host initialization error remains the actionable failure.
+                }
+                isolatedRenderHost = null
+                isolatedRenderTarget = null
+                isolatedViewportDimensions = null
+                replayVideoTraceDebug('export.render-host.isolated.failed', {
+                    message: error?.message ?? String(error),
+                })
+                throw new Error('Isolated Replay rendering could not be initialized.', {cause: error})
             }
         }
 
@@ -2540,6 +2585,7 @@ export const runReplayDeferredMp4Export = async ({
             replay,
             controller,
             replayMode,
+            dryRun: isDryRun,
             coordinator: replaySceneTileReadinessCoordinator,
             lookaheadMs: replaySceneTileReadinessOptions?.readiness?.enabled !== false
                          && replaySceneTileReadinessOptions?.readiness?.prewarmEnabled !== false
@@ -2597,6 +2643,7 @@ export const runReplayDeferredMp4Export = async ({
                         replay,
                         controller,
                         resolvedSample: frame.sample,
+                        dryRun: isDryRun,
                     }) ?? frameSample
                 }
                 else {
@@ -2773,7 +2820,15 @@ export const runReplayDeferredMp4Export = async ({
                 })
             },
             onFrame: async frame => {
-                const exportRuntime = updateReplayExportCreationProgress({plan, frame})
+                const exportRuntime = updateReplayExportCreationProgress({
+                    plan,
+                    frame,
+                    minimumIntervalMs: isDryRun ? REPLAY_DRY_RUN_PROGRESS_UPDATE_INTERVAL_MS : 0,
+                })
+                if (!exportRuntime) {
+                    return
+                }
+
                 updateReplayRecordingMonitor({
                     mode: monitorMode,
                     phase: plan.runtime?.exportStopRequested === true

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,7 @@ import {
 }                                                                 from 'cesium'
 import {
     getJourneyReplaySettings, normalizeJourneyReplayProgressionStyle, normalizeJourneyReplayTrace, REPLAY_EFFECT_NEON,
-    REPLAY_EFFECT_NONE, REPLAY_TRACE_MODE_FULL,
+    REPLAY_EFFECT_NONE, REPLAY_MIN_TRACE_WIDTH, REPLAY_TRACE_MODE_FULL,
 }                                                                 from './JourneyReplayProgressionStyle'
 import {isJourneyReplayBasicMode}                                  from './ReplayUserModeConstants'
 import { replayVideoTraceDebug }                                  from './ReplayVideoTraceDebug'
@@ -33,7 +33,6 @@ const DEFAULT_COLOR = '#ff6a00'
 const DEFAULT_BORDER = '#FFFFFF'
 
 const CURSOR_MIN_RADIUS_METERS = 0.1
-const MIN_PROGRESS_WIDTH = 3
 const PROGRESS_Z_INDEX_REMAINING_FILL = 39
 const PROGRESS_Z_INDEX_BORDER = 40
 const PROGRESS_Z_INDEX_FILL = 41
@@ -162,10 +161,20 @@ export class JourneyReplayCesiumRenderer {
         return this
     }
 
+    /**
+     * Synchronize the replay trace and cursor to one logical sample.
+     *
+     * @param {object} options - Render inputs and visibility controls.
+     * @param {object} options.sample - Current journey sample.
+     * @param {object} options.sampler - Journey path sampler.
+     * @param {boolean} options.allowPlaybackGeometryUpdate - Allow cadence-based updates during playback.
+     * @returns {void}
+     */
     update = ({
                   sample,
                   sampler = this.#sampler,
                   forceGeometry = false,
+                  allowPlaybackGeometryUpdate = false,
                   freezeDynamic = false,
                   syncCursorToTrace = false,
                   hideCursor = false,
@@ -180,6 +189,7 @@ export class JourneyReplayCesiumRenderer {
         }
 
         this.#sampler = sampler
+        this.#journeySlug = sampler?.journey?.slug ?? globalThis.lgs?.theJourney?.slug ?? 'current'
         this.#sample = sample
         const requestedTraceVisibility = hideTrace === true
             ? false
@@ -220,7 +230,9 @@ export class JourneyReplayCesiumRenderer {
         const shouldUpdateGeometry = forceGeometry
                                      || styleChanged
                                      || (!hideTrace && wasTraceHidden)
-                                     || (!freezeDynamic && this.#shouldUpdatePathGeometry(sample))
+                                     || (!freezeDynamic && this.#shouldUpdatePathGeometry(sample, {
+                                         allowPlaybackGeometryUpdate,
+                                     }))
         if (shouldUpdateGeometry) {
             this.#updateCompletedLines(sample, {staticGeometry: completedTraceMode === 'static'})
             this.#updateRemainingLines(sample, {hideRemainingTrace})
@@ -442,6 +454,12 @@ export class JourneyReplayCesiumRenderer {
     }
 
     #ensureSource = () => {
+        const name = `${REPLAY_DATA_SOURCE_PREFIX}#${this.#journeySlug ?? 'current'}`
+        if (this.#source && this.#source.name !== name) {
+            this.#restoreOriginalTrackSources()
+            this.#removeTraceGeometry(this.#source)
+        }
+
         if (this.#source && (this.#sourceInCollection() || this.#sourceAddPending)) {
             return this.#source
         }
@@ -456,7 +474,6 @@ export class JourneyReplayCesiumRenderer {
             return null
         }
 
-        const name = `${REPLAY_DATA_SOURCE_PREFIX}#${this.#journeySlug ?? 'current'}`
         const existing = dataSources.getByName?.(name)?.[0]
         const changedSource = Boolean(existing && existing !== this.#source)
         this.#source = existing ?? new CustomDataSource(name)
@@ -505,8 +522,16 @@ export class JourneyReplayCesiumRenderer {
         this.#sourceRaised = true
     }
 
-    #shouldUpdatePathGeometry = (sample) => {
-        if (globalThis.lgs?.stores?.replay?.playing) {
+    /**
+     * Apply the interactive time and distance thresholds to path geometry updates.
+     *
+     * @param {object} sample - Current journey sample.
+     * @param {object} options - Playback update policy.
+     * @param {boolean} options.allowPlaybackGeometryUpdate - Whether dry run may update while playing.
+     * @returns {boolean} Whether path geometry should be rebuilt.
+     */
+    #shouldUpdatePathGeometry = (sample, {allowPlaybackGeometryUpdate = false} = {}) => {
+        if (globalThis.lgs?.stores?.replay?.playing && allowPlaybackGeometryUpdate !== true) {
             return false
         }
 
@@ -910,6 +935,7 @@ export class JourneyReplayCesiumRenderer {
         return this.#limitTracePositions(remaining)
     }
 
+    /** Resolve active-mode colors and apply Simple scaling without changing baseline dimensions. */
     #style = () => {
         const settings = getJourneyReplaySettings()
         const replayStore = globalThis.lgs?.stores?.replay
@@ -920,6 +946,7 @@ export class JourneyReplayCesiumRenderer {
         const trace = normalizeJourneyReplayTrace(simpleMode ? settings.trace : replayStore?.trace ?? settings.trace)
         const fill = progression.fill
         const border = progression.border
+        const sizeScale = simpleMode ? progression.sizeScale ?? 1 : 1
         const remaining = trace.remaining
         const fillColor = fill.color ?? this.#options.color ?? DEFAULT_COLOR
         const borderColor = border.color ?? this.#options.border ?? DEFAULT_BORDER
@@ -951,10 +978,11 @@ export class JourneyReplayCesiumRenderer {
             effectFillEdgeColor,
             remainingColor: cssColor(remaining.color, Color.GRAY).withAlpha(remaining.opacity),
             remainingUseDefinedTrackStyle: remaining.useDefinedTrackStyle !== false,
-            fillWidth:      Math.max(MIN_PROGRESS_WIDTH, fill.width),
-            borderWidth:    Math.max(0, border.width),
+            fillWidth:      Math.max(REPLAY_MIN_TRACE_WIDTH, fill.width) * sizeScale,
+            borderWidth:    Math.max(0, border.width) * sizeScale,
             cursorDiameter:  Math.max(CURSOR_MIN_RADIUS_METERS * 2, fill.width),
-            cursorBorder:    Math.max(0, border.width),
+            cursorSizeScale: sizeScale,
+            cursorBorder:    Math.max(0, border.width) * sizeScale,
         }
     }
 
@@ -1140,6 +1168,7 @@ export class JourneyReplayCesiumRenderer {
         return this.#cursorTracePositionProperty
     }
 
+    /** Update the projected marker using the same sample and appearance as the completed trace. */
     #updateCursor = (sample, {syncToTrace = false} = {}) => {
         const source = this.#ensureSource()
         if (!source) {
@@ -1159,7 +1188,8 @@ export class JourneyReplayCesiumRenderer {
         const cursorPosition = syncToTrace
             ? this.#cursorPositionFromCompletedTrace(tracePosition)
             : rawCursorPosition
-        const pointSize = this.#metersToPixels(style.cursorDiameter * 2, tracePosition, 80) * 2
+        // Scale the projected baseline after pixel limits so all three choices stay distinct at every zoom.
+        const pointSize = this.#metersToPixels(style.cursorDiameter * 2, tracePosition, 80) * 2 * style.cursorSizeScale
         const outlineWidth = Math.max(0, Number(style.cursorBorder) || 0)
         if (this.#cursorBorder) {
             this.#cursorBorder.show = false

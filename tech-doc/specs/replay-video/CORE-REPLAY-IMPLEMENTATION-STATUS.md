@@ -54,6 +54,9 @@ prewarming and per-frame readiness remain enabled. Widget capture readiness,
 bitmap capture, output image composition, and encoding are skipped. Its compact
 monitor displays integer progress and frame counts without an image preview.
 Saved video quality and FPS preferences remain unchanged.
+The Simple settings popup also exposes border/fill colors and three fixed
+trace/marker scales, with reactive previews and Journey persistence. Its duration
+choices include 45 seconds and one minute.
 
 Simple/Expert support is present but incomplete:
 
