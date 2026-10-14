@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
+import {cloneElement} from 'react'
 
 vi.mock('@Components/LGSPopup', () => ({
     LGSPopup: ({active, children, placement}) => active ? <div data-testid="settings-popup" data-placement={placement}>{children}</div> : null,
@@ -33,6 +34,21 @@ vi.mock('@Components/MainUI/video/toolbox/VideoPresetToolbar', () => ({
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
     WaIcon: ({name, variant}) => <span data-icon={name} data-variant={variant}/>,
+    WaColorPicker: ({value, onInput, 'aria-label': ariaLabel}) => (
+        <input aria-label={ariaLabel} value={value} onInput={onInput} readOnly/>
+    ),
+    WaRadioGroup: ({children, value, onChange, label}) => (
+        <div role="radiogroup" aria-label={label}>
+            {children.map(child => cloneElement(child, {checked: child.props.value === value, onChange}))}
+        </div>
+    ),
+    WaRadio: ({children, value, checked, onChange, 'aria-label': ariaLabel}) => (
+        <label>
+            <input type="radio" aria-label={ariaLabel} checked={checked}
+                   onChange={() => onChange({currentTarget: {value}})}/>
+            {children}
+        </label>
+    ),
     WaSwitch: ({children, checked, className, onChange}) => (
         <label className={className}>
             <input type="checkbox" checked={checked} onChange={onChange}/>
@@ -124,6 +140,7 @@ describe('VideoRecordingSettingsToolbar', () => {
 
     afterEach(() => {
         cleanup()
+        vi.useRealTimers()
         globalThis.__ = undefined
         globalThis.lgs = undefined
     })
@@ -236,6 +253,69 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(globalThis.lgs.settings.ui.replay.simple.camera.cameraAngle).toBe(0)
         expect(globalThis.lgs.settings.ui.replay.duration).toBe(20)
         expect(globalThis.lgs.stores.replay.duration).toBe(20)
+    })
+
+    it('selects 45-second and one-minute durations for Simple playback and recording', async () => {
+        globalThis.lgs.stores.replay.simplePreparationActive = true
+        render(<VideoRecordingSettingsToolbar/>)
+        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
+        for (const [label, duration] of [['45s', 45], ['1 min', 60]]) {
+            await act(async () => fireEvent.click(screen.getByRole('button', {name: label})))
+            expect(globalThis.lgs.settings.ui.replay.simple.duration).toBe(duration)
+            expect(globalThis.lgs.stores.replay.duration).toBe(duration)
+            expect(screen.getByRole('button', {name: label}).getAttribute('aria-pressed')).toBe('true')
+        }
+    })
+
+    it('shows equal-size appearance choices without pixel or color labels and persists them', async () => {
+        vi.useFakeTimers()
+        globalThis.lgs.stores.replay.simplePreparationActive = true
+        globalThis.lgs.theJourney.persistToDatabase = vi.fn()
+        globalThis.__.ui.replay.refresh = vi.fn()
+        render(<VideoRecordingSettingsToolbar/>)
+        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
+        expect(screen.queryByText('Border')).toBeNull()
+        expect(screen.queryByText('Fill')).toBeNull()
+        expect(screen.queryByText(/\d+(?:\.\d+)?\s*px/i)).toBeNull()
+        const appearance = document.querySelector('.simple-replay-appearance')
+        expect(appearance.children[0].getAttribute('data-icon')).toBe('paintbrush')
+        expect(appearance.children[1].classList).toContain('simple-replay-appearance__colors')
+        expect(appearance.children[2].classList).toContain('simple-replay-appearance__reset')
+        const baselineRadius = Number(document.querySelector('circle').getAttribute('r'))
+        await act(async () => fireEvent.input(screen.getByLabelText('Replay fill color'), {target: {value: '#008000'}}))
+        await act(async () => fireEvent.input(screen.getByLabelText('Replay border color'), {target: {value: '#0000ff'}}))
+        for (const circle of document.querySelectorAll('.simple-replay-appearance circle')) {
+            expect(circle.getAttribute('fill')).toBe('#008000')
+            expect(circle.getAttribute('stroke')).toBe('#0000ff')
+        }
+        for (const [scale, sizeLabel, traceWidth, markerRadius] of [
+            [1.5, 'medium', 4.5, 6],
+            [2.3, 'large', 6.9, 9.2],
+            [1, 'small', 3, 4],
+        ]) {
+            const radio = screen.getByRole('radio', {name: `Replay size ${sizeLabel}`})
+            await act(async () => fireEvent.click(radio))
+            expect(radio.checked).toBe(true)
+            expect(globalThis.lgs.stores.replay.progression.sizeScale).toBe(scale)
+            const preview = radio.parentElement.querySelector('svg')
+            expect(preview.getAttribute('width')).toBe('36')
+            expect(preview.getAttribute('height')).toBe('24')
+            expect(preview.getAttribute('viewBox')).toBe('0 0 36 24')
+            expect(Number(preview.querySelectorAll('line')[1].getAttribute('stroke-width'))).toBeCloseTo(traceWidth)
+            expect(Number(preview.querySelector('circle').getAttribute('r'))).toBeCloseTo(markerRadius)
+        }
+        expect(Number(document.querySelector('circle').getAttribute('r'))).toBe(baselineRadius)
+
+        await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Reset Replay appearance to defaults'})))
+        expect(screen.getByLabelText('Replay fill color').value).toBe('#ff6a00')
+        expect(screen.getByLabelText('Replay border color').value).toBe('#ffffff')
+        expect(globalThis.lgs.stores.replay.progression.sizeScale).toBe(1)
+        expect(globalThis.lgs.theJourney.replay.simple.presentation).toMatchObject({
+            sizeScale: 1, fillColor: '#ff6a00', borderColor: '#ffffff',
+        })
+        expect(globalThis.__.ui.replay.refresh).toHaveBeenCalledWith({camera: false})
+        await act(async () => vi.advanceTimersByTime(250))
+        expect(globalThis.lgs.theJourney.persistToDatabase).toHaveBeenCalledTimes(1)
     })
 
     it('persists Simple Replay Dry run and hides quality choices without changing video preferences', async () => {

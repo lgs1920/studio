@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,7 +39,16 @@ export const DEFAULT_REPLAY_DURATION = 60
 /** Default duration in seconds for the compact Simple Replay workflow. */
 export const DEFAULT_SIMPLE_REPLAY_DURATION = 15
 /** Supported duration choices in seconds for the compact Simple Replay workflow. */
-export const SIMPLE_REPLAY_DURATIONS = Object.freeze([10, 15, 20, 30])
+export const SIMPLE_REPLAY_DURATIONS = Object.freeze([10, 15, 20, 30, 45, 60])
+/** Supported Simple Replay trace and marker scale factors. */
+export const SIMPLE_REPLAY_SIZE_SCALES = Object.freeze([1, 1.5, 2.3])
+/** Minimum rendered width in pixels for a Simple Replay trace. */
+export const REPLAY_MIN_TRACE_WIDTH = 3
+
+/** Normalize a Simple Replay size choice without compounding its base dimensions. */
+export const normalizeSimpleReplaySizeScale = value => SIMPLE_REPLAY_SIZE_SCALES.includes(Number(value))
+    ? Number(value)
+    : 1
 export const DEFAULT_REPLAY_POI_DISTANCE = 10000
 export const REPLAY_TRACE_MODE_PROGRESSIVE = 'progressive'
 export const REPLAY_TRACE_MODE_FULL = 'full'
@@ -428,12 +437,14 @@ const normalizeJourneyReplayHysteresisMarginRatio = (zone, value, fallback = DEF
     return clampJourneyReplayNumber(edgeMargin, fallback, REPLAY_HYSTERESIS_MARGIN_RATIO_MIN, REPLAY_HYSTERESIS_MARGIN_RATIO_MAX)
 }
 
+/** Normalize baseline trace dimensions and preserve the optional Simple size choice. */
 export const normalizeJourneyReplayProgressionStyle = (progression = {}) => {
     const effect = progression?.effect ?? {}
     const fill = progression?.fill ?? {}
     const border = progression?.border ?? {}
 
     return {
+        ...(progression?.sizeScale !== undefined ? {sizeScale: normalizeSimpleReplaySizeScale(progression.sizeScale)} : {}),
         effect: {
             mode: effect.mode === REPLAY_EFFECT_GLOW || effect.mode === REPLAY_EFFECT_NEON
                   ? effect.mode
@@ -471,6 +482,32 @@ export const normalizeJourneyReplayProgressionStyle = (progression = {}) => {
                 REPLAY_PROFILE_MARKER_BORDER_MAX_WIDTH,
             ),
         },
+    }
+}
+
+/**
+ * Resolve explicit Simple appearance choices against immutable product dimensions.
+ * Legacy progression payloads remain product-owned; only the compact controls override them.
+ * @param {Object} presentation - Persisted color and scale choices.
+ * @param {Object} defaults - Product presentation defaults.
+ * @returns {Object} Appearance shared by previews, playback, and export.
+ */
+export const resolveSimpleReplayPresentation = (presentation = {}, defaults = defaultJourneyReplaySimpleSettings().presentation) => {
+    const baseline = normalizeJourneyReplayProgressionStyle(defaults?.progression)
+    const sizeScale = normalizeSimpleReplaySizeScale(presentation?.sizeScale)
+    const fillColor = presentation?.fillColor ?? presentation?.progression?.fill?.color ?? baseline.fill.color
+    const borderColor = presentation?.borderColor ?? presentation?.progression?.border?.color ?? baseline.border.color
+    return {
+        sizeScale,
+        fillColor,
+        borderColor,
+        progression: normalizeJourneyReplayProgressionStyle({
+            ...baseline,
+            sizeScale,
+            fill: {...baseline.fill, color: fillColor},
+            border: {...baseline.border, color: borderColor},
+        }),
+        profileInfo: normalizeJourneyReplayProfileInfo(defaults?.profileInfo),
     }
 }
 
@@ -790,10 +827,10 @@ const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
         ...(user?.trace ?? {}),
         ...(journey?.trace ?? {}),
     })
-    const presentation = {
-        progression: normalizeJourneyReplayProgressionStyle(product.presentation.progression),
-        profileInfo: normalizeJourneyReplayProfileInfo(product.presentation.profileInfo),
-    }
+    const presentation = resolveSimpleReplayPresentation({
+        ...(user?.presentation ?? {}),
+        ...(journey?.presentation ?? {}),
+    }, product.presentation)
 
     return {
         duration: normalizeSimpleReplayDuration(user?.duration ?? journey?.duration ?? product.duration),

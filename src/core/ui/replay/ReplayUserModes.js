@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ import {
     normalizeJourneyReplayProfileInfo,
     normalizeJourneyReplayTrace,
     normalizeSimpleReplayDuration,
+    resolveSimpleReplayPresentation,
     toGlobalReplayCameraSettings,
 } from './JourneyReplayProgressionStyle'
 
@@ -52,6 +53,7 @@ const expertProgressionPersistTimers = new WeakMap()
 const simpleCameraPersistTimers = new WeakMap()
 const simpleTracePersistTimers = new WeakMap()
 const simpleDurationPersistTimers = new WeakMap()
+const simplePresentationPersistTimers = new WeakMap()
 const EXPERT_CAMERA_PERSIST_DELAY_MS = 250
 
 /**
@@ -353,6 +355,31 @@ export const defaultSimpleReplaySettings = () => {
 }
 
 /**
+ * Persist compact Simple appearance edits on the active journey after input settles.
+ * @param {Object} presentation - Complete normalized Simple presentation.
+ * @returns {Object|null} Saved presentation, or null without an active journey.
+ */
+export const syncJourneySimpleReplayPresentation = presentation => {
+    const journey = currentReplayJourney()
+    if (!journey) {
+        return null
+    }
+    const replay = journey.replay ?? {}
+    journey.replay = {
+        ...replay,
+        simple: {...replay.simple, presentation},
+    }
+    if (typeof journey.persistToDatabase === 'function') {
+        clearTimeout(simplePresentationPersistTimers.get(journey))
+        simplePresentationPersistTimers.set(journey, setTimeout(() => {
+            simplePresentationPersistTimers.delete(journey)
+            void journey.persistToDatabase()
+        }, EXPERT_CAMERA_PERSIST_DELAY_MS))
+    }
+    return presentation
+}
+
+/**
  * Normalize compact Simple Replay settings.
  *
  * @param {Object} settings - Candidate settings.
@@ -376,10 +403,7 @@ export const normalizeSimpleReplaySettings = (settings = {}) => {
         duration: normalizeSimpleReplayDuration(settings?.duration ?? defaults.duration),
         dryRun: settings?.dryRun === true,
         camera,
-        presentation: {
-            progression: normalizeJourneyReplayProgressionStyle(defaults.presentation.progression),
-            profileInfo: normalizeJourneyReplayProfileInfo(defaults.presentation.profileInfo),
-        },
+        presentation: resolveSimpleReplayPresentation(settings?.presentation, defaults.presentation),
         marker: normalizeJourneyReplayMarker({
             ...defaults.marker,
             ...(settings?.marker ?? {}),
@@ -414,6 +438,8 @@ export const resolveSimpleReplaySettings = ({journey, user, product} = {}) => no
     },
     presentation: {
         ...(product?.presentation ?? {}),
+        ...(user?.presentation ?? {}),
+        ...(journey?.presentation ?? {}),
     },
     marker: {
         ...(product?.marker ?? {}),

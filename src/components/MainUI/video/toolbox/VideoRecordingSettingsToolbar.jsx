@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,6 +38,7 @@ import { WaButton, WaIcon, WaSwitch, WaTooltip } from '@awesome.me/webawesome/di
 import { memo, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
 import { VideoRecordingSettingsMenuContent } from './VideoRecordingSettingsMenus'
+import {SimpleReplayAppearanceSettings} from './SimpleReplayAppearanceSettings'
 import '../style.css'
 
 const RATIO_POPUP = 'ratio'
@@ -341,7 +342,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                 {simplePreparation && (
                     <span className="simple-replay-settings-summary__item">
                         <WaIcon name="clock" label=""/>
-                        <span>{`${simpleDuration}s`}</span>
+                        <span>{simpleDuration === 60 ? '1 min' : `${simpleDuration}s`}</span>
                     </span>
                 )}
             </div>
@@ -391,6 +392,9 @@ export const VideoRecordingSettingsToolbar = memo(({
                         </div>
                     )}
                     {simplePreparation && (
+                        <SimpleReplayAppearanceSettings/>
+                    )}
+                    {simplePreparation && (
                         <div className="simple-replay-settings-row" role="group" aria-label="Duration">
                             <WaIcon name="clock" label=""/>
                             <span className="simple-replay-settings-row__label">{'Duration'}</span>
@@ -401,9 +405,9 @@ export const VideoRecordingSettingsToolbar = memo(({
                                               size="s"
                                               variant="neutral"
                                               appearance={simpleDuration === duration ? 'outlined' : 'plain'}
-                                              aria-pressed={simpleDuration === duration}
+                                              aria-pressed={simpleDuration === duration ? 'true' : 'false'}
                                               onClick={() => handleSimpleDurationChange(duration)}>
-                                        {`${duration}s`}
+                                        {duration === 60 ? '1 min' : `${duration}s`}
                                     </WaButton>
                                 ))}
                             </div>

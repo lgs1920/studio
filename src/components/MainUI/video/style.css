@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-10
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -199,6 +199,79 @@
     &::part(label) {
         font-size: var(--lgs-font-size-s);
     }
+}
+
+.simple-replay-appearance {
+    justify-content: flex-start !important;
+
+    & .simple-replay-appearance__reset::part(base) {
+        min-width: var(--lgs-dimension-s);
+        min-height: var(--lgs-dimension-s);
+        padding: 0;
+    }
+
+    & .simple-replay-appearance__reset wa-icon {
+        font-size: var(--lgs-font-size-s);
+    }
+
+    & .simple-replay-appearance__colors {
+        display: flex;
+        align-items: center;
+        gap: var(--lgs-gutter-xs);
+    }
+
+    & .simple-replay-appearance__sizes {
+        margin-inline-start: auto;
+        min-width: 0;
+    }
+
+    & .simple-replay-appearance__sizes::part(form-control-input) {
+        gap: var(--lgs-gutter-xxs);
+    }
+
+    & .simple-replay-appearance__sizes wa-radio {
+        flex: 0 0 2.5rem;
+        width: 2.5rem;
+        height: var(--wa-form-control-height);
+        min-height: var(--wa-form-control-height);
+        padding: var(--lgs-gutter-xs) 0;
+        box-sizing: border-box;
+        border-radius: var(--wa-border-radius-m) !important;
+        margin: 0;
+        border: 1px solid var(--wa-color-border-normal, var(--lgs-card-on-map-border-color));
+
+        &.is-selected {
+            border-color: var(--lgs-card-on-map-selected-border-color, var(--wa-color-brand-border-normal));
+            background-color: var(--lgs-card-on-map-selected-bg-color, var(--wa-color-brand-fill-quiet));
+            background-image: var(--lgs-card-on-map-selected-bg-image, none);
+        }
+    }
+
+    & .simple-replay-appearance__choice {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        line-height: 1;
+    }
+
+    & .simple-replay-appearance__preview {
+        display: block;
+        flex: 0 0 2.25rem;
+        width: 2.25rem;
+        height: var(--lgs-dimension-s);
+        max-width: 100%;
+    }
+}
+
+.video-recording-settings-popup.wa-theme-lgs1920 .simple-replay-appearance wa-radio.is-selected {
+    border-color: var(--wa-color-brand-border-normal);
+    background-color: var(--wa-color-brand-fill-quiet);
+    background-image: none;
+}
+
+.video-recording-settings-popup--simple .simple-replay-duration-buttons {
+    flex-wrap: wrap;
 }
 
 .video-recording-settings-popup--simple .crop-ratio-popup-menu,

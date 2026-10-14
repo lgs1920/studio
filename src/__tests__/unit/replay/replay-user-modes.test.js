@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -75,6 +75,40 @@ describe('Replay user modes', () => {
             .toBe(REPLAY_USER_MODE_BASIC)
         expect(resolveJourneyReplayUserMode({settings: {}, replay: {userMode: REPLAY_USER_MODE_EXPERT}}))
             .toBe(REPLAY_USER_MODE_EXPERT)
+    })
+
+    it('resolves compact appearance overrides without scaling product widths repeatedly or changing Expert style', () => {
+        vi.stubGlobal('lgs', {
+            savedConfiguration: {ui: {replay: replayYamlDefaults}},
+            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_BASIC, simple: {
+                presentation: {sizeScale: 1.5, fillColor: '#008000'},
+            }}}},
+            stores: {replay: {simplePreparationActive: true}},
+            theJourney: {replay: {
+                simple: {presentation: {sizeScale: 2.3, borderColor: '#0000ff'}},
+                expert: {progression: {fill: {color: '#ffffff', width: 7}, border: {width: 3}}},
+            }},
+        })
+        try {
+            const resolved = resolveSimpleReplaySettings({
+                user: globalThis.lgs.settings.ui.replay.simple,
+                journey: globalThis.lgs.theJourney.replay.simple,
+            })
+            expect(resolved.presentation).toMatchObject({sizeScale: 2.3, fillColor: '#008000', borderColor: '#0000ff'})
+            const normalized = normalizeSimpleReplaySettings(resolved)
+            expect(normalized.presentation.progression.fill.width).toBe(replayYamlDefaults.simple.presentation.progression.fill.width)
+            expect(getJourneyReplaySettings().progression).toMatchObject({
+                sizeScale: 2.3, fill: {color: '#008000', width: 4}, border: {color: '#0000ff', width: 2},
+            })
+            expect(normalizeSimpleReplaySettings({presentation: {sizeScale: 99}}).presentation.sizeScale).toBe(1)
+            expect(normalizeSimpleReplaySettings({presentation: null}).presentation.sizeScale).toBe(1)
+            globalThis.lgs.stores.replay.simplePreparationActive = false
+            globalThis.lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
+            expect(getJourneyReplaySettings().progression.fill).toMatchObject({color: '#ffffff', width: 7})
+        }
+        finally {
+            vi.unstubAllGlobals()
+        }
     })
 
     it('resolves journey settings over user and product settings', () => {
@@ -192,9 +226,17 @@ describe('Replay user modes', () => {
             expect(normalized.camera).toMatchObject({debug: false, cameraAngle: 0})
             expect(normalized.marker.mode).toBe('trace')
             expect(normalized.trace.mode).toBe('full')
-            expect(normalized.presentation.progression).toMatchObject(yamlProgression)
+            expect(normalized.presentation.progression).toMatchObject({
+                ...yamlProgression,
+                fill: {...yamlProgression.fill, color: '#008000'},
+                border: {...yamlProgression.border, color: '#0000ff'},
+            })
 
-            expect(getJourneyReplaySettings({journey}).progression).toMatchObject(yamlProgression)
+            expect(getJourneyReplaySettings({journey}).progression).toMatchObject({
+                ...yamlProgression,
+                fill: {...yamlProgression.fill, color: '#008000'},
+                border: {...yamlProgression.border, color: '#0000ff'},
+            })
 
             globalThis.lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
             globalThis.lgs.stores.replay.userMode = REPLAY_USER_MODE_EXPERT
