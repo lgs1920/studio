@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-13
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import {afterEach, describe, expect, test, vi} from 'vitest'
 import {CanvasOverlayComposer} from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
+import {createReplayRecordingPerformance} from '@Core/ui/replay/ReplayRecordingPerformance'
 
 describe('CanvasOverlayComposer recording path', () => {
     let composer
@@ -96,5 +97,41 @@ describe('CanvasOverlayComposer recording path', () => {
         composer.dispose()
         expect(outputCanvas.width).toBe(320)
         expect(outputCanvas.height).toBe(180)
+    })
+
+    test('excludes the scene flush from composition timings and reports the nested blur cost', async () => {
+        let now = 0
+        const performance = createReplayRecordingPerformance({now: () => now})
+        performance.start({fps: 30})
+        const sourceCanvas = document.createElement('canvas')
+        sourceCanvas.width = 320
+        sourceCanvas.height = 180
+        sourceCanvas.getBoundingClientRect = () => {
+            now += 2
+            return {width: 320, height: 180, left: 0, top: 0}
+        }
+        const overlayCanvas = document.createElement('canvas')
+        overlayCanvas.width = 40
+        overlayCanvas.height = 20
+        const drawImage = vi.fn(() => { now += 3 })
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+            drawImage, fillRect: vi.fn(), setTransform: vi.fn(),
+            save: vi.fn(), restore: vi.fn(), translate: vi.fn(), rotate: vi.fn(), scale: vi.fn(),
+            beginPath: vi.fn(), rect: vi.fn(), clip: vi.fn(),
+        })
+        composer = new CanvasOverlayComposer(sourceCanvas, {
+            width: 320, height: 180, outputDpr: 1,
+            continuousRendering: false,
+            flushWebGLBuffer: () => { now += 100 },
+            recordingPerformance: performance,
+        })
+        composer.addOverlay(overlayCanvas, {x: 0, y: 0, w: 40, h: 20, blur: 4})
+        await composer.renderFrame()
+        const report = performance.finish()
+        expect(report.stages.find(stage => stage.key === 'sourceLayout')).toMatchObject({count: 1, totalMillis: 2})
+        expect(report.stages.find(stage => stage.key === 'composition')).toMatchObject({count: 1, totalMillis: 12})
+        expect(report.stages.find(stage => stage.key === 'compositionBlur')).toMatchObject({kind: 'detail', count: 1, totalMillis: 6})
+        expect(drawImage).toHaveBeenCalledTimes(4)
+        expect(report.wallMillis).toBeGreaterThanOrEqual(114)
     })
 })

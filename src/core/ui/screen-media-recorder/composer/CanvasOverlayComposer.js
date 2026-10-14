@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-18
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,7 @@ export class CanvasOverlayComposer {
     #dpr = window.devicePixelRatio || 1
     #sourceDpr = 1
     #flushWebGLBuffer = null
+    #recordingPerformance = null
     #blurBufferDirty = true
     #running = false
     #continuousRendering = true
@@ -63,6 +64,7 @@ export class CanvasOverlayComposer {
      * @param {Function|null} [options.flushWebGLBuffer=null] - Optional callback to flush a WebGL scene.
      * @param {boolean} [options.continuousRendering=true] - Enable the background loop for interactive composition.
      * @param {HTMLCanvasElement|null} [options.outputCanvas=null] - Optional caller-owned output surface.
+     * @param {Object|null} [options.recordingPerformance=null] - Session-local Record timing collector.
      */
     constructor(sourceCanvas, options = {}) {
         if (!(sourceCanvas instanceof HTMLCanvasElement)) {
@@ -80,6 +82,7 @@ export class CanvasOverlayComposer {
                   flushWebGLBuffer = null,
                   continuousRendering = true,
                   outputCanvas = null,
+                  recordingPerformance = null,
               } = options
 
         this.#clip = clip ? {...clip} : null
@@ -90,6 +93,7 @@ export class CanvasOverlayComposer {
         this.#dpr = Math.max(1, Number(outputDpr) || 1)
         this.#flushWebGLBuffer = typeof flushWebGLBuffer === 'function' ? flushWebGLBuffer : null
         this.#continuousRendering = continuousRendering !== false
+        this.#recordingPerformance = recordingPerformance
 
         this.#ownsOutputCanvas = !(outputCanvas instanceof HTMLCanvasElement)
         this.#outputCanvas = this.#ownsOutputCanvas ? document.createElement('canvas') : outputCanvas
@@ -165,8 +169,14 @@ export class CanvasOverlayComposer {
             await new Promise(resolve => requestAnimationFrame(() => resolve()))
         }
 
-        this.#updateSourceDpr()
-        this.#computeSourceRect()
+        const layoutStartedAt = this.#recordingPerformance?.now()
+        try {
+            this.#updateSourceDpr()
+            this.#computeSourceRect()
+        }
+        finally {
+            this.#recordingPerformance?.record('sourceLayout', layoutStartedAt)
+        }
         this.#draw()
         return this.#outputCanvas
     }
@@ -328,68 +338,81 @@ export class CanvasOverlayComposer {
     #draw = () => {
         this.#flushWebGLBuffer?.()
 
-        const ctx = this.#ctx
-        const dpr = this.#dpr
-        const physW = this.#outputCanvas.width
-        const physH = this.#outputCanvas.height
+        // The scene flush above is intentionally outside the composition measurement.
+        const compositionStartedAt = this.#recordingPerformance?.now()
+        try {
+            const ctx = this.#ctx
+            const dpr = this.#dpr
+            const physW = this.#outputCanvas.width
+            const physH = this.#outputCanvas.height
 
-        ctx.fillRect(0, 0, this.#outW, this.#outH)
-        this.#blurBufferDirty = true
+            ctx.fillRect(0, 0, this.#outW, this.#outH)
+            this.#blurBufferDirty = true
 
-        // Main source render.
-        ctx.drawImage(
-            this.#sourceCanvas,
-            this.#srcRect.x, this.#srcRect.y, this.#srcRect.w, this.#srcRect.h,
-            0, 0, this.#outW, this.#outH,
-        )
+            // Main source render.
+            ctx.drawImage(
+                this.#sourceCanvas,
+                this.#srcRect.x, this.#srcRect.y, this.#srcRect.w, this.#srcRect.h,
+                0, 0, this.#outW, this.#outH,
+            )
 
-        const len = this.#overlaysCount
-        for (let i = 0; i < len; i++) {
-            const overlay = this.#overlays[i]
-            const el = overlay.getElement()
-            if (!el) {
-                continue
-            }
-
-            const hw = overlay.contentWidth / 2
-            const hh = overlay.contentHeight / 2
-
-            if (overlay.blur > 0) {
-                // Backdrop blur, clipped to the rounded rect.
-                if (this.#blurBufferDirty) {
-                    this.#blurCtx.drawImage(this.#outputCanvas, 0, 0, physW, physH, 0, 0, physW, physH)
-                    this.#blurBufferDirty = false
+            const len = this.#overlaysCount
+            for (let i = 0; i < len; i++) {
+                const overlay = this.#overlays[i]
+                const el = overlay.getElement()
+                if (!el) {
+                    continue
                 }
 
+                const hw = overlay.contentWidth / 2
+                const hh = overlay.contentHeight / 2
+
+                if (overlay.blur > 0) {
+                    const blurStartedAt = this.#recordingPerformance?.now()
+                    try {
+                        // Backdrop blur, clipped to the rounded rect.
+                        if (this.#blurBufferDirty) {
+                            this.#blurCtx.drawImage(this.#outputCanvas, 0, 0, physW, physH, 0, 0, physW, physH)
+                            this.#blurBufferDirty = false
+                        }
+
+                        ctx.save()
+                        ctx.translate(overlay.cx, overlay.cy)
+                        ctx.rotate(overlay.rad)
+                        ctx.scale(overlay.scale, overlay.scale)
+                        this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, overlay.radius)
+                        ctx.clip()
+
+                        ctx.setTransform(1, 0, 0, 1, 0, 0)
+                        ctx.filter = `blur(${overlay.blurPx}px)`
+                        ctx.drawImage(this.#blurCanvas, 0, 0, physW, physH, 0, 0, physW, physH)
+
+                        ctx.restore()
+                        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+                    }
+                    finally {
+                        this.#recordingPerformance?.record('compositionBlur', blurStartedAt)
+                    }
+                }
+
+                // Overlay content.
                 ctx.save()
                 ctx.translate(overlay.cx, overlay.cy)
                 ctx.rotate(overlay.rad)
                 ctx.scale(overlay.scale, overlay.scale)
-                this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, overlay.radius)
-                ctx.clip()
 
-                ctx.setTransform(1, 0, 0, 1, 0, 0)
-                ctx.filter = `blur(${overlay.blurPx}px)`
-                ctx.drawImage(this.#blurCanvas, 0, 0, physW, physH, 0, 0, physW, physH)
+                ctx.drawImage(
+                    el,
+                    0, 0, el.width, el.height,
+                    overlay.dx, overlay.dy, overlay.w, overlay.h,
+                )
 
                 ctx.restore()
-                ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+                this.#blurBufferDirty = true
             }
-
-            // Overlay content.
-            ctx.save()
-            ctx.translate(overlay.cx, overlay.cy)
-            ctx.rotate(overlay.rad)
-            ctx.scale(overlay.scale, overlay.scale)
-
-            ctx.drawImage(
-                el,
-                0, 0, el.width, el.height,
-                overlay.dx, overlay.dy, overlay.w, overlay.h,
-            )
-
-            ctx.restore()
-            this.#blurBufferDirty = true
+        }
+        finally {
+            this.#recordingPerformance?.record('composition', compositionStartedAt)
         }
     }
 
@@ -434,5 +457,6 @@ export class CanvasOverlayComposer {
         this.#overlays = []
         this.#overlaysCount = 0
         this.#flushWebGLBuffer = null
+        this.#recordingPerformance = null
     }
 }

@@ -20,6 +20,8 @@ import {proxy} from 'valtio'
 import {JourneyReplayMode} from '@Core/ui/replay/JourneyReplayMode'
 import {applyCameraView} from '@Core/ui/replay/JourneyReplayCameraState'
 import {JourneyReplayPlaybackController} from '@Core/ui/replay/JourneyReplayPlaybackController'
+import {prepareReplayDeferredExportPlan} from '@Core/ui/replay/ReplayDeferredExporter'
+import {resolveReplayVideoFramePhase} from '@Core/ui/replay/ReplayVideoTimeline'
 import {isCameraOwnedByReplay} from '@Core/ui/replay/ReplayCameraOwnership'
 import {resolveJourneyReplayCameraAngleGuide} from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
 import {defaultJourneyReplaySettings} from '@Core/ui/replay/JourneyReplayProgressionStyle'
@@ -116,6 +118,55 @@ afterEach(() => {
 })
 
 describe('Replay with the real Cesium camera', () => {
+    it.each([false, true])('applies each export frame once without the interactive listener with dryRun=%s', async dryRun => {
+        const {camera, mode, journey, controller, renderer} = installScene()
+        const returnPose = readPose(camera)
+        try {
+            mode.beginReplayCameraExport()
+            lgs.stores.ui.video.exporting = true
+            await mode.preparePlaybackSceneForExport({journey})
+            mode.configure({duration: 1})
+            const seek = vi.spyOn(controller, 'seek')
+            const updateCamera = vi.spyOn(mode[JOURNEY_REPLAY_INTERNAL_CALL], 'updateCamera')
+            const syncNearbyPOIs = vi.spyOn(mode[JOURNEY_REPLAY_INTERNAL_CALL], 'syncNearbyPOIsForSample')
+            renderer.update.mockClear()
+            const {exporter, plan} = prepareReplayDeferredExportPlan({
+                replay: lgs.stores.replay,
+                journey,
+                controller,
+                fps: 10,
+                dimensions: {width: 320, height: 180},
+                uiToast: {success: vi.fn()},
+            })
+            const samples = []
+            await exporter.renderOnly({
+                seekBeforeRender: false,
+                renderFrame: async ({frame}) => {
+                    const phase = resolveReplayVideoFramePhase({timeline: plan.videoTimeline, frame, isFinalSceneFrame: frame.isLast})
+                    samples.push(await mode.renderReplayExportFrame({phase, frame, resolvedSample: frame.sample, dryRun}))
+                },
+            })
+
+            expect(seek).toHaveBeenCalledTimes(exporter.timeline.frameCount)
+            expect(renderer.update).toHaveBeenCalledTimes(exporter.timeline.frameCount)
+            expect(updateCamera).toHaveBeenCalledTimes(exporter.timeline.frameCount)
+            // Initial POI preparation may finish asynchronously, but export frames must not run scrub updates.
+            expect(syncNearbyPOIs.mock.calls.filter(([sample]) => sample?.progress > 0)).toHaveLength(0)
+            expect(samples[0].progress).toBe(0)
+            expect(samples.at(-1).progress).toBe(1)
+            expect(Number.isFinite(camera.positionCartographic.height)).toBe(true)
+            if (!dryRun) {
+                expect(renderer.update.mock.calls.every(([options]) => options.forceGeometry === true)).toBe(true)
+            }
+        }
+        finally {
+            mode.endReplayCameraExport()
+            mode.dispose()
+            await mode.waitForSceneRestore()
+        }
+        expectPose(camera, returnPose)
+    })
+
     it.each([539, 3454, 7000])('contains the real marker in an offset crop during a ten-second Simple export at height %s', async altitude => {
         const {camera, mode, journey, settings} = installScene({userMode: 'basic', altitude, pitch: -30})
         const coordinates = Array.from({length: 21}, (_, index) => [2 + index * 0.02, 48 + Math.sin(index) * 0.02, 120])

@@ -110,6 +110,8 @@ export class JourneyReplayCesiumRenderer {
     #maskedTrackSources = new Map()
     #traceGuide = null
     #traceGuideKey = null
+    #providedTraceGuide = null
+    #providedTraceGuideSource = null
     #completedTracePositionsFactory = null
     #dynamicTraceFrames = new Map()
     #traceHidden = false
@@ -146,9 +148,13 @@ export class JourneyReplayCesiumRenderer {
 
     #requestRender = () => this.#scene()?.requestRender?.()
 
+    /** Install a playback guide whose normalized positions remain stable until the next show call. */
     show = ({sampler, options = {}} = {}) => {
         this.#sampler = sampler ?? this.#sampler
         this.#options = {...this.#options, ...options}
+        this.#providedTraceGuide = null
+        this.#providedTraceGuideSource = null
+        this.#invalidateDynamicTraceFrames()
         this.#journeySlug = this.#sampler?.journey?.slug ?? globalThis.lgs?.theJourney?.slug ?? 'current'
         this.#traceVisible = true
         this.#traceHidden = false
@@ -301,6 +307,7 @@ export class JourneyReplayCesiumRenderer {
         return summary
     }
 
+    /** Release scene geometry and cached guides when the Replay renderer is cleared. */
     clear = () => {
         const source = this.#source
 
@@ -323,6 +330,8 @@ export class JourneyReplayCesiumRenderer {
         this.#sourceAddPending = false
         this.#traceGuide = null
         this.#traceGuideKey = null
+        this.#providedTraceGuide = null
+        this.#providedTraceGuideSource = null
         this.#invalidateDynamicTraceFrames()
         this.#completedTracePositionsFactory = null
         this.#traceHidden = false
@@ -740,26 +749,33 @@ export class JourneyReplayCesiumRenderer {
         return guide
     }
 
+    /** Normalize a supplied guide once per installation, falling back to the sampler's trace guide. */
     #smoothedGuideEntries = () => {
-        const providedGuide = (this.#options.smoothedGuide ?? [])
-            .map(entry => {
-                const position = this.#groundPositionFromCoordinate(entry)
-                const progress = finiteNumber(entry?.progress)
-                if (!position || progress === null) {
-                    return null
-                }
+        const guideSource = this.#options.smoothedGuide ?? null
+        if (this.#providedTraceGuide === null || this.#providedTraceGuideSource !== guideSource) {
+            // Camera guides are stable between show calls. Rebuilding Cartesian positions per frame
+            // scales with the full route and overwhelms the dry run even without bitmap capture.
+            this.#providedTraceGuideSource = guideSource
+            this.#providedTraceGuide = (guideSource ?? [])
+                .map(entry => {
+                    const position = this.#groundPositionFromCoordinate(entry)
+                    const progress = finiteNumber(entry?.progress)
+                    if (!position || progress === null) {
+                        return null
+                    }
 
-                return {
-                    longitude: Number(entry.longitude),
-                    latitude:  Number(entry.latitude),
-                    position,
-                    progress,
-                }
-            })
-            .filter(Boolean)
+                    return {
+                        longitude: Number(entry.longitude),
+                        latitude:  Number(entry.latitude),
+                        position,
+                        progress,
+                    }
+                })
+                .filter(Boolean)
+        }
 
-        if (providedGuide.length >= 2) {
-            return providedGuide
+        if (this.#providedTraceGuide.length >= 2) {
+            return this.#providedTraceGuide
         }
 
         return this.#traceGuideEntries()

@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { JSDOM } from 'jsdom'
 import { Output } from 'mediabunny'
 import {PerspectiveFrustum} from 'cesium'
@@ -32,6 +32,7 @@ import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpe
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import {REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModeConstants'
+import {createReplayRecordingPerformance} from '@Core/ui/replay/ReplayRecordingPerformance'
 import * as replayOverlayComposer from '@Core/ui/replay/ReplayVideoOverlayComposer'
 import * as replayTileReadiness from '@Core/ui/replay/ReplaySceneTileReadiness'
 import * as replayWidgetFrames from '@Core/ui/replay/ReplayWidgetFrameRenderers'
@@ -723,6 +724,29 @@ describe('ReplayDeferredExporter', () => {
         expect(mediabunnyMocks.codecProbeCount).toBe(0)
     })
 
+    it.each([false, true])('allows the frame callback to own seeking with dryRun=%s', async dryRun => {
+        const seek = vi.fn()
+        const exporter = new ReplayDeferredExporter({
+            controller: {seek, sampler: {atProgress: progress => ({progress})}},
+            timeline: {durationMillis: 1000, fps: 10},
+        })
+        const result = await exporter.exportMp4({
+            dryRun,
+            seekBeforeRender: false,
+            dimensions: {width: 320, height: 180},
+            buildCanvas: dimensions => ({...dimensions, getContext: () => ({clearRect: vi.fn(), drawImage: vi.fn()})}),
+            renderFrame: async ({frame}) => {
+                expect(seek).toHaveBeenCalledTimes(frame.index)
+                seek(frame.progress, frame.sample)
+            },
+        })
+
+        expect(result.frameCount).toBe(11)
+        expect(seek).toHaveBeenCalledTimes(11)
+        expect(seek).toHaveBeenNthCalledWith(1, 0, {progress: 0})
+        expect(seek).toHaveBeenLastCalledWith(1, {progress: 1})
+    })
+
     it('cancels a dry run after the current frame without creating output', async () => {
         Output.instances.length = 0
         const abortController = new AbortController()
@@ -1030,7 +1054,7 @@ describe('ReplayDeferredExporter', () => {
         expect(result.plan.captureMode).toBe('quality')
         expect(download).toHaveBeenCalledOnce()
         expect(download.mock.calls[0][1]).toMatch(/journey-a-master-export\.mp4$/)
-        expect(seek).toHaveBeenCalled()
+        expect(seek).toHaveBeenCalledTimes(result.plan.manifest.frameCount + 1)
         expect(globalThis.lgs.scene.requestRender).toHaveBeenCalledTimes(1)
         expect(globalThis.__.ui.replay.refresh).toHaveBeenCalled()
         expect(result.plan.runtime.exportProgress).toBe(1)
@@ -1038,6 +1062,14 @@ describe('ReplayDeferredExporter', () => {
         expect(result.plan.runtime.exportEstimatedRemainingMillis).toBe(0)
         expect(result.plan.runtime.exportFileSize).toBe(result.blob.size)
         expect(result.plan.runtime.exportFileSize).toBeGreaterThan(0)
+        expect(result.plan.runtime.recordingPerformance).toBe(result.recordingPerformance)
+        expect(result.recordingPerformance).toMatchObject({
+            status: 'completed', frameCount: result.frameCount, outputBytes: result.blob.size,
+            context: {dimensions: {width: 1280, height: 720}, renderHostMode: 'visible'},
+        })
+        for (const key of ['widgetStatePublication', 'overlayCapture', 'overlayLayout', 'encoderSubmission']) {
+            expect(result.recordingPerformance.stages.find(stage => stage.key === key)).toMatchObject({count: result.frameCount})
+        }
     })
 
     it('keeps the export composer canvas at the exact MP4 dimensions when crop and output ratios differ', async () => {
@@ -1167,7 +1199,7 @@ describe('ReplayDeferredExporter', () => {
         const firstFrameTileWait = new Promise(resolve => { signalFirstFrameTileWait = resolve })
         const tileCoordinator = {
             prepareForCapture: vi.fn(async ({maxMillis}) => {
-                if (maxMillis === 75) {
+                if (maxMillis === 250) {
                     frameTileWaitCount += 1
                     if (frameTileWaitCount === 1) {
                         signalFirstFrameTileWait()
@@ -1279,7 +1311,7 @@ describe('ReplayDeferredExporter', () => {
                 yieldIntervalMs: 0,
                 yieldToBrowser,
                 uiToast,
-                tileReadinessTimeoutMs: 75,
+                tileReadinessTimeoutMs: 5000,
             })
             await Promise.race([
                 firstFrameTileWait,
@@ -1295,7 +1327,6 @@ describe('ReplayDeferredExporter', () => {
             expect(prepareTileCache).toHaveBeenCalledOnce()
             expect(createTileCoordinator).toHaveBeenCalledOnce()
             createTileCoordinator.mock.calls[0][1].renderNow()
-            expect(scene.render).toHaveBeenCalledOnce()
             expect(consoleTable).toHaveBeenCalledOnce()
         }
         finally {
@@ -1313,12 +1344,21 @@ describe('ReplayDeferredExporter', () => {
         const phases = renderReplayExportFrame.mock.calls.slice(-result.plan.manifest.frameCount)
             .map(([frame]) => frame.phase.kind)
         const dryRunFrameCalls = renderReplayExportFrame.mock.calls.slice(-result.plan.manifest.frameCount)
+        const readinessFrameCalls = dryRunFrameCalls.filter(([options]) => options.frame.isFirst
+            || options.frame.isLast
+            || options.phase.isFinalSceneFrame
+            || options.phase.isLastPhaseFrame
+            || options.phase.phaseFrameIndex === 0)
         const progressSnapshots = monitorSnapshots.filter(snapshot => snapshot.mode === 'dry-run'
             && snapshot.processedFrames > 0)
         expect(result).toMatchObject({dryRun: true, frameCount: result.plan.manifest.frameCount})
         expect(result).not.toHaveProperty('frames')
         expect(result).not.toHaveProperty('blob')
         expect(dryRunFrameCalls.every(([options]) => options.dryRun === true)).toBe(true)
+        // The native frame callback owns seeking. Only the terminal progress restoration seeks here.
+        expect(controller.seek).toHaveBeenCalledOnce()
+        expect(controller.seek).toHaveBeenCalledWith(0)
+        expect(scene.render).toHaveBeenCalledOnce()
         expect(progressSnapshots.length).toBeLessThan(result.plan.manifest.frameCount)
         expect(progressSnapshots.at(-1)).toMatchObject({
             progress: 1,
@@ -1328,16 +1368,18 @@ describe('ReplayDeferredExporter', () => {
             frameCount: result.plan.manifest.frameCount,
             cameraTraceMillis: result.plan.manifest.frameCount * 40,
             widgetStateMillis: 0,
-            tileReadinessMillis: result.plan.manifest.frameCount * 20,
+            tileReadinessMillis: readinessFrameCalls.length * 20,
             otherMillis: 5220,
-            totalMillis: 5220 + result.plan.manifest.frameCount * 60,
+            totalMillis: 5220 + result.plan.manifest.frameCount * 40 + readinessFrameCalls.length * 20,
         })
         expect(phases).toContain('pre-replay')
         expect(phases).toContain('replay')
         expect(phases).toContain('post-replay')
         expect(renderReplayExportFrame).toHaveBeenCalledTimes(result.plan.manifest.frameCount + 4)
         expect(tileCoordinator.prepareForCapture.mock.calls.filter(([options]) => options.maxMillis === 100)).toHaveLength(3)
-        expect(frameTileWaitCount).toBe(result.plan.manifest.frameCount)
+        expect(tileCoordinator.prepareForCapture.mock.calls.filter(([options]) => options.maxMillis === 250))
+            .toHaveLength(readinessFrameCalls.length)
+        expect(frameTileWaitCount).toBe(readinessFrameCalls.length)
         expect(tileCoordinator.dispose).toHaveBeenCalledOnce()
         expect(restoreTileCache).toHaveBeenCalledOnce()
         expect(yieldToBrowser).toHaveBeenCalledTimes(result.plan.manifest.frameCount - 1)
@@ -1345,9 +1387,11 @@ describe('ReplayDeferredExporter', () => {
         expect(preparePlaybackSceneForExport).toHaveBeenCalledOnce()
         expect(buildCanvas).not.toHaveBeenCalled()
         expect(CanvasOverlayComposer).not.toHaveBeenCalled()
-        expect(result.plan.runtime.exportElapsedMillis).toBe(5220 + result.plan.manifest.frameCount * 60)
-        expect(result.plan.runtime.exportAverageFrameMillis).toBeCloseTo(60, 1)
-        expect(result.plan.runtime.exportEstimatedTotalMillis).toBeCloseTo(result.plan.manifest.frameCount * 60, 1)
+        expect(result.plan.runtime.exportElapsedMillis).toBe(
+            5220 + result.plan.manifest.frameCount * 40 + readinessFrameCalls.length * 20,
+        )
+        expect(result.plan.runtime.exportAverageFrameMillis).toBeLessThan(60)
+        expect(result.plan.runtime.exportEstimatedTotalMillis).toBeLessThan(result.plan.manifest.frameCount * 60)
         expect(monitorSnapshots.find(snapshot => snapshot.mode === 'dry-run' && snapshot.processedFrames > 0)).toMatchObject({
             elapsedMillis: 5280,
             estimatedRemainingMillis: null,
@@ -1794,5 +1838,157 @@ describe('ReplayDeferredExporter', () => {
         expect(restorePlaybackScene).toHaveBeenCalledTimes(2)
         expect(restorePlaybackScene).toHaveBeenNthCalledWith(1, {force: true})
         expect(restorePlaybackScene).toHaveBeenNthCalledWith(2, {force: true})
+    })
+})
+
+describe('Record performance diagnostics', () => {
+    let info
+    let table
+    let contextSpy
+
+    beforeEach(() => {
+        Output.instances.length = 0
+        info = vi.spyOn(console, 'info').mockImplementation(() => {})
+        table = vi.spyOn(console, 'table').mockImplementation(() => {})
+    })
+
+    afterEach(() => {
+        contextSpy?.mockRestore()
+        contextSpy = null
+        info.mockRestore()
+        table.mockRestore()
+    })
+
+    it('measures encoder copy, backpressure, progress, drain, and finalization without changing output frames', async () => {
+        let now = 0
+        const performance = createReplayRecordingPerformance({now: () => now})
+        const onPerformance = vi.fn()
+        contextSpy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+            drawImage: vi.fn(() => { now += 2 }),
+            clearRect: vi.fn(),
+        })
+        const exporter = new ReplayDeferredExporter({timeline: {durationMillis: 200, fps: 10}})
+        const result = await exporter.exportMp4({
+            dimensions: {width: 320, height: 180},
+            browser: 'chromium',
+            recordingPerformance: performance,
+            onPerformance,
+            renderFrame: async ({frame}) => {
+                if (frame.index === 0) {
+                    const output = Output.instances.at(-1)
+                    const source = output.addVideoTrack.mock.calls[0][0]
+                    source.add.mockImplementation(() => {
+                        now += 7
+                        source.target._maxPos += 256
+                        source.config.onEncodedPacket({byteLength: 256})
+                        return Promise.resolve()
+                    })
+                    source.close.mockImplementation(() => {
+                        now += 13
+                        return Promise.resolve()
+                    })
+                    output.finalize.mockImplementation(() => {
+                        now += 17
+                        output.target.buffer = new ArrayBuffer(output.target._maxPos)
+                        return Promise.resolve()
+                    })
+                }
+                now += 11
+            },
+            onFrame: async () => { now += 3 },
+            onFileSize: () => { now += 1 },
+        })
+        const report = result.recordingPerformance
+        expect(report).toMatchObject({
+            status: 'completed', frameCount: 3, keepAliveFrameCount: 0,
+            encodedPacketCount: 3, outputBytes: 768, wallMillis: 105,
+            frameProductionFps: 41.667,
+            context: {browser: 'chromium', fps: 10, codec: 'avc', latencyMode: 'quality'},
+        })
+        expect(report.stages.find(stage => stage.key === 'encoderCopy')).toMatchObject({count: 3, totalMillis: 6})
+        expect(report.stages.find(stage => stage.key === 'encoderSubmission')).toMatchObject({count: 3, totalMillis: 24})
+        expect(report.stages.find(stage => stage.key === 'progressPublication')).toMatchObject({count: 3, totalMillis: 9})
+        expect(report.stages.find(stage => stage.key === 'fileSizePublication')).toMatchObject({kind: 'detail', totalMillis: 6})
+        expect(report.stages.find(stage => stage.key === 'encoderDrain')).toMatchObject({count: 1, totalMillis: 13})
+        expect(report.stages.find(stage => stage.key === 'containerFinalize')).toMatchObject({count: 1, totalMillis: 17})
+        expect(report.stages.find(stage => stage.key === 'blobCreation')).toMatchObject({count: 1})
+        expect(result.frames.map(frame => frame.frameTimeMs)).toEqual([0, 100, 200])
+        expect(result.blob.size).toBe(768)
+        expect(onPerformance).toHaveBeenCalledExactlyOnceWith(report)
+        expect(info).toHaveBeenCalledExactlyOnceWith('[Replay video] Recording performance:', report)
+        expect(table).toHaveBeenCalledOnce()
+    })
+
+    it.each(['cancelled', 'failed', 'stopped'])('reports partial %s recordings after the encoder cleanup', async status => {
+        const onPerformance = vi.fn()
+        const abortController = new AbortController()
+        if (status === 'cancelled') {
+            abortController.abort()
+        }
+        mediabunnyMocks.failNextCanvasAdd = status === 'failed'
+        const exporter = new ReplayDeferredExporter({timeline: {durationMillis: 1000, fps: 10}})
+        const promise = exporter.exportMp4({
+            dimensions: {width: 320, height: 180},
+            signal: abortController.signal,
+            onPerformance,
+            buildCanvas: dimensions => ({...dimensions, getContext: () => ({})}),
+            renderFrame: async () => null,
+            shouldStop: (_frame, processedFrames) => processedFrames === 2,
+        })
+        if (status === 'stopped') {
+            expect((await promise).frameCount).toBe(2)
+        }
+        else {
+            await expect(promise).rejects.toMatchObject({name: status === 'cancelled' ? 'AbortError' : 'Error'})
+        }
+        expect(onPerformance).toHaveBeenCalledOnce()
+        const report = onPerformance.mock.calls[0][0]
+        expect(report.status).toBe(status)
+        expect(report.frameCount).toBe(status === 'stopped' ? 2 : 0)
+        const output = Output.instances.at(-1)
+        if (status === 'stopped') {
+            expect(output.finalize).toHaveBeenCalledOnce()
+        }
+        else {
+            expect(output.cancel).toHaveBeenCalledOnce()
+            expect(report.stages.find(stage => stage.key === 'cancellationCleanup')).toMatchObject({count: 1})
+        }
+        if (status === 'failed') {
+            expect(report.stages.find(stage => stage.key === 'encoderSubmission')).toMatchObject({count: 1})
+        }
+        expect(table).toHaveBeenCalledOnce()
+    })
+
+    it('does not create recording measurements for a dry run', async () => {
+        const onPerformance = vi.fn()
+        const exporter = new ReplayDeferredExporter({timeline: {durationMillis: 0, fps: 10}})
+        const result = await exporter.exportMp4({
+            dryRun: true,
+            onPerformance,
+            renderFrame: async () => null,
+        })
+        expect(result).not.toHaveProperty('recordingPerformance')
+        expect(onPerformance).not.toHaveBeenCalled()
+        expect(info).not.toHaveBeenCalled()
+        expect(table).not.toHaveBeenCalled()
+    })
+
+    it('keeps the recording result when a diagnostic report consumer fails', async () => {
+        const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+        try {
+            const exporter = new ReplayDeferredExporter({timeline: {durationMillis: 0, fps: 10}})
+            const result = await exporter.exportMp4({
+                dimensions: {width: 320, height: 180},
+                buildCanvas: dimensions => ({...dimensions, getContext: () => ({})}),
+                renderFrame: async () => null,
+                onPerformance: () => { throw new Error('Report consumer failed') },
+            })
+            expect(result).toMatchObject({frameCount: 1, recordingPerformance: {status: 'completed'}})
+            expect(result.blob.size).toBeGreaterThan(0)
+            expect(warning).toHaveBeenCalledOnce()
+        }
+        finally {
+            warning.mockRestore()
+        }
     })
 })

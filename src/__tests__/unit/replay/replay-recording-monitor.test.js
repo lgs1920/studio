@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {afterEach, describe, expect, it, vi} from 'vitest'
+import {createReplayRecordingPerformance} from '@Core/ui/replay/ReplayRecordingPerformance'
 
 import {
     connectReplayRecordingMonitorPreview,
@@ -30,6 +31,40 @@ describe('ReplayRecordingMonitor', () => {
     afterEach(() => {
         stopReplayRecordingMonitor()
         vi.restoreAllMocks()
+    })
+
+    it('measures both preview copies and synchronous notifications without throttling publication', () => {
+        let now = 0
+        const performance = createReplayRecordingPerformance({now: () => now})
+        const source = document.createElement('canvas')
+        source.width = 320
+        source.height = 180
+        const preview = document.createElement('canvas')
+        const drawImage = vi.fn(() => { now += 3 })
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({drawImage})
+        startReplayRecordingMonitor({mode: 'export'})
+        const disconnect = connectReplayRecordingMonitorPreview(preview)
+        const listener = vi.fn(() => { now += 2 })
+        const unsubscribe = subscribeReplayRecordingMonitor(listener)
+        performance.start({fps: 30})
+        try {
+            publishReplayRecordingMonitorFrame({canvas: source, frameIndex: 0, recordingPerformance: performance})
+            updateReplayRecordingMonitor({size: 256, recordingPerformance: performance})
+            const report = performance.finish()
+            expect(report.wallMillis).toBe(10)
+            expect(report.stages.find(stage => stage.key === 'previewSnapshot')).toMatchObject({count: 1, totalMillis: 3})
+            expect(report.stages.find(stage => stage.key === 'previewCopy')).toMatchObject({count: 1, totalMillis: 3})
+            expect(report.stages.find(stage => stage.key === 'monitorNotification')).toMatchObject({count: 2, totalMillis: 4})
+            expect(report.stages.find(stage => stage.key === 'previewPublication')).toMatchObject({count: 1, totalMillis: 8})
+            expect(listener).toHaveBeenCalledTimes(2)
+            expect(drawImage).toHaveBeenCalledTimes(2)
+            expect(preview).toMatchObject({width: 320, height: 180})
+            expect(getReplayRecordingMonitorSnapshot()).toMatchObject({frameIndex: 0, size: 256})
+        }
+        finally {
+            unsubscribe()
+            disconnect()
+        }
     })
 
     it('publishes a stable copy of the composed canvas and export progress metadata', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,9 +55,16 @@ const hasFiniteNumber = value => value !== null && value !== undefined && Number
 const isCanvasElement = element => element?.nodeName === 'CANVAS'
                                   && typeof element.getContext === 'function'
 
-const notify = () => {
-    snapshot = {...state}
-    listeners.forEach(listener => listener())
+/** Notify synchronous subscribers, optionally measuring their callback work. */
+const notify = (recordingPerformance = null) => {
+    const startedAt = recordingPerformance?.now()
+    try {
+        snapshot = {...state}
+        listeners.forEach(listener => listener())
+    }
+    finally {
+        recordingPerformance?.record('monitorNotification', startedAt)
+    }
 }
 
 /**
@@ -176,6 +183,7 @@ export const startReplayRecordingMonitor = ({
  * Dry run publishes frame progress without copying or retaining preview images.
  *
  * @param {Object} frame - Composed canvas and frame metadata.
+ * @param {Object|null} [frame.recordingPerformance=null] - Optional session timing collector.
  * @returns {Object} Current monitor snapshot.
  */
 export const publishReplayRecordingMonitorFrame = ({
@@ -186,41 +194,63 @@ export const publishReplayRecordingMonitorFrame = ({
     frameIndex = null,
     frameCount = null,
     processedFrames = null,
+    recordingPerformance = null,
 } = {}) => {
     if (!isCanvasElement(canvas)) {
         return snapshot
     }
 
-    const publishedMode = mode ?? state.mode
-    const nextProgress = hasFiniteNumber(progress) ? Math.max(0, Math.min(1, Number(progress))) : state.progress
-    const shouldPublishPreview = publishedMode !== 'dry-run'
-    let frameCanvas = null
+    const publicationStartedAt = recordingPerformance?.now()
+    try {
+        const publishedMode = mode ?? state.mode
+        const nextProgress = hasFiniteNumber(progress) ? Math.max(0, Math.min(1, Number(progress))) : state.progress
+        const shouldPublishPreview = publishedMode !== 'dry-run'
+        let frameCanvas = null
 
-    if (shouldPublishPreview) {
-        frameCanvas = snapshotReplayMonitorFrame(canvas)
-        copyReplayMonitorFrame(frameCanvas, monitorPreviewCanvas)
-    }
+        if (shouldPublishPreview) {
+            const snapshotStartedAt = recordingPerformance?.now()
+            try {
+                frameCanvas = snapshotReplayMonitorFrame(canvas)
+            }
+            finally {
+                recordingPerformance?.record('previewSnapshot', snapshotStartedAt)
+            }
+            if (monitorPreviewCanvas) {
+                const copyStartedAt = recordingPerformance?.now()
+                try {
+                    copyReplayMonitorFrame(frameCanvas, monitorPreviewCanvas)
+                }
+                finally {
+                    recordingPerformance?.record('previewCopy', copyStartedAt)
+                }
+            }
+        }
 
-    state = {
-        ...state,
-        active: true,
-        mode: publishedMode,
-        phase: phase ?? state.phase,
-        progress: nextProgress,
-        frameIndex: hasFiniteNumber(frameIndex) ? Number(frameIndex) : state.frameIndex,
-        frameCount: hasFiniteNumber(frameCount) ? Number(frameCount) : state.frameCount,
-        processedFrames: hasFiniteNumber(processedFrames) ? Number(processedFrames) : state.processedFrames,
-        frameCanvas,
-        frameVersion: state.frameVersion + (shouldPublishPreview ? 1 : 0),
+        state = {
+            ...state,
+            active: true,
+            mode: publishedMode,
+            phase: phase ?? state.phase,
+            progress: nextProgress,
+            frameIndex: hasFiniteNumber(frameIndex) ? Number(frameIndex) : state.frameIndex,
+            frameCount: hasFiniteNumber(frameCount) ? Number(frameCount) : state.frameCount,
+            processedFrames: hasFiniteNumber(processedFrames) ? Number(processedFrames) : state.processedFrames,
+            frameCanvas,
+            frameVersion: state.frameVersion + (shouldPublishPreview ? 1 : 0),
+        }
+        notify(recordingPerformance)
+        return snapshot
     }
-    notify()
-    return snapshot
+    finally {
+        recordingPerformance?.record('previewPublication', publicationStartedAt)
+    }
 }
 
 /**
  * Update export progress and metrics without replacing its frame.
  *
  * @param {Object} metrics - Runtime phase, progress, and encoder metrics.
+ * @param {Object|null} [metrics.recordingPerformance=null] - Optional session timing collector.
  * @returns {Object} Current monitor snapshot.
  */
 export const updateReplayRecordingMonitor = ({
@@ -235,6 +265,7 @@ export const updateReplayRecordingMonitor = ({
     videoDurationMillis = null,
     size = null,
     paused = null,
+    recordingPerformance = null,
 } = {}) => {
     state = {
         ...state,
@@ -255,7 +286,7 @@ export const updateReplayRecordingMonitor = ({
         size: hasFiniteNumber(size) ? Math.max(0, Number(size)) : state.size,
         paused: typeof paused === 'boolean' ? paused : state.paused,
     }
-    notify()
+    notify(recordingPerformance)
     return snapshot
 }
 

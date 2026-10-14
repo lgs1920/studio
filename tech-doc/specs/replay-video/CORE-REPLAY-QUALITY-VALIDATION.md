@@ -136,9 +136,16 @@ narrow crop, and at least one high-resolution output profile.
 
 - Traverse every configured logical frame and start/stop phase with the normal
   camera, trace, and published widget state.
-- Keep tile-cache preparation, prewarming, and bounded per-frame tile waits.
-- Recheck readiness after a synchronous ready-view render; keep missing-tile
+- Keep tile-cache preparation and prewarming. Bound phase-boundary and final
+  readiness checkpoints to 250 ms and omit intermediate synchronous scene
+  flushes and tile waits.
+- Recheck readiness after a synchronous checkpoint render; keep missing-tile
   waits asynchronous and preserve normal recording render scheduling.
+- Apply each export frame through the guarded callback without a preliminary
+  interactive seek. Check camera/trace update counts and ordered prepared
+  samples in both Dry run and Record.
+- Reuse normalized supplied trace-guide positions across frames. Verify guide
+  replacement, edited-guide reinstallation, clearing, and exact final endpoints.
 - Use the same ordered worker-prepared journey samples in Dry run and Record;
   verify frames start after the first batch without waiting for the full route.
 - Do not allocate a working capture canvas, wait for widget bitmap readiness,
@@ -170,6 +177,47 @@ substitute for visual evidence.
 
 ## Performance and responsiveness
 
+- Each real Record export publishes one `[Replay video] Recording performance:`
+  report and a console table after encoding cleanup, including graceful stop,
+  cancellation, or failure. Dry run does not produce these recording timings.
+- Read the latest JSON report from
+  `lgs.stores.replay.deferredExportPlan.runtime.recordingPerformance`. The direct
+  `ReplayDeferredExporter.exportMp4()` result also exposes `recordingPerformance`.
+  To copy a UI Record report from browser DevTools, use:
+
+  ```javascript
+  copy(JSON.stringify(lgs.stores.replay.deferredExportPlan.runtime.recordingPerformance, null, 2))
+  ```
+
+- Compare repeated real exports with the same journey, timeline, crop, dimensions,
+  output FPS, quality, codec, widgets, render host, and browser. The context records
+  encoder configuration and output characteristics. Open DevTools after recording
+  when collecting an unprofiled baseline, so debugging does not affect the run.
+- Timing rows cover composition-canvas initialization, widget synchronous frame publication, bitmap capture/waits,
+  overlay layout, source layout, canvas composition, backdrop blur, frame transfers,
+  monitor snapshot/preview copies and synchronous notifications, the encoder-canvas
+  copy, submission queue/backpressure waits, progress/file-size publication,
+  encoder close/drain, MP4 finalization, and Blob creation.
+- `wallMillis` starts at encoder setup after scene preparation and ends after
+  encoder cleanup. It includes upstream frame rendering and tile waits, which are
+  outside the measured recording-stage breakdown. `activeMillis` subtracts user
+  pause waits. `frameProductionFps` measures actual completed timeline frames per
+  active frame-loop second, rather than the output video's playback FPS. Keep-alive
+  submissions and encoded packets are counted separately.
+- Read `scope` rows as the measured recording operations. `detail` rows overlap
+  enclosing spans: blur is inside composition, preview copies/notifications are
+  inside publication, and packet-driven file-size updates can occur during encoder
+  submission or drain. `context` rows include the whole frame loop and pause or
+  cancellation waits. Do not add all row totals or percentages.
+- `CanvasSource.add()` timings describe submission and writer/encoder backpressure,
+  not isolated codec CPU time. Background encoding finishes during close/drain.
+  Canvas timings measure browser command duration, not deferred GPU completion,
+  and exclude the composite renderer's Cesium flush callback. Notification timings
+  include synchronous listeners, not later asynchronous React commits.
+- Reports include totals, counts, means, maxima, and approximate P50/P95 histogram
+  upper bounds with about 1% precision in `(1 + durationMillis)`. Timing storage is
+  bounded independently of frame count, with no retained frame samples, extra
+  timers, or per-frame console logging.
 - Slider dragging must not compile a complete trajectory or block the main
   thread.
 - Settled scrub qualification must be cancellable and bounded.

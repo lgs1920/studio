@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -146,6 +146,7 @@ export class ReplayVideoRenderSession {
      *
      * @param {number} frameIndex
      * @param {Object} options
+     * @param {boolean} [options.seekBeforeRender=true] - Seek unless the frame application callback owns it.
      * @returns {Promise<object>}
      */
     renderFrame = async (frameIndex = 0, options = {}) => {
@@ -154,7 +155,9 @@ export class ReplayVideoRenderSession {
         if (this.#preparedFrameSampleResolver) {
             frameOptions.sample = await this.#preparedFrameSampleResolver(frameIndex, frame)
         }
-        await this.#seek?.(frame.progress, frame, frameOptions)
+        if (options.seekBeforeRender !== false) {
+            await this.#seek?.(frame.progress, frame, frameOptions)
+        }
         const intent = await this.#frameResolver.resolveFrame({
             frame,
             phase: options.phase,
@@ -212,14 +215,15 @@ export class ReplayVideoRenderSession {
      * This keeps the export deterministic and gives the caller a hook for each
      * rendered frame.
      *
-     * @param {{signal?: AbortSignal|null, onFrame?: Function|null, shouldStop?: Function|null}} options
+     * @param {{signal?: AbortSignal|null, onFrame?: Function|null, shouldStop?: Function|null, seekBeforeRender?: boolean}} options
      * @returns {Promise<Array<object>>}
      */
-    renderAll = async ({signal = null, onFrame = null, shouldStop = null} = {}) => {
+    renderAll = async ({signal = null, onFrame = null, shouldStop = null, seekBeforeRender = true} = {}) => {
         const frames = []
         await this.renderEach({
             signal,
             shouldStop,
+            seekBeforeRender,
             onFrame: async rendered => {
                 frames.push(rendered)
                 if (typeof onFrame === 'function') {
@@ -234,13 +238,14 @@ export class ReplayVideoRenderSession {
     /**
      * Render every frame sequentially without retaining completed frames.
      *
-     * @param {{signal?: AbortSignal|null, onFrame?: Function|null, shouldStop?: Function|null, yieldBetweenFrames?: boolean, yieldIntervalMs?: number, yieldToBrowser?: Function|null}} options
+     * @param {{signal?: AbortSignal|null, onFrame?: Function|null, shouldStop?: Function|null, seekBeforeRender?: boolean, yieldBetweenFrames?: boolean, yieldIntervalMs?: number, yieldToBrowser?: Function|null}} options
      * @returns {Promise<number>} Number of rendered frames.
      */
     renderEach = async ({
                            signal = null,
                            onFrame = null,
                            shouldStop = null,
+                           seekBeforeRender = true,
                            yieldBetweenFrames = false,
                            yieldIntervalMs = 0,
                            yieldToBrowser = null,
@@ -253,7 +258,7 @@ export class ReplayVideoRenderSession {
                 break
             }
 
-            const rendered = await this.renderFrame(index, {signal})
+            const rendered = await this.renderFrame(index, {signal, seekBeforeRender})
             renderedCount += 1
             if (typeof onFrame === 'function') {
                 await onFrame(rendered)

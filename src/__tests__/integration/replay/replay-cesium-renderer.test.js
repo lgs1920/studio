@@ -667,6 +667,75 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(propertyValue(completedFill?.polyline?.granularity)).toBe(8)
     })
 
+    it('converts a dense supplied guide once while keeping every frame and the final trace exact', () => {
+        const dataSources = makeDataSources()
+        installReplayGlobals({dataSources})
+        const journey = makeJourney([
+            makeTrack({
+                slug: 'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.01, 48.01, 130]],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const guide = Array.from({length: 1000}, (_, index) => ({
+            progress: index / 999,
+            longitude: 2 + index / 99900,
+            latitude: 48 + index / 99900,
+        }))
+        const renderer = new JourneyReplayCesiumRenderer()
+        const fromDegrees = vi.spyOn(Cartesian3, 'fromDegrees')
+        try {
+            renderer.show({sampler, options: {smoothedGuide: guide}})
+            for (let index = 0; index <= 100; index += 1) {
+                renderer.update({
+                    sample: sampler.atProgress(index / 100),
+                    sampler,
+                    forceGeometry: true,
+                    syncCursorToTrace: true,
+                    staticCompletedTrace: index === 100,
+                })
+            }
+            // Coordinate conversions must grow with the route plus frames, not their product.
+            expect(fromDegrees.mock.calls.length).toBeLessThan(guide.length + 101 * 5)
+            const completedFill = replayEntity(dataSources, '#completed#smoothed#fill')
+            const positions = propertyValue(completedFill?.polyline?.positions)
+            expect(positions).toHaveLength(guide.length)
+            expect(Cartesian3.equals(positions.at(-1), Cartesian3.fromDegrees(2.01, 48.01, 0))).toBe(true)
+        }
+        finally {
+            fromDegrees.mockRestore()
+            renderer.clear()
+        }
+    })
+
+    it('refreshes cached guide positions when show reinstalls an edited guide and after clear', () => {
+        const dataSources = makeDataSources()
+        installReplayGlobals({dataSources})
+        const journey = makeJourney([
+            makeTrack({slug: 'track#journey#gpx#main', coordinates: [[2, 48, 120], [2.01, 48.01, 130]]}),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const guide = [{progress: 0, longitude: 2, latitude: 48}, {progress: 1, longitude: 2.01, latitude: 48.01}]
+        const renderer = new JourneyReplayCesiumRenderer()
+        /** Read the static endpoint after reinstalling the same guide object. */
+        const renderEnd = () => {
+            renderer.show({sampler, options: {smoothedGuide: guide}})
+            renderer.update({sample: sampler.atProgress(1), sampler, forceGeometry: true, staticCompletedTrace: true})
+            return propertyValue(replayEntity(dataSources, '#completed#smoothed#fill')?.polyline?.positions).at(-1)
+        }
+        try {
+            expect(Cartesian3.equals(renderEnd(), Cartesian3.fromDegrees(2.01, 48.01, 0))).toBe(true)
+            guide[1].latitude = 48.02
+            expect(Cartesian3.equals(renderEnd(), Cartesian3.fromDegrees(2.01, 48.02, 0))).toBe(true)
+            renderer.clear()
+            guide[1].latitude = 48.03
+            expect(Cartesian3.equals(renderEnd(), Cartesian3.fromDegrees(2.01, 48.03, 0))).toBe(true)
+        }
+        finally {
+            renderer.clear()
+        }
+    })
+
     it('keeps the final point in the live replay trace', () => {
         const dataSources = makeDataSources()
         const replay = defaultJourneyReplaySettings()

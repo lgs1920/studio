@@ -47,16 +47,19 @@ preview and the active Replay immediately. Expert appearance remains independent
 Simple Replay offers an opt-in Dry run preference in the video settings popup.
 It traverses the same fixed-timestamp timeline, including start and stop clips,
 and applies the same camera, trace, and logical widget state. Tile prewarming
-and bounded per-frame tile readiness remain enabled according to the configured
-readiness policy. Dry run skips widget capture readiness, bitmap capture,
+remains enabled according to the configured readiness policy. Dry run checks
+tile readiness at phase boundaries and final frames with a maximum 250 ms
+budget. Intermediate frames request rendering without a synchronous scene
+flush or tile wait, and the session yields browser tasks after batches of work.
+Dry run skips widget capture readiness, bitmap capture,
 output-canvas composition, codec selection, and media handoff. Widgets consume
 published state through normal React batching because no capture reads their
 pixels. The monitor displays an integer progress percentage, processed/total
 frames, and estimated remaining time without copying a preview image.
 Video quality and FPS preferences remain unchanged for the next recording.
-Ready views can render synchronously in Dry run to avoid waiting for the next
+Dry-run checkpoints can render synchronously to avoid waiting for the next
 browser animation frame. Readiness is checked again after rendering; missing
-tiles retain asynchronous, cancellable waits. Record and Dry run request
+tiles retain bounded, asynchronous, cancellable waits. Record and Dry run request
 ordered route samples from a module worker in small batches while the scene is
 prepared and frames render, then apply each sample at its matching frame. The
 first batch gates the first rendered frame; later batches are requested
@@ -263,6 +266,12 @@ applied.
 `CustomDataSource`. It resolves its viewer and scene from the session's explicit
 render target, falling back to the Studio viewer for interactive replay.
 
+The renderer normalizes the supplied camera guide into Cartesian positions once
+per `show()` installation and reuses those positions across frame updates and
+dynamic property evaluations. Reinstalling the guide, replacing its source, or
+clearing the renderer invalidates that cache. Progress interpolation and final
+trace endpoints continue to use the current logical sample.
+
 Interactive playback may throttle expensive geometry updates. Deferred export
 must force frame-accurate geometry because its frames are generated faster
 than wall time. A wall-clock throttle can otherwise leave the encoded trace
@@ -295,7 +304,8 @@ A settled request uses `ReplaySceneFrameQualifier`, supports cancellation, and
 waits within bounded readiness budgets.
 
 Export scene readiness belongs to the active render target. Product MP4 export
-and Dry run qualify frames on the main Studio viewer. A synchronous scene
+qualifies every frame on the main Studio viewer, while Dry run qualifies only
+its bounded phase/final checkpoints. A synchronous scene
 render supplies the post-render boundary during readiness instead of relying on
 the browser's animation-frame loop. Moving replay and clip frames use bounded
 moving-frame readiness; holds and final frames may request settled quality.
@@ -307,8 +317,13 @@ Readiness delays export wall time but never changes logical video time.
 preparation, frame rendering,
 readiness, overlay composition, encoding, cancellation, and cleanup.
 Its Simple Replay Dry run mode keeps logical frame updates, tile prewarming,
-bounded tile readiness, cancellation, and cleanup. It skips widget capture,
+bounded tile-readiness checkpoints, cancellation, and cleanup. It skips widget capture,
 output-canvas composition, codec probing, and media creation.
+Product export and Dry run delegate the controller seek to their frame
+application callback. The preceding session resolution does not also seek:
+otherwise it would invoke the interactive scrub listener before the guarded
+export update, duplicating trace/camera work and mixing the two execution paths.
+Standalone frame sessions retain their default seek-before-render behavior.
 `ReplayVideoOverlayComposer` maps logical widget and crop coordinates to the
 physical output surface. Mediabunny encodes the product frame timeline and must
 not become a replay clock.

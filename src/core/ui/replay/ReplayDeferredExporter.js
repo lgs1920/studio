@@ -80,6 +80,7 @@ import {
 import {
     CanvasOverlayComposer,
 }                              from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
+import {createReplayRecordingPerformance} from '@Core/ui/replay/ReplayRecordingPerformance'
 import {REPLAY_VIDEO_FPS} from '@Core/ui/replay/ReplayVideoSettings'
 import {isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
 import {createSimpleReplayTraceFocusClips} from '@Core/ui/replay/JourneyReplaySimpleFocus'
@@ -104,6 +105,7 @@ const REPLAY_EXPORT_CODEC_KEEPALIVE_INTERVAL_MS = 5000
 const REPLAY_EXPORT_CODEC_KEEPALIVE_TIMESTAMP_STEP_SECONDS = 0.000001
 const REPLAY_DRY_RUN_BROWSER_YIELD_INTERVAL_MS = 50
 const REPLAY_DRY_RUN_PROGRESS_UPDATE_INTERVAL_MS = 100
+const REPLAY_DRY_RUN_TILE_READINESS_CHECK_TIMEOUT_MS = 250
 const REPLAY_FRAME_SAMPLE_WORKER_MIN_FRAME_COUNT = 120
 const REPLAY_FRAME_SAMPLE_WORKER_MAX_FRAME_COUNT = 36000
 const REPLAY_FRAME_SAMPLE_WORKER_MAX_ROUTE_SAMPLE_COUNT = 50000
@@ -244,6 +246,28 @@ export const isReplayExportFrameSettled = ({frame = null, phase = null} = {}) =>
     const localProgress = finiteNumber(phase.localProgress, null)
     return localProgress !== null
            && (localProgress <= 0.000001 || localProgress >= 0.999999)
+}
+
+/**
+ * Select dry-run phase boundaries for bounded tile-readiness checks.
+ *
+ * @param {Object} options - Export frame and resolved phase.
+ * @param {Object|null} options.frame - Current source timeline frame.
+ * @param {Object|null} options.phase - Resolved timeline phase.
+ * @returns {boolean} Whether this frame should briefly wait for scene readiness.
+ */
+const isReplayDryRunTileReadinessCheckpoint = ({frame = null, phase = null} = {}) => {
+    const isBoundary = frame?.isFirst === true
+                       || frame?.isLast === true
+                       || phase?.isFinalSceneFrame === true
+                       || phase?.isLastPhaseFrame === true
+                       || phase?.phaseFrameIndex === 0
+    const isHold = phase?.kind === 'hold'
+                   || phase?.hold === true
+                   || phase?.clip?.params?.hold === true
+                   || phase?.clip?.params?.motion === 'hold'
+
+    return isBoundary || (!isHold && isReplayExportFrameSettled({frame, phase}))
 }
 
 /**
@@ -1513,6 +1537,7 @@ export class ReplayDeferredExporter {
      * @param {Object|null} [options.dimensions=null] - Output dimensions retained as metadata.
      * @param {Function|null} [options.renderFrame=null] - Logical Replay frame update callback.
      * @param {Function|null} [options.shouldStop=null] - Optional early-stop predicate.
+     * @param {boolean} [options.seekBeforeRender=true] - Whether the session seeks before the render callback.
      * @param {number} [options.yieldIntervalMs=50] - Minimum work interval between browser task yields.
      * @param {Function|null} [options.yieldToBrowser=null] - Optional UI yield callback.
      * @returns {Promise<Object>} Dry run result without frame payloads or media output.
@@ -1525,6 +1550,7 @@ export class ReplayDeferredExporter {
                            dimensions = null,
                            renderFrame = null,
                            shouldStop = null,
+                           seekBeforeRender = true,
                            yieldIntervalMs = REPLAY_DRY_RUN_BROWSER_YIELD_INTERVAL_MS,
                            yieldToBrowser = null,
                        } = {}) => {
@@ -1537,6 +1563,7 @@ export class ReplayDeferredExporter {
         const frameCount = await this.#session.renderEach({
             signal,
             shouldStop,
+            seekBeforeRender,
             yieldBetweenFrames: true,
             yieldIntervalMs,
             yieldToBrowser,
@@ -1566,6 +1593,9 @@ export class ReplayDeferredExporter {
      * Encode the deterministic timeline, or traverse logical frames without capture.
      * @param {Object} options - MP4 or dry-run options.
      * @param {boolean} [options.dryRun=false] - Update Replay frames without capture or media output.
+     * @param {Object|null} [options.recordingPerformance=null] - Shared session timing collector.
+     * @param {Function|null} [options.onPerformance=null] - Receive the completed or partial timing report.
+     * @param {boolean} [options.seekBeforeRender=true] - Whether the session owns the initial controller seek.
      * @param {number} [options.yieldIntervalMs=50] - Dry run browser task yield interval.
      * @returns {Promise<Object>} Export or dry-run result.
      */
@@ -1580,9 +1610,12 @@ export class ReplayDeferredExporter {
                            buildCanvas = null,
                            onFileSize = null,
                            shouldStop = null,
+                           seekBeforeRender = true,
                            yieldIntervalMs = REPLAY_DRY_RUN_BROWSER_YIELD_INTERVAL_MS,
                            yieldToBrowser = null,
                            dryRun = false,
+                           recordingPerformance = null,
+                           onPerformance = null,
                        } = {}) => {
         if (dryRun === true) {
             return this.renderOnly({
@@ -1593,11 +1626,72 @@ export class ReplayDeferredExporter {
                 dimensions,
                 renderFrame,
                 shouldStop,
+                seekBeforeRender,
                 yieldIntervalMs,
                 yieldToBrowser,
             })
         }
 
+        const performance = recordingPerformance ?? createReplayRecordingPerformance()
+        performance.start({
+            label,
+            browser,
+            dimensions: normalizeDimensions(dimensions ?? {}),
+            fps: this.#timeline.fps,
+            plannedFrameCount: this.#timeline.frameCount,
+        })
+        let result = null
+        let status = 'failed'
+        let failure = null
+        let performanceReport = null
+        try {
+            result = await this.#encodeMp4({
+                signal, onFrame, label, metadata, dimensions, browser, renderFrame,
+                buildCanvas, onFileSize, shouldStop, seekBeforeRender, recordingPerformance: performance,
+            })
+            status = result.frameCount < this.#timeline.frameCount ? 'stopped' : 'completed'
+        }
+        catch (error) {
+            failure = error
+            status = error?.name === 'AbortError' ? 'cancelled' : 'failed'
+            throw error
+        }
+        finally {
+            performanceReport = performance.finish({status, outputBytes: result?.blob?.size ?? null, error: failure})
+            // Publish one aggregate report after cleanup, never one message per frame.
+            if (typeof onPerformance === 'function') {
+                try {
+                    onPerformance(performanceReport)
+                }
+                catch (error) {
+                    // Diagnostics must not replace the original encoding result or failure.
+                    console.warn('[Replay video] Recording performance publication failed:', error)
+                }
+            }
+            console.info('[Replay video] Recording performance:', performanceReport)
+            console.table(performanceReport.stages.map(stage => ({
+                Stage: stage.label,
+                Kind: stage.kind,
+                Count: stage.count,
+                'Total ms': stage.totalMillis,
+                'Mean ms': stage.averageMillis,
+                'P50 approx ms': stage.p50Millis,
+                'P95 approx ms': stage.p95Millis,
+                'Max ms': stage.maxMillis,
+                '% active session': stage.activeWallPercent,
+            })))
+        }
+        return this.#buildArtifact({...result, recordingPerformance: performanceReport})
+    }
+
+    /**
+     * Preserve the existing MP4 capture/encoding order while measuring its stages.
+     * The caller owns the session-local collector and publishes the final report.
+     */
+    #encodeMp4 = async ({
+        signal, onFrame, label, metadata, dimensions, browser, renderFrame,
+        buildCanvas, onFileSize, shouldStop, seekBeforeRender, recordingPerformance,
+    }) => {
         if (typeof renderFrame !== 'function') {
             throw new Error('ReplayDeferredExporter.exportMp4 requires a renderFrame callback.')
         }
@@ -1607,16 +1701,29 @@ export class ReplayDeferredExporter {
             throw new Error('ReplayDeferredExporter.exportMp4 requires valid dimensions.')
         }
 
-        const outputConfig = this.#preparedOutputConfig
-                            ?? await resolveReplayExportVideoOutput({
-                                width:  outputDimensions.width,
-                                height: outputDimensions.height,
-                                browser,
-                            })
+        const codecStartedAt = recordingPerformance.now()
+        let outputConfig = null
+        try {
+            outputConfig = this.#preparedOutputConfig ?? await resolveReplayExportVideoOutput({
+                width: outputDimensions.width, height: outputDimensions.height, browser,
+            })
+        }
+        finally {
+            recordingPerformance.record('codecSetup', codecStartedAt)
+        }
         if (!outputConfig) {
             throw new Error(`No supported video codec for ${outputDimensions.width}x${outputDimensions.height} on this browser.`)
         }
 
+        recordingPerformance.configure({
+            codec: outputConfig.codec,
+            fullCodecString: outputConfig.fullCodecString,
+            bitrate: outputConfig.bitrate,
+            hardwareAcceleration: outputConfig.hardwareAcceleration,
+            latencyMode: 'quality',
+            reusedCodecConfiguration: Boolean(this.#preparedOutputConfig),
+        })
+        const outputSetupStartedAt = recordingPerformance.now()
         const canvas = typeof buildCanvas === 'function'
                        ? buildCanvas(outputDimensions)
                        : document.createElement('canvas')
@@ -1650,11 +1757,17 @@ export class ReplayDeferredExporter {
             }
 
             lastPublishedFileSize = bytes
-            onFileSize(bytes, {
-                encodedPacketBytes,
-                targetBytes,
-                finalized: Boolean(target.buffer),
-            })
+            const publicationStartedAt = recordingPerformance.now()
+            try {
+                onFileSize(bytes, {
+                    encodedPacketBytes,
+                    targetBytes,
+                    finalized: Boolean(target.buffer),
+                })
+            }
+            finally {
+                recordingPerformance.record('fileSizePublication', publicationStartedAt)
+            }
         }
 
         let encoderCanvas = canvas
@@ -1697,7 +1810,9 @@ export class ReplayDeferredExporter {
                 const alphaBytes = finiteNumber(packet?.sideData?.alphaByteLength, null)
                                    ?? finiteNumber(packet?.sideData?.alpha?.byteLength, 0)
                                    ?? 0
-                encodedPacketBytes += Math.max(0, packetBytes) + Math.max(0, alphaBytes)
+                const packetSize = Math.max(0, packetBytes) + Math.max(0, alphaBytes)
+                encodedPacketBytes += packetSize
+                recordingPerformance.packetEncoded(packetSize)
                 publishFileSize()
             },
         })
@@ -1726,6 +1841,7 @@ export class ReplayDeferredExporter {
          * @returns {Promise<void>} Promise resolved after the frame is submitted.
          */
         const enqueueSourceAdd = ({timestamp, duration, encodeOptions, keepAlive = false}) => {
+            const queuedAt = recordingPerformance.now()
             const operation = sourceOperation.then(async () => {
                 if (sourceOperationError) {
                     throw sourceOperationError
@@ -1749,7 +1865,15 @@ export class ReplayDeferredExporter {
                     }
                 }
 
-                await source.add(safeTimestamp, duration, encodeOptions)
+                recordingPerformance.record(keepAlive ? 'encoderKeepAliveQueue' : 'encoderQueueWait', queuedAt)
+                const submissionStartedAt = recordingPerformance.now()
+                try {
+                    await source.add(safeTimestamp, duration, encodeOptions)
+                }
+                finally {
+                    recordingPerformance.record(keepAlive ? 'encoderKeepAliveSubmission' : 'encoderSubmission', submissionStartedAt)
+                }
+                recordingPerformance.frameSubmitted({keepAlive, timestamp: safeTimestamp, duration})
                 lastEncodedTimestamp = safeTimestamp
                 publishFileSize()
             })
@@ -1783,44 +1907,65 @@ export class ReplayDeferredExporter {
 
         try {
             outputStarted = true
-            await output.start()
+            try {
+                await output.start()
+            }
+            finally {
+                recordingPerformance.record('outputSetup', outputSetupStartedAt)
+            }
             publishFileSize({force: true})
 
             const renderedFrames = []
-            const frames = await this.#session.renderAll({
-                signal,
-                shouldStop,
-                onFrame: async rendered => {
-                    nextFrameTimestamp = rendered.frameTimeMs / 1000
-                    const renderResult = await renderFrame({
-                        canvas,
-                        context: ctx,
-                        frame: rendered,
-                        manifest,
-                        metadata,
-                    })
-                    renderedFrames.push(renderResult ?? rendered)
-                    if (encoderContext) {
-                        // Replace the full encoder frame in one draw, including transparent source pixels.
-                        encoderContext.drawImage(
+            let frames = null
+            const frameLoopStartedAt = recordingPerformance.now()
+            try {
+                frames = await this.#session.renderAll({
+                    signal,
+                    shouldStop,
+                    seekBeforeRender,
+                    onFrame: async rendered => {
+                        nextFrameTimestamp = rendered.frameTimeMs / 1000
+                        const renderResult = await renderFrame({
                             canvas,
-                            0,
-                            0,
-                            outputDimensions.width,
-                            outputDimensions.height,
-                        )
-                    }
-                    await enqueueSourceAdd({
-                        timestamp: rendered.frameTimeMs / 1000,
-                        duration: rendered.frameIntervalMs / 1000,
-                        encodeOptions: rendered.isFirst ? {keyFrame: true} : undefined,
-                    })
-                    scheduleCodecKeepAlive()
-                    if (typeof onFrame === 'function') {
-                        await onFrame(rendered, manifest)
-                    }
-                },
-            })
+                            context: ctx,
+                            frame: rendered,
+                            manifest,
+                            metadata,
+                        })
+                        renderedFrames.push(renderResult ?? rendered)
+                        if (encoderContext) {
+                            // Replace the full encoder frame in one draw, including transparent source pixels.
+                            const encoderCopyStartedAt = recordingPerformance.now()
+                            try {
+                                encoderContext.drawImage(
+                                    canvas, 0, 0, outputDimensions.width, outputDimensions.height,
+                                )
+                            }
+                            finally {
+                                recordingPerformance.record('encoderCopy', encoderCopyStartedAt)
+                            }
+                        }
+                        await enqueueSourceAdd({
+                            timestamp: rendered.frameTimeMs / 1000,
+                            duration: rendered.frameIntervalMs / 1000,
+                            encodeOptions: rendered.isFirst ? {keyFrame: true} : undefined,
+                        })
+                        scheduleCodecKeepAlive()
+                        if (typeof onFrame === 'function') {
+                            const progressStartedAt = recordingPerformance.now()
+                            try {
+                                await onFrame(rendered, manifest)
+                            }
+                            finally {
+                                recordingPerformance.record('progressPublication', progressStartedAt)
+                            }
+                        }
+                    },
+                })
+            }
+            finally {
+                recordingPerformance.record('frameLoop', frameLoopStartedAt)
+            }
 
             if (signal?.aborted) {
                 throw new DOMException('The Replay export was cancelled.', 'AbortError')
@@ -1830,20 +1975,45 @@ export class ReplayDeferredExporter {
                 clearTimeout(keepAliveTimer)
                 keepAliveTimer = null
             }
-            await source.close()
-            await output.finalize()
+            const drainStartedAt = recordingPerformance.now()
+            try {
+                await source.close()
+            }
+            finally {
+                recordingPerformance.record('encoderDrain', drainStartedAt)
+            }
+            const finalizeStartedAt = recordingPerformance.now()
+            try {
+                await output.finalize()
+            }
+            finally {
+                recordingPerformance.record('containerFinalize', finalizeStartedAt)
+            }
             outputFinalized = true
 
-            const blob = new Blob([output.target.buffer], {type: outputConfig.mimeType})
+            const blobStartedAt = recordingPerformance.now()
+            let blob = null
+            try {
+                blob = new Blob([output.target.buffer], {type: outputConfig.mimeType})
+            }
+            finally {
+                recordingPerformance.record('blobCreation', blobStartedAt)
+            }
             publishFileSize({force: true})
             if (typeof onFileSize === 'function') {
-                onFileSize(blob.size, {
-                    encodedPacketBytes,
-                    targetBytes: blob.size,
-                    finalized: true,
-                })
+                const publicationStartedAt = recordingPerformance.now()
+                try {
+                    onFileSize(blob.size, {
+                        encodedPacketBytes,
+                        targetBytes: blob.size,
+                        finalized: true,
+                    })
+                }
+                finally {
+                    recordingPerformance.record('fileSizePublication', publicationStartedAt)
+                }
             }
-            return this.#buildArtifact({
+            return {
                 blob,
                 manifest,
                 frames,
@@ -1852,7 +2022,7 @@ export class ReplayDeferredExporter {
                 mimeType: outputConfig.mimeType,
                 extension: outputConfig.extension,
                 label,
-            })
+            }
         }
         finally {
             keepAliveStopped = true
@@ -1862,7 +2032,13 @@ export class ReplayDeferredExporter {
             }
             await sourceOperation.catch(() => undefined)
             if (outputStarted && !outputFinalized && typeof output.cancel === 'function') {
-                await output.cancel().catch(() => undefined)
+                const cleanupStartedAt = recordingPerformance.now()
+                try {
+                    await output.cancel().catch(() => undefined)
+                }
+                finally {
+                    recordingPerformance.record('cancellationCleanup', cleanupStartedAt)
+                }
             }
         }
     }
@@ -2599,9 +2775,20 @@ export const runReplayDeferredMp4Export = async ({
             exporter.session?.setPreparedFrameSampleResolver?.(replayFrameSampleWorker.resolveSampleForFrame)
         }
 
+        const recordingPerformance = isDryRun ? null : createReplayRecordingPerformance()
+        recordingPerformance?.configure({
+            qualityIndex: outputRenderSpec?.qualityIndex ?? null,
+            renderHostMode,
+            captureMode,
+            cropRect: outputRenderSpec?.cropRect ? {...outputRenderSpec.cropRect} : null,
+            visibleOverlayIds: [...(plan.runtime?.context?.visibleOverlayIds ?? [])],
+        })
         const result = await exporter.exportMp4({
             signal,
             shouldStop: () => plan.runtime?.exportStopRequested === true,
+            // The callback applies the frame through the guarded Replay export boundary. A preliminary
+            // seek would also run the interactive listener, rebuilding the trace and moving the camera twice.
+            seekBeforeRender: false,
             dryRun: isDryRun,
             yieldIntervalMs,
             yieldToBrowser,
@@ -2609,15 +2796,26 @@ export const runReplayDeferredMp4Export = async ({
             metadata: plan.mediaMetadata ?? mediaMetadata ?? metadata ?? {},
             dimensions: outputDimensions,
             buildCanvas,
+            recordingPerformance,
+            onPerformance: report => {
+                plan.runtime.recordingPerformance = ref(report)
+            },
             onFileSize: bytes => {
                 updateReplayExportFileSize({plan, bytes})
                 updateReplayRecordingMonitor({
                     mode: monitorMode,
                     size: bytes,
+                    recordingPerformance,
                 })
             },
             renderFrame: async ({canvas, context, frame}) => {
-                await waitForReplayExportResume({plan, signal})
+                const pauseStartedAt = plan.runtime?.exportPaused ? recordingPerformance?.now() : null
+                try {
+                    await waitForReplayExportResume({plan, signal})
+                }
+                finally {
+                    recordingPerformance?.record('pauseWait', pauseStartedAt)
+                }
                 if (signal?.aborted) {
                     throw new DOMException('The Replay export was aborted.', 'AbortError')
                 }
@@ -2655,31 +2853,38 @@ export const runReplayDeferredMp4Export = async ({
                     }
                     globalThis.__?.ui?.replay?.refresh?.({camera: true, suppressMoveEvents: true})
                 }
-                const widgetStateStartedAt = isDryRun ? runtimeNow() : 0
+                const widgetStateStartedAt = recordingPerformance?.now() ?? (isDryRun ? runtimeNow() : 0)
                 if (isDryRun) {
                     dryRunTimings.cameraTraceMillis += widgetStateStartedAt - frameUpdateStartedAt
                 }
-                publishReplayExportFrameState({
-                    plan,
-                    replay,
-                    controller,
-                    frame: {
-                        ...sourceFrame,
-                        progress: phase.progress,
-                    },
-                    sample: frameSample,
-                    phase,
-                    commitSynchronously: !isDryRun,
-                    logicalFrame: replayMode?.lastReplayLogicalFrame ?? null,
-                    trackPath: plan.renderContract?.trackPath
-                               ?? plan.runtime?.context?.renderContract?.trackPath
-                               ?? controller?.sampler?.logicalTrackPath
-                               ?? null,
-                })
+                try {
+                    publishReplayExportFrameState({
+                        plan,
+                        replay,
+                        controller,
+                        frame: {
+                            ...sourceFrame,
+                            progress: phase.progress,
+                        },
+                        sample: frameSample,
+                        phase,
+                        commitSynchronously: !isDryRun,
+                        logicalFrame: replayMode?.lastReplayLogicalFrame ?? null,
+                        trackPath: plan.renderContract?.trackPath
+                                   ?? plan.runtime?.context?.renderContract?.trackPath
+                                   ?? controller?.sampler?.logicalTrackPath
+                                   ?? null,
+                    })
+                }
+                finally {
+                    recordingPerformance?.record('widgetStatePublication', widgetStateStartedAt)
+                }
                 const tileReadinessStartedAt = isDryRun ? runtimeNow() : 0
                 if (isDryRun) {
                     dryRunTimings.widgetStateMillis += tileReadinessStartedAt - widgetStateStartedAt
                 }
+                const isReadinessCheckpoint = !isDryRun
+                                               || isReplayDryRunTileReadinessCheckpoint({frame, phase})
                 const speedLevel = resolveReplayTileSpeedLevel({
                     frame,
                     previousFrame: previousReplayExportFrame,
@@ -2688,26 +2893,32 @@ export const runReplayDeferredMp4Export = async ({
                 })
                 previousReplayExportFrame = frame
                 previousReplayExportSample = frameSample
-                if (replaySceneTileReadinessCoordinator) {
-                    await replaySceneTileReadinessCoordinator.prepareForCapture({
-                        maxMillis: tileReadinessTimeoutMs,
-                        signal,
-                        speedLevel,
-                        settled: isReplayExportFrameSettled({frame, phase}),
-                    })
+                // Intermediate dry-run frames rely on requestRender and browser yields without blocking.
+                if (!isDryRun || isReadinessCheckpoint) {
+                    const maxMillis = isDryRun
+                        ? Math.min(tileReadinessTimeoutMs, REPLAY_DRY_RUN_TILE_READINESS_CHECK_TIMEOUT_MS)
+                        : tileReadinessTimeoutMs
+                    if (replaySceneTileReadinessCoordinator) {
+                        await replaySceneTileReadinessCoordinator.prepareForCapture({
+                            maxMillis,
+                            signal,
+                            speedLevel,
+                            settled: isReplayExportFrameSettled({frame, phase}),
+                        })
+                    }
+                    else {
+                        await prepareReplaySceneTilesForCapture({
+                            scene: replayMode?.cesiumScene?.()
+                                   ?? globalThis.lgs?.scene
+                                   ?? globalThis.lgs?.viewer?.scene
+                                   ?? null,
+                            maxMillis,
+                            signal,
+                            renderNow: flushReplayRenderTarget,
+                        })
+                    }
                 }
-                else {
-                    await prepareReplaySceneTilesForCapture({
-                        scene: replayMode?.cesiumScene?.()
-                               ?? globalThis.lgs?.scene
-                               ?? globalThis.lgs?.viewer?.scene
-                               ?? null,
-                        maxMillis: tileReadinessTimeoutMs,
-                        signal,
-                        renderNow: flushReplayRenderTarget,
-                    })
-                }
-                // Dry run qualifies terrain like export, then skips widget capture and image composition.
+                // Dry run checks key scene boundaries, then skips widget capture and image composition.
                 if (isDryRun) {
                     dryRunTimings.tileReadinessMillis += runtimeNow() - tileReadinessStartedAt
                     return
@@ -2735,6 +2946,7 @@ export const runReplayDeferredMp4Export = async ({
                     const composerWidth = canvas.width / composerOutputDpr
                     const composerHeight = canvas.height / composerOutputDpr
                     if (!replayComposer && !replayComposerFallback) {
+                        const compositionSetupStartedAt = recordingPerformance.now()
                         try {
                             replayComposer = new CanvasOverlayComposer(frameSource, {
                                 clip: composerClip,
@@ -2745,10 +2957,14 @@ export const runReplayDeferredMp4Export = async ({
                                 flushWebGLBuffer: flushReplayRenderTarget,
                                 continuousRendering: false,
                                 outputCanvas: canvas,
+                                recordingPerformance,
                             })
                         }
                         catch {
                             replayComposerFallback = true
+                        }
+                        finally {
+                            recordingPerformance.record('compositionSetup', compositionSetupStartedAt)
                         }
                     }
 
@@ -2768,44 +2984,66 @@ export const runReplayDeferredMp4Export = async ({
                                 sourceCanvasHeight: frameSource.height,
                             })
                         }
-                        const visibleWidgetKeys = await flushReplayVideoOverlayCanvases({
-                            replay,
-                            controller,
-                            frameState: plan.runtime?.frameState,
-                            captureMirrors,
-                            strict: true,
-                            signal,
-                        })
-                        buildReplayVideoComposerOverlays({
-                            composer:      replayComposer,
-                            cropRect:      cropRect ?? {left: 0, top: 0, width: canvas.width, height: canvas.height},
-                            coordinateScale: isolatedRenderHost && cropRect && isolatedViewportDimensions
-                                ? {
-                                    x: isolatedViewportDimensions.width / Math.max(1, cropRect.width),
-                                    y: isolatedViewportDimensions.height / Math.max(1, cropRect.height),
-                                }
-                                : null,
-                            replay,
-                            controller,
-                            widgetKeys: visibleWidgetKeys,
-                            metricsCache: overlayMetricsCache,
-                        })
+                        const captureStartedAt = recordingPerformance.now()
+                        let visibleWidgetKeys = null
+                        try {
+                            visibleWidgetKeys = await flushReplayVideoOverlayCanvases({
+                                replay, controller, frameState: plan.runtime?.frameState,
+                                captureMirrors, strict: true, signal,
+                            })
+                        }
+                        finally {
+                            recordingPerformance.record('overlayCapture', captureStartedAt)
+                        }
+                        const layoutStartedAt = recordingPerformance.now()
+                        try {
+                            buildReplayVideoComposerOverlays({
+                                composer:      replayComposer,
+                                cropRect:      cropRect ?? {left: 0, top: 0, width: canvas.width, height: canvas.height},
+                                coordinateScale: isolatedRenderHost && cropRect && isolatedViewportDimensions
+                                    ? {
+                                        x: isolatedViewportDimensions.width / Math.max(1, cropRect.width),
+                                        y: isolatedViewportDimensions.height / Math.max(1, cropRect.height),
+                                    }
+                                    : null,
+                                replay,
+                                controller,
+                                widgetKeys: visibleWidgetKeys,
+                                metricsCache: overlayMetricsCache,
+                            })
+                        }
+                        finally {
+                            recordingPerformance.record('overlayLayout', layoutStartedAt)
+                        }
                         await replayComposer.renderFrame()
 
                         const composedCanvas = replayComposer.getCanvas?.()
                         if (composedCanvas && composedCanvas !== canvas) {
-                            context.clearRect(0, 0, canvas.width, canvas.height)
-                            context.drawImage(composedCanvas, 0, 0, composedCanvas.width, composedCanvas.height, 0, 0, canvas.width, canvas.height)
+                            const transferStartedAt = recordingPerformance.now()
+                            try {
+                                context.clearRect(0, 0, canvas.width, canvas.height)
+                                context.drawImage(composedCanvas, 0, 0, composedCanvas.width, composedCanvas.height, 0, 0, canvas.width, canvas.height)
+                            }
+                            finally {
+                                recordingPerformance.record('compositionTransfer', transferStartedAt)
+                            }
                         }
                     }
                     else {
                         flushReplayRenderTarget()
-                        context.clearRect(0, 0, canvas.width, canvas.height)
-                        context.drawImage(frameSource, 0, 0, frameSource.width, frameSource.height, 0, 0, canvas.width, canvas.height)
+                        const compositionStartedAt = recordingPerformance.now()
+                        try {
+                            context.clearRect(0, 0, canvas.width, canvas.height)
+                            context.drawImage(frameSource, 0, 0, frameSource.width, frameSource.height, 0, 0, canvas.width, canvas.height)
+                        }
+                        finally {
+                            recordingPerformance.record('composition', compositionStartedAt)
+                        }
                     }
                 }
                 publishReplayRecordingMonitorFrame({
                     canvas,
+                    recordingPerformance,
                     mode: monitorMode,
                     phase: plan.runtime?.exportStopRequested === true
                            ? 'finalizing'
@@ -2844,6 +3082,7 @@ export const runReplayDeferredMp4Export = async ({
                     elapsedMillis: exportRuntime?.exportElapsedMillis,
                     estimatedRemainingMillis: exportRuntime?.exportEstimatedRemainingMillis,
                     size: exportRuntime?.exportFileSize,
+                    recordingPerformance,
                 })
             },
         })

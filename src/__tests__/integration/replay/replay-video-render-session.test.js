@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -200,5 +200,28 @@ describe('ReplayVideoRenderSession', () => {
         expect(seek.mock.invocationCallOrder[0]).toBeLessThan(resolveSample.mock.invocationCallOrder[0])
         expect(rendered.sample.frameIndex).toBe(1)
         expect(rendered.sample.progress).toBeCloseTo(0.1, 6)
+    })
+
+    it('delegates the controller seek to a frame callback without losing prepared sample order', async () => {
+        const seek = vi.fn()
+        const samples = Array.from({length: 11}, (_, index) => ({progress: index / 10, marker: index}))
+        const session = new ReplayVideoRenderSession({
+            controller: {seek},
+            timeline: {durationMillis: 1000, fps: 10},
+        })
+        const resolvePreparedSample = vi.fn(index => Promise.resolve(samples[index]))
+        session.setPreparedFrameSampleResolver(resolvePreparedSample)
+        const applyFrame = vi.fn(frame => {
+            expect(seek).toHaveBeenCalledTimes(frame.index)
+            seek(frame.progress, frame.sample)
+        })
+
+        const frames = await session.renderAll({seekBeforeRender: false, onFrame: applyFrame})
+
+        expect(frames.map(frame => frame.sample.marker)).toEqual(samples.map(sample => sample.marker))
+        expect(seek).toHaveBeenCalledTimes(11)
+        expect(seek).toHaveBeenNthCalledWith(1, 0, samples[0])
+        expect(seek).toHaveBeenLastCalledWith(1, samples.at(-1))
+        expect(resolvePreparedSample).toHaveBeenCalledTimes(11)
     })
 })

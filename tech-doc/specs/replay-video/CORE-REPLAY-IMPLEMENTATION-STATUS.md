@@ -50,10 +50,20 @@ handoff; it does not encode video.
 
 Simple Replay additionally has an opt-in Dry run setting. It walks the complete
 configured timeline with camera, trace, and logical widget updates. Tile
-prewarming and per-frame readiness remain enabled. Widget capture readiness,
+prewarming remains enabled, with readiness checks bounded to 250 ms at phase
+boundaries and final frames. Intermediate frames do not synchronously flush
+Cesium or wait for tiles. Widget capture readiness,
 bitmap capture, output image composition, and encoding are skipped. Its compact
 monitor displays integer progress and frame counts without an image preview.
 Saved video quality and FPS preferences remain unchanged.
+Product export and Dry run apply each controller seek through the guarded frame
+callback rather than also invoking the interactive scrub listener beforehand.
+Supplied trace guides are converted once per installation instead of once per
+property evaluation. A CPU-only 5,000-point, 421-frame synthetic scenario with
+the production controller, renderer, and a real Cesium Camera reduced the
+profiled Dry-run frame-work interval from 22.9 s to 2.0 s. This excludes WebGL
+rendering, tile loading, bitmap capture, and encoding; it is not an end-to-end
+recording benchmark or visual validation.
 The Simple settings popup also exposes border/fill colors and three fixed
 trace/marker scales, with reactive previews and Journey persistence. Its duration
 choices include 45 seconds and one minute.
