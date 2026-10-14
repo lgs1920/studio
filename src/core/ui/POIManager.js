@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,7 @@ import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
 import { Export }                                  from '@Core/ui/Export'
 import { POIUtils }                                from '@Utils/cesium/POIUtils'
 import { KM }                                      from '@Utils/UnitUtils'
-import { Cartesian3 }                              from 'cesium'
+import { Cartesian3, HeightReference }              from 'cesium'
 import { v4 as uuid }                              from 'uuid'
 import { subscribe }                               from 'valtio'
 
@@ -890,6 +890,34 @@ export class POIManager {
             point.height = json.height
         }
         return point
+    }
+
+    /**
+     * Reapply terrain clamping to rendered POIs after the scene terrain changes.
+     * @returns {number} The number of POI billboards updated.
+     */
+    refreshTerrainClamping = () => {
+        const heightReference = __.ui.sceneManager.noRelief()
+            ? HeightReference.NONE
+            : HeightReference.CLAMP_TO_GROUND
+        let updated = 0
+
+        for (const poi of this.list.values()) {
+            const container = POIUtils.getEntityContainer(poi)
+            const entity = container?.getById(poi.id)
+            if (!entity?.billboard) {
+                continue
+            }
+
+            entity.billboard.heightReference = heightReference
+            updated += 1
+        }
+
+        if (updated > 0) {
+            lgs.scene?.requestRender?.()
+        }
+
+        return updated
     }
 
     remove = async ({id, dbSync = true} = {}) => {

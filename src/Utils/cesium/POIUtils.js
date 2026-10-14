@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-03-01
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -213,6 +213,9 @@ export class POIUtils {
         const width = poi.image?.width ?? 32
         const height = poi.image?.height ?? 32
         const visible = POIUtils.setPOIVisibility(poi, parentVisibility)
+        const heightReference = __.ui.sceneManager.noRelief()
+                                   ? HeightReference.NONE
+                                   : HeightReference.CLAMP_TO_GROUND
 
         // Base entity options
         const options = {
@@ -220,8 +223,6 @@ export class POIUtils {
             id:                       poi.id,
             position:                 Cartesian3.fromDegrees(poi.longitude, poi.latitude, poi.simulatedHeight ?? poi.height),
             show:                     visible,
-            disableDepthTestDistance: __.ui.sceneManager.is2D ? 0 : 1.2742018E7,
-            heightReference: __.ui.sceneManager.noRelief() ? HeightReference.NONE : HeightReference.CLAMP_TO_GROUND,
         };
 
         // Billboard configuration
@@ -234,6 +235,8 @@ export class POIUtils {
             pixelOffset:     poi.pixelOffset ? new Cartesian2(poi.pixelOffset.x, poi.pixelOffset.y) : new Cartesian2(0, 0),
             horizontalOrigin: HorizontalOrigin.CENTER,
             verticalOrigin:  VerticalOrigin.BOTTOM,
+            heightReference: heightReference,
+            disableDepthTestDistance: 0,
             show:            visible,
         };
 
@@ -250,8 +253,6 @@ export class POIUtils {
         if (entity) {
             entity.show = options.show
             entity.position = options.position
-            entity.disableDepthTestDistance = options.disableDepthTestDistance
-            entity.heightReference = options.heightReference
             // Update billboard properties
             if (entity.billboard) {
                 entity.billboard.image = billboard.image
@@ -262,6 +263,8 @@ export class POIUtils {
                 entity.billboard.pixelOffset = billboard.pixelOffset
                 entity.billboard.horizontalOrigin = billboard.horizontalOrigin
                 entity.billboard.verticalOrigin = billboard.verticalOrigin
+                entity.billboard.heightReference = billboard.heightReference
+                entity.billboard.disableDepthTestDistance = billboard.disableDepthTestDistance
                 entity.billboard.show = billboard.show
             }
             else {

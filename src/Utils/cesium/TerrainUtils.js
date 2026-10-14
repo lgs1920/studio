@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-01
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -73,6 +73,7 @@ export class TerrainUtils {
             const terrain = new Terrain(await TerrainUtils.setTerrain(theEntity))
             if (terrain) {
                 await lgs.scene.setTerrain(terrain)
+                __.ui.poiManager?.refreshTerrainClamping?.()
             }
         }
         catch (error) {
