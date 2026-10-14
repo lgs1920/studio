@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,7 @@ import {
 import bbox                                            from '@turf/bbox'
 import { default as centroid }                         from '@turf/centroid'
 import { SceneUtils }                                  from '@Utils/cesium/SceneUtils'
+import { TerrainUtils }                                from '@Utils/cesium/TerrainUtils'
 import {
     getTrackRenderContent, trackRenderSmoothingKey,
 }                                                      from '@Utils/cesium/trackRenderSmoothing'
@@ -35,7 +36,7 @@ import { CountApi }                                     from '@Utils/CountApi'
 import {
     BoundingSphere, BufferPolyline, BufferPolylineMaterial, Cartesian2, Cartesian3, Cartographic, Color as CColor,
     CustomDataSource, GeoJsonDataSource, GeoJsonPrimitive, HeightReference, HorizontalOrigin, Math as M,
-    PolylineDashMaterialProperty, PolylineOutlineMaterialProperty, Rectangle, sampleTerrainMostDetailed, VerticalOrigin,
+    PolylineDashMaterialProperty, PolylineOutlineMaterialProperty, Rectangle, VerticalOrigin,
 }                                                      from 'cesium'
 import { UIToast }                                     from '../UIToast.js'
 import { POI_FLAG, POI_FLAG_START, POI_STD, POIUtils } from './POIUtils'
@@ -1484,7 +1485,7 @@ export class TrackUtils {
         })
 
         const altitude = []
-        const temp = await sampleTerrainMostDetailed(lgs.viewer.terrainProvider, positions)
+        const temp = await TerrainUtils.sampleTerrainHeights(positions)
         temp.forEach(coordinate => {
             altitude.push(coordinate.height)
         })

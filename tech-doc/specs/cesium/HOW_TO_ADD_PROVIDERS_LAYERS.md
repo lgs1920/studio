@@ -111,8 +111,10 @@ Terrain fields:
 
 | Field | Required | Notes |
 | --- | --- | --- |
-| `terrainType` | Yes | `cesium`, `ellipsoid`, or `url`. |
-| `url` | Required for `terrainType: url` | Terrain endpoint. Can include `{%authent%}` for token replacement. |
+| `terrainType` | Yes | `cesium`, `ellipsoid`, `url`, or `mapterhorn`. |
+| `url` | Required for `terrainType: url` or `mapterhorn` | Terrain endpoint or Terrarium XYZ template. URL terrain can include `{%authent%}` for token replacement. |
+| `maximumLevel` | Optional for `mapterhorn` | Highest requested terrain zoom; defaults to `17`. |
+| `heightmapResolution` | Optional for `mapterhorn` | Heightmap vertices per tile side; defaults to `65` (`2^n + 1`). |
 | `noRelief` | Optional | UI hint for ellipsoid terrain. |
 
 Ion 3D fields:
@@ -279,6 +281,35 @@ usage:
 ```
 
 Uses `CesiumTerrainProvider.fromUrl`.
+
+### Mapterhorn Terrain
+
+```yaml
+type: terrain
+terrainType: mapterhorn
+url: 'https://tiles.mapterhorn.com/{z}/{x}/{y}.webp'
+maximumLevel: 17
+heightmapResolution: 65
+usage:
+  type: free
+  doc: 'https://mapterhorn.com/data-access/'
+```
+
+Uses `@bertt/cesium-mapterhorn-provider` (MIT) with Studio's coverage adapter.
+The endpoint serves 512-pixel Terrarium-encoded WebP tiles in Web Mercator.
+No API key is required. Global coverage is available through level 12; detailed
+coverage through level 17 depends on the region. Missing detailed tiles retain
+the available parent terrain, and confirmed 404 subtrees are not requested again
+for the lifetime of the provider. Other network errors retain Cesium's retry behavior.
+
+The Bun patch preserves Cesium's synchronous `undefined` return when its scheduler
+defers a request. Both the distributed ESM entry and upstream source are patched.
+Because the provider has no tile-availability metadata, Studio samples altitudes
+at the globally covered level 12 rather than calling `sampleTerrainMostDetailed`.
+Providers that expose availability continue to use the most detailed sampling API.
+
+Use the [official Mapterhorn attribution](https://mapterhorn.com/attribution/)
+for terrain credits and the source-specific licenses linked there.
 
 ## Supported Ion 3D Types
 

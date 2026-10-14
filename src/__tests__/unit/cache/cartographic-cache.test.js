@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -98,6 +98,13 @@ describe('cartographic routing and freshness', () => {
         const source = 'https://wms.example/map?REQUEST=GetMap&LAYERS=public-map'
         expect(classifyTileRequest(new Request(`https://studio.example/proxy.php?csurl=${encodeURIComponent(source)}`), wmsRules)?.kind).toBe('imagery')
         expect(classifyTileRequest(new Request('https://wms.example/map?REQUEST=GetFeatureInfo&LAYERS=public-map'), wmsRules)).toBeNull()
+    })
+
+    it('routes only Mapterhorn XYZ WebP tiles through the terrain cache', () => {
+        expect(classifyTileRequest(new Request('https://tiles.mapterhorn.com/12/2112/1500.webp'), rules))
+            .toEqual({kind: 'terrain', ion: false})
+        expect(classifyTileRequest(new Request('https://tiles.mapterhorn.com/tilejson.json'), rules)).toBeNull()
+        expect(classifyTileRequest(new Request('https://tiles.mapterhorn.com/logo.webp'), rules)).toBeNull()
     })
 
     it('does not cache application data, Google tiles, ranges, or unknown endpoints', () => {

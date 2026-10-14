@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import YAML             from 'yaml'
 import { describe, expect, it } from 'vitest'
 
@@ -115,5 +115,26 @@ describe('layers-terrains configuration', () => {
             logoText: 'Google Maps',
             url:      'https://www.google.com/maps',
         })
+    })
+
+    it('declares free Mapterhorn terrain with local branding and source attribution', () => {
+        const config = loadLayersTerrains()
+        const provider = config.providers.find(candidate => candidate.id === 'mapterhorn')
+        const layer = indexLayersById(config).get('mapterhorn-world')
+
+        expect(layer).toMatchObject({
+            provider: 'mapterhorn',
+            type: 'terrain',
+            terrainType: 'mapterhorn',
+            url: 'https://tiles.mapterhorn.com/{z}/{x}/{y}.webp',
+            maximumLevel: 17,
+            heightmapResolution: 65,
+            usage: {type: 'free'},
+        })
+        expect(provider.credits).toBe('Terrain data © Mapterhorn and its source data providers')
+        expect(provider.url).toBe('https://mapterhorn.com/attribution/')
+        expect(existsSync(`public${provider.logo}`)).toBe(true)
+        expect(existsSync(`public/assets/images/layers/thumbnails/${layer.image}`)).toBe(true)
+        expect(readFileSync('src/assets/credits/credits-map-providers.md', 'utf8')).toContain('https://mapterhorn.com/attribution/')
     })
 })

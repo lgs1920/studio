@@ -99,7 +99,8 @@ providers:
         maximumScreenSpaceError: 16 # Root value accepted for tiles3d.
 
         ## Terrain fields: `type: terrain`
-        terrainType: url            # cesium / ellipsoid / url
+        terrainType: url            # cesium / ellipsoid / url / mapterhorn
+        heightmapResolution: 65     # Mapterhorn vertices per tile side (2^n + 1).
         noRelief: false             # UI hint for `terrainType: ellipsoid`.
 
         ## Base 3D fields: `type: base3d`

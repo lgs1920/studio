@@ -4,6 +4,7 @@ The application, including studio, backend,APIs,site is based on :
 
 ### Map and 3D:
 * [cesiumjs](https://cesium.com/)  - The Map engine
+* [cesium-mapterhorn-provider](https://github.com/bertt/cesium-mapterhorn-provider) by bertt - Mapterhorn Terrarium terrain provider (MIT)
 * [Three.js](https://threejs.org/) - 3D graphics library
 
 ### Code and devs:

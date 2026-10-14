@@ -14,25 +14,37 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { TERRAIN_FROM_CESIUM, TERRAIN_FROM_CESIUM_ELLIPSOID, TERRAIN_FROM_URL, URL_AUTHENT_KEY } from '@Core/constants'
+import {
+    TERRAIN_FROM_CESIUM, TERRAIN_FROM_CESIUM_ELLIPSOID, TERRAIN_FROM_MAPTERHORN, TERRAIN_FROM_URL,
+    URL_AUTHENT_KEY,
+} from '@Core/constants'
 import { IonLayerUtils } from './IonLayerUtils'
-import { CesiumTerrainProvider, EllipsoidTerrainProvider, Terrain } from 'cesium'
+import { MapterhornTerrainProvider } from './MapterhornTerrainProvider'
+import { CesiumTerrainProvider, EllipsoidTerrainProvider, Terrain, sampleTerrain, sampleTerrainMostDetailed } from 'cesium'
 
 export class TerrainUtils {
 
     /**
-     * Sett  terrain from settings
+     * Create the terrain provider declared by the selected layer.
      *
      * @param entity {string|object} Entity Id or Entity Object
-     * @return {Promise<CesiumTerrainProvider>|null}
+     * @return {Promise<object|null>} Terrain provider or null for an unknown entity.
      */
-    static async setTerrain(entity) {
+    static setTerrain = async entity => {
         // we assume that if it not a string,it is the entity object
         const theEntity = (typeof entity === 'string') ? __.layersAndTerrainManager.getEntityProxy(entity) : entity
 
         // Set the right terrain
         if (!theEntity) {
             return null
+        }
+
+        if (theEntity.terrainType === TERRAIN_FROM_MAPTERHORN) {
+            return new MapterhornTerrainProvider({
+                url: theEntity.url,
+                maxLevel: theEntity.maximumLevel ?? 17,
+                heightmapResolution: theEntity.heightmapResolution ?? 65,
+            })
         }
 
         // We know the URL
@@ -66,7 +78,13 @@ export class TerrainUtils {
         return null
     }
 
-    static async changeTerrain(entity) {
+    /**
+     * Apply a selected terrain through Cesium's existing scene and error boundary.
+     *
+     * @param {string|object} entity - Terrain entity or catalogue id.
+     * @returns {Promise<void>} Scene terrain update completion.
+     */
+    static changeTerrain = async entity => {
         const theEntity = (typeof entity === 'string') ? __.layersAndTerrainManager.getEntityProxy(entity) : entity
 
         try {
@@ -91,4 +109,19 @@ export class TerrainUtils {
             throw new Error(`Cesium terrain "${name}" failed to load.${cause}`)
         }
     }
+
+    /**
+     * Sample altitude without requiring unavailable tile-availability metadata.
+     *
+     * @param {object[]} positions - Cartographic positions updated by Cesium.
+     * @param {object} options - Provider and precision options.
+     * @returns {Promise<object[]>} Positions with sampled terrain heights.
+     */
+    static sampleTerrainHeights = (positions, {
+        provider = globalThis.lgs?.viewer?.terrainProvider,
+        mostDetailed = true,
+        level = 11,
+    } = {}) => mostDetailed && provider?.availability
+        ? sampleTerrainMostDetailed(provider, positions)
+        : sampleTerrain(provider, mostDetailed ? provider?.samplingLevel ?? level : level, positions)
 }

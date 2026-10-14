@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-08
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,7 +34,7 @@ export const buildTileCacheRules = (providers = [], origin = 'https://studio.inv
             const kind = layer.type === 'terrain' ? 'terrain'
                 : ['tiles3d', 'base3d'].includes(layer.type) ? 'tiles3d' : 'imagery'
             if (kind === 'imagery' && !layer.tile) continue
-            if (kind === 'terrain' && layer.terrainType !== 'url') continue
+            if (kind === 'terrain' && !['url', 'mapterhorn'].includes(layer.terrainType)) continue
             const address = kind === 'tiles3d' ? layer.tiles3d?.url ?? layer.url : layer.url
             if (!address) continue
             try {
@@ -43,7 +43,8 @@ export const buildTileCacheRules = (providers = [], origin = 'https://studio.inv
                 let path = url.pathname
                 if (kind === 'tiles3d') path = path.slice(0, path.lastIndexOf('/') + 1)
                 else if (path.includes('TEMPLATE')) path = path.slice(0, path.indexOf('TEMPLATE'))
-                const mode = kind === 'imagery' ? layer.tile : kind
+                const mode = kind === 'imagery' ? layer.tile
+                    : layer.terrainType === 'mapterhorn' ? 'mapterhorn' : kind
                 rules.push({origin: url.origin, path, kind, mode, layer: layer.layer ?? '', matrixSet: layer.tileMatrixSetID ?? ''})
             }
             catch { /* Ignore malformed or unavailable provider URLs. */ }

@@ -22,6 +22,26 @@ filter:
 
 ## Providers List
 providers:
+  ## Mapterhorn public Terrarium terrain
+  - id: mapterhorn
+    name: Mapterhorn
+    fullname: Mapterhorn
+    credits: 'Terrain data © Mapterhorn and its source data providers'
+    logo: '/assets/images/layers/logos/mapterhorn.png'
+    url: 'https://mapterhorn.com/attribution/'
+    layers:
+      - name: World Terrain
+        id: mapterhorn-world
+        image: mapterhorn-provider.png
+        usage:
+          type: free
+          doc: 'https://mapterhorn.com/data-access/'
+        type: terrain
+        terrainType: mapterhorn
+        url: 'https://tiles.mapterhorn.com/{z}/{x}/{y}.webp'
+        maximumLevel: 17
+        heightmapResolution: 65
+
   - id: reearth
     name: Re:Earth
     fullname: Re:Earth

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-18
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -156,6 +156,8 @@ export const LOCKED_ACCESS = 'locked'
 export const TERRAIN_FROM_CESIUM = 'cesium'
 export const TERRAIN_FROM_CESIUM_ELLIPSOID = 'ellipsoid'
 export const TERRAIN_FROM_URL = 'url'
+/** Public Terrarium/WebP terrain served by Mapterhorn. */
+export const TERRAIN_FROM_MAPTERHORN = 'mapterhorn'
 export const LOW_TERRAIN_PRECISION = 1
 export const HIGH_TERRAIN_PRECISION = 2
 

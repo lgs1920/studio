@@ -22,7 +22,7 @@
 * Earthstar Geographics
 * GIS User Community
 * Re:Earth Terrain
-* Mapterhorn
+* Terrain data © [Mapterhorn](https://mapterhorn.com/) and its source data providers. See the [official attribution and source licenses](https://mapterhorn.com/attribution/) and [complete source catalogue](https://download.mapterhorn.com/attribution.json).
 * EGM2008.
 * BNF - IGN.
 * © Instituto Geográfico Nacional / Centro Nacional de Información Geográfica (Spain).

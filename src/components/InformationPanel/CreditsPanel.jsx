@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-06-17
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { WaButton, WaCard } from '@awesome.me/webawesome/dist/react'
+import '@awesome.me/webawesome/dist/styles/utilities/text.css'
 import React                        from 'react'
 import { default as ReactMarkdown } from 'react-markdown'
 import { markdown as engine }    from '../../../src/assets/credits/credits-engine.md'
@@ -24,6 +25,14 @@ import { markdown as mediaAssets } from '../../../src/assets/credits/credits-med
 import { markdown as providers } from '../../../src/assets/credits/credits-map-providers.md'
 import { markdown as code }      from '../../../src/assets/credits/credits-open-source-code.md'
 import { openCodeDependenciesDrawer } from './openCodeDependenciesDrawer'
+
+/** Renders a Markdown link with Web Awesome's theme-aware link utility. */
+const CreditsMarkdownLink = ({children, href, title}) => (
+    <a className="wa-link" href={href} title={title}>{children}</a>
+)
+
+/** Applies the same branded link renderer to every credits document. */
+const creditsMarkdownComponents = {a: CreditsMarkdownLink}
 
 /**
  * Renders the credits content for the information drawer.
@@ -36,11 +45,11 @@ export const CreditsPanel = () => {
         <LGSScrollbars>
             <WaCard className="lgs--credits-list">
                 <h1>{'Credits'}</h1>
-                <ReactMarkdown children={engine}/>
-                <ReactMarkdown children={providers}/>
-                <ReactMarkdown children={geocoding}/>
-                <ReactMarkdown children={mediaAssets}/>
-                <ReactMarkdown children={code}/>
+                <ReactMarkdown components={creditsMarkdownComponents}>{engine}</ReactMarkdown>
+                <ReactMarkdown components={creditsMarkdownComponents}>{providers}</ReactMarkdown>
+                <ReactMarkdown components={creditsMarkdownComponents}>{geocoding}</ReactMarkdown>
+                <ReactMarkdown components={creditsMarkdownComponents}>{mediaAssets}</ReactMarkdown>
+                <ReactMarkdown components={creditsMarkdownComponents}>{code}</ReactMarkdown>
                 <WaButton className="lgs--credits-dependencies-button"
                           size="s"
                           appearance="plain"

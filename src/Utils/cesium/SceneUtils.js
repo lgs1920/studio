@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2024-12-06
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,9 +24,10 @@ import bbox          from '@turf/bbox'
 import centroid      from '@turf/centroid'
 import {
     BoundingSphere, Cartesian2, Cartesian3, Cartographic, Color, EasingFunction, HeadingPitchRange, Math as M, Matrix4,
-    Rectangle, sampleTerrain, sampleTerrainMostDetailed, SceneMode,
+    Rectangle, sampleTerrain, SceneMode,
 }                    from 'cesium'
 import { CameraUtils } from '@Utils/cesium/CameraUtils'
+import { TerrainUtils } from '@Utils/cesium/TerrainUtils'
 import {
     buildCameraTransferPath,
     selectCameraTransferMode,
@@ -307,7 +308,7 @@ export class SceneUtils {
         let results
         switch (precision) {
             case HIGH_TERRAIN_PRECISION:
-                results = await sampleTerrainMostDetailed(lgs.viewer.terrainProvider, cartographics)
+                results = await TerrainUtils.sampleTerrainHeights(cartographics)
                 break
             case LOW_TERRAIN_PRECISION:
                 results = await sampleTerrain(lgs.viewer.terrainProvider, level, cartographics)

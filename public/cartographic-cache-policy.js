@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,7 +44,8 @@ export const classifyTileRequest = (request, rules = []) => {
     const query = new Map([...url.searchParams].map(([key, value]) => [key.toLowerCase(), value]))
     for (const rule of rules) {
         if (url.origin !== rule.origin || !(url.pathname === rule.path || url.pathname.startsWith(rule.path.endsWith('/') ? rule.path : `${rule.path}/`))) continue
-        if (rule.kind === 'terrain' && terrain) return {kind: 'terrain', ion: false}
+        if (rule.kind === 'terrain' && (terrain
+            || rule.mode === 'mapterhorn' && /\/\d+\/\d+\/\d+\.webp$/i.test(url.pathname))) return {kind: 'terrain', ion: false}
         if (rule.kind === 'tiles3d' && content3d) return {kind: 'tiles3d', ion: false}
         if (rule.kind !== 'imagery') continue
         if (['wmts', 'wmts-legacy'].includes(rule.mode) && query.get('request')?.toLowerCase() === 'gettile') {

@@ -14,7 +14,7 @@ This list focuses on providers that supply at least one of:
 
 Current LGS1920 support:
 
-- Ready now: Cesium terrain (`terrainType: cesium`), URL terrain (`terrainType: url`), `wmts`, `wmts-legacy`, URL-template tile layers.
+- Ready now: Cesium terrain (`terrainType: cesium`), URL terrain (`terrainType: url`), Mapterhorn Terrarium terrain (`terrainType: mapterhorn`), `wmts`, `wmts-legacy`, URL-template tile layers.
 - Needs code: WMS. Cesium supports this through `WebMapServiceImageryProvider`, but `MapLayer.jsx` does not currently expose a `tile: wms` branch.
 - Needs per-provider checks: WMTS services with non-standard tiling schemes, custom `TileMatrixSet`, unusual axis order, or missing EPSG:3857 support.
 
@@ -32,6 +32,7 @@ same vocabulary as the YAML file.
 
 | Provider | Layer id | Country / area | Usage type | LGS type | Tile / terrain type | Endpoint URL | Zoom |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| Mapterhorn | `mapterhorn-world` | Global; detailed regional coverage | `free` | `terrain` | `mapterhorn` | `https://tiles.mapterhorn.com/{z}/{x}/{y}.webp` | 0-17; global through 12 |
 | Cesium | `cesium-world` | Global | `free` | `terrain` | `cesium` | `https://cesium.com/platform/cesiumjs/` | n/a |
 | Cesium | `cesium-ellipsoid` | Global | `free` | `terrain` | `ellipsoid` | `https://cesium.com/platform/cesiumjs/` | n/a |
 | IGN (France) | `ign-cadastral` | `FR` | `free` | `overlay` | `wmts` | `https://data.geopf.fr/wmts` | 0-19 |
