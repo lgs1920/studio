@@ -132,7 +132,11 @@ Diagnostics label ground offset separately from absolute Replay height.
 Recording diagnostics report the altitude mode, configured pitch, altitude,
 and angle alongside the rendered marker height and applied Cesium entry pose.
 Deferred export context uses Replay entry state only and never a camera return
-snapshot or an arbitrary live map view.
+snapshot or an arbitrary live map view. Revalidating preparation clears any
+entry pose retained by an earlier playback before the deferred plan captures its
+camera context. Interactive startup captures the prepared Cesium pose before
+configuration and restores that exact pose for the first frame, preserving its
+zoom and crop composition.
 
 Simple Replay adds a fixed four-second trace-centroid focus phase after its
 playback. Expert Replay uses its configured start and stop clips.
@@ -356,7 +360,9 @@ During Simple preparation, the runtime camera is authoritative for the drawer
 and partial cone edits. Duration or style hydration must not replace it with an
 older journey camera. Successful preparation persists that validated camera
 before recording transitions, so releasing the preparation flag cannot change
-the height, pitch, or angle used by export.
+the height, pitch, or angle used by export. Playback and export startup retain
+the runtime camera across their own configuration hydration before applying the
+first camera frame.
 
 The Record action awaits completion of any normal map rotation before resolving
 the preparation camera and crop. Journey Toolbar rendering is masked throughout

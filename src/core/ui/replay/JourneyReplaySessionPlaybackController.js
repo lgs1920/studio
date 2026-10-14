@@ -321,6 +321,8 @@ export const prepareReplayCamera = async (mode, {
             return false
         }
     }
+    // A deferred export must not reuse the entry pose from an earlier playback.
+    state.replayEntryCameraState = null
     call.updateCameraFromCesiumControls?.({journey})
     const store = replayStore()
     const simplePreparation = isJourneyReplayBasicMode()
@@ -520,6 +522,9 @@ export const start = (mode, options = {}) => {
     }
     call.updateCameraFromCesiumControls?.({journey})
     call.cancelPreparationCameraGesture?.()
+    const preparedReplayCameraState = state.replayCameraPrepared
+        ? captureReplayEntryCameraState(replayCameraFor(mode))
+        : null
     const startStartedAt = globalThis.performance?.now?.() ?? Date.now()
     const traceStartStep = (step, extra = {}) => {
         replayVideoTraceDebug('interactive.replay.start.stage', {
@@ -538,8 +543,18 @@ export const start = (mode, options = {}) => {
     state.suppressPlaybackCameraSync = false
     state.cameraStateRestoredBeforeSceneCleanup = false
     state.replayExportClipFrameState = null
+    const preparedCameraStore = replayStore()
+    const preserveSimplePreparationCamera = isJourneyReplayBasicMode()
+        && (preparedCameraStore?.simplePreparationActive === true
+            || globalThis.lgs?.stores?.ui?.video?.editing === true)
+    const preparedSimpleCamera = preserveSimplePreparationCamera && preparedCameraStore?.camera
+        ? normalizeJourneyReplayCamera(preparedCameraStore.camera)
+        : null
     traceStartStep('configure.begin')
     const sampler = call.configure(options)
+    if (preparedSimpleCamera) {
+        preparedCameraStore.camera = preparedSimpleCamera
+    }
     traceStartStep('configure.end', {hasSampler: Boolean(sampler?.hasSamples)})
     if (!sampler?.hasSamples) {
         releaseReplaySessionOwnership(mode, replaySessionLease)
@@ -566,8 +581,18 @@ export const start = (mode, options = {}) => {
         if (shouldHideOtherJourneys) {
             call.hideOtherJourneysVisibility()
         }
-        call.placeCameraAtPlaybackStart(startSample, startProgress, {preserveScreenPosition: true})
-        state.replayEntryCameraState = captureReplayEntryCameraState(replayCameraFor(mode))
+        const restoredPreparedCamera = preparedReplayCameraState
+            && call.restoreCameraState({clear: false, cameraState: preparedReplayCameraState})
+        if (restoredPreparedCamera) {
+            // Preparation already owns the exact crop and zoom. Reconstructing
+            // the frame here can translate the camera and change its range.
+            state.preserveStartCameraComposition = true
+            state.replayEntryCameraState = preparedReplayCameraState
+        }
+        else {
+            call.placeCameraAtPlaybackStart(startSample, startProgress, {preserveScreenPosition: true})
+            state.replayEntryCameraState = captureReplayEntryCameraState(replayCameraFor(mode))
+        }
         state.replayCameraPrepared = false
         traceStartStep('capture-drawer-state.begin')
         call.captureJourneyReplayDrawerStateBeforePlayback()
@@ -749,10 +774,20 @@ export const preparePlaybackSceneForExport = async (mode, {
         state.clipCameraContinuity = null
 
         const safeProgress = Math.max(0, Math.min(1, Number(progress) || 0))
+        const preparedCameraStore = replayStore()
+        const preserveSimplePreparationCamera = isJourneyReplayBasicMode()
+            && (preparedCameraStore?.simplePreparationActive === true
+                || globalThis.lgs?.stores?.ui?.video?.editing === true)
+        const preparedSimpleCamera = preserveSimplePreparationCamera && preparedCameraStore?.camera
+            ? normalizeJourneyReplayCamera(preparedCameraStore.camera)
+            : null
         const sampler = call.configure({
             journey,
             progress: safeProgress,
         }) ?? state.sampler
+        if (preparedSimpleCamera) {
+            preparedCameraStore.camera = preparedSimpleCamera
+        }
         const sample = sampler?.atProgress?.(safeProgress)
                        ?? state.controller?.currentSample?.()
                        ?? null
