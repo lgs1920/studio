@@ -253,17 +253,18 @@ empty or stale.
 ### Render targets
 
 `ReplayRenderTarget` associates a replay session with an explicit viewer, scene,
-and canvas without replacing global Studio objects. Interactive playback and
-the product MP4 export both use the main Studio Cesium viewer. During MP4
-export, the frame renderer advances Replay on that viewer, draws the trace
-there, and copies the main Cesium canvas into the video composer for each fixed
-frame timestamp. The main viewer is the sole camera authority; the video
-composer receives pixels and overlays, not a second Cesium camera.
+and canvas without replacing global Studio objects. Interactive playback, Dry
+run, and product MP4 export use the main Studio Cesium viewer. Product export
+applies every resolved Replay camera command to that viewer, synchronously
+renders during tile readiness, and copies the same main canvas into the video
+composer. The main scene therefore continues to display the advancing Replay
+while the recording monitor previews composed output frames.
 
-`IsolatedReplayRenderHost` remains an available off-screen host for explicit
-isolated-render workflows and tests. It owns a no-loop `CesiumWidget`, a
-separate camera, and independent Cesium runtime resources. It is not selected
-by the Simple or Expert product MP4 flow.
+`IsolatedReplayRenderHost` remains available to explicit off-screen render
+callers. It owns a no-loop `CesiumWidget`, a separate camera, and independent
+Cesium runtime resources. Its scene descriptor reproduces supported terrain,
+imagery, environment settings, and the active base 3D layer. Product recording
+does not allocate this host or redirect the main Replay renderer to it.
 
 Camera, trace, clip, visibility, prewarming, readiness, and capture operations
 must resolve the active session render target. They must not access the global
@@ -276,11 +277,11 @@ A settled request uses `ReplaySceneFrameQualifier`, supports cancellation, and
 waits within bounded readiness budgets.
 
 Export scene readiness belongs to the active render target. Product MP4 export
-qualifies frames on the main Studio viewer; explicit isolated-render workflows
-qualify frames on their isolated host. Moving replay and clip frames use
-bounded moving-frame readiness; holds and final frames may request settled
-quality. Readiness delays export wall time but never changes logical video
-time.
+and Dry run qualify frames on the main Studio viewer. A synchronous scene
+render supplies the post-render boundary during readiness instead of relying on
+the browser's animation-frame loop. Moving replay and clip frames use bounded
+moving-frame readiness; holds and final frames may request settled quality.
+Readiness delays export wall time but never changes logical video time.
 
 ### Composition and encoding
 

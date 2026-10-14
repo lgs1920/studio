@@ -10,8 +10,9 @@ Date: 2026-10-14
 Simple and Expert configure the same Replay mechanism and use the active mode's
 camera settings. Capture paths consume that Replay state; they are not
 user-facing Replay modes. Linked Replay video uses the deterministic deferred
-MP4 exporter. Product export advances the main Studio Cesium viewer, then copies
-that viewer's canvas into the video composer. Replay correctness is visual and
+MP4 exporter. Dry run and product export advance the main Studio Cesium viewer.
+Product export explicitly renders each frame during tile readiness and copies
+the main viewer's canvas into the video composer. Replay correctness is visual and
 temporal. Mock-only validation cannot establish
 that a generated video contains the trace, follows the camera, waits for the
 right scene, or preserves phase continuity. Apply this matrix proportionally to
@@ -83,9 +84,11 @@ narrow crop, and at least one high-resolution output profile.
   durations. Check per-frame camera-anchor movement and heading, confirm the
   smoothing-pass offset stays within one quarter of the projected crop width,
   and confirm the trace and marker remain on the unmodified route sample.
-- Each product export frame applies its camera command to the main Studio
-  viewer before the viewer canvas is copied into the output frame.
-- The export camera does not come from a second Cesium viewer or a stale
+- Each product export frame applies its resolved camera command to the main
+  Cesium viewer before that viewer's canvas is copied into the output frame.
+- While recording, the main scene continues to display the current Replay
+  camera and trace; export cleanup restores the saved return view.
+- The product export uses the active Replay camera command, not a stale
   preparation pose.
 - Obsolete cleanup cannot move the camera after session replacement.
 
@@ -100,15 +103,19 @@ narrow crop, and at least one high-resolution output profile.
 ### Render target and lifecycle
 
 - Product export camera, scene, canvas, and replay trace resolve to the main
-  Studio viewer and its canvas.
-- The canvas copied to each encoded frame is the same main Cesium canvas that
-  displays the Replay trace and applies its camera command.
+  Studio viewer.
+- The main Cesium scene remains in the application during recording and follows
+  the same Replay frames used by the encoded video.
+- The canvas copied to each encoded frame is the main Cesium canvas after its
+  synchronous render boundary.
+- Product recording does not allocate an isolated host or redirect the main
+  Replay renderer.
 - The recording monitor copies each composed frame before the exporter reuses
   its working canvas; the preview does not flash black between frames.
-- Explicit isolated-render workflows resolve to the owner-scoped target and do
-  not move the interactive Studio camera.
-- Success, cancellation, encoding failure, and readiness failure release any
-  explicit target and destroy an isolated host when one was allocated.
+- Recording while the browser window is fully covered still advances the main
+  scene and captures visible trace geometry in the output.
+- Success, cancellation, encoding failure, and readiness failure restore the
+  main viewer and its camera to the saved return view.
 
 ### Composition and encoding
 
@@ -147,8 +154,10 @@ render hosts, or encoding:
    turns and elevation changes at both speeds;
 4. inspect first and final frames;
 5. inspect terrain and 3D Tiles replacement or missing-detail artifacts;
-6. record output dimensions, frame count, duration, export time, and browser;
-7. compare with the accepted baseline when one exists.
+6. repeat a recording with the browser window fully covered and confirm the
+   trace remains present;
+7. record output dimensions, frame count, duration, export time, and browser;
+8. compare with the accepted baseline when one exists.
 
 The validation result must state what was inspected. “Tests pass” is not a
 substitute for visual evidence.

@@ -2506,7 +2506,7 @@ export const runReplayDeferredMp4Export = async ({
                     movingTimeoutMs:         replayReadiness.movingTimeoutMs,
                     settledTimeoutMs:        replayReadiness.settledTimeoutMs,
                     prewarmEnabled:          replayReadiness.prewarmEnabled,
-                    renderNow:               isDryRun ? flushReplayRenderTarget : null,
+                    renderNow:               flushReplayRenderTarget,
                 })
             replaySceneTileReadinessOptions = {
                 readiness: replayReadiness,
@@ -2657,7 +2657,7 @@ export const runReplayDeferredMp4Export = async ({
                                ?? null,
                         maxMillis: tileReadinessTimeoutMs,
                         signal,
-                        renderNow: isDryRun ? flushReplayRenderTarget : null,
+                        renderNow: flushReplayRenderTarget,
                     })
                 }
                 // Dry run qualifies terrain like export, then skips widget capture and image composition.

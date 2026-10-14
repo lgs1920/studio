@@ -91,11 +91,11 @@ Simple/Expert support is present but incomplete:
 - Explicit replay session ownership and guarded cleanup.
 - Canonical camera-command continuity across transitions and clips.
 - Explicit owner-scoped viewer, scene, and canvas render targets.
-- Isolated no-loop export `CesiumWidget` implementation with scene descriptor
-  replication, retained for explicit isolated-render workflows and tests.
-- Simple and Expert product MP4 recording renders Replay trace and camera
-  frames in the main Studio Cesium viewer, then copies its canvas into the video
-  composer. The main Cesium camera is the only product Replay camera source.
+- Optional isolated no-loop `CesiumWidget` implementation with scene descriptor
+  replication for explicit off-screen render targets.
+- Simple and Expert product MP4 recording keeps the main Cesium scene visible,
+  synchronously renders each export frame during tile readiness, and copies the
+  main canvas into the video composer.
 - Deterministic Replay MP4 export at fixed frame timestamps, with monitor
   pause/cancel controls and preview/share handoff.
 - Deferred MP4 export follows the Replay preparation timeline's selected start
@@ -198,7 +198,7 @@ subject to the validation gates below.
 | --- | --- | --- | --- |
 | PARTIAL / TODO | 1.0.0 | Complete synchronized replay-start camera editing while preserving the implemented canonical camera and clip continuity | [Start camera editor](../../todo/CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md) |
 | PARTIAL / TODO | 1.0.0 | Validate Simple Replay Dry run visually on a real reference journey and confirm completion and cancellation cleanup in a WebGL browser | [Dry run issue #533](https://github.com/lgs1920/studio/issues/533) |
-| TODO | 1.0.0 | Validate isolated Replay export on fixed imagery, terrain, and 3D Tiles journeys; prove camera parity, resource teardown, and visual quality | [Replay quality validation](CORE-REPLAY-QUALITY-VALIDATION.md) |
+| PARTIAL / TODO | 1.0.0 | Validate main-scene product MP4 export on fixed imagery, terrain, and 3D Tiles journeys, including recording with the browser window fully covered; prove camera parity, return-view restoration, and visual quality | [Replay quality validation](CORE-REPLAY-QUALITY-VALIDATION.md) |
 | IMPLEMENTED | 1.0.0 | Deliver linked Replay preparation as a compact controlled Timeline preview | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
 | PARTIAL / TODO | 1.0.0 follow-up | Connect remaining Timeline domain commands, Action Mode, clip double-click navigation, and persisted visibility/order changes | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
 | TODO | 1.1.0 | Replace separated clip controls with the normalized editable multi-track replay timeline | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |

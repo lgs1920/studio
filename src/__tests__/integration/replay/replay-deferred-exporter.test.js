@@ -171,7 +171,10 @@ vi.mock('@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer', () => {
         this.beginUpdate = vi.fn()
         this.addOverlay = vi.fn()
         this.endUpdate = vi.fn()
-        this.renderFrame = vi.fn(() => Promise.resolve(this.canvas))
+        this.renderFrame = vi.fn(() => {
+            this.options.flushWebGLBuffer?.()
+            return Promise.resolve(this.canvas)
+        })
         this.getCanvas = vi.fn(() => this.canvas)
         this.dispose = vi.fn()
         instances.push(this)
@@ -1347,7 +1350,7 @@ describe('ReplayDeferredExporter', () => {
         expect(mediabunnyMocks.codecProbeCount).toBe(0)
     })
 
-    it('renders product Replay export from the main Studio Cesium canvas through every clip phase', async () => {
+    it('keeps product Replay export on the main Cesium scene across every clip phase', async () => {
         let now = 0
         const performanceNow = vi.spyOn(globalThis.performance, 'now').mockImplementation(() => now)
         const sourceCanvas = document.createElement('canvas')
@@ -1371,9 +1374,55 @@ describe('ReplayDeferredExporter', () => {
         })
         const preparePlaybackSceneForExport = vi.fn(() => true)
         const restorePlaybackScene = vi.fn()
-        const isolatedRenderHostFactory = vi.fn()
-        const setRenderTarget = vi.fn()
-        const clearRenderTarget = vi.fn()
+        const mainScene = {
+            render: vi.fn(),
+            requestRender: vi.fn(),
+        }
+        let activeScene = mainScene
+        let tileReadinessScene = null
+        let tileReadinessOptions = null
+        const tileReadinessCoordinator = {
+            prepareForCapture: vi.fn(async () => {
+                tileReadinessOptions?.renderNow?.()
+                return true
+            }),
+            dispose: vi.fn(),
+        }
+        const tileReadinessCoordinatorFactory = vi.spyOn(
+            replayTileReadiness,
+            'createReplaySceneTileReadinessCoordinator',
+        ).mockImplementation((scene, options) => {
+            tileReadinessScene = scene
+            tileReadinessOptions = options
+            return tileReadinessCoordinator
+        })
+        const isolatedScene = {
+            render: vi.fn(),
+            requestRender: vi.fn(),
+            globe: {tileCacheSize: 100},
+        }
+        const isolatedCanvas = document.createElement('canvas')
+        isolatedCanvas.width = 320
+        isolatedCanvas.height = 180
+        const isolatedRenderTarget = {
+            viewer: {scene: isolatedScene, canvas: isolatedCanvas},
+            scene: isolatedScene,
+            canvas: isolatedCanvas,
+        }
+        const isolatedRenderHost = {
+            initialize: vi.fn(async () => undefined),
+            renderTarget: vi.fn(() => isolatedRenderTarget),
+            canvas: vi.fn(() => isolatedCanvas),
+            prepareForCapture: vi.fn(async () => true),
+            destroy: vi.fn(),
+        }
+        const isolatedRenderHostFactory = vi.fn(() => isolatedRenderHost)
+        const setRenderTarget = vi.fn(target => {
+            activeScene = target.scene
+        })
+        const clearRenderTarget = vi.fn(() => {
+            activeScene = mainScene
+        })
         const interactiveCamera = {
             heading: 0.5,
             pitch:   -0.5,
@@ -1403,10 +1452,7 @@ describe('ReplayDeferredExporter', () => {
                 },
             },
             canvas: sourceCanvas,
-            scene: {
-                render: vi.fn(),
-                requestRender: vi.fn(),
-            },
+            scene: mainScene,
             viewer: {
                 terrainProvider: {id: 'terrain'},
                 imageryLayers: {length: 0, get: vi.fn()},
@@ -1439,6 +1485,7 @@ describe('ReplayDeferredExporter', () => {
                         renderReplayExportFrame,
                         preparePlaybackSceneForExport,
                         restorePlaybackScene,
+                        cesiumScene: () => activeScene,
                         setRenderTarget,
                         clearRenderTarget,
                     },
@@ -1498,6 +1545,7 @@ describe('ReplayDeferredExporter', () => {
                 }),
                 download: vi.fn(),
                 isolatedRenderHostFactory,
+                renderHostMode: 'visible',
             })
 
             const phases = renderReplayExportFrame.mock.calls.map(([args]) => args.phase.kind)
@@ -1526,13 +1574,20 @@ describe('ReplayDeferredExporter', () => {
             expect(restorePlaybackScene).toHaveBeenNthCalledWith(1, {force: true})
             expect(restorePlaybackScene).toHaveBeenNthCalledWith(2, {force: true})
             expect(isolatedRenderHostFactory).not.toHaveBeenCalled()
+            expect(isolatedRenderHost.initialize).not.toHaveBeenCalled()
+            expect(isolatedRenderHost.prepareForCapture).not.toHaveBeenCalled()
+            expect(isolatedRenderHost.destroy).not.toHaveBeenCalled()
             expect(setRenderTarget).not.toHaveBeenCalled()
             expect(clearRenderTarget).not.toHaveBeenCalled()
+            expect(tileReadinessScene).toBe(mainScene)
+            expect(tileReadinessCoordinatorFactory).toHaveBeenCalledWith(mainScene, expect.objectContaining({
+                renderNow: expect.any(Function),
+            }))
+            expect(tileReadinessCoordinator.prepareForCapture).toHaveBeenCalled()
             expect(CanvasOverlayComposer.instances[0].sourceCanvas).toBe(sourceCanvas)
             expect(CanvasOverlayComposer.instances[0].options.flushWebGLBuffer).toEqual(expect.any(Function))
-            const renderCountBeforeFlush = globalThis.lgs.scene.render.mock.calls.length
-            CanvasOverlayComposer.instances[0].options.flushWebGLBuffer()
-            expect(globalThis.lgs.scene.render).toHaveBeenCalledTimes(renderCountBeforeFlush + 1)
+            expect(mainScene.render).toHaveBeenCalled()
+            expect(isolatedScene.render).not.toHaveBeenCalled()
             expect(result.plan.runtime.exportElapsedMillis).toBe(result.plan.manifest.frameCount * 40)
             expect(result.plan.runtime.exportAverageFrameMillis).toBeCloseTo(40, 1)
             expect(result.plan.runtime.exportEstimatedTotalMillis).toBeCloseTo(result.plan.runtime.exportElapsedMillis, 1)
