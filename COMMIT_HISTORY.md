@@ -3527,3 +3527,51 @@
 ## 2026-10-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/fee0f8e49e7bec58115a3f1565f66c65e2111832)
 
 - Recorded automatically from Git history.
+
+## 2026-10-14 — [`refactor(profile): modularize ECharts imports`](https://github.com/lgs1920/studio/commit/f5b795652a714063b3943dd8869e246d289c23bf)
+
+- Recorded automatically from Git history.
+
+## 2026-10-14 — [`fix: refresh POI terrain clamping after terrain changes`](https://github.com/lgs1920/studio/commit/cf4166b4f39f4ea3f2e1f0d09a36b4dd2d505097)
+
+- Recorded automatically from Git history.
+
+## 2026-10-14 — [`style(terrain): use provider marks in thumbnails`](https://github.com/lgs1920/studio/commit/ede487c2bb35b3d98902de1213fc40fd6195038f)
+
+- Recorded automatically from Git history.
+
+## 2026-10-14 — [`feat(replay): improve simple replay settings`](https://github.com/lgs1920/studio/commit/6ab9f1fcca18db36c786c769fbc887c5c3d80aa4)
+
+- Recorded automatically from Git history.
+
+## 2026-10-14 — [`fix(replay): honor preparation range in exports`](https://github.com/lgs1920/studio/commit/1b87d7ec3b5332480b1c21aaeb7337bafd71646f)
+
+- Recorded automatically from Git history.
+
+## 2026-10-14 — [`fix(replay): keep recording on main scene`](https://github.com/lgs1920/studio/commit/3ab5f884b7ce79919d3a7cea39618e4d1aa49aed)
+
+- Recorded automatically from Git history.
+
+## 2026-10-14 — [`chore(deps): add Mapterhorn provider and refresh dependencies`](https://github.com/lgs1920/studio/commit/c7b2aa7029e353d7ee44532dae454c42fe3e1d50)
+
+- Recorded automatically from Git history.
+
+## 2026-10-14 — [`feat(terrain): add Mapterhorn Terrarium provider`](https://github.com/lgs1920/studio/commit/6a4572a62438d06b60fa6178d7d36acd44f3ef17)
+
+- Recorded automatically from Git history.
+
+## 2026-10-14 — [`fix(replay): preserve prepared start framing in playback`](https://github.com/lgs1920/studio/commit/b34085585a0532db669bd9cd1ae24c3bcd9663a6)
+
+- Recorded automatically from Git history.
+
+## 2026-10-14 — [`fix(replay): stabilize trace rendering and video export`](https://github.com/lgs1920/studio/commit/a3ee1b087026ea6a1e8243783973f6ebe4458a3d)
+
+- Recorded automatically from Git history.
+
+## 2026-10-14 — [`fix(replay): preserve prepared zoom through playback cleanup`](https://github.com/lgs1920/studio/commit/00230c01a314a9f0b831630d811ae6645e273fd1)
+
+- Recorded automatically from Git history.
+
+## 2026-10-14 — [`fix(replay): reduce dry-run overhead and add timing diagnostics`](https://github.com/lgs1920/studio/commit/7bef7c00a905f89808c23a9aaf2e493d6cda385e)
+
+- Recorded automatically from Git history.
