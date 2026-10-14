@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-03
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -542,6 +542,7 @@ const updateCameraTracking = (mode, {
     logicalFrame = null,
     logicalCamera = false,
     exportMode = false,
+    preserveCurrentFrame = false,
 } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -670,6 +671,27 @@ const updateCameraTracking = (mode, {
         cache: updateCache,
     })
     if (!nominalView) {
+        return
+    }
+
+    if (source === 'start' && preserveCurrentFrame) {
+        resetCameraTransportState(state)
+        resetReplayCameraPitchCorrection(mode)
+        state.lastNavigationRecenterAt = null
+        state.lastNavigationRecenterProgress = null
+        state.navigationPredictiveViolationAt = null
+        if (markerSettings.mode === REPLAY_MARKER_MODE_NAVIGATION) {
+            state.navigationCameraView = nominalView
+        }
+        call.rememberNominalCameraView(nominalView)
+        state.lastNominalCameraHeading = nominalView.heading
+        state.lastNominalCameraPitch = nominalView.pitch
+        state.lastCameraHeading = nominalView.heading
+        state.lastCameraPitch = nominalView.pitch
+        if (logicalFrame) {
+            logicalFrame.cameraPose = nominalView
+            logicalFrame.cameraFrame = call.currentCameraFrame?.(null) ?? null
+        }
         return
     }
 

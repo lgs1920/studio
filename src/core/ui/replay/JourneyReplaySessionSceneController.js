@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -174,7 +174,7 @@ export const stop = (mode, options = {}) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         disposeReplaySceneFrameQualifier(mode)
         state.clipSequenceToken++
-        state.skipNextImmediateStartRecenter = false
+        state.preserveStartCameraComposition = false
         call.stopStopClipPOIMaskLoop()
         if (replayOwnedCameraFor(mode)) {
             call.cancelActiveCameraFlight()
@@ -312,7 +312,7 @@ export const resetCameraController = (mode, {
         state.lastNavigationRecenterProgress = null
         state.navigationCameraView = null
         state.navigationPredictiveViolationAt = null
-        state.skipNextImmediateStartRecenter = false
+        state.preserveStartCameraComposition = false
         state.lastPlaybackUpdateProgressKey = null
         if (!preserveSavedCameraState) {
             state.savedCameraState = null
@@ -959,25 +959,19 @@ export const bindRenderer = (mode, ) => {
                     void call.syncNearbyPOIsForSample(startSample ?? detail.sample ?? null)
                     traceStep('sync-nearby-pois.end')
                     if (!state.deferStartCameraRecenter) {
-                        if (state.skipNextImmediateStartRecenter) {
-                            state.skipNextImmediateStartRecenter = false
-                            const startCameraSettings = currentJourneyReplayCameraSettings()
-                            traceStep('update-tolerance-zone-overlay.begin')
-                            call.updateToleranceZoneOverlay(startCameraSettings.hysteresis)
-                            traceStep('update-tolerance-zone-overlay.end')
-                        }
-                        else {
-                            traceStep('update-camera.begin')
-                            call.updateCamera({
-                                                   ...detail,
-                                                   source:                    'start',
-                                                   forceToleranceRecenter:     true,
-                                                   immediateToleranceRecenter: true,
-                                                   logicalCamera:             isJourneyReplayVideoCaptureActive(),
-                                               })
-                            call.recordReplayCameraAltitude()
-                            traceStep('update-camera.end')
-                        }
+                        const preserveStartCameraComposition = state.preserveStartCameraComposition === true
+                        traceStep('update-camera.begin')
+                        call.updateCamera({
+                            ...detail,
+                            source:                    'start',
+                            forceToleranceRecenter:     !preserveStartCameraComposition,
+                            immediateToleranceRecenter: !preserveStartCameraComposition,
+                            preserveCurrentFrame:       preserveStartCameraComposition,
+                            logicalCamera:             isJourneyReplayVideoCaptureActive(),
+                        })
+                        state.preserveStartCameraComposition = false
+                        call.recordReplayCameraAltitude()
+                        traceStep('update-camera.end')
                         updateReplayFrameRenderContract({
                             logicalFrame: detail?.logicalFrame,
                         })
@@ -1139,7 +1133,7 @@ export const bindRenderer = (mode, ) => {
             }),
             state.controller.on(REPLAY_EVENT_END, detail => {
                 state.lastPlaybackUpdateProgressKey = null
-                state.skipNextImmediateStartRecenter = false
+                state.preserveStartCameraComposition = false
                 const token = state.clipSequenceToken
                 const sample = detail.sampler?.atProgress?.(1)
                               ?? detail.sample

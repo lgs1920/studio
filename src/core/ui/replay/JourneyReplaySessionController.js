@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -253,7 +253,6 @@ export class JourneyReplaySessionController {
     #toleranceZoneOverlayCanvas = null
     #toleranceZoneOverlayCameraChangedRemove = null
     #lastDynamicTargetScreen = null
-    #skipNextImmediateStartRecenter = false
     #toleranceZoneOverlay = null
     #toleranceZoneOverlayVisible = false
     #lastToleranceZoneHysteresis = null
@@ -262,6 +261,7 @@ export class JourneyReplaySessionController {
     #hiddenJourneyVisibility = new Map()
     #hiddenCurrentJourneyPolylines = new Map()
     #deferStartCameraRecenter = false
+    #preserveStartCameraComposition = false
     #introHeadingTransition = null
     #cameraBridgeBound = false
     #cameraLiveSyncFrame = null
@@ -728,13 +728,6 @@ export class JourneyReplaySessionController {
                 this.#lastDynamicTargetScreen = value
             },
         })
-        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'skipNextImmediateStartRecenter', {
-            configurable: true,
-            get: () => this.#skipNextImmediateStartRecenter,
-            set: value => {
-                this.#skipNextImmediateStartRecenter = value
-            },
-        })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'toleranceZoneOverlay', {
             configurable: true,
             get: () => this.#toleranceZoneOverlay,
@@ -803,6 +796,13 @@ export class JourneyReplaySessionController {
             get: () => this.#deferStartCameraRecenter,
             set: value => {
                 this.#deferStartCameraRecenter = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'preserveStartCameraComposition', {
+            configurable: true,
+            get: () => this.#preserveStartCameraComposition,
+            set: value => {
+                this.#preserveStartCameraComposition = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'introHeadingTransition', {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@
  * Replay clips and export camera frames.
  */
 
-import {Math as CesiumMath} from 'cesium'
+import {Cartesian3, Math as CesiumMath} from 'cesium'
 import turfCentroid from '@turf/centroid'
 import {CameraUtils} from '@Utils/cesium/CameraUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
@@ -35,6 +35,7 @@ import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {resolveJourneyReplayLogicalCameraPose} from './JourneyReplayLogicalCameraPose'
 import {createReplayCameraCommand} from './ReplayCameraCommand'
+import {constrainReplayCameraFrameToCrop} from './JourneyReplayCameraCropConstraint'
 import {
     createSimpleReplayTraceFocusClips,
     SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID,
@@ -913,9 +914,12 @@ export const clipListForSlot = (mode, slot) => {
     return slot === REPLAY_CLIP_SLOT_STOP ? clips.stop : clips.start
 }
 
-export const placeCameraAtPlaybackStart = (mode, sample, progress = 0) => {
+export const placeCameraAtPlaybackStart = (mode, sample, progress = 0, {
+    preserveScreenPosition = false,
+} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    state.preserveStartCameraComposition = false
 
         if (!sample) {
             return false
@@ -945,15 +949,61 @@ export const placeCameraAtPlaybackStart = (mode, sample, progress = 0) => {
             return false
         }
 
-        call.recenterCameraToSample({
-            sample:         view.sample,
-            heading:        view.heading,
-            pitch:          view.pitch,
-            cameraSettings,
-            cameraHeight:   view.cameraHeight,
-            instant:        true,
-            duration:       0,
-        })
+        let cameraPlaced = false
+        const desiredPoint = preserveScreenPosition
+            ? call.trackingWindowPositionForSample?.(view.sample)
+            : null
+        const viewport = call.viewportRectForCesiumSurface?.()
+        const frame = desiredPoint && viewport?.width > 0 && viewport?.height > 0
+            ? call.cameraRecenterFrame({
+                sample:         view.sample,
+                cameraAnchorSample: view.cameraAnchorSample,
+                heading:        view.heading,
+                pitch:          view.pitch,
+                roll:           view.roll,
+                cameraSettings,
+                cameraHeight:   view.cameraHeight,
+            })
+            : null
+        if (frame) {
+            const cameraFrame = {
+                destination: frame.destination,
+                direction:   frame.direction,
+                up:          frame.correctedUp,
+            }
+            const constrainedFrame = constrainReplayCameraFrameToCrop({
+                frame: cameraFrame,
+                target: frame.target,
+                viewport,
+                verticalFovRadians: finiteNumber(camera.frustum?.fovy)
+                    ?? finiteNumber(camera.frustum?.fov)
+                    ?? Math.PI / 3,
+                aspectRatio: finiteNumber(camera.frustum?.aspectRatio),
+                desiredPoint,
+            })
+            cameraPlaced = call.applyCameraFrame?.(constrainedFrame) === true
+            if (cameraPlaced) {
+                call.rememberCameraView?.({
+                    anchor: view.cameraAnchorSample ?? view.sample,
+                    heading: frame.safeHeading,
+                    pitch: frame.safePitch,
+                    roll: frame.roll,
+                    rangeMeters: Cartesian3.distance(constrainedFrame.destination, frame.target),
+                })
+                state.preserveStartCameraComposition = true
+            }
+        }
+        if (!cameraPlaced) {
+            call.recenterCameraToSample({
+                sample:         view.sample,
+                heading:        view.heading,
+                pitch:          view.pitch,
+                cameraSettings,
+                cameraHeight:   view.cameraHeight,
+                instant:        true,
+                duration:       0,
+            })
+        }
         state.lastCameraHeading = view.heading
         state.lastCameraPitch = view.pitch
         call.rememberNominalCameraView(view)

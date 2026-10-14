@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -528,7 +528,8 @@ export const start = (mode, options = {}) => {
         const videoReplayLinked = call.isReplayVideoLinked()
         state.logicalCameraTrajectory = false
         state.videoReplayClipLogicalTrajectory = videoReplayLinked
-        const startSample = sampler.atProgress?.(options.progress ?? 0)
+        const startProgress = clamp(finiteNumber(options.progress) ?? 0, 0, 1)
+        const startSample = sampler.atProgress?.(startProgress)
         call.captureCameraState({sample: startSample})
         seedReplayCameraFromCesium(mode, journey)
         void globalThis.__?.ui?.cameraManager?.stopRotate?.()
@@ -539,7 +540,7 @@ export const start = (mode, options = {}) => {
         if (shouldHideOtherJourneys) {
             call.hideOtherJourneysVisibility()
         }
-        const initialCameraPlaced = call.placeCameraAtPlaybackStart(startSample, options.progress ?? 0) === true
+        call.placeCameraAtPlaybackStart(startSample, startProgress, {preserveScreenPosition: true})
         state.replayEntryCameraState = captureReplayEntryCameraState(replayCameraFor(mode))
         state.replayCameraPrepared = false
         traceStartStep('capture-drawer-state.begin')
@@ -567,7 +568,7 @@ export const start = (mode, options = {}) => {
                                    ?? finiteNumber(startSample?.altitude ?? startSample?.height)
                                    ?? 0,
                 fromPitch:     finiteNumber(camera?.pitch) ?? state.lastCameraPitch ?? SAFE_TOP_DOWN_PITCH,
-                targetHeading: call.introHeadingForProgress(options.progress ?? 0),
+                targetHeading: call.introHeadingForProgress(startProgress),
                 applied:       false,
             }
                                        : null
@@ -597,7 +598,7 @@ export const start = (mode, options = {}) => {
                 store: runtimeStore,
                 slot: REPLAY_CLIP_SLOT_START,
                 sample: startSample,
-                progress: options.progress ?? 0,
+                progress: startProgress,
                 phase: startPhase,
                 frameIndex: startPhase?.frameIndex,
                 frameCount: videoTimeline?.frameCount,
@@ -647,12 +648,11 @@ export const start = (mode, options = {}) => {
                     }
 
                     state.deferStartCameraRecenter = false
-                    state.skipNextImmediateStartRecenter = true
                     // Do not compile the constrained camera path synchronously here.
                     // That bulk compilation freezes Interactive and Replay export startup.
                     traceStartStep('controller.start.begin', {phase: 'start-clips'})
                     startResult = state.controller.start({
-                        progress: options.progress ?? 0,
+                        progress: startProgress,
                     })
                     traceStartStep('controller.start.end', {phase: 'start-clips'})
                 }
@@ -665,15 +665,12 @@ export const start = (mode, options = {}) => {
         else {
             state.deferStartCameraRecenter = false
             traceStartStep('place-camera-at-playback-start.begin')
-            state.skipNextImmediateStartRecenter = initialCameraPlaced
-            traceStartStep('place-camera-at-playback-start.end', {
-                skipNextImmediateStartRecenter: state.skipNextImmediateStartRecenter,
-            })
+            traceStartStep('place-camera-at-playback-start.end')
             // Do not compile the constrained camera path synchronously here.
             // That bulk compilation freezes Interactive and Replay export startup.
             traceStartStep('controller.start.begin', {phase: 'no-start-clips'})
             startResult = state.controller.start({
-                progress: options.progress ?? 0,
+                progress: startProgress,
             })
             traceStartStep('controller.start.end', {phase: 'no-start-clips'})
         }
@@ -763,7 +760,7 @@ export const preparePlaybackSceneForExport = async (mode, {
             call.restoreCameraState({clear: false, cameraState: providedCameraState})
         }
         else {
-            call.placeCameraAtPlaybackStart(sample, safeProgress)
+            call.placeCameraAtPlaybackStart(sample, safeProgress, {preserveScreenPosition: true})
             state.replayEntryCameraState = captureReplayEntryCameraState(replayCameraFor(mode))
         }
         state.clipCameraContinuity = typeof call.currentReplayClipCameraState === 'function'
@@ -780,7 +777,7 @@ export const preparePlaybackSceneForExport = async (mode, {
             journey.updateVisibility?.(true)
 
             if (startClips.length === 0) {
-                call.placeCameraAtPlaybackStart(sample, safeProgress)
+                call.placeCameraAtPlaybackStart(sample, safeProgress, {preserveScreenPosition: true})
             }
         }
 
@@ -1053,16 +1050,35 @@ export const endReplayCameraExport = (mode, ) => {
         state.logicalCameraTrajectory = false
     }
 
+/**
+ * Render one deterministic export frame while keeping the camera synchronized.
+ * Dry runs keep every logical update but use the interactive trace geometry cadence.
+ *
+ * @param {object} mode - Replay session facade.
+ * @param {object} options - Frame rendering inputs.
+ * @param {object|null} options.phase - Resolved export phase.
+ * @param {object|null} options.frame - Source timeline frame.
+ * @param {object|null} options.controller - Active export controller.
+ * @param {object} options.resolvedSample - Sample resolved for this frame.
+ * @param {boolean} options.dryRun - Whether to throttle trace geometry updates.
+ * @returns {Promise<object|null>} Resolved journey sample for the frame.
+ */
 export const renderReplayExportFrame = async (mode, {
     phase = null,
     frame = null,
     controller = mode[JOURNEY_REPLAY_INTERNAL_STATE].controller,
     resolvedSample = undefined,
+    dryRun = false,
 } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         const activeController = controller ?? state.controller
         const replayPhase = phase?.kind === 'replay' || !phase?.clip
+        const isDryRunBoundary = frame?.isFirst === true
+                                 || frame?.isLast === true
+                                 || phase?.isFinalSceneFrame === true
+                                 || phase?.isLastPhaseFrame === true
+        const forceTraceGeometry = dryRun !== true || isDryRunBoundary
         const progress = clamp(finiteNumber(phase?.progress) ?? activeController?.progress ?? 0, 0, 1)
         const anchorProgress = clamp(finiteNumber(phase?.anchorProgress) ?? progress, 0, 1)
 
@@ -1082,9 +1098,9 @@ export const renderReplayExportFrame = async (mode, {
                 state.renderer.update({
                     sample,
                     sampler:       state.sampler,
-                    // Export frames are produced faster than wall-clock playback. Bypass the
-                    // interactive renderer throttle so every encoded frame owns its trace.
-                    forceGeometry: true,
+                    // Dry runs preserve frame state while following the interactive geometry cadence.
+                    forceGeometry: forceTraceGeometry,
+                    allowPlaybackGeometryUpdate: dryRun === true,
                     syncCursorToTrace: true,
                     hideTrace:     phase?.slot === REPLAY_CLIP_SLOT_START,
                     showTrace:     true,
@@ -1172,7 +1188,8 @@ export const renderReplayExportFrame = async (mode, {
             state.renderer.update({
                 sample,
                 sampler:               state.sampler,
-                forceGeometry:         true,
+                forceGeometry:         forceTraceGeometry,
+                allowPlaybackGeometryUpdate: dryRun === true,
                 freezeDynamic:         false,
                 hideCursor:            hideClipCursor,
                 hideTrace:              phase?.slot === REPLAY_CLIP_SLOT_START,

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-10
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,7 +25,11 @@ import {resolveJourneyReplayCameraAngleGuide} from '@Core/ui/replay/JourneyRepla
 import {defaultJourneyReplaySettings} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {makeJourney, makeTrack} from '../../unit/replay/replay-phase1-fixtures'
-import {projectReplayTargetInCameraFrame} from '@Core/ui/replay/JourneyReplayCameraMath'
+import {
+    projectReplayTargetInCameraFrame,
+    replayAngularDelta,
+    replayCameraHeadingForAngle,
+} from '@Core/ui/replay/JourneyReplayCameraMath'
 
 /** Read the actual Cesium basis and reference frame, excluding mutable aliases. */
 const readPose = camera => ({
@@ -812,6 +816,253 @@ describe('Replay with the real Cesium camera', () => {
             expect(position.z).toBeCloseTo(1600 - 900, 5)
         }
         finally {
+            mode.dispose()
+            await mode.waitForSceneRestore()
+        }
+    })
+
+    it('immediately tracks the exact GPX start point and initial route heading', () => {
+        const {camera, mode, controller, settings, journey} = installScene({
+            userMode: 'basic',
+            terrainHeight: 120,
+            altitude: 3515,
+            pitch: -30,
+            cameraAngle: 0,
+        })
+        const coordinates = [[2.12345, 48.23456, 120], [2.1242, 48.237, 130]]
+        journey.tracks = new Map([[
+            'track#journey#gpx#main',
+            makeTrack({slug: 'track#journey#gpx#main', coordinates}),
+        ]])
+        settings.simple.camera.canFixHiddenMarker = false
+        journey.replay.simple.camera.canFixHiddenMarker = false
+        const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        const updateCamera = vi.spyOn(call, 'updateCamera')
+
+        try {
+            mode.start({journey})
+
+            const startSample = controller.currentSample()
+            expect(startSample.longitude).toBeCloseTo(coordinates[0][0], 12)
+            expect(startSample.latitude).toBeCloseTo(coordinates[0][1], 12)
+            expect(startSample.altitude).toBeCloseTo(coordinates[0][2], 8)
+
+            const startUpdate = updateCamera.mock.calls
+                .map(([options]) => options)
+                .find(options => options.source === 'start')
+            expect(startUpdate).toMatchObject({
+                progress: 0,
+                source: 'start',
+                forceToleranceRecenter: true,
+                immediateToleranceRecenter: true,
+                sample: {
+                    longitude: coordinates[0][0],
+                    latitude: coordinates[0][1],
+                },
+            })
+            const target = Cartesian3.fromDegrees(coordinates[0][0], coordinates[0][1], 120)
+            const targetDirection = Cartesian3.normalize(
+                Cartesian3.subtract(target, camera.positionWC, new Cartesian3()),
+                new Cartesian3(),
+            )
+            expect(Cartesian3.angleBetween(targetDirection, camera.directionWC)).toBeLessThan(1e-7)
+
+            const routeHeading = call.headingFromPositionProperty(0, {
+                easing: journey.replay.simple.camera.hysteresis.easing,
+            })
+            const expectedHeading = replayCameraHeadingForAngle({axisHeading: routeHeading, cameraAngle: 0})
+            const headingDifference = replayAngularDelta(expectedHeading, directionHeadingAt(camera, target))
+            expect(Math.abs(headingDifference)).toBeLessThan(1e-6)
+        }
+        finally {
+            mode.dispose()
+        }
+    })
+
+    it.each([
+        ['Simple', 'basic', 2 / 3],
+        ['Expert', 'expert', 4 / 5],
+    ])('preserves a prepared %s start position inside the replay tracking zone', async (label, userMode, screenPosition) => {
+        const {camera, mode, controller, settings, journey} = installScene({
+            userMode,
+            terrainHeight: 120,
+            altitude: 3515,
+            pitch: -30,
+            cameraAngle: 0,
+        })
+        const replayKey = userMode === 'basic' ? 'simple' : 'expert'
+        const replayCamera = journey.replay[replayKey].camera
+        const coordinates = [[2.12345, 48.23456, 120], [2.1242, 48.237, 130]]
+        journey.tracks = new Map([[
+            'track#journey#gpx#main',
+            makeTrack({slug: 'track#journey#gpx#main', coordinates}),
+        ]])
+        const selectedSettingsCamera = userMode === 'basic' ? settings.simple.camera : settings.camera
+        selectedSettingsCamera.canFixHiddenMarker = false
+        replayCamera.canFixHiddenMarker = false
+        const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        const viewport = {left: 0, top: 0, width: 1000, height: 800, canvasWidth: 1000, canvasHeight: 800}
+        call.viewportRectForCesiumSurface = () => viewport
+        call.trackingWindowPositionForSample = sample => projectReplayTargetInCameraFrame({
+            frame: call.currentCameraFrame(null),
+            target: call.markerRenderCartesianForSample(sample),
+            viewport,
+            verticalFovRadians: camera.frustum.fovy,
+            aspectRatio: camera.frustum.aspectRatio,
+        })
+        const updateCamera = vi.spyOn(call, 'updateCamera')
+
+        try {
+            await mode.prepareReplayCamera()
+            const sample = mode[JOURNEY_REPLAY_INTERNAL_STATE].sampler.atProgress(0)
+            const view = call.cameraViewForSample({
+                sample,
+                progress: 0,
+                source: 'drawer',
+                cameraSettings: replayCamera,
+                markerSettings: {mode: 'navigation', position: null},
+                previousHeading: null,
+                previousPitch: null,
+            })
+            const centeredFrame = call.cameraRecenterFrame({
+                sample: view.sample,
+                heading: view.heading,
+                pitch: view.pitch,
+                roll: view.roll,
+                cameraSettings: view.cameraSettings,
+                cameraHeight: view.cameraHeight,
+            })
+            const depth = Cartesian3.dot(
+                Cartesian3.subtract(centeredFrame.target, centeredFrame.destination, new Cartesian3()),
+                centeredFrame.direction,
+            )
+            const desiredY = viewport.height * screenPosition
+            const verticalOffset = (desiredY - (viewport.height / 2))
+                * 2 * depth * Math.tan(camera.frustum.fovy / 2) / viewport.height
+            const destination = Cartesian3.add(
+                centeredFrame.destination,
+                Cartesian3.multiplyByScalar(centeredFrame.correctedUp, verticalOffset, new Cartesian3()),
+                new Cartesian3(),
+            )
+            call.applyCameraFrame({
+                destination,
+                direction: centeredFrame.direction,
+                up: centeredFrame.correctedUp,
+            })
+            const preparedFrame = call.currentCameraFrame(null)
+            const preparedScreenPosition = call.trackingWindowPositionForSample(sample)
+            expect(preparedScreenPosition.y / viewport.height).toBeCloseTo(screenPosition, 2)
+
+            mode.start({journey})
+
+            const startSample = controller.currentSample()
+            const replayScreenPosition = call.trackingWindowPositionForSample(startSample)
+            const startUpdate = updateCamera.mock.calls
+                .map(([options]) => options)
+                .find(options => options.source === 'start')
+            expect(startUpdate).toMatchObject({
+                preserveCurrentFrame: true,
+                forceToleranceRecenter: false,
+                immediateToleranceRecenter: false,
+            })
+            expect(replayScreenPosition.x).toBeCloseTo(preparedScreenPosition.x, 1)
+            expect(replayScreenPosition.y / viewport.height).toBeCloseTo(screenPosition, 2)
+            expect(Cartesian3.distance(camera.directionWC, preparedFrame.direction)).toBeLessThan(1e-10)
+            expect(Cartesian3.distance(camera.upWC, preparedFrame.up)).toBeLessThan(1e-10)
+            expect(startSample.longitude).toBeCloseTo(coordinates[0][0], 12)
+            expect(startSample.latitude).toBeCloseTo(coordinates[0][1], 12)
+        }
+        finally {
+            mode.dispose()
+        }
+    })
+
+    it.each([
+        ['Simple', 'basic', 2 / 3],
+        ['Expert', 'expert', 4 / 5],
+    ])('keeps the prepared %s start position through export initialization and its first frame', async (label, userMode, screenPosition) => {
+        const {camera, mode, settings, journey} = installScene({
+            userMode,
+            terrainHeight: 120,
+            altitude: 3515,
+            pitch: -30,
+            cameraAngle: 0,
+        })
+        const replayKey = userMode === 'basic' ? 'simple' : 'expert'
+        const replayCamera = journey.replay[replayKey].camera
+        const coordinates = [[2.12345, 48.23456, 120], [2.1242, 48.237, 130]]
+        journey.tracks = new Map([[
+            'track#journey#gpx#main',
+            makeTrack({slug: 'track#journey#gpx#main', coordinates}),
+        ]])
+        const selectedSettingsCamera = userMode === 'basic' ? settings.simple.camera : settings.camera
+        selectedSettingsCamera.canFixHiddenMarker = false
+        replayCamera.canFixHiddenMarker = false
+        const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        const viewport = {left: 0, top: 0, width: 1000, height: 800, canvasWidth: 1000, canvasHeight: 800}
+        call.viewportRectForCesiumSurface = () => viewport
+        call.trackingWindowPositionForSample = sample => projectReplayTargetInCameraFrame({
+            frame: call.currentCameraFrame(null),
+            target: call.markerRenderCartesianForSample(sample),
+            viewport,
+            verticalFovRadians: camera.frustum.fovy,
+            aspectRatio: camera.frustum.aspectRatio,
+        })
+
+        try {
+            await mode.prepareReplayCamera()
+            const sample = mode[JOURNEY_REPLAY_INTERNAL_STATE].sampler.atProgress(0)
+            const view = call.cameraViewForSample({
+                sample,
+                progress: 0,
+                source: 'drawer',
+                cameraSettings: replayCamera,
+                markerSettings: {mode: 'navigation', position: null},
+                previousHeading: null,
+                previousPitch: null,
+            })
+            const centeredFrame = call.cameraRecenterFrame({
+                sample: view.sample,
+                heading: view.heading,
+                pitch: view.pitch,
+                roll: view.roll,
+                cameraSettings: view.cameraSettings,
+                cameraHeight: view.cameraHeight,
+            })
+            const depth = Cartesian3.dot(
+                Cartesian3.subtract(centeredFrame.target, centeredFrame.destination, new Cartesian3()),
+                centeredFrame.direction,
+            )
+            const desiredY = viewport.height * screenPosition
+            const verticalOffset = (desiredY - (viewport.height / 2))
+                * 2 * depth * Math.tan(camera.frustum.fovy / 2) / viewport.height
+            call.applyCameraFrame({
+                destination: Cartesian3.add(
+                    centeredFrame.destination,
+                    Cartesian3.multiplyByScalar(centeredFrame.correctedUp, verticalOffset, new Cartesian3()),
+                    new Cartesian3(),
+                ),
+                direction: centeredFrame.direction,
+                up: centeredFrame.correctedUp,
+            })
+            const preparedPosition = call.trackingWindowPositionForSample(sample)
+            expect(preparedPosition.y / viewport.height).toBeCloseTo(screenPosition, 2)
+
+            mode.beginReplayCameraExport()
+            lgs.stores.ui.video.exporting = true
+            await mode.preparePlaybackSceneForExport({journey})
+            const initializedPosition = call.trackingWindowPositionForSample(sample)
+            expect(initializedPosition.y / viewport.height).toBeCloseTo(screenPosition, 2)
+
+            await mode.renderReplayExportFrame({
+                phase: {kind: 'replay', progress: 0},
+                frame: {frameTimeMs: 0, frameIntervalMs: 1000 / 30},
+            })
+            const firstFramePosition = call.trackingWindowPositionForSample(sample)
+            expect(firstFramePosition.y / viewport.height).toBeCloseTo(screenPosition, 2)
+        }
+        finally {
+            mode.endReplayCameraExport()
             mode.dispose()
             await mode.waitForSceneRestore()
         }

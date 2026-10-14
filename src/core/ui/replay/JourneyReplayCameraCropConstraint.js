@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-12
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,11 +18,12 @@ import {Cartesian3, Cartesian4, Cartographic, Matrix4, Transforms} from 'cesium'
 import {clamp, projectReplayTargetInCameraFrame} from './JourneyReplayCameraMath'
 
 /**
- * Keep the rendered marker inside the crop by translating an eased camera frame.
- * Rotation, frustum and geodetic height remain unchanged. The minimal horizontal
- * correction reaches the crop's inner margin rather than snapping to its center.
+ * Keep the rendered marker inside the crop by translating a camera frame.
+ * Rotation, frustum and geodetic height remain unchanged. When requested, retain
+ * the marker's prepared crop-local screen position instead of centering it.
  *
  * @param {Object} options - Physical camera frame, current marker and projection.
+ * @param {{x: number, y: number}|null} [options.desiredPoint=null] - Crop-local screen position to preserve.
  * @returns {Object|null} Original frame or a corrected frame without input mutation.
  */
 export const constrainReplayCameraFrameToCrop = ({
@@ -32,6 +33,7 @@ export const constrainReplayCameraFrameToCrop = ({
     verticalFovRadians = Math.PI / 3,
     aspectRatio = null,
     markerRadius = 35,
+    desiredPoint = null,
 } = {}) => {
     if (!frame?.destination || !frame.direction || !frame.up || !target
         || !(viewport?.width > 0) || !(viewport?.height > 0)) {
@@ -46,7 +48,19 @@ export const constrainReplayCameraFrameToCrop = ({
     const insetY = Math.min(viewport.height / 4, Math.max(markerRadius, viewport.height * 0.12))
     const projection = {target, viewport, verticalFovRadians, aspectRatio}
     const point = projectReplayTargetInCameraFrame({...projection, frame})
-    if (point && point.x >= insetX && point.x <= viewport.width - insetX
+    const desiredX = Number.isFinite(Number(desiredPoint?.x))
+        ? clamp(Number(desiredPoint.x), insetX, viewport.width - insetX)
+        : null
+    const desiredY = Number.isFinite(Number(desiredPoint?.y))
+        ? clamp(Number(desiredPoint.y), insetY, viewport.height - insetY)
+        : null
+    const hasDesiredPoint = desiredX !== null && desiredY !== null
+    if (hasDesiredPoint && point
+        && Math.abs(point.x - desiredX) <= 0.5
+        && Math.abs(point.y - desiredY) <= 0.5) {
+        return frame
+    }
+    if (!hasDesiredPoint && point && point.x >= insetX && point.x <= viewport.width - insetX
         && point.y >= insetY && point.y <= viewport.height - insetY) {
         return frame
     }
@@ -56,10 +70,10 @@ export const constrainReplayCameraFrameToCrop = ({
     const up = Cartesian3.normalize(Cartesian3.cross(right, direction, new Cartesian3()), new Cartesian3())
     const tangentY = Math.tan(verticalFovRadians / 2)
     const tangentX = tangentY * (aspectRatio ?? canvasWidth / canvasHeight)
-    const desiredX = point ? clamp(point.x, insetX, viewport.width - insetX) : viewport.width / 2
-    const desiredY = point ? clamp(point.y, insetY, viewport.height - insetY) : viewport.height / 2
-    const slopeX = ((desiredX + cropLeft) * 2 / canvasWidth - 1) * tangentX
-    const slopeY = (1 - (desiredY + cropTop) * 2 / canvasHeight) * tangentY
+    const targetX = desiredX ?? (point ? clamp(point.x, insetX, viewport.width - insetX) : viewport.width / 2)
+    const targetY = desiredY ?? (point ? clamp(point.y, insetY, viewport.height - insetY) : viewport.height / 2)
+    const slopeX = ((targetX + cropLeft) * 2 / canvasWidth - 1) * tangentX
+    const slopeY = (1 - (targetY + cropTop) * 2 / canvasHeight) * tangentY
     const horizontalEquation = Cartesian3.subtract(right, Cartesian3.multiplyByScalar(direction, slopeX, new Cartesian3()), new Cartesian3())
     const verticalEquation = Cartesian3.subtract(up, Cartesian3.multiplyByScalar(direction, slopeY, new Cartesian3()), new Cartesian3())
     const basis = Transforms.eastNorthUpToFixedFrame(target)
