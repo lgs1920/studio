@@ -1770,25 +1770,9 @@ export class ReplayDeferredExporter {
             }
         }
 
-        let encoderCanvas = canvas
-        let encoderContext = null
-        if (typeof HTMLCanvasElement !== 'undefined'
-            && canvas instanceof HTMLCanvasElement
-            && typeof document !== 'undefined'
-            && typeof document.createElement === 'function') {
-            const stableCanvas = document.createElement('canvas')
-            stableCanvas.width = outputDimensions.width
-            stableCanvas.height = outputDimensions.height
-            const stableContext = stableCanvas.getContext('2d', {alpha: false, desynchronized: true})
-            if (stableContext?.drawImage && stableContext?.clearRect) {
-                encoderCanvas = stableCanvas
-                encoderContext = stableContext
-                // Copy also replaces transparent source pixels without a separate clear.
-                encoderContext.globalCompositeOperation = 'copy'
-            }
-        }
-
-        const source = new CanvasSource(encoderCanvas, {
+        // CanvasSource snapshots the canvas into a VideoFrame synchronously in
+        // add(), so it is safe to reuse this canvas without an intermediate copy.
+        const source = new CanvasSource(canvas, {
             codec:                outputConfig.codec,
             bitrate:              outputConfig.bitrate,
             alpha:                'discard',
@@ -1797,11 +1781,8 @@ export class ReplayDeferredExporter {
             latencyMode:          'quality',
             hardwareAcceleration: outputConfig.hardwareAcceleration,
             ...(outputConfig.fullCodecString ? {fullCodecString: outputConfig.fullCodecString} : {}),
-            transform:            {
-                width:  outputDimensions.width,
-                height: outputDimensions.height,
-            },
-            sizeChangeBehavior: 'fill',
+            // The composition canvas already uses outputDimensions, so a
+            // transform would redraw every frame without changing its size.
             onEncoderConfig:    () => {},
             onEncodedPacket:    packet => {
                 const packetBytes = finiteNumber(packet?.byteLength, null)
@@ -1933,18 +1914,6 @@ export class ReplayDeferredExporter {
                             metadata,
                         })
                         renderedFrames.push(renderResult ?? rendered)
-                        if (encoderContext) {
-                            // Replace the full encoder frame in one draw, including transparent source pixels.
-                            const encoderCopyStartedAt = recordingPerformance.now()
-                            try {
-                                encoderContext.drawImage(
-                                    canvas, 0, 0, outputDimensions.width, outputDimensions.height,
-                                )
-                            }
-                            finally {
-                                recordingPerformance.record('encoderCopy', encoderCopyStartedAt)
-                            }
-                        }
                         await enqueueSourceAdd({
                             timestamp: rendered.frameTimeMs / 1000,
                             duration: rendered.frameIntervalMs / 1000,
