@@ -2,7 +2,7 @@
 
 Status: current implementation inventory
 
-Date: 2026-10-12
+Date: 2026-10-14
 
 ## Purpose
 
@@ -98,6 +98,9 @@ Simple/Expert support is present but incomplete:
   composer. The main Cesium camera is the only product Replay camera source.
 - Deterministic Replay MP4 export at fixed frame timestamps, with monitor
   pause/cancel controls and preview/share handoff.
+- Deferred MP4 export follows the Replay preparation timeline's selected start
+  and end range while keeping frame timestamps local to the output and phase
+  resolution anchored to the canonical source timeline.
 - Unified transient Replay transport and export monitor hosted by
   the generic Widget manager. It retains normal replay scrubbing, playback,
   snapshot, and settings controls, then switches to the exact composed encoder

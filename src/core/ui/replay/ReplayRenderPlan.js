@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,12 +34,16 @@ export const REPLAY_PLAN_QUALIFICATION_QUALIFIED = 'qualified'
  * architecture is designed to remove.
  *
  * @param {Object} options - Render plan inputs.
+ * @param {Object|null} [options.frameClock] - Optional export frame clock.
+ * @param {number} [options.timelineOffsetMillis] - Source timeline time for the first output frame.
  * @returns {Object} Plain replay render plan.
  */
 export const createReplayRenderPlan = ({
     id = null,
     definition = null,
     timeline = definition?.timeline ?? null,
+    frameClock: frameClockOverrides = null,
+    timelineOffsetMillis = 0,
     trackPath = null,
     trackPathDescriptor = definition?.trackPathDescriptor ?? null,
     cameraTrack = null,
@@ -51,9 +55,9 @@ export const createReplayRenderPlan = ({
     }
 
     const frameTimeline = new ReplayFrameTimeline({
-        durationMillis: timeline?.durationMillis ?? 0,
-        fps: timeline?.fps ?? 30,
-        direction: 1,
+        durationMillis: frameClockOverrides?.durationMillis ?? timeline?.durationMillis ?? 0,
+        fps: frameClockOverrides?.fps ?? timeline?.fps ?? 30,
+        direction: frameClockOverrides?.direction ?? 1,
     })
     const frameClock = {
         durationMillis: frameTimeline.durationMillis,
@@ -72,6 +76,7 @@ export const createReplayRenderPlan = ({
         version: REPLAY_RENDER_PLAN_VERSION,
         definitionId: definition.id,
         frameClock,
+        timelineOffsetMillis: Math.max(0, Number(timelineOffsetMillis) || 0),
         trackPathSignature: trackPathDescriptor?.signature ?? null,
         qualificationRevision: normalizedQualification.revision,
     }
@@ -82,6 +87,7 @@ export const createReplayRenderPlan = ({
         definitionId: definition.id,
         definition,
         timeline,
+        timelineOffsetMillis: Math.max(0, Number(timelineOffsetMillis) || 0),
         frameClock,
         trackPath: trackPath ?? null,
         trackPathDescriptor: trackPathDescriptor ?? null,

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-30
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -211,7 +211,7 @@ export const VideoRecordingScreenArea = memo(() => {
             const lastRenderedFrame = renderedFrames.at(-1)
             const recordedDurationMillis = lastRenderedFrame
                                           ? lastRenderedFrame.frameTimeMs + lastRenderedFrame.frameIntervalMs
-                                          : result.plan?.videoTimeline?.durationMillis ?? 0
+                                          : result.plan?.outputDurationMillis ?? result.plan?.videoTimeline?.durationMillis ?? 0
             globalThis.window?.dispatchEvent?.(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
                 detail: {
                     blob: result.blob,

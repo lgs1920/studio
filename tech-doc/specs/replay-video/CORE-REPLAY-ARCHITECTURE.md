@@ -2,7 +2,7 @@
 
 Status: current implementation inventory; see the implementation status for known gaps
 
-Date: 2026-10-12
+Date: 2026-10-14
 
 ## Purpose
 
@@ -130,6 +130,16 @@ Replay modes:
 
 Each path must resolve equivalent visual state for the same logical time. They
 are not independent replay engines.
+
+The editable start and end handles in Replay preparation define the deferred
+video export window over the canonical start/Replay/stop timeline. The first
+encoded frame resolves the phase and Replay progress at the selected start
+time; later frames map the zero-based output clock back to that source time.
+The selected end time bounds the export. A range that starts or ends inside a
+clip preserves that clip's source-local time, and a range beginning after a
+phase omits the earlier phases. With no edited range, export covers the full
+timeline. The range affects deferred video output and does not create a second
+interactive playback clock.
 
 The functional frame contains:
 

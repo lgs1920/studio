@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -276,6 +276,107 @@ describe('ReplayDeferredExporter', () => {
         expect(replay.deferredExportPlan).toBe(result.plan)
     })
 
+    it('starts the exported Replay at the preparation range start', async () => {
+        const seek = vi.fn()
+        const sampler = {
+            logicalTrackPath: null,
+            atProgress: vi.fn(progress => ({
+                progress,
+                longitude: progress * 10,
+                latitude: progress * 5,
+                altitude: 100,
+            })),
+        }
+        const replay = {
+            preparationTimeline: {
+                timeline: {
+                    rangeStartMillis: 4_000,
+                    rangeEndMillis: 7_000,
+                },
+            },
+        }
+        const {plan, exporter} = prepareReplayDeferredExportPlan({
+            replay,
+            journey: {slug: 'journey-a'},
+            controller: {
+                duration: 10,
+                direction: 1,
+                sampler,
+                seek,
+                currentSample: () => sampler.atProgress(0),
+            },
+            fps: 10,
+        })
+
+        expect(plan.exportWindow).toMatchObject({
+            startMillis: 4_000,
+            endMillis: 7_000,
+            durationMillis: 3_000,
+            startProgress: 0.4,
+        })
+        expect(exporter.timeline.durationMillis).toBe(3_000)
+        expect(plan.manifest.durationMillis).toBe(3_000)
+
+        const firstFrame = await exporter.session.renderFrame(0)
+
+        expect(seek).toHaveBeenCalledWith(0.4, undefined)
+        expect(firstFrame.logicalFrame.phase).toMatchObject({
+            kind: 'replay',
+            progress: 0.4,
+        })
+        expect(firstFrame.logicalFrame.frameTimeMs).toBe(4_000)
+
+        const lastFrame = await exporter.session.renderFrame(exporter.timeline.frameCount - 1)
+
+        expect(seek).toHaveBeenNthCalledWith(2, 0.7, undefined)
+        expect(lastFrame.logicalFrame.phase).toMatchObject({
+            kind: 'replay',
+            progress: 0.7,
+        })
+        expect(lastFrame.logicalFrame.frameTimeMs).toBe(7_000)
+    })
+
+    it('keeps a start clip at its selected local time when the export range begins inside it', async () => {
+        globalThis.lgs = {
+            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_EXPERT}}},
+        }
+        const replay = {
+            preparationTimeline: {
+                timeline: {
+                    rangeStartMillis: 1_000,
+                    rangeEndMillis: 3_500,
+                },
+            },
+            clips: {
+                catalog: {
+                    intro: {id: 'intro', slots: ['start'], defaults: {duration: 2}},
+                },
+                start: [{clipId: 'intro', params: {duration: 2}}],
+            },
+        }
+        const sampler = {
+            logicalTrackPath: null,
+            atProgress: progress => ({progress, longitude: progress, latitude: progress}),
+        }
+        const {plan, exporter} = prepareReplayDeferredExportPlan({
+            replay,
+            journey: {slug: 'journey-a'},
+            controller: {duration: 10, direction: 1, sampler, seek: vi.fn()},
+            fps: 10,
+        })
+
+        const firstFrame = await exporter.session.renderFrame(0)
+        const lastFrame = await exporter.session.renderFrame(exporter.timeline.frameCount - 1)
+
+        expect(plan.exportWindow).toMatchObject({startMillis: 1_000, endMillis: 3_500, durationMillis: 2_500})
+        expect(firstFrame.logicalFrame.phase).toMatchObject({
+            kind: 'pre-replay',
+            localMillis: 1_000,
+            localProgress: 0.5,
+        })
+        expect(lastFrame.logicalFrame.phase).toMatchObject({kind: 'replay', progress: 0.15})
+    })
+
     it('includes the fixed trace-focus outro in a Simple Replay export timeline', () => {
         globalThis.lgs = {
             settings: {ui: {replay: {userMode: REPLAY_USER_MODE_EXPERT}}},
@@ -487,7 +588,7 @@ describe('ReplayDeferredExporter', () => {
 
         expect(freshPlan.plan.runtime.contextKey).toBe(context.contextKey)
         expect(freshPlan.plan.definition.cameraDefinition).toEqual(expect.objectContaining({
-            version: 1,
+            version: 2,
             position: expect.objectContaining({altitudeMeters: 1200}),
             orientation: expect.objectContaining({pitchRadians: expect.any(Number)}),
         }))
@@ -1296,6 +1397,11 @@ describe('ReplayDeferredExporter', () => {
                 return 1
             })
         globalThis.lgs = {
+            settings: {
+                ui: {
+                    replay: {userMode: REPLAY_USER_MODE_EXPERT},
+                },
+            },
             canvas: sourceCanvas,
             scene: {
                 render: vi.fn(),
@@ -1352,6 +1458,11 @@ describe('ReplayDeferredExporter', () => {
                     trackSlug: 'track-a',
                     progress: 0,
                     durationMillis: 1000,
+                    replayEntryCameraState: {
+                        destination: {longitude: 90, latitude: 45, height: 321},
+                        orientation: {heading: 0.5, pitch: -0.5, roll: 0.25},
+                        altitude: 321,
+                    },
                     clips: {
                         catalog: {
                             'zoom-in': {

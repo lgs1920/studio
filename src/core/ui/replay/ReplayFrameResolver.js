@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -159,10 +159,16 @@ export class ReplayFrameResolver {
         throwIfReplayResolutionAborted(signal)
         const resolvedFrame = frame
                               ?? this.#frameTimeline.frameAtTimeMs(timeMs ?? 0)
+        const frameTimeOffset = frame && (timeMs === null || timeMs === undefined)
+            ? Math.max(0, Number(this.#plan.timelineOffsetMillis) || 0)
+            : 0
+        const phaseTimeMs = frameTimeOffset > 0
+            ? (Number(resolvedFrame?.frameTimeMs) || 0) + frameTimeOffset
+            : timeMs
         const resolvedPhase = phase ?? resolveReplayVideoFramePhase({
             timeline: this.#plan.timeline,
             frame: resolvedFrame,
-            frameTimeMs: timeMs,
+            frameTimeMs: phaseTimeMs,
             isFinalSceneFrame: resolvedFrame?.isLast === true,
         })
 

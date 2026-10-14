@@ -3,7 +3,7 @@
 Status: validation contract for interactive Replay and deterministic Replay
 video export
 
-Date: 2026-10-12
+Date: 2026-10-14
 
 ## Purpose
 
@@ -39,6 +39,9 @@ narrow crop, and at least one high-resolution output profile.
 - Scrub requests are latest-request-wins and obsolete qualification is aborted.
 - Holds preserve logical time and fixed camera state.
 - First, phase-boundary, last replay, and final scene frames are exact.
+- The first exported frame resolves at the preparation range start, the final
+  frame resolves at its end, and clips intersecting either boundary retain
+  their source-local phase time.
 
 ### Camera
 

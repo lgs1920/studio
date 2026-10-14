@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -115,6 +115,72 @@ const finiteNumber = (value, fallback = null) => {
 }
 
 const clampProgress = value => Math.max(0, Math.min(1, Number(value) || 0))
+
+/**
+ * Resolve the selected video range from Replay preparation.
+ *
+ * @param {Object} options - Replay and source timeline inputs.
+ * @param {Object|null} options.replay - Replay store.
+ * @param {Object} options.timeline - Canonical Replay video timeline.
+ * @returns {Object} Bounded export window and its initial Replay progress.
+ */
+const resolveReplayExportWindow = ({replay, timeline} = {}) => {
+    const preparationRange = replay?.preparationTimeline?.timeline ?? {}
+    const timelineDuration = Math.max(0, Number(timeline?.durationMillis) || 0)
+    const requestedStart = preparationRange.rangeStartMillis === null
+        || preparationRange.rangeStartMillis === undefined
+        || preparationRange.rangeStartMillis === ''
+        ? 0
+        : finiteNumber(preparationRange.rangeStartMillis, 0) ?? 0
+    const requestedEnd = preparationRange.rangeEndMillis === null
+        || preparationRange.rangeEndMillis === undefined
+        || preparationRange.rangeEndMillis === ''
+        ? timelineDuration
+        : finiteNumber(preparationRange.rangeEndMillis, timelineDuration) ?? timelineDuration
+    const startMillis = Math.max(0, Math.min(timelineDuration, requestedStart))
+    const endMillis = Math.max(startMillis, Math.min(timelineDuration, requestedEnd))
+    const startPhase = resolveReplayVideoFramePhase({timeline, frameTimeMs: startMillis})
+
+    return {
+        startMillis,
+        endMillis,
+        durationMillis: endMillis - startMillis,
+        startProgress: startPhase.kind === 'replay'
+            ? startPhase.progress
+            : startPhase.anchorProgress ?? startPhase.progress,
+    }
+}
+
+/**
+ * Resolve a canonical source-timeline phase for one frame in a trimmed export.
+ *
+ * @param {Object} options - Export plan and output frame.
+ * @param {Object|null} options.plan - Deferred export plan.
+ * @param {Object|null} options.frame - Frame on the trimmed output clock.
+ * @returns {Object} Phase resolved at the corresponding source timeline time.
+ */
+const resolveReplayExportFramePhase = ({plan, frame} = {}) => {
+    const frameTimeMs = Math.max(0, Number(frame?.frameTimeMs) || 0)
+        + Math.max(0, Number(plan?.exportWindow?.startMillis) || 0)
+
+    return resolveReplayVideoFramePhase({
+        timeline: plan?.videoTimeline,
+        frame,
+        frameTimeMs,
+        isFinalSceneFrame: frame?.isLast === true,
+    })
+}
+
+/**
+ * Project an output frame onto its source timeline timestamp for camera logic.
+ *
+ * @param {Object|null} frame - Frame on the zero-based output clock.
+ * @param {Object|null} phase - Phase resolved on the canonical source clock.
+ * @returns {Object|null} Frame carrying its source timeline timestamp.
+ */
+const resolveReplayExportSourceFrame = (frame, phase) => frame
+    ? Object.assign({}, frame, {frameTimeMs: phase?.frameTimeMs ?? frame.frameTimeMs})
+    : frame
 
 /**
  * Resolve export progress from encoded frame order rather than replay direction.
@@ -227,16 +293,16 @@ const prewarmReplayScenePrefix = async ({
     }
 
     const timeline = new ReplayFrameTimeline({
-        durationMillis: plan.videoTimeline.durationMillis,
+        durationMillis: plan.exportWindow?.durationMillis ?? plan.videoTimeline.durationMillis,
         fps: plan.videoTimeline.fps,
         direction: 1,
     })
     const firstFrame = timeline.frameAtIndex(0)
-    const firstPhase = resolveReplayVideoFramePhase({
-        timeline: plan.videoTimeline,
-        frame: firstFrame,
-    })
-    const safeLookaheadMs = Math.max(0, Number(lookaheadMs) || 0)
+    const firstPhase = resolveReplayExportFramePhase({plan, frame: firstFrame})
+    const safeLookaheadMs = Math.min(
+        timeline.durationMillis,
+        Math.max(0, Number(lookaheadMs) || 0),
+    )
     const sampleCount = Math.min(
         REPLAY_TILE_PREWARM_MAX_SAMPLES,
         Math.max(1, Math.ceil(safeLookaheadMs / REPLAY_TILE_PREWARM_STEP_MS)),
@@ -256,13 +322,10 @@ const prewarmReplayScenePrefix = async ({
             }
 
             const futureFrame = timeline.frameAtTimeMs(sampleIndex * sampleStepMs)
-            const futurePhase = resolveReplayVideoFramePhase({
-                timeline: plan.videoTimeline,
-                frame: futureFrame,
-            })
+            const futurePhase = resolveReplayExportFramePhase({plan, frame: futureFrame})
             await replayMode.renderReplayExportFrame({
                 phase: futurePhase,
-                frame: futureFrame,
+                frame: resolveReplayExportSourceFrame(futureFrame, futurePhase),
                 plan,
                 replay,
                 controller,
@@ -287,7 +350,7 @@ const prewarmReplayScenePrefix = async ({
     finally {
         await replayMode.renderReplayExportFrame({
             phase: firstPhase,
-            frame: firstFrame,
+            frame: resolveReplayExportSourceFrame(firstFrame, firstPhase),
             plan,
             replay,
             controller,
@@ -307,7 +370,13 @@ const prewarmReplayScenePrefix = async ({
  * @param {AbortSignal|null} options.signal - Optional cancellation signal.
  * @returns {{resolveSampleForFrame: Function, dispose: Function, getProcessingMillis: Function}|null} Worker client.
  */
-const createReplayFrameSampleWorkerClient = ({sampler = null, timeline = null, signal = null} = {}) => {
+const createReplayFrameSampleWorkerClient = ({
+                                                 sampler = null,
+                                                 timeline = null,
+                                                 frameClockDurationMillis = timeline?.durationMillis,
+                                                 timelineOffsetMillis = 0,
+                                                 signal = null,
+                                             } = {}) => {
     const routeSamples = sampler?.samples
     if (typeof Worker !== 'function'
         || !Array.isArray(routeSamples)
@@ -319,7 +388,7 @@ const createReplayFrameSampleWorkerClient = ({sampler = null, timeline = null, s
     }
 
     const frameTimeline = new ReplayFrameTimeline({
-        durationMillis: timeline.durationMillis,
+        durationMillis: frameClockDurationMillis,
         fps: timeline.fps,
         direction: 1,
     })
@@ -343,7 +412,12 @@ const createReplayFrameSampleWorkerClient = ({sampler = null, timeline = null, s
     /** Resolve the progress associated with one canonical export frame. */
     const progressAtIndex = index => {
         const frame = frameTimeline.frameAtIndex(index)
-        const phase = resolveReplayVideoFramePhase({timeline, frame})
+        const phase = resolveReplayVideoFramePhase({
+            timeline,
+            frame,
+            frameTimeMs: frame.frameTimeMs + Math.max(0, Number(timelineOffsetMillis) || 0),
+            isFinalSceneFrame: frame.isLast,
+        })
         return phase?.kind === 'replay'
             ? phase.progress ?? frame.progress
             : phase?.anchorProgress ?? phase?.progress ?? frame.progress
@@ -425,7 +499,7 @@ const createReplayFrameSampleWorkerClient = ({sampler = null, timeline = null, s
             return Promise.resolve(cachedSample)
         }
         if (workerFailed || disposed || !worker) {
-            return Promise.resolve(sampler.atProgress(Number.isFinite(frame?.progress) ? frame.progress : progressAtIndex(index)))
+            return Promise.resolve(sampler.atProgress(progressAtIndex(index)))
         }
         requestedThroughIndex = Math.max(requestedThroughIndex, index + lookaheadFrames)
         const pending = new Promise(resolve => {
@@ -636,6 +710,7 @@ export const captureReplayDeferredExportContext = ({
         visibleOverlayIds,
         recordingSync: replay?.recordingSync,
     })
+    const preparationTimeline = replay?.preparationTimeline?.timeline ?? {}
     const context = {
         ...renderContext.context,
         captureMode:   captureMode === 'quality' ? 'quality' : 'speed',
@@ -645,6 +720,18 @@ export const captureReplayDeferredExportContext = ({
         cameraState:   initialCameraState,
         recordingSync: Boolean(replay?.recordingSync),
         progress:      finiteNumber(controller?.progress ?? replay?.progress, null),
+        exportRange: {
+            rangeStartMillis: preparationTimeline.rangeStartMillis === null
+                || preparationTimeline.rangeStartMillis === undefined
+                || preparationTimeline.rangeStartMillis === ''
+                ? 0
+                : finiteNumber(preparationTimeline.rangeStartMillis, 0) ?? 0,
+            rangeEndMillis: preparationTimeline.rangeEndMillis === null
+                || preparationTimeline.rangeEndMillis === undefined
+                || preparationTimeline.rangeEndMillis === ''
+                ? null
+                : finiteNumber(preparationTimeline.rangeEndMillis, null),
+        },
         visibleOverlayIds,
         widgetSignature,
         clipSignature: replayClipSignature(resolveReplayExportClips({replay})),
@@ -1787,6 +1874,7 @@ export const prepareReplayDeferredExportPlan = ({
         direction,
         clips: replayClips,
     })
+    const exportWindow = resolveReplayExportWindow({replay, timeline: videoTimeline})
     const effectiveRenderSpec = renderSpec ?? buildReplayVideoRenderSpec({
         cropRect: replay?.videoCropRect,
         sourceCanvas,
@@ -1809,7 +1897,7 @@ export const prepareReplayDeferredExportPlan = ({
     })
     const trackPath = controller?.sampler?.logicalTrackPath ?? null
     const trackPathDescriptor = createReplayTrackPathDescriptor(trackPath)
-    const startProgress = Number(direction) < 0 ? 1 : 0
+    const startProgress = exportWindow.startProgress
     const cameraDefinition = createReplayCameraDefinition({
         cameraSettings: currentJourneyReplayCameraSettings(),
         markerSettings: replay?.marker,
@@ -1830,6 +1918,12 @@ export const prepareReplayDeferredExportPlan = ({
     })
     const renderPlan = createReplayRenderPlan({
         definition,
+        frameClock: {
+            durationMillis: exportWindow.durationMillis,
+            fps,
+            direction: 1,
+        },
+        timelineOffsetMillis: exportWindow.startMillis,
         trackPath,
         trackPathDescriptor,
     })
@@ -1846,16 +1940,26 @@ export const prepareReplayDeferredExportPlan = ({
     const exporter = new ReplayDeferredExporter({
         controller,
         timeline: {
-            durationMillis: videoTimeline.durationMillis,
+            durationMillis: exportWindow.durationMillis,
             fps,
             direction: 1,
         },
         seek: (progress, frame = null, options = {}) => {
-            const phase = resolveReplayVideoFramePhase({timeline: videoTimeline, frame})
+            const phase = resolveReplayVideoFramePhase({
+                timeline: videoTimeline,
+                frame,
+                frameTimeMs: (Number(frame?.frameTimeMs) || 0) + exportWindow.startMillis,
+                isFinalSceneFrame: frame?.isLast === true,
+            })
             return controller?.seek?.(phase.progress, options.sample)
         },
         resolveSample: frame => {
-            const phase = resolveReplayVideoFramePhase({timeline: videoTimeline, frame})
+            const phase = resolveReplayVideoFramePhase({
+                timeline: videoTimeline,
+                frame,
+                frameTimeMs: (Number(frame?.frameTimeMs) || 0) + exportWindow.startMillis,
+                isFinalSceneFrame: frame?.isLast === true,
+            })
             return controller?.sampler?.atProgress?.(phase.progress)
                    ?? controller?.currentSample?.()
                    ?? null
@@ -1880,6 +1984,8 @@ export const prepareReplayDeferredExportPlan = ({
         mediaMetadata,
         definition,
         renderPlan,
+        exportWindow,
+        outputDurationMillis: exportWindow.durationMillis,
         renderContract: replayContext.context?.renderContract
                          ?? createReplayRenderModeContract({
                              renderMode: REPLAY_RENDER_MODE_EXPORT,
@@ -1915,6 +2021,7 @@ export const prepareReplayDeferredExportPlan = ({
                              : null,
                 contextKey:  replayContext.contextKey,
                 replayDurationMillis,
+                exportRange: exportWindow,
                 clipSignature: videoTimeline.clipSignature,
                 ...(metadata ?? {}),
             },
@@ -1922,6 +2029,7 @@ export const prepareReplayDeferredExportPlan = ({
     }
     plan.exporter = exporter
     plan.videoTimeline = videoTimeline
+    plan.exportWindow = exportWindow
 
     if (replay) {
         replay.deferredExportPlan = plan
@@ -2132,6 +2240,8 @@ export const runReplayDeferredMp4Export = async ({
     const replayFrameSampleWorker = createReplayFrameSampleWorkerClient({
         sampler: controller?.sampler ?? null,
         timeline: plan.videoTimeline,
+        frameClockDurationMillis: exporter.timeline?.durationMillis,
+        timelineOffsetMillis: plan.exportWindow?.startMillis,
         signal,
     })
     if (!isDryRun && plan.runtime?.warmPromise) {
@@ -2249,7 +2359,8 @@ export const runReplayDeferredMp4Export = async ({
     startReplayRecordingMonitor({
         mode: monitorMode,
         frameCount: plan.manifest?.frameCount ?? null,
-        videoDurationMillis: plan.videoTimeline?.durationMillis
+        videoDurationMillis: plan.outputDurationMillis
+                             ?? plan.videoTimeline?.durationMillis
                              ?? plan.manifest?.durationMillis
                              ?? plan.manifest?.metadata?.replayDurationMillis
                              ?? null,
@@ -2356,10 +2467,11 @@ export const runReplayDeferredMp4Export = async ({
 
         const scenePrepareStartedAt = runtimeNow()
         let scenePrepared = false
-        const firstTimelinePhase = plan.videoTimeline?.phases?.[0] ?? null
+        const firstExportFrame = exporter.timeline?.frameAtIndex?.(0) ?? null
+        const firstTimelinePhase = resolveReplayExportFramePhase({plan, frame: firstExportFrame})
         replayVideoTraceDebug('export.scene.prepare.start', {
             journeySlug: journey?.slug ?? replay?.journeySlug ?? null,
-            progress: originalProgress ?? 0,
+            progress: plan.exportWindow?.startProgress ?? originalProgress ?? 0,
             hideReplayMarker: firstTimelinePhase?.slot === REPLAY_CLIP_SLOT_START && Boolean(firstTimelinePhase?.clip),
             hasCameraState: Boolean(plan.runtime?.context?.cameraState),
             hasPreparePlaybackSceneForExport: typeof replayMode?.preparePlaybackSceneForExport === 'function',
@@ -2368,7 +2480,7 @@ export const runReplayDeferredMp4Export = async ({
             if (typeof replayMode?.preparePlaybackSceneForExport === 'function') {
                 await replayMode.preparePlaybackSceneForExport({
                     journey,
-                    progress: originalProgress ?? 0,
+                    progress: plan.exportWindow?.startProgress ?? originalProgress ?? 0,
                     hideReplayMarker: firstTimelinePhase?.slot === REPLAY_CLIP_SLOT_START && Boolean(firstTimelinePhase?.clip),
                     cameraState: plan.runtime?.context?.cameraState ?? null,
                 }) === true
@@ -2465,10 +2577,8 @@ export const runReplayDeferredMp4Export = async ({
                 }
                 const frameUpdateStartedAt = isDryRun ? runtimeNow() : 0
 
-                const phase = resolveReplayVideoFramePhase({
-                    timeline: plan.videoTimeline,
-                    frame,
-                })
+                const phase = resolveReplayExportFramePhase({plan, frame})
+                const sourceFrame = resolveReplayExportSourceFrame(frame, phase)
                 replayVideoTraceDebug('camera.export-frame', {
                     frameIndex:    frame?.index ?? null,
                     frameTimeMs:   frame?.frameTimeMs ?? null,
@@ -2482,7 +2592,7 @@ export const runReplayDeferredMp4Export = async ({
                 if (typeof replayMode?.renderReplayExportFrame === 'function') {
                     frameSample = await replayMode.renderReplayExportFrame({
                         phase,
-                        frame,
+                        frame: sourceFrame,
                         plan,
                         replay,
                         controller,
@@ -2507,7 +2617,7 @@ export const runReplayDeferredMp4Export = async ({
                     replay,
                     controller,
                     frame: {
-                        ...frame,
+                        ...sourceFrame,
                         progress: phase.progress,
                     },
                     sample: frameSample,
