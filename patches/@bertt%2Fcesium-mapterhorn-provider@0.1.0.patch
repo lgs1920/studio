@@ -1,0 +1,67 @@
+diff --git a/node_modules/@bertt/cesium-mapterhorn-provider/.bun-tag-988cd99675168c0f b/.bun-tag-988cd99675168c0f
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/dist/cesium-mapterhorn-provider.esm.js b/dist/cesium-mapterhorn-provider.esm.js
+index 0642f7cbd932bda8b2738912fe8264e69700ce3b..db28dd8b1ce869ba8d4876d942f652617dc1aedc 100644
+--- a/dist/cesium-mapterhorn-provider.esm.js
++++ b/dist/cesium-mapterhorn-provider.esm.js
+@@ -64,7 +64,7 @@ var MapterhornTerrainProvider = class {
+   loadTileDataAvailability() {
+     return void 0;
+   }
+-  async requestTileGeometry(x, y, level, request) {
++  requestTileGeometry(x, y, level, request) {
+     if (level > this._maxLevel) return void 0;
+     const resource = new Resource({
+       url: this._url.replace("{z}", level).replace("{x}", x).replace("{y}", y),
+@@ -73,7 +73,17 @@ var MapterhornTerrainProvider = class {
+     });
+     const promise = resource.fetchBlob();
+     if (!promise) return void 0;
+-    const blob = await promise;
++    // Keep request scheduling synchronous and defer only the downloaded tile decoding.
++    return promise.then(blob => this._decodeTileBlob(blob, level))
++  }
++
++  /**
++   * Decode a downloaded Terrarium tile without changing request scheduling.
++   * @param {Blob} blob Downloaded WebP tile.
++   * @param {number} level Requested zoom level.
++   * @returns {Promise<HeightmapTerrainData>} Decoded terrain grid.
++   */
++  async _decodeTileBlob(blob, level) {
+     const bitmap = await createImageBitmap(blob, {
+       colorSpaceConversion: "none",
+       premultiplyAlpha: "none"
+diff --git a/src/MapterhornTerrainProvider.js b/src/MapterhornTerrainProvider.js
+index 5675f02eb020a21a94bfd32b94300d1c9c011651..b305493423d4558231327e84d5711d631ca73a64 100644
+--- a/src/MapterhornTerrainProvider.js
++++ b/src/MapterhornTerrainProvider.js
+@@ -76,7 +76,7 @@ export class MapterhornTerrainProvider {
+     return undefined;
+   }
+ 
+-  async requestTileGeometry(x, y, level, request) {
++  requestTileGeometry(x, y, level, request) {
+     if (level > this._maxLevel) return undefined;
+ 
+     const resource = new Resource({
+@@ -90,7 +90,17 @@ export class MapterhornTerrainProvider {
+ 
+     const promise = resource.fetchBlob();
+     if (!promise) return undefined; // request throttled; Cesium will retry
+-    const blob = await promise;
++    // Keep request scheduling synchronous and defer only the downloaded tile decoding.
++    return promise.then(blob => this._decodeTileBlob(blob, level))
++  }
++
++  /**
++   * Decode a downloaded Terrarium tile without changing request scheduling.
++   * @param {Blob} blob Downloaded WebP tile.
++   * @param {number} level Requested zoom level.
++   * @returns {Promise<HeightmapTerrainData>} Decoded terrain grid.
++   */
++  async _decodeTileBlob(blob, level) {
+ 
+     const bitmap = await createImageBitmap(blob, {
+       colorSpaceConversion: "none",

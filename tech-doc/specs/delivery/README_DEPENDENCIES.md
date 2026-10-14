@@ -38,6 +38,7 @@ These are the current package names declared in the `dependencies` section of `p
 
 ```text
 @awesome.me/kit-eb5c406148
+@bertt/cesium-mapterhorn-provider
 @lgs1920/timeline
 @fortawesome/duotone-light-svg-icons
 @fortawesome/duotone-regular-svg-icons
