@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ import {CameraUtils} from '@Utils/cesium/CameraUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips} from './JourneyReplayClips'
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
+import {journeyReplayStartPosition, syncJourneyReplayStartPosition} from './ReplayUserModes'
 import {
     currentJourneyReplayCameraSettings, currentJourneyReplaySample, finiteNumber, replayStore,
 } from './JourneyReplayRuntime'
@@ -916,6 +917,8 @@ export const clipListForSlot = (mode, slot) => {
 
 export const placeCameraAtPlaybackStart = (mode, sample, progress = 0, {
     preserveScreenPosition = false,
+    desiredPosition = null,
+    journey = null,
 } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -930,8 +933,9 @@ export const placeCameraAtPlaybackStart = (mode, sample, progress = 0, {
             return false
         }
 
-        const settings = getJourneyReplaySettings()
-        const cameraSettings = currentJourneyReplayCameraSettings()
+        const activeJourney = journey ?? globalThis.lgs?.theJourney
+        const settings = getJourneyReplaySettings({journey: activeJourney})
+        const cameraSettings = currentJourneyReplayCameraSettings({journey: activeJourney})
         const markerSettings = normalizeJourneyReplayMarker({
             ...(globalThis.lgs?.stores?.replay?.marker ?? settings.marker),
             position: null,
@@ -950,10 +954,16 @@ export const placeCameraAtPlaybackStart = (mode, sample, progress = 0, {
         }
 
         let cameraPlaced = false
-        const desiredPoint = preserveScreenPosition
-            ? call.trackingWindowPositionForSample?.(view.sample)
-            : null
         const viewport = call.viewportRectForCesiumSurface?.()
+        const savedPosition = desiredPosition
+            ?? journeyReplayStartPosition(activeJourney, isJourneyReplayBasicMode() ? 'basic' : 'expert')
+        const desiredPoint = viewport?.width > 0 && viewport?.height > 0
+            ? savedPosition
+                ? {x: savedPosition.x * viewport.width, y: savedPosition.y * viewport.height}
+                : preserveScreenPosition
+                    ? call.trackingWindowPositionForSample?.(view.sample)
+                    : null
+            : null
         const frame = desiredPoint && viewport?.width > 0 && viewport?.height > 0
             ? call.cameraRecenterFrame({
                 sample:         view.sample,
@@ -982,6 +992,15 @@ export const placeCameraAtPlaybackStart = (mode, sample, progress = 0, {
                 desiredPoint,
             })
             cameraPlaced = call.applyCameraFrame?.(constrainedFrame) === true
+            if (cameraPlaced) {
+                const actualPosition = call.trackingWindowPositionForSample?.(view.sample)
+                if (actualPosition && viewport?.width > 0 && viewport?.height > 0) {
+                    syncJourneyReplayStartPosition({
+                        x: actualPosition.x / viewport.width,
+                        y: actualPosition.y / viewport.height,
+                    }, activeJourney, isJourneyReplayBasicMode() ? 'basic' : 'expert')
+                }
+            }
             if (cameraPlaced) {
                 call.rememberCameraView?.({
                     anchor: view.cameraAnchorSample ?? view.sample,

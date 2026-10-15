@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-26
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -99,7 +99,7 @@ describe('replay preparation camera', () => {
     })
 
     it('skips pre-Replay clips when timeline playback starts inside the Replay phase', () => {
-        const journey = {}
+        const journey = {replay: {expert: {startPosition: {x: 0.73, y: 0.34}}}}
         const sample = {longitude: 2, latitude: 48, altitude: 120}
         const clip = {clipId: 'intro'}
         const replayEntryCameraState = {
@@ -159,7 +159,11 @@ describe('replay preparation camera', () => {
 
         expect(call.clipListForSlot).not.toHaveBeenCalledWith('pre-replay')
         expect(call.playJourneyReplayClips).not.toHaveBeenCalled()
-        expect(call.placeCameraAtPlaybackStart).toHaveBeenCalledWith(sample, 0)
+        expect(call.placeCameraAtPlaybackStart).toHaveBeenCalledWith(sample, 0, {
+            preserveScreenPosition: true,
+            desiredPosition: {x: 0.73, y: 0.34},
+            journey,
+        })
         expect(controller.start).toHaveBeenCalledWith({progress: 0})
     })
 
@@ -348,6 +352,8 @@ describe('replay preparation camera', () => {
             cameraRecenterFrame:      vi.fn(() => frame),
             cesiumScene:              () => ({requestRender: vi.fn()}),
             configure:                vi.fn(() => ({atProgress: () => sample})),
+            trackingWindowPositionForSample: vi.fn(() => ({x: 680, y: 720})),
+            viewportRectForCesiumSurface: vi.fn(() => ({width: 1000, height: 1000})),
             persistCameraSettings:    vi.fn(),
             cameraViewForSample:      vi.fn(() => ({
                 sample,
@@ -360,6 +366,14 @@ describe('replay preparation camera', () => {
             setReplayPreparationPivot: vi.fn(),
             updateCameraSettingsFromCesiumControls: vi.fn(),
             bindCesiumCameraBridge:   vi.fn(),
+            placeCameraAtPlaybackStart: vi.fn(requestedSample => {
+                const resolvedFrame = call.cameraRecenterFrame({sample: requestedSample, heading: 0})
+                globalThis.lgs.camera.setView({
+                    destination: resolvedFrame.destination,
+                    orientation: {direction: resolvedFrame.direction, up: resolvedFrame.correctedUp},
+                })
+                return true
+            }),
             hideOtherJourneysVisibility: vi.fn(),
         }
         const mode = {
@@ -376,8 +390,9 @@ describe('replay preparation camera', () => {
             stores: {replay: {camera: settings.camera, marker: settings.marker}},
         }
 
+        const journey = {replay: {simple: {}}}
         const preparation = enterReplayPreparation(mode, {
-            journey: {},
+            journey,
             shouldApply: () => true,
         })
         expect(stopRotate).toHaveBeenCalledOnce()
@@ -392,7 +407,11 @@ describe('replay preparation camera', () => {
         await expect(preparation).resolves.toBe(true)
         expect(call.cameraRecenterFrame).toHaveBeenCalledWith(expect.objectContaining({sample, heading: 0}))
         expect(lgs.camera.setView).toHaveBeenCalledWith({destination: frame.destination, orientation: {direction: frame.direction, up: frame.correctedUp}})
-        expect(lgs.camera.cancelFlight).toHaveBeenCalledOnce()
+        expect(journey.replay.simple.startPosition).toEqual({x: 0.68, y: 0.72})
+        expect(call.placeCameraAtPlaybackStart).toHaveBeenCalledWith(sample, 0, {
+            desiredPosition: {x: 0.68, y: 0.72},
+            journey,
+        })
         expect(call.captureCameraState).not.toHaveBeenCalled()
         expect(call.hideOtherJourneysVisibility).toHaveBeenCalledOnce()
         expect(call.setReplayPreparationPivot).not.toHaveBeenCalled()

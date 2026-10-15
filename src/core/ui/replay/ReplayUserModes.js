@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,7 +54,99 @@ const simpleCameraPersistTimers = new WeakMap()
 const simpleTracePersistTimers = new WeakMap()
 const simpleDurationPersistTimers = new WeakMap()
 const simplePresentationPersistTimers = new WeakMap()
+const journeyReplayStartPositionPersistPromises = new WeakMap()
 const EXPERT_CAMERA_PERSIST_DELAY_MS = 250
+
+/**
+ * Normalize a Replay departure marker position as a fraction of the crop.
+ *
+ * @param {Object} position - Candidate crop-relative coordinates.
+ * @returns {{x: number, y: number}|null} Normalized position or null when invalid.
+ */
+export const normalizeJourneyReplayStartPosition = position => {
+    const x = Number(position?.x)
+    const y = Number(position?.y)
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        return null
+    }
+
+    return {
+        x: Math.min(1, Math.max(0, x)),
+        y: Math.min(1, Math.max(0, y)),
+    }
+}
+
+/**
+ * Read the saved departure position for the active Replay mode.
+ *
+ * @param {Object|null} journey - Journey supplying Replay configuration.
+ * @param {string} mode - Replay mode, either `basic` or `expert`.
+ * @returns {{x: number, y: number}|null} Saved crop-relative position.
+ */
+export const journeyReplayStartPosition = (journey, mode) => {
+    const settings = journey?.replay?.[mode === REPLAY_USER_MODE_EXPERT ? 'expert' : 'simple']
+    return normalizeJourneyReplayStartPosition(settings?.startPosition)
+}
+
+/**
+ * Persist the departure marker's crop-relative position on its Journey.
+ *
+ * @param {Object} position - Crop-relative coordinates in the range 0 to 1.
+ * @param {Object|null} journey - Journey receiving the position.
+ * @param {string} mode - Replay mode, either `basic` or `expert`.
+ * @returns {{x: number, y: number}|null} Persisted position or null when invalid.
+ */
+export const syncJourneyReplayStartPosition = (position, journey, mode) => {
+    const normalized = normalizeJourneyReplayStartPosition(position)
+    if (!journey || !normalized) {
+        return null
+    }
+
+    const replay = journey.replay ?? {}
+    const key = mode === REPLAY_USER_MODE_EXPERT ? 'expert' : 'simple'
+    const settings = replay[key] && typeof replay[key] === 'object' ? replay[key] : {}
+    journey.replay = {
+        ...replay,
+        [key]: {
+            ...settings,
+            startPosition: normalized,
+        },
+    }
+    if (typeof journey.persistToDatabase === 'function') {
+        const previousPersistence = journeyReplayStartPositionPersistPromises.get(journey)
+        const persistence = previousPersistence
+            ? previousPersistence.catch(() => {}).then(() => journey.persistToDatabase())
+            : Promise.resolve().then(() => journey.persistToDatabase())
+        journeyReplayStartPositionPersistPromises.set(journey, persistence)
+        void persistence.catch(error => {
+            console.error(`[Replay persistence] Failed to save the start position for ${journey.slug ?? 'a Journey'}.`, error)
+        })
+    }
+    return normalized
+}
+
+/**
+ * Wait for queued departure-position writes before Replay consumes the prepared pose.
+ *
+ * @param {Object|null} journey - Journey whose departure position was updated.
+ * @returns {Promise<boolean>} Whether a queued write was flushed.
+ */
+export const flushJourneyReplayStartPositionPersistence = async journey => {
+    if (!journey) {
+        return false
+    }
+
+    const persistence = journeyReplayStartPositionPersistPromises.get(journey)
+    if (!persistence) {
+        return false
+    }
+
+    await persistence
+    if (journeyReplayStartPositionPersistPromises.get(journey) === persistence) {
+        journeyReplayStartPositionPersistPromises.delete(journey)
+    }
+    return true
+}
 
 /**
  * Normalize a persisted Replay user mode.

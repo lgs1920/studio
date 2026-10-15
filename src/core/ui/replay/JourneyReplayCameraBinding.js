@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,11 +42,49 @@ import {
     buildReplayAntiCollisionBounds,
 } from './JourneyReplayCameraCollision'
 import {replayCameraFor} from './ReplayRenderTarget'
+import {currentReplayJourney, isJourneyReplayBasicMode} from './ReplayUserModeConstants'
+import {
+    flushJourneyReplayStartPositionPersistence,
+    syncJourneyReplayStartPosition,
+} from './ReplayUserModes'
 
 const CAMERA_TRANSFER_MIN_LIFT_METERS = 120
 const CAMERA_TRANSFER_DISTANCE_LIFT_RATIO = 0.18
 // Observe a quiet camera interval rather than timing gesture completion from the input event.
 const PREPARATION_CAMERA_SETTLE_INTERVAL_MS = 120
+
+/**
+ * Resolve the departure marker's current crop-relative screen position.
+ *
+ * @param {object} mode - Replay session owning the preparation camera.
+ * @returns {{x: number, y: number}|null} Normalized position within the crop.
+ */
+const preparationStartPositionFor = mode => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const sample = state.replayPreparationSample
+    const point = sample ? call.trackingWindowPositionForSample?.(sample) : null
+    const viewport = call.viewportRectForCesiumSurface?.()
+    if (!point || !(viewport?.width > 0) || !(viewport?.height > 0)) {
+        return null
+    }
+
+    return {x: point.x / viewport.width, y: point.y / viewport.height}
+}
+
+/**
+ * Compare crop-relative positions using a half-pixel tolerance.
+ *
+ * @param {object|null} first - First normalized position.
+ * @param {object|null} second - Second normalized position.
+ * @param {object|null} viewport - Crop viewport dimensions.
+ * @returns {boolean} Whether the marker moved on screen.
+ */
+const preparationStartPositionChanged = (first, second, viewport) => Boolean(
+    first && second && viewport?.width > 0 && viewport?.height > 0
+    && (Math.abs(first.x - second.x) * viewport.width > 0.5
+        || Math.abs(first.y - second.y) * viewport.height > 0.5),
+)
 
 /**
  * Resolve the vertical clearance used by a long camera transfer.
@@ -393,6 +431,8 @@ export const cancelPreparationCameraGesture = mode => {
     state.cameraUserAdjusting = false
     state.preparationPointerPitch = null
     state.preparationPointerHeight = null
+    state.preparationPointerStartPosition = null
+    state.preparationPointerJourney = null
     call.stopCameraLiveSyncLoop?.()
     const resolveGesture = state.preparationCameraGestureResolve
     state.preparationCameraGestureResolve = null
@@ -449,6 +489,8 @@ export const bindMarkerInteractions = (mode) => {
             if (preparation && pointer && !state.cameraPointerActive) {
                 state.preparationPointerPitch = finiteNumber(camera.pitch)
                 state.preparationPointerHeight = finiteNumber(camera.positionCartographic?.height)
+                state.preparationPointerStartPosition = preparationStartPositionFor(mode)
+                state.preparationPointerJourney = currentReplayJourney()
             }
             if (state.suppressPlaybackCameraSync) {
                 if (!pointer) {
@@ -500,7 +542,16 @@ export const bindMarkerInteractions = (mode) => {
                 Math.abs(camera.pitch - state.preparationPointerPitch) >= 1e-7
                 || Math.abs(camera.positionCartographic?.height - state.preparationPointerHeight) >= 0.5
             )
-            const waitForPreparation = preparation && !immediate && (deferPreparation || preparationPoseChanged)
+            const viewport = call.viewportRectForCesiumSurface?.()
+            const preparationPosition = preparation ? preparationStartPositionFor(mode) : null
+            const preparationPositionChangedAtEnd = preparation
+                && preparationStartPositionChanged(
+                    state.preparationPointerStartPosition,
+                    preparationPosition,
+                    viewport,
+                )
+            const waitForPreparation = preparation
+                && (deferPreparation || preparationPoseChanged || preparationPositionChangedAtEnd)
             if (waitForPreparation && !state.preparationCameraGesturePromise) {
                 state.preparationCameraGesturePromise = new Promise(resolve => {
                     state.preparationCameraGestureResolve = resolve
@@ -512,15 +563,19 @@ export const bindMarkerInteractions = (mode) => {
             }
             let settlingPitch = finiteNumber(camera.pitch)
             let settlingHeight = finiteNumber(camera.positionCartographic?.height)
+            let settlingPosition = preparationPosition
             /** Commit the final pose only after camera inertia has stopped changing it. */
-            const finish = () => {
+            const finish = async () => {
                 if (waitForPreparation) {
                     const pitch = finiteNumber(camera.pitch)
                     const height = finiteNumber(camera.positionCartographic?.height)
+                    const position = preparationStartPositionFor(mode)
                     const moving = Math.abs(pitch - settlingPitch) >= 1e-9
                         || Math.abs(height - settlingHeight) >= 0.001
+                        || preparationStartPositionChanged(settlingPosition, position, viewport)
                     settlingPitch = pitch
                     settlingHeight = height
+                    settlingPosition = position
                     if (moving) {
                         call.updateCameraFromCesiumControls({userInteraction: true})
                         state.cameraManualInteractionTimer = setTimeout(finish, PREPARATION_CAMERA_SETTLE_INTERVAL_MS)
@@ -530,8 +585,32 @@ export const bindMarkerInteractions = (mode) => {
                 state.cameraManualInteractionTimer = null
                 call.updateCameraFromCesiumControls({userInteraction: true})
                 state.cameraUserAdjusting = false
+                const finalPosition = preparation ? preparationStartPositionFor(mode) : null
+                const finalViewport = call.viewportRectForCesiumSurface?.() ?? viewport
+                if (preparation && preparationStartPositionChanged(
+                    state.preparationPointerStartPosition,
+                    finalPosition,
+                    finalViewport,
+                )) {
+                    const journey = state.preparationPointerJourney ?? currentReplayJourney()
+                    if (finalPosition && journey) {
+                        syncJourneyReplayStartPosition(
+                            finalPosition,
+                            journey,
+                            isJourneyReplayBasicMode() ? 'basic' : 'expert',
+                        )
+                        try {
+                            await flushJourneyReplayStartPositionPersistence(journey)
+                        }
+                        catch (error) {
+                            console.error(`[Replay persistence] Failed to flush the start position for ${journey.slug ?? 'a Journey'}.`, error)
+                        }
+                    }
+                }
                 state.preparationPointerPitch = null
                 state.preparationPointerHeight = null
+                state.preparationPointerStartPosition = null
+                state.preparationPointerJourney = null
                 refreshToleranceCameraAfterManualMove()
                 call.stopCameraLiveSyncLoop()
                 const resolveGesture = state.preparationCameraGestureResolve
@@ -540,7 +619,7 @@ export const bindMarkerInteractions = (mode) => {
                 resolveGesture?.(true)
             }
             if (immediate || (preparation && !waitForPreparation)) {
-                finish()
+                void finish()
                 return
             }
             state.cameraManualInteractionTimer = setTimeout(finish, PREPARATION_CAMERA_SETTLE_INTERVAL_MS)
@@ -569,9 +648,9 @@ export const bindMarkerInteractions = (mode) => {
         camera.moveStart.addEventListener(moveStart)
         camera.moveEnd.addEventListener(moveEnd)
         const pointerDown = () => manualStart({pointer: true})
-        const pointerUp = () => manualEnd()
+        const pointerUp = () => manualEnd({deferPreparation: true})
         const mouseDown = () => manualStart({pointer: true})
-        const mouseUp = () => manualEnd()
+        const mouseUp = () => manualEnd({deferPreparation: true})
         const wheel = () => {
             manualStart({pointer: true})
             // Cesium applies wheel zoom on its next scene update, after this event.

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -146,6 +146,84 @@ describe('JourneyReplay camera interaction lifecycle', () => {
             } else {
                 globalThis.lgs = previousLgs
             }
+        }
+    })
+
+    it('persists a departure pan that settles just after pointer release', async () => {
+        vi.useFakeTimers()
+        const listeners = {}
+        const screenPositions = {x: 500, y: 500}
+        let persistedReplay = null
+        const journey = {
+            replay: {simple: {startPosition: {x: 0.5, y: 0.5}}},
+            persistToDatabase: vi.fn(async function () {
+                persistedReplay = JSON.parse(JSON.stringify(this.replay))
+            }),
+        }
+        const camera = {
+            changed: {addEventListener: vi.fn(), removeEventListener: vi.fn()},
+            moveStart: {addEventListener: listener => { listeners.moveStart = listener }, removeEventListener: vi.fn()},
+            moveEnd: {addEventListener: listener => { listeners.moveEnd = listener }, removeEventListener: vi.fn()},
+            pitch: -30 * Math.PI / 180,
+            positionCartographic: {height: 1800},
+        }
+        const canvas = {
+            addEventListener: (name, listener) => { listeners[name] = listener },
+            removeEventListener: vi.fn(),
+        }
+        const state = {
+            cameraAutoTrackingIgnoreUntil: 0,
+            cameraApplyingView: false,
+            cameraFlightActive: false,
+            cameraManualInteractionTimer: null,
+            cameraPointerActive: false,
+            cameraUserAdjusting: false,
+            suppressPlaybackCameraSync: false,
+            replayPreparationSample: {longitude: 2, latitude: 48, altitude: 120},
+            unbind: [],
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                now: () => 0,
+                startCameraLiveSyncLoop: vi.fn(),
+                stopCameraLiveSyncLoop: vi.fn(),
+                updateCameraFromCesiumControls: vi.fn(),
+                trackingWindowPositionForSample: () => ({...screenPositions}),
+                viewportRectForCesiumSurface: () => ({width: 1000, height: 1000}),
+            },
+            [JOURNEY_REPLAY_INTERNAL_STATE]: state,
+        }
+        globalThis.lgs = {
+            settings: {ui: {replay: {...defaultJourneyReplaySettings(), userMode: 'basic'}}},
+            stores: {
+                main: {theJourney: journey},
+                replay: {active: false, playing: false, paused: false},
+                ui: {video: {editing: true}},
+            },
+            viewer: {camera, canvas},
+            theJourney: journey,
+        }
+
+        try {
+            bindMarkerInteractions(mode)
+            listeners.pointerdown()
+            listeners.pointerup()
+            setTimeout(() => {
+                screenPositions.x = 720
+                screenPositions.y = 340
+                camera.pitch = -31 * Math.PI / 180
+                camera.positionCartographic.height = 1802
+            }, 50)
+            await vi.advanceTimersByTimeAsync(360)
+
+            expect(journey.replay.simple.startPosition).toEqual({x: 0.72, y: 0.34})
+            expect(journey.persistToDatabase).toHaveBeenCalledOnce()
+            expect(persistedReplay.simple.startPosition).toEqual({x: 0.72, y: 0.34})
+            expect(state.preparationCameraGesturePromise).toBeNull()
+        }
+        finally {
+            state.unbind.forEach(unbind => unbind())
+            vi.useRealTimers()
         }
     })
 

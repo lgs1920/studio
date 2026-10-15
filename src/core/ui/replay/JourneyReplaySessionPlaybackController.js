@@ -41,7 +41,12 @@ import {
 }                                                                                          from '@Utils/cesium/TrackUtils'
 import { Journey }                                                                         from '@Core/Journey'
 import {currentReplayJourney, isJourneyReplayBasicMode}                                    from './ReplayUserModeConstants'
-import {flushJourneyReplayCameraPersistence}                                               from './ReplayUserModes'
+import {
+    flushJourneyReplayCameraPersistence,
+    flushJourneyReplayStartPositionPersistence,
+    journeyReplayStartPosition,
+    syncJourneyReplayStartPosition,
+}                                                                                          from './ReplayUserModes'
 import {
     ArcType, Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate,
     EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, Math as CesiumMath, Matrix4,
@@ -137,6 +142,27 @@ const seedReplayCameraFromCesium = (mode, journey) => {
     return true
 }
 
+/**
+ * Save the current departure marker position as a fraction of the active crop.
+ *
+ * @param {Object} mode - Replay session.
+ * @param {Object} journey - Journey receiving the saved position.
+ * @param {Object} sample - Canonical departure sample.
+ * @returns {{x: number, y: number}|null} Saved crop-relative position.
+ */
+const persistReplayStartPositionFromCamera = (mode, journey, sample) => {
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const point = call.trackingWindowPositionForSample?.(sample)
+    const viewport = call.viewportRectForCesiumSurface?.()
+    if (!point || !(viewport?.width > 0) || !(viewport?.height > 0)) {
+        return null
+    }
+
+    return syncJourneyReplayStartPosition({
+        x: point.x / viewport.width,
+        y: point.y / viewport.height,
+    }, journey, isJourneyReplayBasicMode() ? 'basic' : 'expert')
+}
 
 /**
  * Trace configured zoom values against the physical camera pose at a boundary.
@@ -486,7 +512,17 @@ export const enterReplayPreparation = async (mode, {
             if (!state.preparationExitCameraState) {
                 state.preparationExitCameraState = call.captureCameraSnapshot?.({camera}) ?? null
             }
-            call.placeCameraAtPlaybackStart?.(sample, 0)
+            const replayMode = isJourneyReplayBasicMode() ? 'basic' : 'expert'
+            const savedStartPosition = journeyReplayStartPosition(journey, replayMode)
+            // Capture the departure's existing screen placement before the Replay
+            // framing changes the live Cesium camera. Each Journey owns this value.
+            const startPosition = savedStartPosition
+                ?? persistReplayStartPositionFromCamera(mode, journey, sample)
+            call.placeCameraAtPlaybackStart?.(sample, 0, {
+                desiredPosition: startPosition,
+                journey,
+            })
+            await flushJourneyReplayStartPositionPersistence(journey)
             state.replayEntryCameraState = captureReplayEntryCameraState(camera)
             traceReplayCameraTransfer({
                 mode,
@@ -653,9 +689,14 @@ export const start = (mode, options = {}) => {
             // the frame here can translate the camera and change its range.
             state.preserveStartCameraComposition = true
             state.replayEntryCameraState = preparedReplayCameraState
+            persistReplayStartPositionFromCamera(mode, journey, startSample)
         }
         else {
-            call.placeCameraAtPlaybackStart(startSample, startProgress, {preserveScreenPosition: true})
+            call.placeCameraAtPlaybackStart(startSample, startProgress, {
+                preserveScreenPosition: true,
+                desiredPosition: journeyReplayStartPosition(journey, isJourneyReplayBasicMode() ? 'basic' : 'expert'),
+                journey,
+            })
             state.replayEntryCameraState = captureReplayEntryCameraState(replayCameraFor(mode))
         }
         state.replayCameraPrepared = false
@@ -886,7 +927,11 @@ export const preparePlaybackSceneForExport = async (mode, {
             call.restoreCameraState({clear: false, cameraState: providedCameraState})
         }
         else {
-            call.placeCameraAtPlaybackStart(sample, safeProgress, {preserveScreenPosition: true})
+            call.placeCameraAtPlaybackStart(sample, safeProgress, {
+                preserveScreenPosition: true,
+                desiredPosition: journeyReplayStartPosition(journey, isJourneyReplayBasicMode() ? 'basic' : 'expert'),
+                journey,
+            })
             state.replayEntryCameraState = captureReplayEntryCameraState(replayCameraFor(mode))
         }
         state.clipCameraContinuity = typeof call.currentReplayClipCameraState === 'function'
@@ -903,7 +948,11 @@ export const preparePlaybackSceneForExport = async (mode, {
             journey.updateVisibility?.(true)
 
             if (startClips.length === 0) {
-                call.placeCameraAtPlaybackStart(sample, safeProgress, {preserveScreenPosition: true})
+                call.placeCameraAtPlaybackStart(sample, safeProgress, {
+                    preserveScreenPosition: true,
+                    desiredPosition: journeyReplayStartPosition(journey, isJourneyReplayBasicMode() ? 'basic' : 'expert'),
+                    journey,
+                })
             }
         }
 
@@ -1094,7 +1143,10 @@ const refreshPreparationCamera = (mode, sample, options = {}) => {
     if (state.preparationExitCameraState
         && globalThis.lgs?.stores?.ui?.video?.editing === true
         && !replayOwnedCameraFor(mode)) {
-        call.placeCameraAtPlaybackStart?.(sample, 0)
+        call.placeCameraAtPlaybackStart?.(sample, 0, {
+            preserveScreenPosition: true,
+            journey: currentReplayJourney(),
+        })
     }
 
     if (options.source === 'keyboard') {

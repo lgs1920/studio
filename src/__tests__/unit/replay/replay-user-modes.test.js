@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,14 +17,17 @@
 import {
     defaultSimpleReplaySettings,
     flushJourneyReplayCameraPersistence,
+    flushJourneyReplayStartPositionPersistence,
     hasExpertReplayConfiguration,
     initializeExpertReplayFromSimple,
     normalizeSimpleReplaySettings,
     normalizeReplayUserMode,
+    journeyReplayStartPosition,
     resolveSimpleReplaySettings,
     syncJourneyExpertReplayCamera,
     syncJourneyExpertReplayProgression,
     syncJourneySimpleReplayCamera,
+    syncJourneyReplayStartPosition,
     REPLAY_USER_MODE_BASIC,
     REPLAY_USER_MODE_EXPERT,
 } from '@Core/ui/replay/ReplayUserModes'
@@ -42,6 +45,25 @@ import {parse as parseYaml} from 'yaml'
 const replayYamlDefaults = parseYaml(readFileSync(new URL('../../../../public/replay.yaml', import.meta.url), 'utf8')).replay
 
 describe('Replay user modes', () => {
+    it('persists the departure screen position separately on each Journey and Replay mode', async () => {
+        const persistSimple = vi.fn()
+        const persistExpert = vi.fn()
+        const simpleJourney = {slug: 'simple-journey', replay: {}, persistToDatabase: persistSimple}
+        const expertJourney = {slug: 'expert-journey', replay: {}, persistToDatabase: persistExpert}
+
+        expect(syncJourneyReplayStartPosition({x: 0.72, y: 0.34}, simpleJourney, REPLAY_USER_MODE_BASIC))
+            .toEqual({x: 0.72, y: 0.34})
+        expect(syncJourneyReplayStartPosition({x: 0.28, y: 0.66}, expertJourney, REPLAY_USER_MODE_EXPERT))
+            .toEqual({x: 0.28, y: 0.66})
+
+        expect(journeyReplayStartPosition(simpleJourney, REPLAY_USER_MODE_BASIC)).toEqual({x: 0.72, y: 0.34})
+        expect(journeyReplayStartPosition(expertJourney, REPLAY_USER_MODE_EXPERT)).toEqual({x: 0.28, y: 0.66})
+        await expect(flushJourneyReplayStartPositionPersistence(simpleJourney)).resolves.toBe(true)
+        await expect(flushJourneyReplayStartPositionPersistence(expertJourney)).resolves.toBe(true)
+        expect(persistSimple).toHaveBeenCalledOnce()
+        expect(persistExpert).toHaveBeenCalledOnce()
+    })
+
     it('defaults to Basic and normalizes unknown modes', () => {
         expect(normalizeReplayUserMode()).toBe(REPLAY_USER_MODE_BASIC)
         expect(normalizeReplayUserMode('unknown')).toBe(REPLAY_USER_MODE_BASIC)
