@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -514,21 +514,32 @@ export const viewportRectForCesiumSurface = (mode) => {
         const targetCanvas = target?.canvas ?? target?.scene?.canvas ?? target?.viewer?.canvas ?? null
         if (targetCanvas) {
             const targetRect = targetCanvas.getBoundingClientRect?.()
-            const width = finiteNumber(targetRect?.width)
-                          ?? finiteNumber(targetCanvas.clientWidth)
-                          ?? finiteNumber(targetCanvas.width)
-                          ?? 0
-            const height = finiteNumber(targetRect?.height)
-                           ?? finiteNumber(targetCanvas.clientHeight)
-                           ?? finiteNumber(targetCanvas.height)
-                           ?? 0
+            const canvasWidth = finiteNumber(targetRect?.width)
+                                ?? finiteNumber(targetCanvas.clientWidth)
+                                ?? finiteNumber(targetCanvas.width)
+                                ?? 0
+            const canvasHeight = finiteNumber(targetRect?.height)
+                                 ?? finiteNumber(targetCanvas.clientHeight)
+                                 ?? finiteNumber(targetCanvas.height)
+                                 ?? 0
+            const cropRect = call.videoCropRect()
+            if (cropRect) {
+                return {
+                    ...cropRect,
+                    canvasWidth,
+                    canvasHeight,
+                    canvasLeft: 0,
+                    canvasTop: 0,
+                }
+            }
+
             return {
                 left: 0,
                 top: 0,
-                width,
-                height,
-                canvasWidth: finiteNumber(targetCanvas.width) ?? width,
-                canvasHeight: finiteNumber(targetCanvas.height) ?? height,
+                width: canvasWidth,
+                height: canvasHeight,
+                canvasWidth,
+                canvasHeight,
             }
         }
 

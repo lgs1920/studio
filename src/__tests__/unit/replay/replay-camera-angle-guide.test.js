@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -661,12 +661,29 @@ describe('replay camera angle map guide', () => {
         const container = document.createElement('div')
         const canvas = document.createElement('canvas')
         const cropElement = document.createElement('div')
+        let cropBounds = {left: 300, top: 250, width: 400, height: 300, right: 700, bottom: 550}
+        let resizeObserverCallback = null
+        const observe = vi.fn()
+        const disconnect = vi.fn()
+        vi.stubGlobal('ResizeObserver', class {
+            constructor(callback) {
+                resizeObserverCallback = callback
+            }
+
+            observe(element) {
+                observe(element)
+            }
+
+            disconnect() {
+                disconnect()
+            }
+        })
         container.appendChild(canvas)
         container.appendChild(cropElement)
         document.body.appendChild(container)
         container.getBoundingClientRect = () => ({left: 0, top: 0, width: 1000, height: 800, right: 1000, bottom: 800})
         canvas.getBoundingClientRect = () => ({left: 0, top: 0, width: 1000, height: 800, right: 1000, bottom: 800})
-        cropElement.getBoundingClientRect = () => ({left: 450, top: 350, width: 100, height: 100, right: 550, bottom: 450})
+        cropElement.getBoundingClientRect = () => cropBounds
         Object.defineProperties(container, {
             clientHeight: {configurable: true, value: 800},
             clientWidth: {configurable: true, value: 1000},
@@ -676,6 +693,8 @@ describe('replay camera angle map guide', () => {
             clientWidth: {configurable: true, value: 1000},
         })
         const terrainHeight = 100
+        let projectionScale = 1
+        let projectionOffset = {x: 0, y: 0}
         const viewer = {
             container,
             camera: {
@@ -691,10 +710,10 @@ describe('replay camera angle map guide', () => {
                 globe: {getHeight: () => terrainHeight},
                 cartesianToCanvasCoordinates: (position, result) => {
                     const cartographic = Cartographic.fromCartesian(position)
-                    result.x = 500 + ((cartographic.longitude - (2 * Math.PI / 180))
-                        * Math.cos(48 * Math.PI / 180) * 6378137)
-                    result.y = 400 - ((cartographic.latitude - (48 * Math.PI / 180)) * 6378137)
-                        - (cartographic.height - terrainHeight)
+                    result.x = 500 + projectionOffset.x + ((cartographic.longitude - (2 * Math.PI / 180))
+                        * Math.cos(48 * Math.PI / 180) * 6378137 * projectionScale)
+                    result.y = 400 + projectionOffset.y - ((cartographic.latitude - (48 * Math.PI / 180)) * 6378137 * projectionScale)
+                        - ((cartographic.height - terrainHeight) * projectionScale)
                     return result
                 },
                 postRender: {addEventListener: () => () => undefined},
@@ -710,33 +729,48 @@ describe('replay camera angle map guide', () => {
             camera: {altitude: 6000, cameraAngle: 0},
             journey,
         })
-        const callbacks = {cropElement, screenLocked: true}
+        const onCameraChange = vi.fn()
+        const callbacks = {cropElement, onCameraChange, screenLocked: true}
         expect(mountJourneyReplayCameraAngleGuide(viewer, initialGuide, {}, callbacks)).toBe(true)
+        expect(observe).toHaveBeenCalledWith(cropElement)
 
         /**
-         * Assert the projected tip remains inside the inset crop and the axis begins at the route departure.
+         * Assert the cone tip stays in the crop, its camera icon keeps a one-rem margin, and its axis starts at departure.
          *
          * @returns {void} No return value.
          */
-        const expectGuideInsideCrop = () => {
+        const expectGuideInsideCrop = ({expectAxisAtRouteStart = true} = {}) => {
             const overlay = container.querySelector('.replay-camera-angle-guide-dom')
             const tip = overlay.querySelector('[data-part="cone-tip-drag-target"]')
+            const outerCone = overlay.querySelector('[data-part="outer"]')
             const cameraAxis = overlay.querySelector('[data-part="camera-position-axis"]')
             const routeStart = overlay.querySelector('[data-part="journey-route-start"]')
+            const remPixels = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+            const iconInset = remPixels + 14
             const tipX = Number(tip.getAttribute('cx'))
             const tipY = Number(tip.getAttribute('cy'))
             const iconCenterX = Number(cameraAxis.getAttribute('x2'))
             const iconCenterY = Number(cameraAxis.getAttribute('y2'))
-            expect(tipX).toBeGreaterThanOrEqual(462)
-            expect(tipX).toBeLessThanOrEqual(538)
-            expect(tipY).toBeGreaterThanOrEqual(362)
-            expect(tipY).toBeLessThanOrEqual(438)
-            expect(iconCenterX).toBeGreaterThanOrEqual(464)
-            expect(iconCenterX).toBeLessThanOrEqual(536)
-            expect(iconCenterY).toBeGreaterThanOrEqual(364)
-            expect(iconCenterY).toBeLessThanOrEqual(436)
-            expect(Number(cameraAxis.getAttribute('x1'))).toBeCloseTo(Number(routeStart.getAttribute('cx')), 6)
-            expect(Number(cameraAxis.getAttribute('y1'))).toBeCloseTo(Number(routeStart.getAttribute('cy')), 6)
+            expect(tipX).toBeGreaterThanOrEqual(cropBounds.left)
+            expect(tipX).toBeLessThanOrEqual(cropBounds.right)
+            expect(tipY).toBeGreaterThanOrEqual(cropBounds.top)
+            expect(tipY).toBeLessThanOrEqual(cropBounds.bottom)
+            const coneVertices = outerCone.getAttribute('d').match(/^M ([\d.-]+) ([\d.-]+) L ([\d.-]+) ([\d.-]+) L ([\d.-]+) ([\d.-]+)/)
+            expect(coneVertices).not.toBeNull()
+            for (const [x, y] of [[coneVertices[1], coneVertices[2]], [coneVertices[3], coneVertices[4]], [coneVertices[5], coneVertices[6]]]) {
+                expect(Number(x)).toBeGreaterThanOrEqual(cropBounds.left)
+                expect(Number(x)).toBeLessThanOrEqual(cropBounds.right)
+                expect(Number(y)).toBeGreaterThanOrEqual(cropBounds.top)
+                expect(Number(y)).toBeLessThanOrEqual(cropBounds.bottom)
+            }
+            expect(iconCenterX).toBeGreaterThanOrEqual(cropBounds.left + iconInset)
+            expect(iconCenterX).toBeLessThanOrEqual((cropBounds.right - iconInset) + 0.01)
+            expect(iconCenterY).toBeGreaterThanOrEqual(cropBounds.top + iconInset)
+            expect(iconCenterY).toBeLessThanOrEqual((cropBounds.bottom - iconInset) + 0.01)
+            if (expectAxisAtRouteStart) {
+                expect(Number(cameraAxis.getAttribute('x1'))).toBeCloseTo(Number(routeStart.getAttribute('cx')), 6)
+                expect(Number(cameraAxis.getAttribute('y1'))).toBeCloseTo(Number(routeStart.getAttribute('cy')), 6)
+            }
         }
 
         expectGuideInsideCrop()
@@ -747,9 +781,64 @@ describe('replay camera angle map guide', () => {
         expect(updateJourneyReplayCameraAngleGuide(viewer, modifiedGuide, {cropElement})).toBe(true)
         expectGuideInsideCrop()
 
+        const overlay = container.querySelector('.replay-camera-angle-guide-dom')
+        const cameraIcon = overlay.querySelector('img')
+        const routeStart = overlay.querySelector('[data-part="journey-route-start"]')
+        const anchorX = Number(routeStart.getAttribute('cx'))
+        const anchorY = Number(routeStart.getAttribute('cy'))
+        const cameraX = Number.parseFloat(cameraIcon.style.left)
+        const cameraY = Number.parseFloat(cameraIcon.style.top)
+        const dragRadius = Math.hypot(cameraX - anchorX, cameraY - anchorY)
+        const cameraAngleLabel = overlay.querySelector('text[data-part="angle-label"]').textContent
+        const pointerEvent = (type, x, y) => {
+            const event = new Event(type, {bubbles: true, cancelable: true})
+            Object.defineProperties(event, {
+                button: {value: 0},
+                clientX: {value: x},
+                clientY: {value: y},
+                pointerId: {value: 1},
+            })
+            return event
+        }
+        cameraIcon.dispatchEvent(pointerEvent('pointerdown', cameraX, cameraY))
+        for (let step = 0; step < 16; step += 1) {
+            const angle = (step / 16) * Math.PI * 2
+            window.dispatchEvent(pointerEvent(
+                'pointermove',
+                anchorX + (Math.cos(angle) * dragRadius),
+                anchorY + (Math.sin(angle) * dragRadius),
+            ))
+            expectGuideInsideCrop()
+        }
+        window.dispatchEvent(pointerEvent('pointerup', cameraX, cameraY))
+        expectGuideInsideCrop()
+        expect(overlay.querySelector('text[data-part="angle-label"]').textContent).not.toBe(cameraAngleLabel)
+        expect(onCameraChange).toHaveBeenCalledOnce()
+        projectionScale = 2
+        window.dispatchEvent(new Event('resize'))
+        expectGuideInsideCrop()
+
+        cropBounds = {left: 430, top: 340, width: 140, height: 100, right: 570, bottom: 440}
+        resizeObserverCallback?.([{target: cropElement}])
+        expectGuideInsideCrop({expectAxisAtRouteStart: false})
+
+        cropBounds = {left: 300, top: 250, width: 400, height: 300, right: 700, bottom: 550}
+        resizeObserverCallback?.([{target: cropElement}])
+
+        projectionOffset = {x: -420, y: -330}
+        expect(updateJourneyReplayCameraAngleGuide(viewer, modifiedGuide, {cropElement})).toBe(true)
+        expectGuideInsideCrop({expectAxisAtRouteStart: false})
+        const offscreenCameraX = Number.parseFloat(cameraIcon.style.left)
+        const offscreenCameraY = Number.parseFloat(cameraIcon.style.top)
+        cameraIcon.dispatchEvent(pointerEvent('pointerdown', offscreenCameraX, offscreenCameraY))
+        window.dispatchEvent(pointerEvent('pointermove', offscreenCameraX + 60, offscreenCameraY + 25))
+        expectGuideInsideCrop({expectAxisAtRouteStart: false})
+        window.dispatchEvent(pointerEvent('pointerup', offscreenCameraX + 60, offscreenCameraY + 25))
+        expectGuideInsideCrop({expectAxisAtRouteStart: false})
+
         removeJourneyReplayCameraAngleGuide(viewer)
         expect(mountJourneyReplayCameraAngleGuide(viewer, modifiedGuide, {}, callbacks)).toBe(true)
-        expectGuideInsideCrop()
+        expectGuideInsideCrop({expectAxisAtRouteStart: false})
         removeJourneyReplayCameraAngleGuide(viewer)
         container.remove()
     })
