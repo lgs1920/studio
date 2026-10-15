@@ -34,6 +34,7 @@ import {
 import {
     REPLAY_CAMERA_ANGLE_MAX,
     REPLAY_CAMERA_ANGLE_MIN,
+    REPLAY_CAMERA_KEYBOARD_ROTATION_STEP_DEGREES,
     normalizeJourneyReplayCamera,
     replayCameraSettingsFromArrowKey,
 } from './JourneyReplayProgressionStyle'
@@ -49,7 +50,6 @@ const CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS = 1200
 const CAMERA_ANGLE_GUIDE_CONE_BASE_HALF_WIDTH_METERS = 240
 const CAMERA_ANGLE_GUIDE_DEPARTURE_DISTANCE_METERS = 300
 const CAMERA_ANGLE_GUIDE_ACTIVITY_DISTANCE_METERS = 200
-const CAMERA_ANGLE_GUIDE_DRAG_SNAP_STEP_DEGREES = 5
 const EARTH_RADIUS_METERS = 6378137
 const CAMERA_ANGLE_GUIDE_MAX_SCREEN_RATIO = 0.2
 const CAMERA_ANGLE_GUIDE_INNER_HEIGHT_RATIO = 0.95
@@ -1056,6 +1056,7 @@ const cameraIconCropBoundsFrom = (viewer, overlay, record) => {
         (cropBounds.right - cropBounds.left) / 2,
         (cropBounds.bottom - cropBounds.top) / 2,
     )
+
     return {
         left: cropBounds.left + inset,
         right: cropBounds.right - inset,
@@ -2291,6 +2292,9 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     const {overlay, elements} = record
     syncGuideAnchorToTerrain(viewer, record)
     elements.angleLabel.textContent = angleLabelFrom(record.guide.angleDegrees)
+    const cameraIconCropBounds = record.screenLocked
+        ? cameraIconCropBoundsFrom(viewer, overlay, record)
+        : null
     const overlayRect = overlay.getBoundingClientRect?.() ?? {}
     const width = Number(overlayRect.width) || overlay.clientWidth || viewer.scene.canvas?.clientWidth || 1
     const height = Number(overlayRect.height) || overlay.clientHeight || viewer.scene.canvas?.clientHeight || 1
@@ -2396,7 +2400,7 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     const cropOffset = record.screenLocked
         ? coneCropOffsetFrom(
             [left, right, tip, videoIcon],
-            cameraIconCropBoundsFrom(viewer, overlay, record),
+            cameraIconCropBounds,
         )
         : {x: 0, y: 0}
     const displayedLeft = offsetGuidePoint(left, cropOffset)
@@ -3169,6 +3173,7 @@ const bindGuideDragInteractions = (viewer, record) => {
             startRadius: Math.hypot(deltaX, deltaY),
             startOffset: record.guide.offsetRadians,
             shiftPressed: event.shiftKey === true,
+            controlPressed: event.ctrlKey === true,
             startMapAngle: tipAltitudeOnly || record.screenLocked ? null : mapBearingFromPointer(event),
             cameraController,
             previousRotateEnabled: cameraController?.enableRotate,
@@ -3201,31 +3206,51 @@ const bindGuideDragInteractions = (viewer, record) => {
     }
 
     /**
-     * Track Shift presses during an active pointer drag.
+     * Track rotation-modifier presses during an active pointer drag.
      *
      * @param {KeyboardEvent} event - Keyboard event.
      * @returns {void}
      */
     const dragModifierKeyDownListener = event => {
-        if (record.dragState?.angleDraggable && event.key === 'Shift') {
-            record.dragState.shiftPressed = true
-            record.dragState.snapActive = true
-            updateGuideGeometry(viewer, record, false)
+        const dragState = record.dragState
+        if (!dragState?.angleDraggable) {
+            return
         }
+        if (event.key === 'Shift') {
+            dragState.shiftPressed = true
+        }
+        else if (event.key === 'Control') {
+            dragState.controlPressed = true
+        }
+        else {
+            return
+        }
+        dragState.snapActive = true
+        updateGuideGeometry(viewer, record, false)
     }
 
     /**
-     * Track Shift releases during an active pointer drag.
+     * Track rotation-modifier releases during an active pointer drag.
      *
      * @param {KeyboardEvent} event - Keyboard event.
      * @returns {void}
      */
     const dragModifierKeyUpListener = event => {
-        if (record.dragState?.angleDraggable && event.key === 'Shift') {
-            record.dragState.shiftPressed = false
-            record.dragState.snapActive = false
-            updateGuideGeometry(viewer, record, false)
+        const dragState = record.dragState
+        if (!dragState?.angleDraggable) {
+            return
         }
+        if (event.key === 'Shift') {
+            dragState.shiftPressed = false
+        }
+        else if (event.key === 'Control') {
+            dragState.controlPressed = false
+        }
+        else {
+            return
+        }
+        dragState.snapActive = true
+        updateGuideGeometry(viewer, record, false)
     }
 
     /**
@@ -3262,10 +3287,15 @@ const bindGuideDragInteractions = (viewer, record) => {
         const angleRadians = dragState.startOffset + angleDelta
         const rawDegrees = angleRadians * 180 / Math.PI
         const shiftPressed = dragState.angleDraggable && (event.shiftKey === true || dragState.shiftPressed)
-        dragState.snapActive = shiftPressed
-        const dragDegrees = shiftPressed
-            ? Math.round(rawDegrees / CAMERA_ANGLE_GUIDE_DRAG_SNAP_STEP_DEGREES)
-                * CAMERA_ANGLE_GUIDE_DRAG_SNAP_STEP_DEGREES
+        const controlPressed = dragState.angleDraggable && (event.ctrlKey === true || dragState.controlPressed)
+        const rotationStepDegrees = controlPressed
+            ? REPLAY_CAMERA_KEYBOARD_ROTATION_STEP_DEGREES.control
+            : shiftPressed
+                ? REPLAY_CAMERA_KEYBOARD_ROTATION_STEP_DEGREES.shift
+                : REPLAY_CAMERA_KEYBOARD_ROTATION_STEP_DEGREES.normal
+        dragState.snapActive = dragState.angleDraggable
+        const dragDegrees = dragState.angleDraggable
+            ? Math.round(rawDegrees / rotationStepDegrees) * rotationStepDegrees
             : rawDegrees
         const cameraAngle = ((dragDegrees + 180) % 360 + 360) % 360 - 180
         const altitude = dragState.altitudeDraggable
@@ -3416,16 +3446,45 @@ const bindGuideDragInteractions = (viewer, record) => {
 const observeGuideCropElement = (viewer, record, cropElement) => {
     record.cropResizeObserver?.disconnect()
     record.cropResizeObserver = null
-    if (!cropElement || typeof globalThis.ResizeObserver !== 'function') {
+    record.cropLayoutObserver?.disconnect()
+    record.cropLayoutObserver = null
+    if (!cropElement) {
         return
     }
 
-    record.cropResizeObserver = new globalThis.ResizeObserver(() => {
+    /**
+     * Refresh the guide before the next paint after its crop layout changes.
+     *
+     * @returns {void} No return value.
+     */
+    const refreshGuideAfterCropLayoutChange = () => {
         record.depthProbePending = true
         updateGuideGeometry(viewer, record, false)
         viewer.scene?.requestRender?.()
-    })
-    record.cropResizeObserver.observe(cropElement)
+    }
+
+    const resizeTargets = new Set([
+        cropElement,
+        cropElement.closest?.('.lgs-widget-container'),
+        viewer?.container,
+    ].filter(element => element && element.isConnected !== false))
+    if (typeof globalThis.ResizeObserver === 'function') {
+        record.cropResizeObserver = new globalThis.ResizeObserver(refreshGuideAfterCropLayoutChange)
+        resizeTargets.forEach(element => record.cropResizeObserver.observe(element))
+    }
+
+    if (typeof globalThis.MutationObserver === 'function') {
+        record.cropLayoutObserver = new globalThis.MutationObserver(refreshGuideAfterCropLayoutChange)
+        const layoutTargets = new Set([
+            cropElement,
+            cropElement.closest?.('.lgs-widget-container'),
+            viewer?.container,
+        ].filter(element => element && element.isConnected !== false))
+        layoutTargets.forEach(element => record.cropLayoutObserver.observe(element, {
+            attributes: true,
+            attributeFilter: ['class', 'style'],
+        }))
+    }
 }
 
 /**
@@ -3451,6 +3510,7 @@ export const removeJourneyReplayCameraAngleGuide = viewer => {
     }
     globalThis.removeEventListener?.('resize', record.resizeListener)
     record.cropResizeObserver?.disconnect()
+    record.cropLayoutObserver?.disconnect()
     record.overlay?.remove()
     return true
 }

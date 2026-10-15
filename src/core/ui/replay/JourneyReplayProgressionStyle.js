@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -67,7 +67,12 @@ export const REPLAY_CAMERA_ANGLE_MIN = -180
 export const REPLAY_CAMERA_ANGLE_MAX = 180
 /** Initial azimuth for a Replay camera before the Journey stores its own angle. */
 export const REPLAY_INITIAL_CAMERA_ANGLE = 0
-const REPLAY_CAMERA_KEYBOARD_STEP_DEGREES = 1
+const REPLAY_CAMERA_KEYBOARD_PITCH_STEP_DEGREES = 1
+export const REPLAY_CAMERA_KEYBOARD_ROTATION_STEP_DEGREES = Object.freeze({
+    normal: 10,
+    shift: 5,
+    control: 1,
+})
 export const REPLAY_CAMERA_PRESET_CUSTOM = 'custom'
 export const REPLAY_CAMERA_PRESET_DEFAULT = 'default'
 export const REPLAY_CAMERA_PRESET_ULTRA_SMOOTH = 'ultra-smooth'
@@ -366,11 +371,12 @@ export const defaultJourneyReplaySettings = () => ({
  */
 const wrappedReplayAngle = (currentAngle, delta, minimum, maximum) => {
     const nextAngle = currentAngle + delta
-    return nextAngle > maximum
-        ? minimum
-        : nextAngle < minimum
-            ? maximum
-            : nextAngle
+    if (nextAngle >= minimum && nextAngle <= maximum) {
+        return nextAngle
+    }
+
+    const range = maximum - minimum
+    return ((nextAngle - minimum) % range + range) % range + minimum
 }
 
 const wrappedReplayCameraAngle = value => {
@@ -675,23 +681,31 @@ export const normalizeJourneyReplayCamera = (camera = {}) => ({
  *
  * @param {Object} camera - Current replay camera settings.
  * @param {string} key - Browser keyboard key.
+ * @param {number} rotationStepDegrees - Azimuth adjustment in degrees.
  * @returns {Object|null} Updated normalized camera settings, or null when the key is unrelated.
  */
-export const replayCameraSettingsFromArrowKey = (camera, key) => {
+export const replayCameraSettingsFromArrowKey = (
+    camera,
+    key,
+    rotationStepDegrees = REPLAY_CAMERA_KEYBOARD_ROTATION_STEP_DEGREES.normal,
+) => {
     const current = normalizeJourneyReplayCamera(camera)
     const next = {...current}
+    const rotationStep = Number.isFinite(rotationStepDegrees) && rotationStepDegrees > 0
+        ? rotationStepDegrees
+        : REPLAY_CAMERA_KEYBOARD_ROTATION_STEP_DEGREES.normal
     switch (key) {
         case 'ArrowUp':
-            next.pitch = clampJourneyReplayNumber(current.pitch + REPLAY_CAMERA_KEYBOARD_STEP_DEGREES, current.pitch, -89, -5)
+            next.pitch = clampJourneyReplayNumber(current.pitch + REPLAY_CAMERA_KEYBOARD_PITCH_STEP_DEGREES, current.pitch, -89, -5)
             break
         case 'ArrowDown':
-            next.pitch = clampJourneyReplayNumber(current.pitch - REPLAY_CAMERA_KEYBOARD_STEP_DEGREES, current.pitch, -89, -5)
+            next.pitch = clampJourneyReplayNumber(current.pitch - REPLAY_CAMERA_KEYBOARD_PITCH_STEP_DEGREES, current.pitch, -89, -5)
             break
         case 'ArrowRight':
-            next.cameraAngle = wrappedReplayAngle(current.cameraAngle, REPLAY_CAMERA_KEYBOARD_STEP_DEGREES, REPLAY_CAMERA_ANGLE_MIN, REPLAY_CAMERA_ANGLE_MAX)
+            next.cameraAngle = wrappedReplayAngle(current.cameraAngle, rotationStep, REPLAY_CAMERA_ANGLE_MIN, REPLAY_CAMERA_ANGLE_MAX)
             break
         case 'ArrowLeft':
-            next.cameraAngle = wrappedReplayAngle(current.cameraAngle, -REPLAY_CAMERA_KEYBOARD_STEP_DEGREES, REPLAY_CAMERA_ANGLE_MIN, REPLAY_CAMERA_ANGLE_MAX)
+            next.cameraAngle = wrappedReplayAngle(current.cameraAngle, -rotationStep, REPLAY_CAMERA_ANGLE_MIN, REPLAY_CAMERA_ANGLE_MAX)
             break
         default:
             return null

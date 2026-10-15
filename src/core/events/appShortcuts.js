@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@ import { getOrbitSettings, setOrbitStoreSettings }      from '@Core/OrbitSetting
 import { getGlobalHideOtherJourneys, setGlobalHideOtherJourneys } from '@Core/ui/JourneyVisibility'
 import {
     REPLAY_MARKER_MODE_TRACE,
+    REPLAY_CAMERA_KEYBOARD_ROTATION_STEP_DEGREES,
     normalizeJourneyReplayMarker,
     replayCameraSettingsFromArrowKey,
     toGlobalReplayCameraSettings,
@@ -718,9 +719,7 @@ const replayCameraKeyboardAction = event => {
     const key = replayCameraArrowKeyFrom(event)
     if (!key
         || event.altKey
-        || event.ctrlKey
         || event.metaKey
-        || event.shiftKey
         || hasActiveAppShortcutBlocker()) {
         return null
     }
@@ -736,7 +735,12 @@ const replayCameraKeyboardAction = event => {
     }
 
     const camera = lgs.stores.replay?.camera ?? replaySettings.camera
-    const nextCamera = replayCameraSettingsFromArrowKey(camera, key)
+    const rotationStepDegrees = event.ctrlKey
+        ? REPLAY_CAMERA_KEYBOARD_ROTATION_STEP_DEGREES.control
+        : event.shiftKey
+            ? REPLAY_CAMERA_KEYBOARD_ROTATION_STEP_DEGREES.shift
+            : REPLAY_CAMERA_KEYBOARD_ROTATION_STEP_DEGREES.normal
+    const nextCamera = replayCameraSettingsFromArrowKey(camera, key, rotationStepDegrees)
     if (!nextCamera) {
         return () => {
         }

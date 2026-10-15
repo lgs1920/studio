@@ -386,9 +386,12 @@ extends the displayed source-trace window from 60 to 1,200 metres, and the route
 is recalculated from the journey coordinates. The guide and simulation are
 hidden if either route endpoint is outside the viewport or terrain-occluded.
 
-In Expert preparation, the arrow keys adjust camera angle and pitch by one
-degree: `ArrowLeft`/`ArrowRight` change azimuth, while `ArrowUp`/`ArrowDown`
-change pitch. Holding Shift disables these shortcuts.
+In Expert preparation, the Replay keyboard handler listens globally, so the
+guide does not need focus. `ArrowLeft`/`ArrowRight` and dragging the camera
+icon adjust azimuth in 10-degree steps. Hold Shift for 5-degree steps or Ctrl
+for 1-degree steps; if both modifiers are held, Ctrl takes precedence.
+`ArrowUp`/`ArrowDown` continue to adjust camera pitch by 1 degree per key
+press.
 
 The camera capability flags are normalized with `true` defaults and gate their
 features independently: `canDrift` enables turn drift, `canFixHiddenMarker`

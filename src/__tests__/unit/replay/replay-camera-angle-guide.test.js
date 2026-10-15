@@ -43,16 +43,21 @@ describe('replay camera angle map guide', () => {
 
     it('adjusts camera azimuth and pitch with map arrow keys', () => {
         const camera = {
-            cameraAngle: 179,
+            cameraAngle: 0,
             pitch: -65,
         }
 
-        expect(replayCameraSettingsFromArrowKey(camera, 'ArrowUp')).toMatchObject({cameraAngle: 179, pitch: -64})
-        expect(replayCameraSettingsFromArrowKey(camera, 'ArrowDown')).toMatchObject({cameraAngle: 179, pitch: -66})
-        expect(replayCameraSettingsFromArrowKey(camera, 'ArrowRight').cameraAngle).toBe(180)
-        expect(replayCameraSettingsFromArrowKey(camera, 'ArrowLeft').cameraAngle).toBe(178)
-        expect(replayCameraSettingsFromArrowKey({cameraAngle: -180}, 'ArrowRight').cameraAngle).toBe(-179)
-        expect(replayCameraSettingsFromArrowKey({cameraAngle: 180}, 'ArrowLeft').cameraAngle).toBe(179)
+        expect(replayCameraSettingsFromArrowKey(camera, 'ArrowUp')).toMatchObject({cameraAngle: 0, pitch: -64})
+        expect(replayCameraSettingsFromArrowKey(camera, 'ArrowDown')).toMatchObject({cameraAngle: 0, pitch: -66})
+        expect(replayCameraSettingsFromArrowKey(camera, 'ArrowRight').cameraAngle).toBe(10)
+        expect(replayCameraSettingsFromArrowKey(camera, 'ArrowLeft').cameraAngle).toBe(-10)
+        expect(replayCameraSettingsFromArrowKey(camera, 'ArrowRight', 5).cameraAngle).toBe(5)
+        expect(replayCameraSettingsFromArrowKey(camera, 'ArrowLeft', 5).cameraAngle).toBe(-5)
+        expect(replayCameraSettingsFromArrowKey(camera, 'ArrowRight', 1).cameraAngle).toBe(1)
+        expect(replayCameraSettingsFromArrowKey(camera, 'ArrowLeft', 1).cameraAngle).toBe(-1)
+        expect(replayCameraSettingsFromArrowKey({cameraAngle: 179}, 'ArrowRight').cameraAngle).toBe(-171)
+        expect(replayCameraSettingsFromArrowKey({cameraAngle: -180}, 'ArrowRight', 1).cameraAngle).toBe(-179)
+        expect(replayCameraSettingsFromArrowKey({cameraAngle: 180}, 'ArrowLeft', 1).cameraAngle).toBe(179)
         expect(replayCameraSettingsFromArrowKey({cameraAngle: 180, pitch: -5}, 'ArrowUp').pitch).toBe(-5)
         expect(replayCameraSettingsFromArrowKey({cameraAngle: 180, pitch: -89}, 'ArrowDown').pitch).toBe(-89)
         expect(replayCameraSettingsFromArrowKey({}, 'Escape')).toBeNull()
@@ -196,10 +201,14 @@ describe('replay camera angle map guide', () => {
     it('reprojects and smoothly animates the terrain-clamped route as the Cesium view changes', () => {
         const container = document.createElement('div')
         const canvas = document.createElement('canvas')
+        const cropElement = document.createElement('div')
         canvas.width = 1000
         canvas.height = 800
         container.appendChild(canvas)
+        container.appendChild(cropElement)
         document.body.appendChild(container)
+        container.getBoundingClientRect = () => ({left: 0, top: 0, width: 1000, height: 800})
+        cropElement.getBoundingClientRect = () => ({left: 40, top: 40, width: 920, height: 720, right: 960, bottom: 760})
         const anchor = Cartesian3.fromDegrees(2, 48, 100)
         const projectionMatrix = Matrix4.clone(Matrix4.IDENTITY)
         const anchorCartographic = Cartographic.fromCartesian(anchor)
@@ -298,6 +307,7 @@ describe('replay camera angle map guide', () => {
         const guide = resolveJourneyReplayCameraAngleGuide({camera: {cameraAngle: 180}, journey})
         expect(mountJourneyReplayCameraAngleGuide(viewer, guide, {}, {
             onCameraChange: cameraChangeListener,
+            cropElement,
             screenLocked: true,
         })).toBe(true)
         postRenderListener()
@@ -420,12 +430,15 @@ describe('replay camera angle map guide', () => {
     it('resizes the preparation simulation from its arrow along the source trace', () => {
         const container = document.createElement('div')
         const canvas = document.createElement('canvas')
+        const cropElement = document.createElement('div')
         canvas.width = 1000
         canvas.height = 800
         container.appendChild(canvas)
+        container.appendChild(cropElement)
         document.body.appendChild(container)
         container.getBoundingClientRect = () => ({left: 0, top: 0, width: 1000, height: 800})
         canvas.getBoundingClientRect = () => ({left: 0, top: 0, width: 1000, height: 800})
+        cropElement.getBoundingClientRect = () => ({left: 40, top: 40, width: 920, height: 720, right: 960, bottom: 760})
         Object.defineProperties(container, {
             clientHeight: {configurable: true, value: 800},
             clientWidth: {configurable: true, value: 1000},
@@ -479,6 +492,7 @@ describe('replay camera angle map guide', () => {
         expect(guide.routeMaxWindowMeters).toBe(1200)
         expect(mountJourneyReplayCameraAngleGuide(viewer, guide, {}, {
             onCameraChange,
+            cropElement,
             screenLocked: true,
         })).toBe(true)
 
@@ -661,10 +675,15 @@ describe('replay camera angle map guide', () => {
         const container = document.createElement('div')
         const canvas = document.createElement('canvas')
         const cropElement = document.createElement('div')
+        const widgetContainer = document.createElement('div')
+        widgetContainer.className = 'lgs-widget-container'
         let cropBounds = {left: 300, top: 250, width: 400, height: 300, right: 700, bottom: 550}
         let resizeObserverCallback = null
+        let mutationObserverCallback = null
         const observe = vi.fn()
         const disconnect = vi.fn()
+        const mutationObserve = vi.fn()
+        const mutationDisconnect = vi.fn()
         vi.stubGlobal('ResizeObserver', class {
             constructor(callback) {
                 resizeObserverCallback = callback
@@ -678,8 +697,22 @@ describe('replay camera angle map guide', () => {
                 disconnect()
             }
         })
+        vi.stubGlobal('MutationObserver', class {
+            constructor(callback) {
+                mutationObserverCallback = callback
+            }
+
+            observe(...args) {
+                mutationObserve(...args)
+            }
+
+            disconnect() {
+                mutationDisconnect()
+            }
+        })
         container.appendChild(canvas)
-        container.appendChild(cropElement)
+        widgetContainer.appendChild(cropElement)
+        container.appendChild(widgetContainer)
         document.body.appendChild(container)
         container.getBoundingClientRect = () => ({left: 0, top: 0, width: 1000, height: 800, right: 1000, bottom: 800})
         canvas.getBoundingClientRect = () => ({left: 0, top: 0, width: 1000, height: 800, right: 1000, bottom: 800})
@@ -695,6 +728,7 @@ describe('replay camera angle map guide', () => {
         const terrainHeight = 100
         let projectionScale = 1
         let projectionOffset = {x: 0, y: 0}
+        let rejectConeProjection = false
         const viewer = {
             container,
             camera: {
@@ -710,6 +744,10 @@ describe('replay camera angle map guide', () => {
                 globe: {getHeight: () => terrainHeight},
                 cartesianToCanvasCoordinates: (position, result) => {
                     const cartographic = Cartographic.fromCartesian(position)
+                    if (rejectConeProjection
+                        && Math.abs(cartographic.latitude - (48 * Math.PI / 180)) > 1e-9) {
+                        return undefined
+                    }
                     result.x = 500 + projectionOffset.x + ((cartographic.longitude - (2 * Math.PI / 180))
                         * Math.cos(48 * Math.PI / 180) * 6378137 * projectionScale)
                     result.y = 400 + projectionOffset.y - ((cartographic.latitude - (48 * Math.PI / 180)) * 6378137 * projectionScale)
@@ -733,6 +771,11 @@ describe('replay camera angle map guide', () => {
         const callbacks = {cropElement, onCameraChange, screenLocked: true}
         expect(mountJourneyReplayCameraAngleGuide(viewer, initialGuide, {}, callbacks)).toBe(true)
         expect(observe).toHaveBeenCalledWith(cropElement)
+        expect(observe).toHaveBeenCalledWith(widgetContainer)
+        expect(mutationObserve).toHaveBeenCalledWith(widgetContainer, expect.objectContaining({
+            attributes: true,
+            attributeFilter: ['class', 'style'],
+        }))
 
         /**
          * Assert the cone tip stays in the crop, its camera icon keeps a one-rem margin, and its axis starts at departure.
@@ -836,7 +879,35 @@ describe('replay camera angle map guide', () => {
         window.dispatchEvent(pointerEvent('pointerup', offscreenCameraX + 60, offscreenCameraY + 25))
         expectGuideInsideCrop({expectAxisAtRouteStart: false})
 
+        cropBounds = {left: 510, top: 420, width: 400, height: 300, right: 910, bottom: 720}
+        mutationObserverCallback?.([])
+        expectGuideInsideCrop({expectAxisAtRouteStart: false})
+
+        cropBounds = {left: 475, top: 250, width: 50, height: 300, right: 525, bottom: 550}
+        mutationObserverCallback?.([])
+        expect(overlay.style.visibility).toBe('visible')
+        expect(cameraIcon.style.display).not.toBe('none')
+
+        cropBounds = {left: 300, top: 250, width: 400, height: 300, right: 700, bottom: 550}
+        mutationObserverCallback?.([])
+        expectGuideInsideCrop({expectAxisAtRouteStart: false})
+
+        expect(updateJourneyReplayCameraAngleGuide(viewer, modifiedGuide, {cropElement})).toBe(true)
+        rejectConeProjection = true
+        expect(updateJourneyReplayCameraAngleGuide(viewer, modifiedGuide, {cropElement})).toBe(true)
+        expect(overlay.style.visibility).toBe('visible')
+        rejectConeProjection = false
+        expect(updateJourneyReplayCameraAngleGuide(viewer, modifiedGuide, {cropElement})).toBe(true)
+        expectGuideInsideCrop({expectAxisAtRouteStart: false})
+
+        expect(updateJourneyReplayCameraAngleGuide(viewer, modifiedGuide, {cropElement: null})).toBe(true)
+        expect(overlay.style.visibility).toBe('visible')
+        expect(cameraIcon.style.display).not.toBe('none')
+        expect(updateJourneyReplayCameraAngleGuide(viewer, modifiedGuide, {cropElement})).toBe(true)
+        expectGuideInsideCrop({expectAxisAtRouteStart: false})
+
         removeJourneyReplayCameraAngleGuide(viewer)
+        expect(mutationDisconnect).toHaveBeenCalled()
         expect(mountJourneyReplayCameraAngleGuide(viewer, modifiedGuide, {}, callbacks)).toBe(true)
         expectGuideInsideCrop({expectAxisAtRouteStart: false})
         removeJourneyReplayCameraAngleGuide(viewer)
@@ -1114,7 +1185,7 @@ describe('replay camera angle map guide', () => {
         for (const [type, listener] of Object.entries(cesiumPointerListeners)) {
             container.addEventListener(type, listener)
         }
-        const pointerEvent = (type, x, y, shiftKey = false) => {
+        const pointerEvent = (type, x, y, shiftKey = false, ctrlKey = false) => {
             const event = new Event(type, {bubbles: true, cancelable: true})
             Object.defineProperties(event, {
                 button: {value: 0},
@@ -1122,6 +1193,7 @@ describe('replay camera angle map guide', () => {
                 clientY: {value: y},
                 pointerId: {value: 1},
                 shiftKey: {value: shiftKey},
+                ctrlKey: {value: ctrlKey},
             })
             return event
         }
@@ -1149,7 +1221,7 @@ describe('replay camera angle map guide', () => {
         expect(cameraChangeListener).not.toHaveBeenCalled()
         cameraGuideSvg.dispatchEvent(pointerEvent('pointerup', cameraMarkerX, cameraMarkerY))
         expect(cameraChangeListener).toHaveBeenCalledTimes(1)
-        expect(cameraChangeListener.mock.lastCall[0].cameraAngle).toBeCloseTo(45, 2)
+        expect(cameraChangeListener.mock.lastCall[0].cameraAngle).toBeCloseTo(50, 2)
         expect(cameraChangeListener.mock.lastCall[0].altitude).toBeCloseTo(1200, 8)
         const tipDragTarget = overlay.querySelector('[data-part="cone-tip-drag-target"]')
         const dragTipX = Number(tipDragTarget.getAttribute('cx'))
@@ -1163,10 +1235,10 @@ describe('replay camera angle map guide', () => {
         tipDragTarget.dispatchEvent(pointerEvent('pointerdown', dragTipX, dragTipY))
         cameraGuideSvg.dispatchEvent(pointerEvent('pointermove', tipDragX, tipDragY))
         expect(cameraChangeListener).toHaveBeenCalledTimes(cameraChangeCallsBeforeTipDrag)
-        expect(overlay.querySelector('text[data-part="angle-label"]').textContent).toBe('+135°')
+        expect(overlay.querySelector('text[data-part="angle-label"]').textContent).toBe('+130°')
         cameraGuideSvg.dispatchEvent(pointerEvent('pointerup', tipDragX, tipDragY))
         expect(cameraChangeListener).toHaveBeenCalledTimes(cameraChangeCallsBeforeTipDrag + 1)
-        expect(cameraChangeListener.mock.lastCall[0].cameraAngle).toBeCloseTo(45, 2)
+        expect(cameraChangeListener.mock.lastCall[0].cameraAngle).toBeCloseTo(50, 2)
         expect(cameraChangeListener.mock.lastCall[0].altitude).toBeCloseTo(1500, 8)
         expect(Math.hypot(
             Number(tipDragTarget.getAttribute('cx')) - projectedAnchor.x,
@@ -1197,9 +1269,9 @@ describe('replay camera angle map guide', () => {
         expect(cameraAngleArc.getAttribute('stroke-width')).toBe('5')
         expect(snapMarker.style.display).toBe('block')
         window.dispatchEvent(new KeyboardEvent('keyup', {key: 'Shift', bubbles: true}))
-        expect(cameraAngleArc.getAttribute('stroke-dasharray')).toBe('6 5')
-        expect(cameraAngleArc.getAttribute('stroke-width')).toBe('3')
-        expect(snapMarker.style.display).toBe('none')
+        expect(cameraAngleArc.getAttribute('stroke-dasharray')).toBe('none')
+        expect(cameraAngleArc.getAttribute('stroke-width')).toBe('5')
+        expect(snapMarker.style.display).toBe('block')
         cameraGuideSvg.dispatchEvent(pointerEvent(
             'pointerup',
             projectedAnchor.x + (Math.cos(snapStartAngle + snappedDragAngle) * snapRadius),
@@ -1207,6 +1279,33 @@ describe('replay camera angle map guide', () => {
         ))
         expect(cameraChangeListener).toHaveBeenCalledTimes(cameraChangeCallsBeforeShiftDrag + 1)
         expect(cameraChangeListener.mock.lastCall[0].cameraAngle).toBe(150)
+
+        const cameraChangeCallsBeforeControlDrag = cameraChangeListener.mock.calls.length
+        const controlStartX = Number.parseFloat(cameraMarker.style.left)
+        const controlStartY = Number.parseFloat(cameraMarker.style.top)
+        const controlRadius = Math.hypot(controlStartX - projectedAnchor.x, controlStartY - projectedAnchor.y)
+        const controlStartAngle = Math.atan2(controlStartY - projectedAnchor.y, controlStartX - projectedAnchor.x)
+        cameraMarker.dispatchEvent(pointerEvent('pointerdown', controlStartX, controlStartY, false, true))
+        window.dispatchEvent(new KeyboardEvent('keydown', {key: 'Control', ctrlKey: true, bubbles: true}))
+        cameraGuideSvg.dispatchEvent(pointerEvent(
+            'pointermove',
+            projectedAnchor.x + (Math.cos(controlStartAngle + (1.4 * Math.PI / 180)) * controlRadius),
+            projectedAnchor.y + (Math.sin(controlStartAngle + (1.4 * Math.PI / 180)) * controlRadius),
+            false,
+            true,
+        ))
+        expect(cameraAngleArc.getAttribute('stroke-dasharray')).toBe('none')
+        expect(snapMarker.style.display).toBe('block')
+        window.dispatchEvent(new KeyboardEvent('keyup', {key: 'Control', bubbles: true}))
+        cameraGuideSvg.dispatchEvent(pointerEvent(
+            'pointerup',
+            projectedAnchor.x + (Math.cos(controlStartAngle + (1.4 * Math.PI / 180)) * controlRadius),
+            projectedAnchor.y + (Math.sin(controlStartAngle + (1.4 * Math.PI / 180)) * controlRadius),
+            false,
+            true,
+        ))
+        expect(cameraChangeListener).toHaveBeenCalledTimes(cameraChangeCallsBeforeControlDrag + 1)
+        expect(cameraChangeListener.mock.lastCall[0].cameraAngle).toBe(151)
         expect(cesiumPointerListeners.pointerdown).toHaveBeenCalledOnce()
         expect(cesiumPointerListeners.pointermove).toHaveBeenCalledOnce()
         expect(cesiumPointerListeners.pointerup).toHaveBeenCalledOnce()
@@ -1232,7 +1331,7 @@ describe('replay camera angle map guide', () => {
         const angleLabel = overlay.querySelector('text[data-part="angle-label"]')
         const cameraAxis = overlay.querySelector('[data-part="camera-position-axis"]')
         expect(angleLabel).not.toBeNull()
-        expect(angleLabel.textContent).toBe('+30°')
+        expect(angleLabel.textContent).toBe('+29°')
         expect(angleLabel.getAttribute('fill')).toBe('rgb(0,255,255)')
         expect(angleLabel.getAttribute('opacity')).toBe('1')
         expect(angleLabel.getAttribute('transform')).toMatch(/^rotate\(/)

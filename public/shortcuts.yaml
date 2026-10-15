@@ -332,25 +332,40 @@
 
 ## Camera adjustments
 
-- action: Adjust replay camera heading
-  description: Adjusts only the replay camera heading by 1 degree while replay camera preparation is active.
+- action: Adjust replay camera pitch
+  description: Changes replay camera pitch by 1 degree during Expert Replay preparation. This global shortcut does not require the guide to have focus.
   id: replay-camera-heading-keyboard
   keys:
-    - ArrowUp
-    - ArrowDown
+    - ArrowUp | ArrowDown
   scope: Replay camera setup
 - action: Adjust replay camera angle
-  description: Adjusts the Ahead/Behind replay camera angle by 1 degree while replay camera preparation is active.
+  description: Rotates replay camera azimuth by 10 degrees per key press during Expert Replay preparation. Hold Shift for 5-degree steps or Ctrl for 1-degree steps; Ctrl takes precedence if both are held. This global shortcut does not require the guide to have focus.
   id: replay-camera-angle-keyboard
   keys:
     - ArrowLeft
     - ArrowRight
+    - Shift+ArrowLeft
+    - Shift+ArrowRight
+    - Ctrl+ArrowLeft
+    - Ctrl+ArrowRight
+  scope: Replay camera setup
+- action: Drag to adjust replay camera angle
+  description: Drag the camera icon to rotate replay azimuth in 10-degree steps.
+  id: replay-camera-angle-drag
+  keys:
+    - Left drag
   scope: Replay camera setup
 - action: Snap replay camera angle while dragging
-  description: Hold Shift while dragging the camera guide to snap its angle to 5-degree increments.
+  description: Hold Shift while dragging the camera icon to rotate replay azimuth in 5-degree steps.
   id: replay-camera-angle-snap-shift-drag
   keys:
     - Shift+Left drag
+  scope: Replay camera setup
+- action: Adjust replay camera angle precisely while dragging
+  description: Hold Ctrl while dragging the camera icon to rotate replay azimuth in 1-degree steps. Ctrl takes precedence if Shift is also held.
+  id: replay-camera-angle-snap-ctrl-drag
+  keys:
+    - Ctrl+Left drag
   scope: Replay camera setup
 
 ########################################

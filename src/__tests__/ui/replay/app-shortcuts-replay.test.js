@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -244,10 +244,29 @@ describe('app replay shortcuts', () => {
         await Promise.resolve()
 
         expect(globalThis.lgs.theJourney.replay.expert.camera.pitch).toBe(-49)
-        expect(globalThis.lgs.theJourney.replay.expert.camera.cameraAngle).toBe(11)
+        expect(globalThis.lgs.theJourney.replay.expert.camera.cameraAngle).toBe(20)
+
+        window.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            key: 'ArrowRight',
+            shiftKey: true,
+        }))
+        await Promise.resolve()
+        expect(globalThis.lgs.theJourney.replay.expert.camera.cameraAngle).toBe(25)
+
+        window.dispatchEvent(new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            key: 'ArrowRight',
+            ctrlKey: true,
+        }))
+        await Promise.resolve()
+        expect(globalThis.lgs.theJourney.replay.expert.camera.cameraAngle).toBe(26)
+
         expect(globalThis.lgs.settings.ui.replay.camera).not.toHaveProperty('pitch')
         expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(0)
-        expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenCalledTimes(2)
+        expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenCalledTimes(4)
         expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenLastCalledWith(expect.objectContaining({
             preparation: true,
         }))
