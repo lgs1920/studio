@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,7 +41,6 @@ import {
 } from '@Core/ui/replay/JourneyReplayRuntime'
 import {
     REPLAY_USER_MODE_BASIC,
-    REPLAY_USER_MODE_EXPERT,
     syncJourneyExpertReplayCamera,
     syncJourneySimpleReplayCamera,
 } from '@Core/ui/replay/ReplayUserModes'
@@ -70,7 +69,8 @@ const subscribeToCropElement = onChange => {
     if (typeof document === 'undefined' || typeof globalThis.MutationObserver !== 'function') {
         return subscribeToNoCropElement()
     }
-    const observerRoot = document.getElementById('lgs-tools-ui') ?? document.body
+    // Widgets may mount through a portal outside the tools container.
+    const observerRoot = document.body
     if (!observerRoot) {
         return subscribeToNoCropElement()
     }
@@ -121,7 +121,6 @@ export const JourneyReplayCameraAngleGuide = () => {
     const isPreparingReplay = guideVisible
         && !replaying
         && (video.editing === true || drawers.open === REPLAY_DRAWER)
-        && [REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT].includes(replaySettings.userMode)
     const cropElement = useSyncExternalStore(
         isPreparingReplay ? subscribeToCropElement : subscribeToNoCropElement,
         isPreparingReplay ? getCropElementSnapshot : getNoCropElementSnapshot,

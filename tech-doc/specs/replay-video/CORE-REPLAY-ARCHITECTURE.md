@@ -86,6 +86,12 @@ Constant altitude stores absolute prepared height. Ground
 offset stores that height minus the rendered Replay target height. Neither input
 rewrites the cone angle. Ordinary Cesium navigation and playback/capture
 camera feedback never write Replay settings.
+The preparation cone uses a CSS-pixel layout independent of Cesium zoom. Replay
+height edits determine its requested display length. The final crop constraint
+contains the rounded base, tip, and camera icon together, retaining the projected
+departure anchor where possible and translating the guide when needed to keep
+it usable. Crop replacement and ancestor layout changes refresh that constraint.
+These display adjustments never write camera settings or move the map camera.
 Entering Simple or Expert video preparation stops and awaits an existing normal
 map orbit before framing the canonical journey departure in a static
 North-oriented view with Replay pitch and height. This explicit entry boundary

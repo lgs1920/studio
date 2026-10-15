@@ -2,7 +2,7 @@
 
 Status: current implementation inventory
 
-Date: 2026-10-14
+Date: 2026-10-15
 
 ## Purpose
 
@@ -23,9 +23,16 @@ determines the target-relative range used as zoom. The single `cameraAngle` is
 measured from the route tangent:
 `0°` is along the trace, `+90°` right, `-90°` left, and `±180°` behind. The
 camera always looks back toward the replay anchor. During Simple or Expert
-preparation, the cone and camera icon use the current Cesium projection so the
-cone remains anchored to the route departure as the map moves. The simulated
-departure trace uses sampled terrain height and is reprojected whenever Cesium's
+preparation, the guide anchor and bearing follow the current Cesium projection.
+The cone has a CSS-pixel display length independent of map zoom; only
+explicit Replay height edits change its requested size. A final screen-space
+layout fits its rounded base, tip, and camera icon inside the live crop. It
+preserves the departure anchor when enough room remains and otherwise moves
+the display into the crop instead of collapsing its length. This display
+constraint never changes the Cesium camera or persisted Replay settings.
+Mounting and crop-element replacement resolve the live crop even when React
+has not yet supplied its element reference.
+The simulated departure trace uses sampled terrain height and is reprojected whenever Cesium's
 view or frustum changes, keeping it aligned to terrain. The trace, departure marker, and activity icon ease to their new
 positions over a short animation. Changing the Cesium camera orientation also
 refreshes the guide projection to keep the camera icon aligned to the trace

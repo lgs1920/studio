@@ -8,15 +8,16 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-29
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {act, cleanup, render, waitFor} from '@testing-library/react'
+import {act, cleanup, fireEvent, render, waitFor} from '@testing-library/react'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
+import {useState} from 'react'
 import {VIDEO_CROP_ZONE} from '@Core/constants'
 
 const guideHarness = vi.hoisted(() => ({
@@ -61,6 +62,7 @@ import {JourneyReplayCameraAngleGuide} from '@Components/JourneyReplay/JourneyRe
 afterEach(() => {
     cleanup()
     document.getElementById(VIDEO_CROP_ZONE)?.remove()
+    document.querySelector('[data-test-cone-tools-root]')?.remove()
     vi.clearAllMocks()
     globalThis.lgs = undefined
     globalThis.__ = undefined
@@ -155,12 +157,12 @@ describe('JourneyReplayCameraAngleGuide component', () => {
         expect(guideHarness.mount).toHaveBeenCalledTimes(1)
     })
 
-    it('keeps the camera cone available during preparation when the stored user mode is stale', async () => {
+    it.each(['basic', undefined])('constrains preparation with mode %s and a crop mounted outside the tools root', async userMode => {
         globalThis.lgs = {
             settings: {
                 ui: {
                     replay: proxy({
-                        userMode: 'basic',
+                        userMode,
                         camera: {
                             cameraAngle: 10,
                         },
@@ -184,10 +186,22 @@ describe('JourneyReplayCameraAngleGuide component', () => {
             viewer: {},
         }
 
-        const {container} = render(
+        const toolsRoot = document.createElement('div')
+        toolsRoot.id = 'lgs-tools-ui'
+        toolsRoot.dataset.testConeToolsRoot = 'true'
+        document.body.append(toolsRoot)
+        /** Replace the crop from its own React lifecycle without rerendering the guide sibling. */
+        const Crop = () => {
+            const [version, setVersion] = useState(0)
+            return <>
+                <div id={VIDEO_CROP_ZONE} key={version}/>
+                <button onClick={() => setVersion(current => current + 1)}>Replace crop</button>
+            </>
+        }
+        const {container, getByRole} = render(
             <>
                 <JourneyReplayCameraAngleGuide/>
-                <div id={VIDEO_CROP_ZONE}/>
+                <Crop/>
             </>,
         )
         const cropElement = container.querySelector(`#${VIDEO_CROP_ZONE}`)
@@ -215,6 +229,14 @@ describe('JourneyReplayCameraAngleGuide component', () => {
             globalThis.lgs.stores.replay.videoCropRect = {left: 20, top: 30, width: 640, height: 360}
         })
         await waitFor(() => expect(guideHarness.update).toHaveBeenCalledTimes(initialUpdateCount + 1))
+
+        fireEvent.click(getByRole('button', {name: 'Replace crop'}))
+        const replacementCrop = container.querySelector(`#${VIDEO_CROP_ZONE}`)
+        expect(replacementCrop).not.toBe(cropElement)
+        await waitFor(() => expect(guideHarness.mount).toHaveBeenLastCalledWith(
+            expect.anything(), expect.anything(), {},
+            expect.objectContaining({cropElement: replacementCrop, screenLocked: true}),
+        ))
     })
 
     it('shows the cone during Simple Replay using its effective trace-relative camera', async () => {

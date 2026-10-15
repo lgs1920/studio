@@ -21,6 +21,7 @@
 import {
     faVideo,
 } from '@fortawesome/pro-solid-svg-icons'
+import {VIDEO_CROP_ZONE} from '@Core/constants'
 import {
     BoundingSphere,
     Cartesian2,
@@ -38,6 +39,7 @@ import {
     normalizeJourneyReplayCamera,
     replayCameraSettingsFromArrowKey,
 } from './JourneyReplayProgressionStyle'
+import {resolveReplayPreparationConeLayout} from './ReplayPreparationConeLayout'
 
 export {replayCameraSettingsFromArrowKey}
 
@@ -47,6 +49,7 @@ export {replayCameraSettingsFromArrowKey}
 export const REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT = 'lgs:replay:camera-angle-guide-change'
 
 const CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS = 1200
+const CAMERA_ANGLE_GUIDE_PREPARATION_LENGTH_PIXELS = 160
 const CAMERA_ANGLE_GUIDE_CONE_BASE_HALF_WIDTH_METERS = 240
 const CAMERA_ANGLE_GUIDE_DEPARTURE_DISTANCE_METERS = 300
 const CAMERA_ANGLE_GUIDE_ACTIVITY_DISTANCE_METERS = 200
@@ -993,6 +996,11 @@ const projectGuidePosition = (viewer, overlay, position, projectionFrame = null)
     projectionFrame,
 )?.dom ?? null
 
+/** Resolve the live crop even before React supplies it or after a DOM replacement. */
+const mountedCropElementFrom = (viewer, cropElement) => cropElement?.isConnected
+    ? cropElement
+    : viewer?.container?.ownerDocument?.getElementById(VIDEO_CROP_ZONE) ?? null
+
 /**
  * Resolve the visible crop bounds in the guide overlay's local coordinates.
  *
@@ -1002,10 +1010,11 @@ const projectGuidePosition = (viewer, overlay, position, projectionFrame = null)
  * @returns {{left: number, right: number, top: number, bottom: number}|null} Crop bounds, or null when unavailable.
  */
 const cropBoundsFrom = (viewer, overlay, cropElement) => {
-    if (!cropElement?.isConnected || typeof cropElement.getBoundingClientRect !== 'function') {
+    const mountedCrop = mountedCropElementFrom(viewer, cropElement)
+    if (!mountedCrop || typeof mountedCrop.getBoundingClientRect !== 'function') {
         return null
     }
-    const cropRect = cropElement.getBoundingClientRect()
+    const cropRect = mountedCrop.getBoundingClientRect()
     const overlayRect = overlay.getBoundingClientRect?.() ?? {}
     const containerRect = viewer?.container?.getBoundingClientRect?.() ?? {}
     const referenceRect = Number(overlayRect.width) > 0 && Number(overlayRect.height) > 0
@@ -1052,7 +1061,7 @@ const cameraIconCropBoundsFrom = (viewer, overlay, record) => {
     }
 
     const inset = Math.min(
-        cropTipMarginPixelsFrom() + (CAMERA_ANGLE_GUIDE_ICON_SIZE / 2),
+        cropTipMarginPixelsFrom() + (CAMERA_ANGLE_GUIDE_ICON_SIZE / Math.SQRT2),
         (cropBounds.right - cropBounds.left) / 2,
         (cropBounds.bottom - cropBounds.top) / 2,
     )
@@ -1063,227 +1072,6 @@ const cameraIconCropBoundsFrom = (viewer, overlay, record) => {
         top: cropBounds.top + inset,
         bottom: cropBounds.bottom - inset,
     }
-}
-
-/**
- * Check whether a projected camera icon center lies inside the reserved crop bounds.
- *
- * @param {{x: number, y: number}|null} point - Projected camera icon center.
- * @param {{left: number, right: number, top: number, bottom: number}|null} bounds - Reserved crop bounds.
- * @returns {boolean} Whether the icon center fits.
- */
-const cameraIconPointFitsBounds = (point, bounds) => Boolean(point && bounds
-    && point.x >= bounds.left && point.x <= bounds.right
-    && point.y >= bounds.top && point.y <= bounds.bottom)
-
-/**
- * Check the visible outer cone polygon after its screen-space base widening.
- *
- * @param {Object} viewer - Cesium viewer.
- * @param {HTMLElement} overlay - DOM guide overlay.
- * @param {Object} record - Mounted guide record.
- * @param {number} coneHeading - Cone bearing in radians.
- * @param {number} coneLength - Displayed cone length in metres.
- * @param {number} iconGap - Gap between cone tip and camera icon in metres.
- * @param {Object} bounds - Crop bounds reserved for the icon and cone.
- * @returns {boolean} Whether the cone outline stays within the crop.
- */
-const coneOutlineFitsCropFrom = (viewer, overlay, record, coneHeading, coneLength, iconGap, bounds) => {
-    const geometry = coneGeometryFrom(
-        viewer,
-        record.anchor,
-        record.transform,
-        record.guide,
-        coneHeading,
-        coneLength,
-        iconGap,
-    )
-    const projected = geometry.outer.map(position => projectGuidePosition(
-        viewer,
-        overlay,
-        position,
-        record.screenProjectionFrame,
-    ))
-    const center = projectGuidePosition(viewer, overlay, geometry.outerBaseCenter, record.screenProjectionFrame)
-    if (projected.some(point => !point) || !center) {
-        return false
-    }
-
-    const normalizedAngle = Math.min(1, Math.abs(record.guide.angleDegrees ?? 0) / 140)
-    const baseWidthScale = 1.2 + (1.8 * (normalizedAngle ** 2))
-    const [left, right] = widenProjectedBase(
-        recenterProjectedBase(projected[0], projected[1], center),
-        center,
-        baseWidthScale,
-    )
-    const outline = [left, right, projected[2]]
-    return outline.every(point => point.x >= bounds.left && point.x <= bounds.right
-        && point.y >= bounds.top && point.y <= bounds.bottom)
-}
-
-/**
- * Resolve the smallest translation that brings a projected cone into its inset crop.
- *
- * @param {Array<{x: number, y: number}>} points - Cone outline and icon center.
- * @param {Object|null} bounds - Crop bounds including padding.
- * @returns {{x: number, y: number}} Screen-space translation.
- */
-const coneCropOffsetFrom = (points, bounds) => {
-    if (!bounds || points.some(point => !point)) {
-        return {x: 0, y: 0}
-    }
-    const minX = Math.min(...points.map(point => point.x))
-    const maxX = Math.max(...points.map(point => point.x))
-    const minY = Math.min(...points.map(point => point.y))
-    const maxY = Math.max(...points.map(point => point.y))
-    const fitAxis = (minimum, maximum, lower, upper) => {
-        if (minimum < lower && maximum > upper) {
-            return ((lower + upper) - (minimum + maximum)) / 2
-        }
-        if (minimum < lower) {
-            return lower - minimum
-        }
-        if (maximum > upper) {
-            return upper - maximum
-        }
-        return 0
-    }
-    return {
-        x: fitAxis(minX, maxX, bounds.left, bounds.right),
-        y: fitAxis(minY, maxY, bounds.top, bounds.bottom),
-    }
-}
-
-/**
- * Translate a projected point by a crop correction.
- *
- * @param {{x: number, y: number}} point - Projected point.
- * @param {{x: number, y: number}} offset - Crop correction.
- * @returns {{x: number, y: number}} Corrected point.
- */
-const offsetGuidePoint = (point, offset) => ({x: point.x + offset.x, y: point.y + offset.y})
-
-/**
- * Constrain the preparation icon gap when the fixed gap alone would leave the crop.
- *
- * @param {Object} viewer - Cesium viewer.
- * @param {HTMLElement} overlay - DOM guide overlay.
- * @param {Object} record - Mounted guide record.
- * @param {number} coneHeading - Cone bearing in radians.
- * @param {number} requestedGap - Desired icon gap in metres.
- * @returns {number} Crop-constrained icon gap in metres.
- */
-const iconGapWithinCropFrom = (viewer, overlay, record, coneHeading, requestedGap) => {
-    const bounds = cameraIconCropBoundsFrom(viewer, overlay, record)
-    if (!record.screenLocked || !bounds || !Number.isFinite(requestedGap) || requestedGap <= 0) {
-        return requestedGap
-    }
-    const iconIsInside = gap => {
-        const point = projectGuidePosition(
-            viewer,
-            overlay,
-            positionAtHeading(record.transform, coneHeading, gap),
-            record.screenProjectionFrame,
-        )
-        return cameraIconPointFitsBounds(point, bounds)
-    }
-    if (iconIsInside(requestedGap) || !iconIsInside(0)) {
-        return requestedGap
-    }
-
-    let minimumGap = 0
-    let maximumGap = requestedGap
-    for (let iteration = 0; iteration < 24; iteration += 1) {
-        const candidateGap = (minimumGap + maximumGap) / 2
-        if (iconIsInside(candidateGap)) {
-            minimumGap = candidateGap
-        }
-        else {
-            maximumGap = candidateGap
-        }
-    }
-    return minimumGap
-}
-
-/**
- * Keep the displayed camera icon inside the video crop while preserving camera settings.
- *
- * @param {Object} viewer - Cesium viewer.
- * @param {HTMLElement} overlay - DOM guide overlay.
- * @param {Object} record - Mounted guide record.
- * @param {number} coneHeading - Cone bearing in radians.
- * @param {number} requestedLength - Display length after altitude scaling.
- * @param {number|null} constrainedIconGap - Crop-constrained icon gap in metres.
- * @returns {number} Crop-constrained display length in metres.
- */
-const coneLengthWithinCropFrom = (viewer, overlay, record, coneHeading, requestedLength, constrainedIconGap = null) => {
-    const bounds = cameraIconCropBoundsFrom(viewer, overlay, record)
-    if (!record.screenLocked || !bounds || !Number.isFinite(requestedLength) || requestedLength <= 0) {
-        return requestedLength
-    }
-
-    const requestedIconGap = Number.isFinite(constrainedIconGap)
-        ? constrainedIconGap
-        : Number.isFinite(record.preparationIconGap)
-            ? record.preparationIconGap
-            : iconGapFrom(viewer, record.anchor)
-    const endpointExtension = requestedIconGap
-    const iconAtLength = length => projectGuidePosition(
-        viewer,
-        overlay,
-        positionAtHeading(record.transform, coneHeading, length + endpointExtension),
-        record.screenProjectionFrame,
-    )
-    const coneFits = length => cameraIconPointFitsBounds(iconAtLength(length), bounds)
-        && coneOutlineFitsCropFrom(viewer, overlay, record, coneHeading, length, endpointExtension, bounds)
-    if (coneFits(requestedLength)) {
-        return requestedLength
-    }
-
-    let minimumLength = 0
-    let maximumLength = requestedLength
-    for (let iteration = 0; iteration < 24; iteration += 1) {
-        const candidateLength = (minimumLength + maximumLength) / 2
-        if (coneFits(candidateLength)) {
-            minimumLength = candidateLength
-        }
-        else {
-            maximumLength = candidateLength
-        }
-    }
-    return Math.max(0.001, minimumLength)
-}
-
-/**
- * Check whether the camera icon can remain inside the inset crop at a proposed pose.
- *
- * @param {Object} viewer - Cesium viewer.
- * @param {Object} record - Mounted guide record.
- * @param {number} coneHeading - Proposed cone bearing in radians.
- * @param {number} requestedLength - Proposed displayed cone length in metres.
- * @param {number|null} constrainedIconGap - Crop-constrained icon gap in metres.
- * @returns {boolean} Whether the camera icon fits inside the inset crop.
- */
-const cameraIconFitsCropFrom = (viewer, record, coneHeading, requestedLength, constrainedIconGap = null) => {
-    const bounds = cameraIconCropBoundsFrom(viewer, record.overlay, record)
-    if (!record.screenLocked || !bounds || !Number.isFinite(requestedLength) || requestedLength <= 0) {
-        return true
-    }
-
-    const iconGap = Number.isFinite(constrainedIconGap)
-        ? constrainedIconGap
-        : Number.isFinite(record.preparationIconGap)
-            ? record.preparationIconGap
-            : iconGapFrom(viewer, record.anchor)
-    const iconPosition = projectGuidePosition(
-        viewer,
-        record.overlay,
-        positionAtHeading(record.transform, coneHeading, requestedLength + iconGap),
-        record.screenProjectionFrame,
-    )
-    // The rendered guide is translated into the crop after projection, including
-    // during the first camera-icon drag from an off-crop starting view.
-    return Boolean(iconPosition)
 }
 
 /**
@@ -2342,31 +2130,14 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
             Math.min(CAMERA_ANGLE_GUIDE_MAX_CONE_SCALE, record.guide.cameraAltitude / CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS),
         )
         : 1
-    const preparationIconGap = record.screenLocked
-        ? iconGapWithinCropFrom(
-            viewer,
-            overlay,
-            record,
-            coneHeading,
-            record.preparationIconGap,
-        )
-        : null
-    const coneLength = coneLengthWithinCropFrom(
-        viewer,
-        overlay,
-        record,
-        coneHeading,
-        record.coneLength * coneScale,
-        preparationIconGap,
-    )
     const geometry = coneGeometryFrom(
         viewer,
         record.anchor,
         record.transform,
         record.guide,
         coneHeading,
-        coneLength,
-        preparationIconGap,
+        record.coneLength * coneScale,
+        record.screenLocked ? record.preparationIconGap : null,
     )
     const routeProjectionState = updateRouteGuideOverlay(viewer, record, width, height, geometry.videoIconPosition)
     const outer = geometry.outer.map(position => projectGuidePosition(viewer, overlay, position, record.screenProjectionFrame))
@@ -2375,46 +2146,65 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     const innerBaseCenter = projectGuidePosition(viewer, overlay, geometry.innerBaseCenter, record.screenProjectionFrame)
     const videoIcon = projectGuidePosition(viewer, overlay, geometry.videoIconPosition, record.screenProjectionFrame)
 
-    if (outer.some(point => !point) || inner.some(point => !point)) {
+    if (!record.screenLocked && (outer.some(point => !point) || inner.some(point => !point)
+        || !outerBaseCenter || !innerBaseCenter)) {
         // Keep the last valid cone visible while Cesium temporarily has no
         // screen projection (camera flight, resize, or tile update).
         overlay.style.visibility = 'visible'
         return 'unprojected'
     }
 
-    const rotationCenter = outerBaseCenter
-    const [outerLeft, outerRight, tip] = outer
-    const [innerOuterLeft, innerOuterRight, innerTip] = inner
     const normalizedCameraAngle = Math.min(1, Math.abs(record.guide.angleDegrees ?? 0) / 140)
     const baseWidthScale = 1.2 + (1.8 * (normalizedCameraAngle ** 2))
-    const [left, right] = widenProjectedBase(
-        recenterProjectedBase(outerLeft, outerRight, outerBaseCenter),
-        outerBaseCenter,
-        baseWidthScale,
-    )
-    const [innerLeft, innerRight] = widenProjectedBase(
-        recenterProjectedBase(innerOuterLeft, innerOuterRight, innerBaseCenter),
-        innerBaseCenter,
-        baseWidthScale,
-    )
-    const cropOffset = record.screenLocked
-        ? coneCropOffsetFrom(
-            [left, right, tip, videoIcon],
-            cameraIconCropBounds,
+    let displayGeometry
+    if (record.screenLocked) {
+        // Project a short local bearing only. World-space cone length must not
+        // determine its visual size or cross the camera's near plane at close zoom.
+        const probeLength = Math.max(0.01, Math.min(100, metersPerCssPixelFrom(viewer, record.anchor) ?? 1))
+        const directionPoint = projectGuidePosition(
+            viewer,
+            overlay,
+            positionAtHeading(record.transform, coneHeading, probeLength),
+            record.screenProjectionFrame,
         )
-        : {x: 0, y: 0}
-    const displayedLeft = offsetGuidePoint(left, cropOffset)
-    const displayedRight = offsetGuidePoint(right, cropOffset)
-    const displayedTip = offsetGuidePoint(tip, cropOffset)
-    const displayedInnerLeft = offsetGuidePoint(innerLeft, cropOffset)
-    const displayedInnerRight = offsetGuidePoint(innerRight, cropOffset)
-    const displayedInnerTip = offsetGuidePoint(innerTip, cropOffset)
-    const displayedRotationCenter = offsetGuidePoint(rotationCenter, cropOffset)
-    const displayedVideoIcon = videoIcon ? offsetGuidePoint(videoIcon, cropOffset) : null
+        if (outerBaseCenter && directionPoint) {
+            const direction = {x: directionPoint.x - outerBaseCenter.x, y: directionPoint.y - outerBaseCenter.y}
+            if (Math.hypot(direction.x, direction.y) > 1e-6) {
+                record.preparationScreenDirection = direction
+            }
+        }
+        const screenHeading = coneHeading - (Number(viewer.camera?.heading) || 0)
+        displayGeometry = resolveReplayPreparationConeLayout({
+            anchor: routeProjectionState.sections[0]?.[0] ?? outerBaseCenter ?? record.projectedAnchor
+                ?? {x: width / 2, y: height / 2},
+            direction: record.preparationScreenDirection ?? {x: Math.sin(screenHeading), y: -Math.cos(screenHeading)},
+            length: CAMERA_ANGLE_GUIDE_PREPARATION_LENGTH_PIXELS * coneScale,
+            baseWidthScale,
+            iconGap: CAMERA_ANGLE_GUIDE_ICON_GAP_PIXELS,
+            bounds: cameraIconCropBounds,
+        })
+    }
+    else {
+        const [left, right] = widenProjectedBase(
+            recenterProjectedBase(outer[0], outer[1], outerBaseCenter), outerBaseCenter, baseWidthScale,
+        )
+        const [innerLeft, innerRight] = widenProjectedBase(
+            recenterProjectedBase(inner[0], inner[1], innerBaseCenter), innerBaseCenter, baseWidthScale,
+        )
+        displayGeometry = {
+            left, right, tip: outer[2], innerLeft, innerRight, innerTip: inner[2],
+            rotationCenter: outerBaseCenter, videoIcon,
+        }
+    }
+    const {
+        left: displayedLeft, right: displayedRight, tip: displayedTip,
+        innerLeft: displayedInnerLeft, innerRight: displayedInnerRight, innerTip: displayedInnerTip,
+        rotationCenter: displayedRotationCenter, videoIcon: displayedVideoIcon,
+    } = displayGeometry
     const projectedRoute = routeProjectionState.sections[0]
     elements.angleLabel.textContent = angleLabelFrom(record.guide.angleDegrees)
-    const requestedArcRadius = Math.hypot(outerRight.x - outerLeft.x, outerRight.y - outerLeft.y)
-        * CAMERA_ANGLE_GUIDE_ANGLE_ARC_BASE_RATIO
+    const requestedArcRadius = Math.hypot(displayedRight.x - displayedLeft.x, displayedRight.y - displayedLeft.y)
+        * CAMERA_ANGLE_GUIDE_ANGLE_ARC_BASE_RATIO / baseWidthScale
     const angleArcClipPath = sideInsetClipPathFrom(
         [displayedLeft, displayedTip, displayedRight],
         CAMERA_ANGLE_GUIDE_ANGLE_ARC_EDGE_CLEARANCE_PIXELS,
@@ -2507,7 +2297,7 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         viewer,
         overlay,
         elements.videoIcon,
-        geometry.videoIconPosition,
+        record.screenLocked ? record.anchor : geometry.videoIconPosition,
         displayedVideoIcon,
         record.guide.cameraHeading ?? coneHeading + Math.PI,
         record.screenProjectionFrame,
@@ -3308,27 +3098,6 @@ const bindGuideDragInteractions = (viewer, record) => {
             )
             : dragState.startAltitude
         const offsetRadians = cameraAngle * Math.PI / 180
-        const coneScale = Math.max(
-            CAMERA_ANGLE_GUIDE_MIN_CONE_SCALE,
-            Math.min(CAMERA_ANGLE_GUIDE_MAX_CONE_SCALE, altitude / CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS),
-        )
-        const proposedConeHeading = record.guide.baseHeading + offsetRadians
-        const constrainedIconGap = iconGapWithinCropFrom(
-            viewer,
-            record.overlay,
-            record,
-            proposedConeHeading,
-            record.preparationIconGap,
-        )
-        if (!cameraIconFitsCropFrom(
-            viewer,
-            record,
-            proposedConeHeading,
-            record.coneLength * coneScale,
-            constrainedIconGap,
-        )) {
-            return
-        }
         record.guide = {
             ...record.guide,
             angleDegrees: cameraAngle,
@@ -3463,23 +3232,19 @@ const observeGuideCropElement = (viewer, record, cropElement) => {
         viewer.scene?.requestRender?.()
     }
 
-    const resizeTargets = new Set([
-        cropElement,
-        cropElement.closest?.('.lgs-widget-container'),
-        viewer?.container,
-    ].filter(element => element && element.isConnected !== false))
+    const layoutTargets = new Set([viewer?.container].filter(Boolean))
+    // Crop translation can live on any widget ancestor, not only its closest
+    // host. Observe those attributes without watching the guide's own writes.
+    for (let element = cropElement; element; element = element.parentElement) {
+        layoutTargets.add(element)
+    }
     if (typeof globalThis.ResizeObserver === 'function') {
         record.cropResizeObserver = new globalThis.ResizeObserver(refreshGuideAfterCropLayoutChange)
-        resizeTargets.forEach(element => record.cropResizeObserver.observe(element))
+        layoutTargets.forEach(element => record.cropResizeObserver.observe(element))
     }
 
     if (typeof globalThis.MutationObserver === 'function') {
         record.cropLayoutObserver = new globalThis.MutationObserver(refreshGuideAfterCropLayoutChange)
-        const layoutTargets = new Set([
-            cropElement,
-            cropElement.closest?.('.lgs-widget-container'),
-            viewer?.container,
-        ].filter(element => element && element.isConnected !== false))
         layoutTargets.forEach(element => record.cropLayoutObserver.observe(element, {
             attributes: true,
             attributeFilter: ['class', 'style'],
@@ -3555,7 +3320,7 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}, c
 
     const record = Object.assign({}, worldGeometry, overlayParts, {
         guide,
-        cropElement: callbacks.cropElement ?? null,
+        cropElement: mountedCropElementFrom(viewer, callbacks.cropElement),
         onCameraChange: callbacks.onCameraChange,
         screenLocked: callbacks.screenLocked === true,
         screenProjectionFrame: callbacks.screenLocked === true ? cameraProjectionFrameFrom(viewer) : null,
@@ -3648,9 +3413,11 @@ export const updateJourneyReplayCameraAngleGuide = (viewer, guide, callbacks = {
     if (typeof callbacks.onCameraChange === 'function') {
         record.onCameraChange = callbacks.onCameraChange
     }
-    if (Object.prototype.hasOwnProperty.call(callbacks, 'cropElement')
-        && record.cropElement !== (callbacks.cropElement ?? null)) {
-        record.cropElement = callbacks.cropElement ?? null
+    const cropElement = mountedCropElementFrom(viewer,
+        Object.prototype.hasOwnProperty.call(callbacks, 'cropElement') ? callbacks.cropElement : record.cropElement,
+    )
+    if (record.cropElement !== cropElement) {
+        record.cropElement = cropElement
         observeGuideCropElement(viewer, record, record.cropElement)
     }
 
