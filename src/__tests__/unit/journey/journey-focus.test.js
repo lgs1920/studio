@@ -8,15 +8,17 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-24
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { Journey } from '@Core/Journey'
+import { NO_FOCUS } from '@Core/constants'
 import { focusJourneyAfterPlayback } from '@Core/ui/replay/JourneyReplayClipController'
 import { JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE } from '@Core/ui/replay/JourneyReplayInternal'
+import { TrackUtils } from '@Utils/cesium/TrackUtils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@Utils/UIToast', () => ({
@@ -54,6 +56,36 @@ describe('Journey focus lifecycle', () => {
             resetCamera: true,
             rotate: false,
         }))
+    })
+
+    it('hides only other journey traces without changing their visibility settings', async () => {
+        const journey = new Journey()
+        journey.slug = 'journey-other'
+        journey.visible = true
+        journey.tracks = new Map()
+        const track = {slug: 'track#journey#other#main', visible: true, draw: vi.fn()}
+        journey.tracks.set(track.slug, track)
+        journey.updateVisibility = vi.fn()
+        const previousLgs = globalThis.lgs
+        globalThis.lgs = {viewer: {dataSources: {}}}
+        const updateTrackVisibility = vi.spyOn(TrackUtils, 'updateTrackVisibility').mockImplementation(() => {})
+
+        try {
+            await journey.draw({
+                mode: NO_FOCUS,
+                hideOtherJourneys: true,
+                currentJourneySlug: 'journey-current',
+            })
+
+            expect(journey.visible).toBe(true)
+            expect(track.visible).toBe(true)
+            expect(journey.updateVisibility).toHaveBeenCalledWith(true)
+            expect(updateTrackVisibility).toHaveBeenCalledWith(journey, track, false)
+        }
+        finally {
+            updateTrackVisibility.mockRestore()
+            globalThis.lgs = previousLgs
+        }
     })
 
     it('finishes replay restoration when the journey focus callback and return value are both absent', async () => {

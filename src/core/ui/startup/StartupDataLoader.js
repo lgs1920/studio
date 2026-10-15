@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -378,10 +378,22 @@ export class StartupDataLoader {
             TrackUtils.setProfileVisibility(journey)
         }
 
-        const isCurrentJourney = current || journey.slug === lgs.theJourney?.slug
         const journeyVisible = journey.visible !== false
-                               && (!getGlobalHideOtherJourneys() || isCurrentJourney)
         journey.updateVisibility(journeyVisible)
+        if (journeyVisible && getGlobalHideOtherJourneys() && journey.slug !== lgs.theJourney?.slug) {
+            journey.tracks.forEach(track => {
+                if (!track?.slug) {
+                    return
+                }
+
+                try {
+                    TrackUtils.updateTrackVisibility(journey, track, false)
+                }
+                catch (error) {
+                    console.error(`[Journey visibility] Failed to hide trace ${track.slug}.`, error)
+                }
+            })
+        }
         this.#loadedJourneySlugs.add(journey.slug)
         await yieldStartupTask()
         return journey

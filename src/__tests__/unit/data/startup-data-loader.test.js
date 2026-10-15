@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,8 +17,9 @@
 import {describe, expect, it, vi} from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-    draw:               vi.fn(),
-    setProfileVisibility: vi.fn(),
+        draw:               vi.fn(),
+        setProfileVisibility: vi.fn(),
+        updateTrackVisibility: vi.fn(),
 }))
 
 vi.mock('cesium', async importOriginal => {
@@ -69,10 +70,11 @@ vi.mock('@Core/Track', () => ({
 
 vi.mock('@Utils/cesium/TrackUtils', () => ({
     TrackUtils: {
-        draw:                 mocks.draw,
-        readCurrentFromDB:    vi.fn(),
-        readRemainingFromDB:  vi.fn(),
-        setProfileVisibility: mocks.setProfileVisibility,
+        draw:                  mocks.draw,
+        readCurrentFromDB:     vi.fn(),
+        readRemainingFromDB:   vi.fn(),
+        setProfileVisibility:  mocks.setProfileVisibility,
+        updateTrackVisibility: mocks.updateTrackVisibility,
     },
 }))
 
@@ -142,6 +144,12 @@ describe('startup data loader', () => {
                 forcedToHide: true,
                 renderMode:   'primitive',
             })
+            expect(globalThis.lgs.journeys.get('journey-a').updateVisibility).toHaveBeenCalledWith(true)
+            expect(mocks.updateTrackVisibility).toHaveBeenCalledWith(
+                globalThis.lgs.journeys.get('journey-a'),
+                globalThis.lgs.journeys.get('journey-a').tracks.get('track-a'),
+                false,
+            )
             expect(postTask).toHaveBeenCalledWith(expect.any(Function), {priority: 'background'})
         }
         finally {
@@ -151,6 +159,7 @@ describe('startup data loader', () => {
             vi.unstubAllGlobals()
             mocks.draw.mockReset()
             mocks.setProfileVisibility.mockReset()
+            mocks.updateTrackVisibility.mockReset()
         }
     })
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,33 +29,67 @@ import {
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {currentReplayJourney} from './ReplayUserModeConstants'
 
-export const hideOtherJourneysVisibility = (mode) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
-        const currentJourneySlug = currentReplayJourney()?.slug ?? null
-        const journeys = globalThis.lgs?.journeys
-        if (!journeys?.values) {
-            return
-        }
-
-        for (const journey of journeys.values()) {
-            if (!journey || journey.slug === currentJourneySlug) {
-                continue
-            }
-
-            if (!state.hiddenJourneyVisibility.has(journey.slug)) {
-                state.hiddenJourneyVisibility.set(journey.slug, journey.visible !== false)
-            }
-
-            // Keep each original state so it can be restored if the hide
-            // preference is later disabled.
-            journey.visible = false
-            journey.updateVisibility?.(false)
-        }
-
-        globalThis.lgs?.scene?.requestRender?.()
+/**
+ * Apply a temporary Replay filter to a journey's track render sources without
+ * changing journey or track visibility settings.
+ *
+ * @param {object} journey - Journey whose track sources are updated.
+ * @param {boolean} visible - Whether persisted-visible tracks should render.
+ * @returns {void} No return value.
+ */
+const setJourneyReplayTraceVisibility = (journey, visible) => {
+    const tracks = journey?.tracks
+    if (typeof tracks?.values !== 'function' || !globalThis.lgs?.viewer?.dataSources) {
+        return
     }
+
+    for (const track of tracks.values()) {
+        if (!track?.slug) {
+            continue
+        }
+
+        try {
+            TrackUtils.updateTrackVisibility(
+                journey,
+                track,
+                visible && journey.visible !== false && track.visible !== false,
+            )
+        }
+        catch (error) {
+            console.error(`[Replay visibility] Failed to update trace ${track.slug}.`, error)
+        }
+    }
+}
+
+/**
+ * Hide only other journeys' rendered traces during Replay.
+ *
+ * @param {object} mode - Replay session mode.
+ * @returns {void} No return value.
+ */
+export const hideOtherJourneysVisibility = (mode) => {
+    const state = mode?.[JOURNEY_REPLAY_INTERNAL_STATE]
+    const journeys = globalThis.lgs?.journeys
+    if (!state?.hiddenJourneyVisibility || typeof journeys?.values !== 'function') {
+        return
+    }
+
+    const currentJourneySlug = currentReplayJourney()?.slug ?? null
+    if (!currentJourneySlug) {
+        return
+    }
+
+    for (const journey of journeys.values()) {
+        if (!journey?.slug || journey.slug === currentJourneySlug) {
+            continue
+        }
+
+        state.hiddenJourneyVisibility.set(journey.slug, true)
+        setJourneyReplayTraceVisibility(journey, false)
+    }
+
+    globalThis.lgs?.scene?.requestRender?.()
+}
 
 export const hideCurrentJourneyVisibility = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -464,64 +498,74 @@ export const setJourneyReplayOrbitAllowed = (mode, allowed = true) => {
  * @returns {void}
  */
 export const restoreOtherJourneysVisibility = (mode, {respectReplaySetting = true} = {}) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
-        if (respectReplaySetting && getJourneyReplayHideOtherJourneys()) {
-            call.hideOtherJourneysVisibility()
-            return
-        }
-
-        if (state.hiddenJourneyVisibility.size === 0) {
-            return
-        }
-
-        const currentJourneySlug = currentReplayJourney()?.slug ?? null
-        for (const [slug, visible] of state.hiddenJourneyVisibility.entries()) {
-            if (slug === currentJourneySlug) {
-                state.hiddenJourneyVisibility.delete(slug)
-                continue
-            }
-
-            const journey = globalThis.lgs?.journeys?.get?.(slug)
-            if (!journey) {
-                continue
-            }
-
-            journey.visible = visible
-            journey.updateVisibility?.(visible)
-        }
-
-        state.hiddenJourneyVisibility.clear()
-        globalThis.lgs?.scene?.requestRender?.()
+    const state = mode?.[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode?.[JOURNEY_REPLAY_INTERNAL_CALL]
+    if (!state?.hiddenJourneyVisibility) {
+        return
     }
 
+    if (respectReplaySetting && getJourneyReplayHideOtherJourneys()) {
+        call?.hideOtherJourneysVisibility?.()
+        return
+    }
+
+    if (state.hiddenJourneyVisibility.size === 0) {
+        return
+    }
+
+    const currentJourneySlug = currentReplayJourney()?.slug ?? null
+    for (const slug of state.hiddenJourneyVisibility.keys()) {
+        if (slug === currentJourneySlug) {
+            state.hiddenJourneyVisibility.delete(slug)
+            continue
+        }
+
+        const journey = globalThis.lgs?.journeys?.get?.(slug)
+        if (!journey) {
+            continue
+        }
+
+        setJourneyReplayTraceVisibility(journey, true)
+    }
+
+    state.hiddenJourneyVisibility.clear()
+    globalThis.lgs?.scene?.requestRender?.()
+}
+
+/**
+ * Set Replay's other-journey trace filter and apply it to an active session.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {boolean} enabled - Whether other journey traces should be hidden.
+ * @returns {boolean} The normalized setting value.
+ */
 export const setHideOtherJourneys = (mode, enabled = true) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const state = mode?.[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode?.[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const nextEnabled = enabled === true
-        const replaySettings = globalThis.lgs?.settings?.ui?.replay
-        if (replaySettings) {
-            replaySettings.hideOtherJourneys = nextEnabled
-        }
-
-        const store = replayStore()
-        if (store) {
-            store.hideOtherJourneys = nextEnabled
-        }
-
-        if (nextEnabled) {
-            if (state.controller.running || state.controller.playing || state.controller.paused) {
-                call.hideOtherJourneysVisibility()
-            }
-        }
-        else {
-            call.restoreOtherJourneysVisibility()
-        }
-
-        return nextEnabled
+    const nextEnabled = enabled === true
+    const replaySettings = globalThis.lgs?.settings?.ui?.replay
+    if (replaySettings) {
+        replaySettings.hideOtherJourneys = nextEnabled
     }
+
+    const store = replayStore()
+    if (store) {
+        store.hideOtherJourneys = nextEnabled
+    }
+
+    const controller = state?.controller
+    if (nextEnabled) {
+        if (controller?.running || controller?.playing || controller?.paused) {
+            call?.hideOtherJourneysVisibility?.()
+        }
+    }
+    else {
+        call?.restoreOtherJourneysVisibility?.()
+    }
+
+    return nextEnabled
+}
 
 export const setHideAllPoisDuringJourneyReplay = (mode, enabled = true) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]

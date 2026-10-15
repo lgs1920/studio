@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-08
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -871,7 +871,8 @@ export class Journey extends MapElement {
         const isVisibleJourney = forceCurrentVisible && isCurrentJourney
                                  ? true
                                  : this.visible !== false
-        const forcedToHide = !isVisibleJourney || (hideOtherJourneys && !isCurrentJourney)
+        const hideJourneyTracks = hideOtherJourneys && !isCurrentJourney
+        const forcedToHide = !isVisibleJourney || hideJourneyTracks
 
         // Draw Tracks and flags
         this.tracks.forEach(track => {
@@ -885,7 +886,21 @@ export class Journey extends MapElement {
         })
 
         await Promise.all(promises)
-        this.updateVisibility(isVisibleJourney && (!hideOtherJourneys || isCurrentJourney))
+        this.updateVisibility(isVisibleJourney)
+        if (isVisibleJourney && hideJourneyTracks && globalThis.lgs?.viewer?.dataSources) {
+            this.tracks.forEach(track => {
+                if (!track?.slug) {
+                    return
+                }
+
+                try {
+                    TrackUtils.updateTrackVisibility(this, track, false)
+                }
+                catch (error) {
+                    console.error(`[Journey visibility] Failed to hide trace ${track.slug}.`, error)
+                }
+            })
+        }
 
         // //Ready
         // const texts = new Map([

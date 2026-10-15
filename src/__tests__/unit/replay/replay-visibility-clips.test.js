@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,9 @@ import { createJourneyReplayClipInstance }                                from '
 import {
     JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE,
 }                                                                      from '@Core/ui/replay/JourneyReplayInternal'
-import {hideOtherJourneysVisibility}                                     from '@Core/ui/replay/JourneyReplayVisibilityController'
+import {
+    hideOtherJourneysVisibility, restoreOtherJourneysVisibility,
+}                                                                      from '@Core/ui/replay/JourneyReplayVisibilityController'
 import {
     replayAngularDelta, replayCameraHeadingForPositionMode, replayCameraHeadingWithHysteresis,
     replayCameraRangeFromPitch, replayCameraRecenterDuration, replayCameraRecenterHeight,
@@ -59,6 +61,7 @@ vi.mock('@Components/Toast', () => ({
 
 
 import {makeJourney, makeTrack} from './replay-phase1-fixtures'
+import {TrackUtils} from '@Utils/cesium/TrackUtils'
 
 /** Exercise clip behavior in Expert mode, where start and stop clips are supported. */
 const defaultJourneyReplaySettings = () => ({...productReplaySettings(), userMode: 'expert'})
@@ -87,6 +90,7 @@ describe('replay visibility and clips', () => {
             [JOURNEY_REPLAY_INTERNAL_CALL]: {},
             [JOURNEY_REPLAY_INTERNAL_STATE]: {hiddenJourneyVisibility: new Map()},
         }
+        const updateTrackVisibility = vi.spyOn(TrackUtils, 'updateTrackVisibility').mockImplementation(() => {})
 
         globalThis.lgs = {
             theJourney: legacyJourney,
@@ -95,6 +99,7 @@ describe('replay visibility and clips', () => {
                 [legacyJourney.slug, legacyJourney],
             ]),
             stores: {main: {theJourney: replayJourney}},
+            viewer: {dataSources: {length: 0}},
             scene: {requestRender: vi.fn()},
         }
 
@@ -102,10 +107,29 @@ describe('replay visibility and clips', () => {
             hideOtherJourneysVisibility(mode)
 
             expect(replayJourney.visible).toBe(true)
-            expect(legacyJourney.updateVisibility).toHaveBeenCalledWith(false)
-            expect(legacyJourney.visible).toBe(false)
+            expect(legacyJourney.updateVisibility).not.toHaveBeenCalled()
+            expect(legacyJourney.visible).toBe(true)
+            expect(legacyJourney.tracks.values().next().value.visible).toBe(true)
+            expect(updateTrackVisibility).toHaveBeenCalledWith(
+                legacyJourney,
+                legacyJourney.tracks.values().next().value,
+                false,
+            )
+
+            mode[JOURNEY_REPLAY_INTERNAL_CALL].hideOtherJourneysVisibility = () => hideOtherJourneysVisibility(mode)
+            globalThis.lgs.settings = {ui: {replay: {userMode: 'expert', inheritHideOtherJourneys: false, hideOtherJourneys: false}}}
+            restoreOtherJourneysVisibility(mode)
+
+            expect(legacyJourney.visible).toBe(true)
+            expect(legacyJourney.tracks.values().next().value.visible).toBe(true)
+            expect(updateTrackVisibility).toHaveBeenLastCalledWith(
+                legacyJourney,
+                legacyJourney.tracks.values().next().value,
+                true,
+            )
         }
         finally {
+            updateTrackVisibility.mockRestore()
             globalThis.lgs = previousLgs
         }
     })
@@ -493,7 +517,7 @@ describe('replay visibility and clips', () => {
         }
     })
 
-    it('keeps other journeys hidden after replay while the setting is enabled', () => {
+    it('hides other journey traces without changing journey or track visibility settings', () => {
         const currentJourney = makeJourney([
                                                makeTrack({
                                                              slug:        'track#journey#gpx#main',
@@ -508,6 +532,7 @@ describe('replay visibility and clips', () => {
                                          ])
         currentJourney.slug = 'journey-current'
         otherJourney.slug = 'journey-other'
+        const otherTrack = otherJourney.tracks.values().next().value
         const previousLgs = globalThis.lgs
         const replay = defaultJourneyReplaySettings()
         const frames = []
@@ -521,6 +546,7 @@ describe('replay visibility and clips', () => {
         otherJourney.updateVisibility = vi.fn(visible => {
             otherJourney.visible = visible
         })
+        const updateTrackVisibility = vi.spyOn(TrackUtils, 'updateTrackVisibility').mockImplementation(() => {})
         const controller = new JourneyReplayPlaybackController({
             requestFrame: callback => {
                 frames.push(callback)
@@ -556,6 +582,7 @@ describe('replay visibility and clips', () => {
                                   }),
             },
             viewer:     {
+                dataSources: {length: 0},
                 trackedEntity: null,
                 camera:        {
                     heading:              0.4,
@@ -602,16 +629,19 @@ describe('replay visibility and clips', () => {
             mode.start({duration: 1})
             expect(currentJourney.updateVisibility).toHaveBeenCalledWith(false)
             expect(currentJourney.visible).toBe(false)
-            expect(otherJourney.updateVisibility).toHaveBeenCalledWith(false)
-            expect(otherJourney.visible).toBe(false)
+            expect(otherJourney.updateVisibility).not.toHaveBeenCalled()
+            expect(otherJourney.visible).toBe(true)
+            expect(otherTrack.visible).toBe(true)
+            expect(updateTrackVisibility).toHaveBeenCalledWith(otherJourney, otherTrack, false)
 
             now = 1000
             frames.shift()()
 
             expect(currentJourney.updateVisibility).toHaveBeenCalledWith(true)
             expect(currentJourney.visible).toBe(true)
-            expect(otherJourney.updateVisibility).toHaveBeenLastCalledWith(false)
-            expect(otherJourney.visible).toBe(false)
+            expect(otherJourney.updateVisibility).not.toHaveBeenCalled()
+            expect(otherJourney.visible).toBe(true)
+            expect(otherTrack.visible).toBe(true)
             expect(globalThis.lgs.stores.replay.hideOtherJourneys).toBe(true)
             expect(globalThis.lgs.settings.ui.replay.hideOtherJourneys).toBe(true)
 
@@ -619,10 +649,11 @@ describe('replay visibility and clips', () => {
             globalThis.lgs.settings.ui.replay.inheritHideOtherJourneys = false
             mode.setHideOtherJourneys(false)
 
-            expect(otherJourney.updateVisibility).toHaveBeenLastCalledWith(true)
+            expect(updateTrackVisibility).toHaveBeenLastCalledWith(otherJourney, otherTrack, true)
             expect(otherJourney.visible).toBe(true)
         }
         finally {
+            updateTrackVisibility.mockRestore()
             globalThis.lgs = previousLgs
         }
     })

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-30
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -110,6 +110,63 @@ describe('journey visibility policy', () => {
         expect(globalThis.lgs.settings.journey.hideOtherJourneys).toBe(true)
         expect(journeyA.draw).toHaveBeenCalled()
         expect(journeyB.draw).toHaveBeenCalled()
+    })
+
+    it('does not crash when the journey registry is unavailable or non-iterable', async () => {
+        globalThis.lgs.journeys = null
+        await expect(refreshJourneyVisibility()).resolves.toBeUndefined()
+
+        globalThis.lgs.journeys = {}
+        await expect(refreshJourneyVisibility()).resolves.toBeUndefined()
+        expect(globalThis.lgs.scene.requestRender).toHaveBeenCalledTimes(2)
+    })
+
+    it('continues refreshing journeys when centroid resolution or one draw fails', async () => {
+        vi.spyOn(SceneUtils, 'getJourneyCentroid').mockRejectedValue(new Error('Invalid journey geometry'))
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        journeyA.draw = vi.fn().mockRejectedValue(new Error('Journey renderer unavailable'))
+
+        await expect(setGlobalHideOtherJourneys(true, {currentJourney: journeyA})).resolves.toBe(true)
+
+        expect(journeyA.draw).toHaveBeenCalledOnce()
+        expect(journeyB.draw).toHaveBeenCalledOnce()
+        expect(journeyC.draw).toHaveBeenCalledOnce()
+        expect(globalThis.lgs.scene.requestRender).toHaveBeenCalledOnce()
+    })
+
+    it('serializes overlapping visibility changes so the latest choice is applied last', async () => {
+        vi.spyOn(SceneUtils, 'getJourneyCentroid').mockImplementation(async journey => ({
+            longitude: journey.slug === journeyA.slug ? 0 : 1,
+            latitude:  0,
+            height:    0,
+        }))
+        let signalFirstDraw
+        let releaseFirstDraw
+        const firstDrawStarted = new Promise(resolve => {
+            signalFirstDraw = resolve
+        })
+        const firstDrawHold = new Promise(resolve => {
+            releaseFirstDraw = resolve
+        })
+        journeyA.draw = vi.fn(async options => {
+            if (options.hideOtherJourneys) {
+                signalFirstDraw()
+                await firstDrawHold
+            }
+        })
+
+        const hideRefresh = refreshJourneyVisibility({hideOtherJourneys: true, currentJourney: journeyA})
+        await firstDrawStarted
+        const showRefresh = refreshJourneyVisibility({hideOtherJourneys: false, currentJourney: journeyA})
+        expect(journeyB.draw).not.toHaveBeenCalled()
+
+        releaseFirstDraw()
+        await Promise.all([hideRefresh, showRefresh])
+
+        expect(journeyA.draw.mock.calls.map(([options]) => options.hideOtherJourneys)).toEqual([true, false])
+        expect(journeyB.draw.mock.calls.map(([options]) => options.hideOtherJourneys)).toEqual([true, false])
+        expect(journeyC.draw.mock.calls.map(([options]) => options.hideOtherJourneys)).toEqual([true, false])
+        expect(globalThis.lgs.scene.requestRender).toHaveBeenCalledTimes(2)
     })
 
     it('sorts journeys by centroid distance from the current journey', async () => {

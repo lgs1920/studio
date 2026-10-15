@@ -1650,6 +1650,7 @@ export class TrackUtils {
 
     static readRemainingFromDB = async () => {
         const currentJourneySlug = lgs.theJourney?.slug ?? null
+        const hideOtherJourneys = lgs.settings?.journey?.hideOtherJourneys === true
         const journeys = await Journey.readAllFromDB({
                                                          excludeSlugs: currentJourneySlug ? [currentJourneySlug] : [],
                                                      })
@@ -1668,6 +1669,8 @@ export class TrackUtils {
         await Promise.all(newJourneys.map(journey => journey.draw({
                                                                       action: DRAWING_FROM_DB,
                                                                       mode:   NO_FOCUS,
+                                                                      hideOtherJourneys,
+                                                                      currentJourneySlug,
                                                                   })))
 
         return newJourneys
