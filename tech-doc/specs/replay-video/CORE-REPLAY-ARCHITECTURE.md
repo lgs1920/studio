@@ -104,6 +104,10 @@ the displayed preparation view; when playback starts outside preparation it
 is the current normal view. An isolated export lease snapshots only its own
 camera and leaves the main map camera alone. Replay applies its configured
 angle, pitch, and height before start clips.
+The departure marker's crop-relative screen position is persisted separately in
+the active Journey's Simple or Expert Replay settings. Preparation and playback
+reuse it when framing the departure, while camera height, pitch, and angle keep
+their independent settings.
 The normal camera manager suspends reads and persistence while the main camera
 is leased. A lifecycle revision rejects asynchronous reads that overlap a lease.
 Isolated export cameras acquire their own leases and leave main-view persistence

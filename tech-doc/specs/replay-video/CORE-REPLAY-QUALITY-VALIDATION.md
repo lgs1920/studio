@@ -51,6 +51,9 @@ narrow crop, and at least one high-resolution output profile.
   preparation, playback/export startup, and the first Replay frame. Configured
   altitude, pitch, and angle must resolve to the same camera-to-marker range
   across crop positioning and the first camera command.
+- Save the departure marker's crop-relative screen position in Simple and Expert
+  Journey Replay data, reload the Journey, and verify preparation, playback, and
+  export preserve that position when present.
 - Preparation and interactive Play wait for the final inertial wheel or drag
   zoom, including movement that continues beyond the first input debounce.
   Verify constant altitude and ground offset in Simple and Expert. Cancellation
