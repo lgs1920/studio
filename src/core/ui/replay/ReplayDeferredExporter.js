@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -2542,7 +2542,9 @@ export const runReplayDeferredMp4Export = async ({
 
     if (plan.runtime) {
         plan.runtime.status = 'exporting'
-        plan.runtime.abortController = abortController ?? null
+        // AbortController is a native host object. Keep it outside Valtio's
+        // deep proxying so AbortSignal methods retain their required receiver.
+        plan.runtime.abortController = abortController ? ref(abortController) : null
     }
     startReplayRecordingMonitor({
         mode: monitorMode,
