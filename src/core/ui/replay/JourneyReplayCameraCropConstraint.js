@@ -8,19 +8,19 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-12
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {Cartesian3, Cartesian4, Cartographic, Matrix4, Transforms} from 'cesium'
+import {Cartesian3, Cartographic} from 'cesium'
 import {clamp, projectReplayTargetInCameraFrame} from './JourneyReplayCameraMath'
 
 /**
  * Keep the rendered marker inside the crop by translating a camera frame.
- * Rotation, frustum and geodetic height remain unchanged. When requested, retain
- * the marker's prepared crop-local screen position instead of centering it.
+ * Rotation, frustum and camera-to-target range remain unchanged. When requested,
+ * retain the marker's prepared crop-local screen position instead of centering it.
  *
  * @param {Object} options - Physical camera frame, current marker and projection.
  * @param {{x: number, y: number}|null} [options.desiredPoint=null] - Crop-local screen position to preserve.
@@ -74,37 +74,30 @@ export const constrainReplayCameraFrameToCrop = ({
     const targetY = desiredY ?? (point ? clamp(point.y, insetY, viewport.height - insetY) : viewport.height / 2)
     const slopeX = ((targetX + cropLeft) * 2 / canvasWidth - 1) * tangentX
     const slopeY = (1 - (targetY + cropTop) * 2 / canvasHeight) * tangentY
-    const horizontalEquation = Cartesian3.subtract(right, Cartesian3.multiplyByScalar(direction, slopeX, new Cartesian3()), new Cartesian3())
-    const verticalEquation = Cartesian3.subtract(up, Cartesian3.multiplyByScalar(direction, slopeY, new Cartesian3()), new Cartesian3())
-    const basis = Transforms.eastNorthUpToFixedFrame(target)
-    const east = Cartesian3.fromCartesian4(Matrix4.getColumn(basis, 0, new Cartesian4()), new Cartesian3())
-    const north = Cartesian3.fromCartesian4(Matrix4.getColumn(basis, 1, new Cartesian4()), new Cartesian3())
-    const a = Cartesian3.dot(horizontalEquation, east)
-    const b = Cartesian3.dot(horizontalEquation, north)
-    const c = Cartesian3.dot(verticalEquation, east)
-    const d = Cartesian3.dot(verticalEquation, north)
-    const determinant = a * d - b * c
-    if (Math.abs(determinant) <= 1e-10) {
+    const rayDirection = Cartesian3.normalize(
+        Cartesian3.add(
+            direction,
+            Cartesian3.add(
+                Cartesian3.multiplyByScalar(right, slopeX, new Cartesian3()),
+                Cartesian3.multiplyByScalar(up, slopeY, new Cartesian3()),
+                new Cartesian3(),
+            ),
+            new Cartesian3(),
+        ),
+        new Cartesian3(),
+    )
+    const range = Cartesian3.distance(frame.destination, target)
+    const destination = Cartesian3.subtract(
+        target,
+        Cartesian3.multiplyByScalar(rayDirection, range, new Cartesian3()),
+        new Cartesian3(),
+    )
+    const destinationHeight = Cartographic.fromCartesian(destination)?.height
+    const targetHeight = Cartographic.fromCartesian(target)?.height
+    if (!Number.isFinite(destinationHeight) || !Number.isFinite(targetHeight)
+        || destinationHeight <= targetHeight + 1) {
         return frame
     }
 
-    const originalHeight = Cartographic.fromCartesian(frame.destination).height
-    let destination = Cartesian3.clone(frame.destination)
-    // Reproject to the original ellipsoid height after each tangent-plane solve.
-    // Iteration compensates for Earth curvature without changing Replay zoom.
-    for (let iteration = 0; iteration < 6; iteration += 1) {
-        const relative = Cartesian3.subtract(target, destination, new Cartesian3())
-        const horizontalError = Cartesian3.dot(horizontalEquation, relative)
-        const verticalError = Cartesian3.dot(verticalEquation, relative)
-        const eastMeters = (horizontalError * d - b * verticalError) / determinant
-        const northMeters = (a * verticalError - horizontalError * c) / determinant
-        const shift = Cartesian3.add(
-            Cartesian3.multiplyByScalar(east, eastMeters, new Cartesian3()),
-            Cartesian3.multiplyByScalar(north, northMeters, new Cartesian3()),
-            new Cartesian3(),
-        )
-        const cartographic = Cartographic.fromCartesian(Cartesian3.add(destination, shift, new Cartesian3()))
-        destination = Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, originalHeight)
-    }
     return {...frame, destination}
 }

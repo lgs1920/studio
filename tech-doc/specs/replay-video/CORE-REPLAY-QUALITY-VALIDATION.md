@@ -3,7 +3,7 @@
 Status: validation contract for interactive Replay and deterministic Replay
 video export
 
-Date: 2026-10-14
+Date: 2026-10-15
 
 ## Purpose
 
@@ -47,6 +47,10 @@ narrow crop, and at least one high-resolution output profile.
 ### Camera
 
 - The first replay camera does not depend on an unrelated preview pose.
+- Compare `replay.camera.transfer` and `camera.view.apply` trace values at
+  preparation, playback/export startup, and the first Replay frame. Configured
+  altitude, pitch, and angle must resolve to the same camera-to-marker range
+  across crop positioning and the first camera command.
 - Preparation and interactive Play wait for the final inertial wheel or drag
   zoom, including movement that continues beyond the first input debounce.
   Verify constant altitude and ground offset in Simple and Expert. Cancellation
@@ -78,8 +82,9 @@ narrow crop, and at least one high-resolution output profile.
   10-second route and an offset crop smaller than the canvas. Anticipation must
   respond to the height/pitch-derived ground span and route speed. Crop checks
   use CSS canvas dimensions and origin even at high drawing-buffer DPR. Safety
-  translation must preserve orientation, frustum and camera height and must
-  never qualify a future or smoothed marker in place of the rendered marker.
+  translation must preserve orientation, frustum and camera-to-target range,
+  and must never qualify a future or smoothed marker in place of the rendered
+  marker.
 - Navigation holds the same applied pose between corrections in live playback
   and export. Check the last three seconds image by image: final alignment must
   be eased and retain the exact endpoint, including reverse playback. Absolute

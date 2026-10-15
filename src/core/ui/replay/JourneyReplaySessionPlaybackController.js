@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -137,6 +137,44 @@ const seedReplayCameraFromCesium = (mode, journey) => {
     return true
 }
 
+
+/**
+ * Trace configured zoom values against the physical camera pose at a boundary.
+ *
+ * @param {object} options - Replay boundary context.
+ * @param {object} options.mode - Replay session mode.
+ * @param {object|null} options.journey - Active journey.
+ * @param {object|null} options.sample - Rendered marker sample.
+ * @param {object|null} options.cameraSettings - Resolved Replay camera settings.
+ * @param {string} options.boundary - Preparation, playback, or export boundary.
+ * @returns {void} No return value.
+ */
+const traceReplayCameraTransfer = ({mode, journey, sample, cameraSettings, boundary}) => {
+    const camera = replayCameraFor(mode)
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const target = sample ? call.markerRenderCartesianForSample?.(sample) : null
+    const cameraPosition = camera?.positionWC ?? camera?.position
+    const cameraTargetRange = cameraPosition && target
+        ? Cartesian3.distance(cameraPosition, target)
+        : null
+
+    replayVideoTraceDebug('replay.camera.transfer', {
+        boundary,
+        journeySlug: journey?.slug ?? null,
+        mode: isJourneyReplayBasicMode() ? 'basic' : 'expert',
+        configured: {
+            altitude: cameraSettings?.altitude ?? null,
+            altitudeMode: cameraSettings?.altitudeMode ?? null,
+            pitch: cameraSettings?.pitch ?? null,
+            cameraAngle: cameraSettings?.cameraAngle ?? null,
+        },
+        cesium: {
+            height: finiteNumber(camera?.positionCartographic?.height),
+            pitch: camera?.pitch === undefined ? null : CesiumMath.toDegrees(camera.pitch),
+            targetRangeMeters: cameraTargetRange,
+        },
+    })
+}
 
 import {
     DEFAULT_DURATION,
@@ -380,6 +418,16 @@ export const prepareReplayCamera = async (mode, {
         call.persistCameraSettings(cameraSettings, {journey})
     }
     await flushJourneyReplayCameraPersistence(journey)
+    if (replayPreparationActive) {
+        state.replayEntryCameraState = captureReplayEntryCameraState(replayCameraFor(mode))
+        traceReplayCameraTransfer({
+            mode,
+            journey,
+            sample,
+            cameraSettings: currentJourneyReplayCameraSettings({journey}),
+            boundary: 'preparation-ready',
+        })
+    }
     // Preparation owns configuration and guides, never the normal map camera.
     state.replayCameraPrepared = true
     call.cesiumScene?.()?.requestRender?.()
@@ -439,6 +487,14 @@ export const enterReplayPreparation = async (mode, {
                 state.preparationExitCameraState = call.captureCameraSnapshot?.({camera}) ?? null
             }
             call.placeCameraAtPlaybackStart?.(sample, 0)
+            state.replayEntryCameraState = captureReplayEntryCameraState(camera)
+            traceReplayCameraTransfer({
+                mode,
+                journey,
+                sample,
+                cameraSettings: currentJourneyReplayCameraSettings({journey}),
+                boundary: 'preparation-framed',
+            })
             call.cesiumScene?.()?.requestRender?.()
         }
     }
@@ -525,6 +581,15 @@ export const start = (mode, options = {}) => {
     const preparedReplayCameraState = state.replayCameraPrepared
         ? captureReplayEntryCameraState(replayCameraFor(mode))
         : null
+    if (preparedReplayCameraState) {
+        traceReplayCameraTransfer({
+            mode,
+            journey,
+            sample: state.replayPreparationSample ?? state.sampler?.atProgress?.(0) ?? null,
+            cameraSettings: currentJourneyReplayCameraSettings({journey}),
+            boundary: 'playback-start',
+        })
+    }
     const startStartedAt = globalThis.performance?.now?.() ?? Date.now()
     const traceStartStep = (step, extra = {}) => {
         replayVideoTraceDebug('interactive.replay.start.stage', {
@@ -842,6 +907,14 @@ export const preparePlaybackSceneForExport = async (mode, {
             }
         }
 
+        state.replayEntryCameraState = captureReplayEntryCameraState(replayCameraFor(mode))
+        traceReplayCameraTransfer({
+            mode,
+            journey,
+            sample,
+            cameraSettings: currentJourneyReplayCameraSettings({journey}),
+            boundary: 'export-entry',
+        })
         call.startReplayCameraAltitudeTracking()
 
         // Do not compile the constrained camera path synchronously during export preparation.

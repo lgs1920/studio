@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -253,15 +253,6 @@ export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraS
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const startedAt = globalThis.performance?.now?.() ?? Date.now()
-        replayVideoTraceDebug('camera.view.apply.start', {
-            anchorLongitude: finiteNumber(anchor?.longitude),
-            anchorLatitude: finiteNumber(anchor?.latitude),
-            heading,
-            pitch,
-            roll,
-            altitudeMode: cameraSettings?.altitudeMode ?? null,
-            terrainHeightLookupBypass: state.terrainHeightLookupBypass === true,
-        })
         const anchorHeight = finiteNumber(anchor?.altitude ?? anchor?.height) ?? 0
         // Both fixed-altitude and ground-offset views aim at the rendered terrain marker.
         // GPX elevation must not select a different target after startup placement.
@@ -274,11 +265,35 @@ export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraS
             Math.max(CAMERA_REDIRECT_TERRAIN_CLEARANCE_METERS, cameraHeight - markerHeight),
             safePitch,
         )
+        const camera = replayCameraFor(mode)
+        const target = call.markerRenderCartesianForSample?.(anchor)
+        const cameraRangeBeforeApply = camera?.positionWC && target
+            ? Cartesian3.distance(camera.positionWC, target)
+            : null
+        replayVideoTraceDebug('camera.view.apply.start', {
+            anchorLongitude: finiteNumber(anchor?.longitude),
+            anchorLatitude: finiteNumber(anchor?.latitude),
+            heading,
+            pitch,
+            roll,
+            configuredAltitude: finiteNumber(cameraSettings?.altitude),
+            configuredAltitudeMode: cameraSettings?.altitudeMode ?? null,
+            configuredPitch: finiteNumber(cameraSettings?.pitch),
+            configuredCameraAngle: finiteNumber(cameraSettings?.cameraAngle),
+            targetHeight: markerHeight,
+            requestedCameraHeight: cameraHeight,
+            requestedRangeMeters: range,
+            cameraHeightBeforeApply: finiteNumber(camera?.positionCartographic?.height),
+            cameraRangeBeforeApplyMeters: cameraRangeBeforeApply,
+            terrainHeightLookupBypass: state.terrainHeightLookupBypass === true,
+        })
         if (call.cameraViewIsStable({anchor, heading: safeHeading, pitch: safePitch, roll: safeRoll, rangeMeters: range})) {
             replayVideoTraceDebug('camera.view.apply.end', {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startedAt,
                 skipped: true,
                 reason: 'stable',
+                requestedRangeMeters: range,
+                cameraRangeMeters: cameraRangeBeforeApply,
             })
             return false
         }
@@ -306,7 +321,6 @@ export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraS
             return false
         }
 
-        const camera = replayCameraFor(mode)
         if (!camera || typeof camera.setView !== 'function') {
             replayVideoTraceDebug('camera.view.apply.end', {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startedAt,
@@ -335,6 +349,11 @@ export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraS
             replayVideoTraceDebug('camera.view.apply.end', {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startedAt,
                 skipped: false,
+                requestedRangeMeters: range,
+                cameraHeight: finiteNumber(camera.positionCartographic?.height),
+                cameraRangeMeters: camera.positionWC && target
+                    ? Cartesian3.distance(camera.positionWC, target)
+                    : null,
             })
         }
     }

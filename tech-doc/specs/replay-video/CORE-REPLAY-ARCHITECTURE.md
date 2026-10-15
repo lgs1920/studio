@@ -2,7 +2,7 @@
 
 Status: current implementation inventory; see the implementation status for known gaps
 
-Date: 2026-10-14
+Date: 2026-10-15
 
 ## Purpose
 
@@ -133,10 +133,13 @@ Recording diagnostics report the altitude mode, configured pitch, altitude,
 and angle alongside the rendered marker height and applied Cesium entry pose.
 Deferred export context uses Replay entry state only and never a camera return
 snapshot or an arbitrary live map view. Revalidating preparation clears any
-entry pose retained by an earlier playback before the deferred plan captures its
-camera context. Interactive startup captures the prepared Cesium pose before
-configuration and restores that exact pose for the first frame, preserving its
-zoom and crop composition.
+entry pose retained by an earlier playback, then captures the finalized
+preparation pose before the deferred plan captures its camera context.
+Interactive startup also captures the prepared Cesium pose before configuration
+and restores that exact pose for the first frame, preserving its zoom and crop
+composition. The `replay.camera.transfer` and `camera.view.apply` trace events
+compare configured altitude, pitch, and angle with physical camera height and
+camera-to-marker range at each transfer boundary.
 
 Simple Replay adds a fixed four-second trace-centroid focus phase after its
 playback. Expert Replay uses its configured start and stop clips.
@@ -240,9 +243,12 @@ the smaller crop and physical drawing-buffer pixel density.
 
 Every Navigation update qualifies the current, unmodified marker against the
 crop, including while a three-second transition is active or a pose is held.
-If necessary, a minimal horizontal translation places it at the inner crop
-margin. This final safety correction preserves the interpolated orientation,
-frustum and geodetic camera height rather than rotating instantly or zooming out.
+If necessary, a minimal camera translation places it at the inner crop margin.
+This final safety correction preserves the interpolated orientation, frustum
+and camera-to-target range rather than rotating instantly or changing the
+selected zoom. It shifts along the camera ray for the target's requested crop
+position; if that would place the camera below the target, the original framed
+pose remains in place.
 Anticipated route samples never replace the real marker for this containment
 check. The path endpoints remain exact when they already contain the marker.
 

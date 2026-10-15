@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-12
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {Cartesian3, Cartographic, Matrix4, Transforms} from 'cesium'
+import {Cartesian3, Matrix4, Transforms} from 'cesium'
 import {describe, expect, it} from 'vitest'
 import {constrainReplayCameraFrameToCrop} from '@Core/ui/replay/JourneyReplayCameraCropConstraint'
 import {projectReplayTargetInCameraFrame, replayAdaptiveTrackingTiming} from '@Core/ui/replay/JourneyReplayCameraMath'
@@ -34,7 +34,7 @@ const createFrame = () => {
 const viewport = {left: 180, top: 100, width: 640, height: 480, canvasWidth: 1000, canvasHeight: 800}
 
 describe('Replay camera crop constraint', () => {
-    it.each([[5.1, 45.07], [4.9, 44.93], [5, 45.18]])('keeps an offscreen marker at %s/%s framed without changing rotation or height', (longitude, latitude) => {
+    it.each([[5.1, 45.07], [4.9, 44.93], [5, 45.18]])('keeps an offscreen marker at %s/%s framed without changing rotation or zoom', (longitude, latitude) => {
         const frame = createFrame()
         const initialPosition = Cartesian3.clone(frame.destination)
         const target = Cartesian3.fromDegrees(longitude, latitude, 120)
@@ -49,9 +49,30 @@ describe('Replay camera crop constraint', () => {
         expect(point.y).toBeLessThanOrEqual(viewport.height)
         expect(corrected.direction).toBe(frame.direction)
         expect(corrected.up).toBe(frame.up)
-        expect(Cartographic.fromCartesian(corrected.destination).height)
-            .toBeCloseTo(Cartographic.fromCartesian(initialPosition).height, 6)
+        expect(Cartesian3.distance(corrected.destination, target))
+            .toBeCloseTo(Cartesian3.distance(initialPosition, target), 6)
         expect(Cartesian3.equals(frame.destination, initialPosition)).toBe(true)
+    })
+
+    it('preserves the configured range when preparation keeps the marker at its saved crop position', () => {
+        const frame = createFrame()
+        const target = Cartesian3.fromDegrees(5, 45, 120)
+        const options = {
+            frame,
+            target,
+            viewport,
+            verticalFovRadians: Math.PI / 3,
+            aspectRatio: 1.25,
+            desiredPoint: {x: 500, y: 240},
+        }
+
+        const corrected = constrainReplayCameraFrameToCrop(options)
+        const point = projectReplayTargetInCameraFrame({...options, frame: corrected})
+
+        expect(point.x).toBeCloseTo(options.desiredPoint.x, 6)
+        expect(point.y).toBeCloseTo(options.desiredPoint.y, 6)
+        expect(Cartesian3.distance(corrected.destination, target))
+            .toBeCloseTo(Cartesian3.distance(frame.destination, target), 6)
     })
 
     it('leaves a safely framed marker and the selected zoom unchanged', () => {
