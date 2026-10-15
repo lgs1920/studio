@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-02
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,6 +38,7 @@ import { subscribe, useSnapshot } from 'valtio'
 import { usePreviewChartResize } from '@Components/MainUI/widgets/editor/usePreviewChartResize'
 import { v4 as uuid } from 'uuid'
 import { WaIcon } from '@awesome.me/webawesome/dist/react'
+import {scheduleProfileChartResize} from '@Core/ui/ProfileChartResize'
 
 const scaleValue = (value, correction = 1) => {
     const numericValue = Number(value)
@@ -397,7 +398,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                 left:         4,
                 right:        5,
                 bottom:       4,
-                containLabel: true,
+                outerBoundsMode:    'same',
+                outerBoundsContain: 'axisLabel',
             },
             xAxis: [
                 {
@@ -540,7 +542,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             type:            'line',
             datasetId:       params.dataset,
             smooth:          true,
-            triggerLineEvent: true,
+            triggerEvent:    true,
             encode:          {x: DISTANCE, y: ELEVATION},
             showSymbol:      false,
             emphasis:        {disabled: true},
@@ -584,7 +586,6 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
 
         return {
             ...styles,
-            toolbox:  {show: false},
             title:    {show: false},
             animation: false,
             animationDuration: 0,
@@ -1402,7 +1403,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
 
         return () => {
-            if (onDataZoom) {
+            if (onDataZoom && !chart.isDisposed()) {
                 chart.off('dataZoom', onDataZoom)
             }
             window.removeEventListener('resize', handleResize)
@@ -1459,9 +1460,11 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         zr?.on?.('click', handleProfileBlankClick)
 
         return () => {
-            chart.off('mousemove', handleJourneyReplayProfileHover)
-            chart.off('globalout', handleJourneyReplayProfileLeave)
-            zr?.off?.('click', handleProfileBlankClick)
+            if (!chart.isDisposed()) {
+                chart.off('mousemove', handleJourneyReplayProfileHover)
+                chart.off('globalout', handleJourneyReplayProfileLeave)
+                zr?.off?.('click', handleProfileBlankClick)
+            }
         }
     }, [
         handleJourneyReplayProfileHover,
@@ -1624,7 +1627,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         })
 
         if (!preview) {
-            requestAnimationFrame(handleResize)
+            return scheduleProfileChartResize(chart, handleResize)
         }
     }, [baseOptions, clearJourneyReplayProfileGraphicsCache, element, data, preview, handleResize, hasAltitudeData])
 
