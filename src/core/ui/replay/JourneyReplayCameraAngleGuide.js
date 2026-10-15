@@ -2096,14 +2096,17 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         ? record.preparationRouteProjectionFrame ?? record.screenProjectionFrame
         : null
     const routeBoundaries = routeBoundaryPositionsFrom(record)
-    const routeBoundariesVisible = routeBoundaries.length === 2
+    // Preparation can mount against the previous map projection while Replay
+    // is still reframing the departure. The crop layout below can place its
+    // cone immediately, so stale route visibility must not hide the guide.
+    const routeBoundariesVisible = record.screenLocked || (routeBoundaries.length === 2
         && routeBoundaries.every(point => isGuideWorldPositionVisible(
             viewer,
             overlay,
             terrainClampedPositionFrom(viewer, point),
             checkDepth,
             routeProjectionFrame,
-        ))
+        )))
     const cameraAnchorVisible = record.screenLocked || isGuideWorldPositionVisible(
         viewer,
         overlay,
