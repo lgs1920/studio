@@ -51,4 +51,4 @@ When a question spans multiple domains, consult `docs/DOMAINS.md` — the defini
 
 ## Runtime Verification
 
-Chrome DevTools MCP is available for browser-based iteration: console error checking, network inspection, screenshots, and Lighthouse audits.
+Chrome DevTools MCP is available for browser-based iteration: console error checking, network inspection, screenshots, and Lighthouse audits. In WSL, configure its persistent Chrome profile and SwiftShader WebGL flags using `skills/lgs-1920-studio-browser-devtools/SKILL.md` before initializing a Cesium viewer; otherwise headless Chrome may report `Error constructing CesiumWidget` before the scene is created.
