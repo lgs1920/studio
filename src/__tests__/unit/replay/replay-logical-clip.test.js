@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -551,6 +551,77 @@ describe('logical replay clip camera path', () => {
         expect(applyDeterministicCameraTransition).toHaveBeenCalledWith(0)
         expect(result.endView.sample).toEqual(endSample)
         expect(result.endView.cameraSettings).toEqual({altitude: 5000})
+    })
+
+    it('preserves a full-turn focus rotation whose start and end orientations match', async () => {
+        let queuedFrame = null
+        vi.stubGlobal('requestAnimationFrame', callback => {
+            queuedFrame = callback
+            return 1
+        })
+        vi.stubGlobal('cancelAnimationFrame', vi.fn())
+
+        const recenterCameraToSample = vi.fn()
+        const startDeterministicCameraTransition = vi.fn(() => true)
+        const applyDeterministicCameraTransition = vi.fn()
+        const sample = {longitude: 2, latitude: 48, altitude: 120}
+        const focusTarget = {longitude: 2.05, latitude: 48.05, altitude: 140}
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                logicalCameraTrajectory: false,
+                clipSequenceToken:      1,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                setContinuousRender: vi.fn(),
+                isReplayVideoLinked: vi.fn(() => false),
+                interpolateReplayExportSample: vi.fn((start, end, ratio) => ({
+                    ...start,
+                    longitude: start.longitude + ((end.longitude - start.longitude) * ratio),
+                    latitude: start.latitude + ((end.latitude - start.latitude) * ratio),
+                    altitude: start.altitude + ((end.altitude - start.altitude) * ratio),
+                })),
+                recenterCameraToSample,
+                cameraRecenterFrame: vi.fn(() => ({destination: {}, direction: {}, correctedUp: {}})),
+                startDeterministicCameraTransition,
+                applyDeterministicCameraTransition,
+            },
+        }
+        vi.stubGlobal('lgs', {scene: {requestRender: vi.fn()}})
+
+        const startedAt = globalThis.performance.now()
+        const resultPromise = applyJourneyReplayClipCameraPlan(mode, {
+            kind:     'focus',
+            duration: 4,
+            rpm:      15,
+            startView: {
+                sample,
+                heading: 0.2,
+                pitch:   -1,
+                height:  5000,
+            },
+            endView: {
+                sample: focusTarget,
+                heading: 0.2,
+                pitch:   -0.8,
+                height:  7000,
+            },
+        }, {token: 1})
+
+        const middleFrame = queuedFrame
+        middleFrame(startedAt + 2000)
+        const finalFrame = queuedFrame
+        finalFrame(startedAt + 5000)
+        await resultPromise
+
+        expect(startDeterministicCameraTransition).not.toHaveBeenCalled()
+        expect(applyDeterministicCameraTransition).not.toHaveBeenCalled()
+        const headings = recenterCameraToSample.mock.calls.map(([frame]) => frame.heading)
+        expect(headings).toHaveLength(3)
+        expect(headings[0]).toBeCloseTo(0.2)
+        expect(headings[1]).toBeCloseTo(0.2 + Math.PI)
+        expect(headings[2]).toBeCloseTo(0.2 + Math.PI * 2)
+        expect(recenterCameraToSample.mock.calls[0][0].sample).toEqual(sample)
+        expect(recenterCameraToSample.mock.calls[2][0].sample).toEqual(focusTarget)
     })
 
     it.each([

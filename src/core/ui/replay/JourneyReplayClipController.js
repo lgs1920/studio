@@ -664,7 +664,13 @@ const cancelLogicalCameraFrame = handle => {
 const playJourneyReplayClipPath = (mode, plan, {token, state, call, onFrame = null} = {}) => {
     const durationMillis = Math.max(0, (finiteNumber(plan?.duration) ?? 0) * 1000)
     const startedAt = globalThis.performance?.now?.() ?? Date.now()
-    const deterministicPathAvailable = typeof call.startDeterministicCameraTransition === 'function'
+    // Endpoint interpolation erases a complete turn when focus starts and ends
+    // at the same heading, so apply each rotating focus pose directly.
+    const requiresContinuousFocusRotation = plan?.kind === 'focus'
+        && Math.abs(finiteNumber(plan.rpm) ?? 0) > 0
+        && durationMillis > 0
+    const deterministicPathAvailable = !requiresContinuousFocusRotation
+                                      && typeof call.startDeterministicCameraTransition === 'function'
                                       && typeof call.applyDeterministicCameraTransition === 'function'
                                       && typeof call.cameraRecenterFrame === 'function'
     let deterministicPathStarted = false
