@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
@@ -177,6 +177,25 @@ describe('JourneyToolbar orbit toggle', () => {
             resetCamera: true,
             rotate:      false,
         }))
+    })
+
+    it.each([
+        ['focus', '#focus-journey-toolbar', false],
+        ['orbit', '#rotate-journey-toolbar', true],
+    ])('keeps %s available when the current journey is hidden', async (_label, selector, rotate) => {
+        globalThis.lgs.theJourneyEditorProxy.journey.visible = false
+        globalThis.lgs.stores.ui.mainUI.rotate.running = false
+        const {container} = render(<JourneyToolbar/>)
+
+        expect(container.querySelector('#focus-journey-toolbar')).toBeTruthy()
+        expect(container.querySelector('#rotate-journey-toolbar')).toBeTruthy()
+        fireEvent.click(container.querySelector(selector))
+
+        await waitFor(() => expect(globalThis.lgs.theJourney.focus).toHaveBeenCalledWith({
+            resetCamera: true,
+            rotate,
+        }))
+        expect(globalThis.lgs.theJourney.visible).toBe(true)
     })
 
     it('disables journey selection while an editor journey is not loaded', () => {
