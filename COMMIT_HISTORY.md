@@ -3575,3 +3575,23 @@
 ## 2026-10-14 — [`fix(replay): reduce dry-run overhead and add timing diagnostics`](https://github.com/lgs1920/studio/commit/7bef7c00a905f89808c23a9aaf2e493d6cda385e)
 
 - Recorded automatically from Git history.
+
+## 2026-10-14 — [`fix(replay): preserve prepared camera pose at startup`](https://github.com/lgs1920/studio/commit/b4d93e1a5f771abdf724995ba54aa78250b0e3d2)
+
+- Recorded automatically from Git history.
+
+## 2026-10-14 — [`refactor(replay): streamline MP4 frame submission`](https://github.com/lgs1920/studio/commit/ae9b52e617f74bbddcd44826d5840e12576aab32)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`docs: configure persistent WebGL browser diagnostics`](https://github.com/lgs1920/studio/commit/a428e890efbe347dacc28e4c893a14cb82b6b362)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`docs: document Cesium WebGL browser setup`](https://github.com/lgs1920/studio/commit/7b458c655fb298353b45810049e3b7aa8fdb410c)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/a7141b77f23f7da0ee2075e56303b37246430b27)
+
+- Recorded automatically from Git history.
