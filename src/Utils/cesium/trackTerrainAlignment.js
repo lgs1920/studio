@@ -24,7 +24,7 @@ const MINIMUM_CLIFF_SLOPE = 1.5
 const MINIMUM_TERRAIN_ERROR_METERS = 8
 const MINIMUM_IMPROVEMENT_METERS = 5
 const MAX_RENDER_POINTS = 4096
-const MAX_TRACE_HALF_WIDTH_METERS = 15
+const MAX_TRACE_WIDTH_METERS = 15
 const preparedContentCache = new WeakMap()
 
 // Require a steep cross-track wall so ordinary altitude noise cannot move the route sideways.
@@ -195,10 +195,10 @@ const hasCliffCrossSection = (requests, heights) => {
  * @param {object} content - Render-ready GeoJSON content.
  * @param {object} options - Terrain provider and rendered trace-width options.
  * @param {object} options.provider - Cesium terrain provider.
- * @param {number} options.traceHalfWidthMeters - Estimated half-width of the visible trace.
+ * @param {number} options.traceWidthMeters - Estimated full width of the visible trace.
  * @returns {Promise<object>} Original content or an aligned render-only copy.
  */
-const alignLineString = async (content, {provider, traceHalfWidthMeters = 0} = {}) => {
+const alignLineString = async (content, {provider, traceWidthMeters = 0} = {}) => {
     const geometry = content?.geometry
     if (!geometry || !['LineString', 'MultiLineString'].includes(geometry.type)) {
         return content
@@ -232,9 +232,9 @@ const alignLineString = async (content, {provider, traceHalfWidthMeters = 0} = {
     }
 
     const requests = []
-    const halfWidth = Math.min(
-        MAX_TRACE_HALF_WIDTH_METERS,
-        Math.max(0, Number.isFinite(Number(traceHalfWidthMeters)) ? Number(traceHalfWidthMeters) : 0),
+    const traceWidth = Math.min(
+        MAX_TRACE_WIDTH_METERS,
+        Math.max(0, Number.isFinite(Number(traceWidthMeters)) ? Number(traceWidthMeters) : 0),
     )
     let flatIndex = 0
     segments.forEach((segment, segmentIndex) => {
@@ -247,7 +247,7 @@ const alignLineString = async (content, {provider, traceHalfWidthMeters = 0} = {
                 const currentError = Math.abs(currentHeight - targetHeight)
                 if (currentError >= MINIMUM_TERRAIN_ERROR_METERS) {
                     ALIGNMENT_SEARCH_DISTANCES_METERS.forEach(searchDistance => {
-                        const distance = searchDistance + halfWidth
+                        const distance = searchDistance + traceWidth
                         for (const side of [-1, 1]) {
                             const candidate = perpendicularCandidate(coordinate, bearing, side, distance)
                             requests.push({candidate, distance, flatIndex, searchDistance, segmentIndex, side, targetHeight})
@@ -322,12 +322,12 @@ const alignLineString = async (content, {provider, traceHalfWidthMeters = 0} = {
  * @param {object} content - Render-ready GeoJSON content.
  * @param {object} options - Cesium terrain provider and rendered trace-width options.
  * @param {object} options.provider - Cesium terrain provider.
- * @param {number} options.traceHalfWidthMeters - Estimated half-width of the visible trace.
+ * @param {number} options.traceWidthMeters - Estimated full width of the visible trace.
  * @returns {Promise<object>} Terrain-aligned render content.
  */
 export const getTerrainAlignedTrackRenderContent = async (content, {
     provider = globalThis.lgs?.viewer?.terrainProvider,
-    traceHalfWidthMeters = 0,
+    traceWidthMeters = 0,
 } = {}) => {
     if (!content || !provider || (typeof content !== 'object') || (typeof provider !== 'object')) {
         return content
@@ -345,14 +345,14 @@ export const getTerrainAlignedTrackRenderContent = async (content, {
         providers.set(provider, widths)
     }
 
-    const halfWidth = Math.min(
-        MAX_TRACE_HALF_WIDTH_METERS,
-        Math.max(0, Number.isFinite(Number(traceHalfWidthMeters)) ? Number(traceHalfWidthMeters) : 0),
+    const traceWidth = Math.min(
+        MAX_TRACE_WIDTH_METERS,
+        Math.max(0, Number.isFinite(Number(traceWidthMeters)) ? Number(traceWidthMeters) : 0),
     )
-    const cacheKey = halfWidth.toFixed(3)
+    const cacheKey = traceWidth.toFixed(3)
     let prepared = widths.get(cacheKey)
     if (!prepared) {
-        prepared = alignLineString(content, {provider, traceHalfWidthMeters: halfWidth}).catch(() => content)
+        prepared = alignLineString(content, {provider, traceWidthMeters: traceWidth}).catch(() => content)
         widths.set(cacheKey, prepared)
     }
 

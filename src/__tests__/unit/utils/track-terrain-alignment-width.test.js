@@ -20,7 +20,7 @@ import { TrackUtils } from '@Utils/cesium/TrackUtils'
 describe('Track terrain-alignment stroke width', () => {
     afterEach(() => vi.restoreAllMocks())
 
-    it('uses half of the wider configured meter stroke and underlay', () => {
+    it('uses the full width of the wider configured meter stroke and underlay', () => {
         const track = {slug: 'track#width'}
         const style = {
             widthUnit: 'meters',
@@ -28,10 +28,10 @@ describe('Track terrain-alignment stroke width', () => {
             underlay: {enabled: true, meterWidth: 10},
         }
 
-        expect(TrackUtils.getTrackTerrainAlignmentHalfWidthMeters(track, style)).toBe(5)
+        expect(TrackUtils.getTrackTerrainAlignmentWidthMeters(track, style)).toBe(10)
     })
 
-    it('converts pixel stroke width to a terrain half-width using the current map scale', () => {
+    it('converts pixel stroke width to full meters using the current map scale', () => {
         const track = {slug: 'track#pixel-width'}
         const style = {
             widthUnit: 'pixels',
@@ -40,6 +40,6 @@ describe('Track terrain-alignment stroke width', () => {
         }
         vi.spyOn(TrackUtils, 'meterWidthToPixelScale').mockReturnValue(4)
 
-        expect(TrackUtils.getTrackTerrainAlignmentHalfWidthMeters(track, style)).toBe(1.5)
+        expect(TrackUtils.getTrackTerrainAlignmentWidthMeters(track, style)).toBe(3)
     })
 })

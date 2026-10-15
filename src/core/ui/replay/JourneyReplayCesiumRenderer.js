@@ -251,9 +251,9 @@ export class JourneyReplayCesiumRenderer {
                 replayStyle.fillWidth + (replayStyle.borderWidth * 2),
                 'border',
             )
-            const replayHalfWidthMeters = pixelsPerMeter > 0 ? replayStrokeWidth / (pixelsPerMeter * 2) : 0
-            const trackHalfWidthMeters = track
-                ? TrackUtils.getTrackTerrainAlignmentHalfWidthMeters(track)
+            const replayWidthMeters = pixelsPerMeter > 0 ? replayStrokeWidth / pixelsPerMeter : 0
+            const trackWidthMeters = track
+                ? TrackUtils.getTrackTerrainAlignmentWidthMeters(track)
                 : 0
 
             const baseContent = {
@@ -266,7 +266,7 @@ export class JourneyReplayCesiumRenderer {
             }
             const alignedContent = await getTerrainAlignedTrackRenderContent(baseContent, {
                 provider,
-                traceHalfWidthMeters: Math.max(replayHalfWidthMeters, trackHalfWidthMeters),
+                traceWidthMeters: Math.max(replayWidthMeters, trackWidthMeters),
             })
             const geometry = alignedContent?.geometry
             const alignedSegments = geometry?.type === 'LineString'

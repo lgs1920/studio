@@ -453,16 +453,16 @@ export class TrackUtils {
     })
 
     /**
-     * Estimate half the visible track width in meters for terrain alignment.
+     * Estimate the full visible track width in meters for terrain alignment.
      *
      * @param {object} track - Track whose render width should be measured.
      * @param {object} style - Normalized track render style.
-     * @returns {number} Estimated half-width in meters.
+     * @returns {number} Estimated full width in meters.
      */
-    static getTrackTerrainAlignmentHalfWidthMeters = (track, style = TrackUtils.getTrackRenderStyle(track)) => {
+    static getTrackTerrainAlignmentWidthMeters = (track, style = TrackUtils.getTrackRenderStyle(track)) => {
         if (style.widthUnit === TRACK_RENDER_WIDTH_UNITS.METERS) {
             const underlayWidth = style.underlay.enabled ? style.underlay.meterWidth : 0
-            return Math.max(style.meterWidth, underlayWidth) / 2
+            return Math.max(style.meterWidth, underlayWidth)
         }
 
         const pixelsPerMeter = TrackUtils.meterWidthToPixelScale(track)
@@ -471,7 +471,7 @@ export class TrackUtils {
         }
 
         const underlayWidth = style.underlay.enabled ? style.underlay.pixelWidth : 0
-        return Math.max(style.farPixelWidth, underlayWidth) / (pixelsPerMeter * 2)
+        return Math.max(style.farPixelWidth, underlayWidth) / pixelsPerMeter
     }
 
     static cssColor = (value, fallback = CColor.WHITE) => colorFromUnknown(value, fallback)
@@ -1318,8 +1318,8 @@ export class TrackUtils {
                 const geometryKey = geometrySignature(track)
                 const terrainProvider = lgs.viewer?.terrainProvider
                 const style = TrackUtils.getTrackRenderStyle(track)
-                const traceHalfWidthMeters = TrackUtils.getTrackTerrainAlignmentHalfWidthMeters(track, style)
-                const alignmentWidthKey = traceHalfWidthMeters.toFixed(3)
+                const traceWidthMeters = TrackUtils.getTrackTerrainAlignmentWidthMeters(track, style)
+                const alignmentWidthKey = traceWidthMeters.toFixed(3)
                 const usePrimitive = canUseTrackPrimitive(track, style, renderMode)
                 const nextRenderMode = usePrimitive ? 'primitive' : 'entities'
                 const hasGeometry = usePrimitive
@@ -1335,7 +1335,7 @@ export class TrackUtils {
                     const baseRenderContent = getTrackRenderContent(track, {forRender: true})
                     const renderContent = await getTerrainAlignedTrackRenderContent(baseRenderContent, {
                         provider: terrainProvider,
-                        traceHalfWidthMeters,
+                        traceWidthMeters,
                     })
                     if (usePrimitive) {
                         TrackUtils.removeTrackStyleEntities(source)

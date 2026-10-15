@@ -78,7 +78,7 @@ describe('terrain alignment for rendered tracks', () => {
 
         const aligned = await getTerrainAlignedTrackRenderContent(content, {
             provider,
-            traceHalfWidthMeters: 3,
+            traceWidthMeters: 6,
         })
 
         expect(aligned).not.toBe(content)
@@ -88,7 +88,7 @@ describe('terrain alignment for rendered tracks', () => {
         expect(aligned.geometry.coordinates[2][0]).toBeGreaterThan(aligned.geometry.coordinates[3][0])
         expect(aligned.geometry.coordinates[3][0]).toBeGreaterThan(content.geometry.coordinates[3][0])
         expect((aligned.geometry.coordinates[2][0] - content.geometry.coordinates[2][0]) * METERS_PER_DEGREE)
-            .toBeCloseTo(4, 1)
+            .toBeCloseTo(5.5, 1)
         expect(aligned.geometry.coordinates[2][2]).toBe(content.geometry.coordinates[2][2])
         expect(aligned.geometry.coordinates[4]).toEqual(content.geometry.coordinates[4])
     })
