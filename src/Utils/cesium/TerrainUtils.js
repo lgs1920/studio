@@ -8,19 +8,35 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-01
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-15
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    TERRAIN_FROM_CESIUM, TERRAIN_FROM_CESIUM_ELLIPSOID, TERRAIN_FROM_MAPTERHORN, TERRAIN_FROM_URL,
+    NO_FOCUS, REFRESH_DRAWING, TERRAIN_FROM_CESIUM, TERRAIN_FROM_CESIUM_ELLIPSOID, TERRAIN_FROM_MAPTERHORN, TERRAIN_FROM_URL,
     URL_AUTHENT_KEY,
 } from '@Core/constants'
 import { IonLayerUtils } from './IonLayerUtils'
 import { MapterhornTerrainProvider } from './MapterhornTerrainProvider'
 import { CesiumTerrainProvider, EllipsoidTerrainProvider, Terrain, sampleTerrain, sampleTerrainMostDetailed } from 'cesium'
+
+/**
+ * Redraw loaded tracks after their terrain provider changes.
+ *
+ * @returns {Promise<void>} Completion of the loaded track redraw requests.
+ */
+const refreshTrackTerrainAlignment = async () => {
+    const journeys = new Set(globalThis.lgs?.journeys?.values?.() ?? [])
+    const editorJourney = globalThis.lgs?.theJourneyEditorProxy?.journey
+    if (editorJourney) {
+        journeys.add(editorJourney)
+    }
+
+    const tracks = [...journeys].flatMap(journey => [...(journey?.tracks?.values?.() ?? [])])
+    await Promise.allSettled(tracks.map(track => track.draw?.({action: REFRESH_DRAWING, mode: NO_FOCUS})))
+}
 
 export class TerrainUtils {
 
@@ -92,6 +108,7 @@ export class TerrainUtils {
             if (terrain) {
                 await lgs.scene.setTerrain(terrain)
                 __.ui.poiManager?.refreshTerrainClamping?.()
+                await refreshTrackTerrainAlignment()
             }
         }
         catch (error) {
