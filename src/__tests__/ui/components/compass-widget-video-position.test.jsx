@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-27
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -59,7 +59,7 @@ describe('CompassWidget video placement', () => {
     beforeEach(() => {
         globalThis.lgs = {
             stores: {
-                replay: proxy({simplePreparationActive: true}),
+                replay: proxy({basicPreparationActive: true}),
                 ui: {
                     video: proxy({
                         editing:      false,
@@ -115,7 +115,7 @@ describe('CompassWidget video placement', () => {
         expect(widget.getAttribute('data-show-control-box')).toBe('false')
     })
 
-    it('disables Compass interactions on the scene board during Simple Replay', () => {
+    it('disables Compass interactions on the scene board during Basic Replay', () => {
         render(
             <CompassWidget
                 context={{widgetEditor: true, widgetsBoard: 'scene-widgets'}}
@@ -137,7 +137,7 @@ describe('CompassWidget video placement', () => {
     })
 
     it('allows removing the optional Compass in Expert Replay', () => {
-        globalThis.lgs.stores.replay.simplePreparationActive = false
+        globalThis.lgs.stores.replay.basicPreparationActive = false
 
         render(
             <CompassWidget

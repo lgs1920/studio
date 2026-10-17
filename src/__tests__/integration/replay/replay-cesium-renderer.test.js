@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -290,11 +290,11 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(propertyValue(cursor?.point?.outlineWidth)).toBe(1.5)
     })
 
-    it('uses the effective Simple colors instead of stale Expert presentation state', () => {
+    it('uses the effective Basic colors instead of stale Expert presentation state', () => {
         const dataSources = makeDataSources()
         const replay = defaultJourneyReplaySettings()
         replay.userMode = 'basic'
-        replay.simple = {
+        replay.basic = {
             presentation: {
                 progression: {
                     fill: {color: '#ff2525'},
@@ -306,7 +306,7 @@ describe('JourneyReplayCesiumRenderer', () => {
             dataSources,
             replay,
         })
-        globalThis.lgs.stores.replay.simplePreparationActive = true
+        globalThis.lgs.stores.replay.basicPreparationActive = true
         globalThis.lgs.stores.replay.progression = {
             ...replay.progression,
             fill: {...replay.progression.fill, color: '#001122'},
@@ -328,13 +328,13 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(propertyValue(cursor?.point?.color)?.toCssColorString()).toBe(Color.fromCssColorString('#ff2525').toCssColorString())
     })
 
-    it.each([1.5, 2.3])('scales the actual Simple marker and trace by %s from the projected baseline', scale => {
+    it.each([1.5, 2.3])('scales the actual Basic marker and trace by %s from the projected baseline', scale => {
         const dataSources = makeDataSources()
         const replay = defaultJourneyReplaySettings()
         replay.userMode = 'basic'
-        replay.simple = {presentation: {sizeScale: 1}}
+        replay.basic = {presentation: {sizeScale: 1}}
         installReplayGlobals({dataSources, replay})
-        globalThis.lgs.stores.replay.simplePreparationActive = true
+        globalThis.lgs.stores.replay.basicPreparationActive = true
         const journey = makeJourney([makeTrack({
             slug: 'track#journey#gpx#main',
             coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
@@ -347,7 +347,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         const baselinePointSize = propertyValue(replayEntity(dataSources, '#cursor').point.pixelSize)
         const baselineLineWidth = propertyValue(replayEntity(dataSources, '#fill').polyline.width)
         const baselineOutline = propertyValue(replayEntity(dataSources, '#cursor').point.outlineWidth)
-        replay.simple.presentation = {sizeScale: scale, fillColor: '#008000', borderColor: '#0000ff'}
+        replay.basic.presentation = {sizeScale: scale, fillColor: '#008000', borderColor: '#0000ff'}
         renderer.update({sample, sampler, forceGeometry: true})
         const cursor = replayEntity(dataSources, '#cursor')
         expect(propertyValue(cursor.point.pixelSize)).toBeCloseTo(baselinePointSize * scale)

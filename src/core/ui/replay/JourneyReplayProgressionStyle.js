@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ import {
     currentReplayJourney,
     resolveJourneyReplayUserMode,
 } from './ReplayUserModeConstants'
+import {getBasicReplaySettings} from './ReplayModeSettings'
 
 export const REPLAY_PROGRESSION_FILL_MIN_WIDTH = 1
 export const REPLAY_PROGRESSION_FILL_MAX_WIDTH = 10
@@ -36,17 +37,17 @@ export const REPLAY_PROFILE_MARKER_BORDER_MAX_WIDTH = 12
 export const REPLAY_LABEL = 'Journey Replay'
 export const DEFAULT_REPLAY_SCOPE = 'all-tracks'
 export const DEFAULT_REPLAY_DURATION = 60
-/** Default duration in seconds for the compact Simple Replay workflow. */
-export const DEFAULT_SIMPLE_REPLAY_DURATION = 15
-/** Supported duration choices in seconds for the compact Simple Replay workflow. */
-export const SIMPLE_REPLAY_DURATIONS = Object.freeze([10, 15, 20, 30, 45, 60])
-/** Supported Simple Replay trace and marker scale factors. */
-export const SIMPLE_REPLAY_SIZE_SCALES = Object.freeze([1, 1.5, 2.3])
-/** Minimum rendered width in pixels for a Simple Replay trace. */
+/** Default duration in seconds for the compact Basic Replay workflow. */
+export const DEFAULT_BASIC_REPLAY_DURATION = 15
+/** Supported duration choices in seconds for the compact Basic Replay workflow. */
+export const BASIC_REPLAY_DURATIONS = Object.freeze([10, 15, 20, 30, 45, 60])
+/** Supported Basic Replay trace and marker scale factors. */
+export const BASIC_REPLAY_SIZE_SCALES = Object.freeze([1, 1.5, 2.3])
+/** Minimum rendered width in pixels for a Basic Replay trace. */
 export const REPLAY_MIN_TRACE_WIDTH = 3
 
-/** Normalize a Simple Replay size choice without compounding its base dimensions. */
-export const normalizeSimpleReplaySizeScale = value => SIMPLE_REPLAY_SIZE_SCALES.includes(Number(value))
+/** Normalize a Basic Replay size choice without compounding its base dimensions. */
+export const normalizeBasicReplaySizeScale = value => BASIC_REPLAY_SIZE_SCALES.includes(Number(value))
     ? Number(value)
     : 1
 export const DEFAULT_REPLAY_POI_DISTANCE = 10000
@@ -102,14 +103,14 @@ export const REPLAY_EFFECT_MODES = Object.freeze([
 ])
 
 /**
- * Normalize a Simple Replay duration to the supported product choices.
+ * Normalize a Basic Replay duration to the supported product choices.
  *
  * @param {*} value - Candidate duration in seconds.
- * @returns {number} Supported Simple Replay duration in seconds.
+ * @returns {number} Supported Basic Replay duration in seconds.
  */
-export const normalizeSimpleReplayDuration = value => {
+export const normalizeBasicReplayDuration = value => {
     const duration = Number(value)
-    return SIMPLE_REPLAY_DURATIONS.includes(duration) ? duration : DEFAULT_SIMPLE_REPLAY_DURATION
+    return BASIC_REPLAY_DURATIONS.includes(duration) ? duration : DEFAULT_BASIC_REPLAY_DURATION
 }
 
 export const DEFAULT_REPLAY_PROGRESSION = {
@@ -222,29 +223,29 @@ export const defaultJourneyReplayCameraStyle = () => ({...DEFAULT_REPLAY_CAMERA}
 export const defaultJourneyReplayReadiness = () => ({...DEFAULT_REPLAY_READINESS})
 
 /**
- * Resolve Simple Replay product defaults from the replay YAML settings.
+ * Resolve Basic Replay product defaults from the replay YAML settings.
  *
- * @returns {Object} Simple Replay defaults layered over normalization fallbacks.
+ * @returns {Object} Basic Replay defaults layered over normalization fallbacks.
  */
-export const defaultJourneyReplaySimpleSettings = () => {
+export const defaultJourneyReplayBasicSettings = () => {
     const replayDefaults = globalThis.lgs?.savedConfiguration?.ui?.replay ?? {}
-    const simpleDefaults = replayDefaults.simple ?? {}
+    const basicDefaults = getBasicReplaySettings(replayDefaults) ?? {}
     const progressionDefaults = defaultJourneyReplayProgressionStyle()
     const replayProgression = replayDefaults.progression ?? {}
-    const simpleProgression = simpleDefaults.presentation?.progression ?? {}
+    const basicProgression = basicDefaults.presentation?.progression ?? {}
     const replayProfileInfo = replayDefaults.profileInfo ?? {}
-    const simpleProfileInfo = simpleDefaults.presentation?.profileInfo ?? {}
+    const basicProfileInfo = basicDefaults.presentation?.profileInfo ?? {}
 
     return {
-        ...simpleDefaults,
-        duration: simpleDefaults.duration ?? DEFAULT_SIMPLE_REPLAY_DURATION,
+        ...basicDefaults,
+        duration: basicDefaults.duration ?? DEFAULT_BASIC_REPLAY_DURATION,
         camera: {
             ...defaultJourneyReplayCameraStyle(),
             ...(replayDefaults.camera ?? {}),
-            ...(simpleDefaults.camera ?? {}),
-            canDrift: simpleDefaults.camera?.canDrift ?? false,
-            canRoll: simpleDefaults.camera?.canRoll ?? false,
-            altitudeMode: simpleDefaults.camera?.altitudeMode
+            ...(basicDefaults.camera ?? {}),
+            canDrift: basicDefaults.camera?.canDrift ?? false,
+            canRoll: basicDefaults.camera?.canRoll ?? false,
+            altitudeMode: basicDefaults.camera?.altitudeMode
                 ?? replayDefaults.camera?.altitudeMode
                 ?? REPLAY_CAMERA_ALTITUDE_CONSTANT,
             cameraAngle: REPLAY_INITIAL_CAMERA_ANGLE,
@@ -252,35 +253,35 @@ export const defaultJourneyReplaySimpleSettings = () => {
         marker: {
             ...defaultJourneyReplayMarkerStyle(),
             ...(replayDefaults.marker ?? {}),
-            ...(simpleDefaults.marker ?? {}),
-            mode: simpleDefaults.marker?.mode ?? REPLAY_MARKER_MODE_NAVIGATION,
+            ...(basicDefaults.marker ?? {}),
+            mode: basicDefaults.marker?.mode ?? REPLAY_MARKER_MODE_NAVIGATION,
         },
         trace: {
             ...defaultJourneyReplayTraceStyle(),
             ...(replayDefaults.trace ?? {}),
-            ...(simpleDefaults.trace ?? {}),
-            mode: simpleDefaults.trace?.mode ?? REPLAY_TRACE_MODE_PROGRESSIVE,
+            ...(basicDefaults.trace ?? {}),
+            mode: basicDefaults.trace?.mode ?? REPLAY_TRACE_MODE_PROGRESSIVE,
         },
         presentation: {
             progression: {
                 ...progressionDefaults,
                 ...replayProgression,
-                ...simpleProgression,
+                ...basicProgression,
                 fill: {
                     ...progressionDefaults.fill,
                     ...(replayProgression.fill ?? {}),
-                    ...(simpleProgression.fill ?? {}),
+                    ...(basicProgression.fill ?? {}),
                 },
                 border: {
                     ...progressionDefaults.border,
                     ...(replayProgression.border ?? {}),
-                    ...(simpleProgression.border ?? {}),
+                    ...(basicProgression.border ?? {}),
                 },
             },
             profileInfo: {
                 ...defaultJourneyReplayProfileInfoStyle(),
                 ...replayProfileInfo,
-                ...simpleProfileInfo,
+                ...basicProfileInfo,
             },
         },
     }
@@ -331,7 +332,7 @@ export const REPLAY_CAMERA_PRESETS = Object.freeze([
 
 export const defaultJourneyReplaySettings = () => ({
     userMode:   REPLAY_USER_MODE_BASIC,
-    simple:     null,
+    basic:      null,
     duration:    DEFAULT_REPLAY_DURATION,
     poiDistance: DEFAULT_REPLAY_POI_DISTANCE,
     hideAllPoisDuringJourneyReplay: false,
@@ -443,14 +444,14 @@ const normalizeJourneyReplayHysteresisMarginRatio = (zone, value, fallback = DEF
     return clampJourneyReplayNumber(edgeMargin, fallback, REPLAY_HYSTERESIS_MARGIN_RATIO_MIN, REPLAY_HYSTERESIS_MARGIN_RATIO_MAX)
 }
 
-/** Normalize baseline trace dimensions and preserve the optional Simple size choice. */
+/** Normalize baseline trace dimensions and preserve the optional Basic size choice. */
 export const normalizeJourneyReplayProgressionStyle = (progression = {}) => {
     const effect = progression?.effect ?? {}
     const fill = progression?.fill ?? {}
     const border = progression?.border ?? {}
 
     return {
-        ...(progression?.sizeScale !== undefined ? {sizeScale: normalizeSimpleReplaySizeScale(progression.sizeScale)} : {}),
+        ...(progression?.sizeScale !== undefined ? {sizeScale: normalizeBasicReplaySizeScale(progression.sizeScale)} : {}),
         effect: {
             mode: effect.mode === REPLAY_EFFECT_GLOW || effect.mode === REPLAY_EFFECT_NEON
                   ? effect.mode
@@ -492,15 +493,15 @@ export const normalizeJourneyReplayProgressionStyle = (progression = {}) => {
 }
 
 /**
- * Resolve explicit Simple appearance choices against immutable product dimensions.
+ * Resolve explicit Basic appearance choices against immutable product dimensions.
  * Legacy progression payloads remain product-owned; only the compact controls override them.
  * @param {Object} presentation - Persisted color and scale choices.
  * @param {Object} defaults - Product presentation defaults.
  * @returns {Object} Appearance shared by previews, playback, and export.
  */
-export const resolveSimpleReplayPresentation = (presentation = {}, defaults = defaultJourneyReplaySimpleSettings().presentation) => {
+export const resolveBasicReplayPresentation = (presentation = {}, defaults = defaultJourneyReplayBasicSettings().presentation) => {
     const baseline = normalizeJourneyReplayProgressionStyle(defaults?.progression)
-    const sizeScale = normalizeSimpleReplaySizeScale(presentation?.sizeScale)
+    const sizeScale = normalizeBasicReplaySizeScale(presentation?.sizeScale)
     const fillColor = presentation?.fillColor ?? presentation?.progression?.fill?.color ?? baseline.fill.color
     const borderColor = presentation?.borderColor ?? presentation?.progression?.border?.color ?? baseline.border.color
     return {
@@ -763,8 +764,8 @@ export const normalizeJourneyReplaySettings = (settings = {}) => {
 
     return {
         userMode,
-        simple:     settings?.simple && typeof settings.simple === 'object'
-                    ? JSON.parse(JSON.stringify(settings.simple))
+        basic:      getBasicReplaySettings(settings)
+                    ? JSON.parse(JSON.stringify(getBasicReplaySettings(settings)))
                     : null,
         duration:    Math.max(1, duration),
         poiDistance: clampJourneyReplayNumber(
@@ -817,8 +818,8 @@ export const normalizeJourneyReplaySettings = (settings = {}) => {
     }
 }
 
-const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
-    const product = defaultJourneyReplaySimpleSettings()
+const resolveReplayBasicSettingsForRuntime = ({journey, user} = {}) => {
+    const product = defaultJourneyReplayBasicSettings()
     const cameraSettings = {
         ...product.camera,
         ...(user?.camera ?? {}),
@@ -841,13 +842,13 @@ const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
         ...(user?.trace ?? {}),
         ...(journey?.trace ?? {}),
     })
-    const presentation = resolveSimpleReplayPresentation({
+    const presentation = resolveBasicReplayPresentation({
         ...(user?.presentation ?? {}),
         ...(journey?.presentation ?? {}),
     }, product.presentation)
 
     return {
-        duration: normalizeSimpleReplayDuration(user?.duration ?? journey?.duration ?? product.duration),
+        duration: normalizeBasicReplayDuration(user?.duration ?? journey?.duration ?? product.duration),
         includeHiddenTracks: false,
         readiness: {
             ...product.readiness,
@@ -897,21 +898,21 @@ export const getJourneyReplaySettings = ({journey = currentReplayJourney()} = {}
             },
         )
         const journeyReplay = journey?.replay
-        const simple = resolveReplaySimpleSettingsForRuntime({
-            journey: journeyReplay?.simple,
-            user: settings.simple,
+        const basic = resolveReplayBasicSettingsForRuntime({
+            journey: getBasicReplaySettings(journeyReplay),
+            user: getBasicReplaySettings(settings),
         })
         if (settings.userMode === REPLAY_USER_MODE_BASIC) {
             return {
                 ...settings,
-                duration: simple.duration,
-                includeHiddenTracks: simple.includeHiddenTracks,
-                readiness: normalizeJourneyReplayReadiness(simple.readiness),
-                camera: {...simple.camera, debug: true},
-                marker: simple.marker,
-                trace: simple.trace,
-                progression: simple.presentation.progression,
-                profileInfo: simple.presentation.profileInfo,
+                duration: basic.duration,
+                includeHiddenTracks: basic.includeHiddenTracks,
+                readiness: normalizeJourneyReplayReadiness(basic.readiness),
+                camera: {...basic.camera, debug: true},
+                marker: basic.marker,
+                trace: basic.trace,
+                progression: basic.presentation.progression,
+                profileInfo: basic.presentation.profileInfo,
             }
         }
 
@@ -945,8 +946,8 @@ export const ensureJourneyReplaySettings = ({resetTransient = false} = {}) => {
 
     const replay = normalizeJourneyReplaySettings(ui.replay)
     replay.camera = toGlobalReplayCameraSettings(replay.camera)
-    if (replay.simple?.camera && typeof replay.simple.camera === 'object') {
-        replay.simple.camera = toGlobalReplayCameraSettings(replay.simple.camera)
+    if (replay.basic?.camera && typeof replay.basic.camera === 'object') {
+        replay.basic.camera = toGlobalReplayCameraSettings(replay.basic.camera)
     }
     ui.replay = replay
     if (resetTransient) {

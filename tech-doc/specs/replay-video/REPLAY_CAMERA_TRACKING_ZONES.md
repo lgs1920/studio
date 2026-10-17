@@ -46,7 +46,7 @@ The nominal pose is recalculated from the current logical replay sample. It is
 never derived from the current Cesium camera orientation.
 
 The camera uses one `cameraAngle` azimuth relative to the route tangent in both
-Simple and Expert Replay. `0°` places the camera along the departure direction,
+Basic and Expert Replay. `0°` places the camera along the departure direction,
 `+90°` places it to the right, `-90°` to the left, and `±180°` behind the
 trace. The camera view always points back toward the replay anchor. Its view
 heading is the route-axis heading plus 180 degrees plus `cameraAngle`.
@@ -64,7 +64,7 @@ position.
 
 ### 2.1 Preparation camera guide
 
-During Simple or Expert preparation, the camera guide cone and camera icon use
+During Basic or Expert preparation, the camera guide cone and camera icon use
 the current Cesium projection, keeping the cone anchored to the route departure
 as the map is panned or zoomed without changing the configured camera angle.
 The camera icon at the cone tip is projected onto the local map plane. The

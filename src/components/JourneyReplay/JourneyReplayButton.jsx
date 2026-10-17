@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,13 +16,14 @@
 
 import { REPLAY_DRAWER } from '@Core/constants'
 import { REPLAY_LABEL, REPLAY_INITIAL_CAMERA_ANGLE, toGlobalReplayCameraSettings } from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {getBasicReplaySettings, writeBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
 import {
     hasExpertReplayConfiguration,
-    initializeExpertReplayFromSimple,
+    initializeExpertReplayFromBasic,
     normalizeExpertReplayCamera,
     REPLAY_USER_MODE_BASIC,
     REPLAY_USER_MODE_EXPERT,
-    resolveSimpleReplaySettings,
+    resolveBasicReplaySettings,
 } from '@Core/ui/replay/ReplayUserModes'
 import { TunnelTooltip } from '@Components/Tunnel/Tunnel'
 import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
@@ -61,7 +62,7 @@ export const JourneyReplayButton = (props) => {
                   && (!showOnlyWhenLinked || isLinked)
     const buttonClassName = isDrawerOpen ? `${className} is-selected`.trim() : className
     const isBasicMode = mode === REPLAY_USER_MODE_BASIC
-    const isBasicPreparationActive = isBasicMode && replay.simplePreparationActive === true
+    const isBasicPreparationActive = isBasicMode && replay.basicPreparationActive === true
     const buttonAriaLabel = isBasicPreparationActive ? 'Start Basic Replay' : ariaLabel
     const buttonTooltipText = isBasicPreparationActive ? 'Start Basic Replay' : tooltipText
     const handleClick = useCallback(() => {
@@ -74,42 +75,39 @@ export const JourneyReplayButton = (props) => {
             return
         }
         if (mode === REPLAY_USER_MODE_BASIC) {
-            const simple = resolveSimpleReplaySettings({
-                journey: journey.replay?.simple,
-                user: lgs.settings.ui.replay.simple,
+            const basicSettings = resolveBasicReplaySettings({
+                journey: getBasicReplaySettings(journey.replay),
+                user: getBasicReplaySettings(lgs.settings.ui.replay),
             })
             const journeyReplay = journey.replay ?? {}
-            const journeySimple = journeyReplay.simple ?? {}
-            const journeySimpleCamera = journeySimple.camera ?? {}
-            const hasSavedSimpleAngle = journeySimpleCamera.cameraAngle !== null
-                && journeySimpleCamera.cameraAngle !== undefined
-                && Number.isFinite(Number(journeySimpleCamera.cameraAngle))
-            const hasLegacySimpleAngle = ['ahead', 'behind'].includes(journeySimpleCamera.positionMode)
-            if (!hasSavedSimpleAngle) {
-                journey.replay = {
-                    ...journeyReplay,
-                    simple: {
-                        ...journeySimple,
-                        camera: {
-                            ...journeySimpleCamera,
-                            cameraAngle: hasLegacySimpleAngle
-                                ? simple.camera.cameraAngle
-                                : REPLAY_INITIAL_CAMERA_ANGLE,
-                        },
+            const journeyBasic = getBasicReplaySettings(journeyReplay) ?? {}
+            const journeyBasicCamera = journeyBasic.camera ?? {}
+            const hasSavedBasicAngle = journeyBasicCamera.cameraAngle !== null
+                && journeyBasicCamera.cameraAngle !== undefined
+                && Number.isFinite(Number(journeyBasicCamera.cameraAngle))
+            const hasLegacyBasicAngle = ['ahead', 'behind'].includes(journeyBasicCamera.positionMode)
+            if (!hasSavedBasicAngle) {
+                journey.replay = writeBasicReplaySettings(journeyReplay, {
+                    ...journeyBasic,
+                    camera: {
+                        ...journeyBasicCamera,
+                        cameraAngle: hasLegacyBasicAngle
+                            ? basicSettings.camera.cameraAngle
+                            : REPLAY_INITIAL_CAMERA_ANGLE,
                     },
-                }
+                })
                 void journey.persistToDatabase?.()
             }
             lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_BASIC
             lgs.stores.replay.userMode = REPLAY_USER_MODE_BASIC
-            lgs.settings.ui.replay.simple = {
-                ...simple,
-                camera: toGlobalReplayCameraSettings(simple.camera),
-            }
-            lgs.settings.ui.replay.camera = toGlobalReplayCameraSettings(simple.camera)
-            lgs.stores.replay.camera = simple.camera
-            lgs.stores.replay.duration = simple.duration
-            lgs.stores.replay.simplePreparationActive = true
+            lgs.settings.ui.replay = writeBasicReplaySettings(lgs.settings.ui.replay, {
+                ...basicSettings,
+                camera: toGlobalReplayCameraSettings(basicSettings.camera),
+            })
+            lgs.settings.ui.replay.camera = toGlobalReplayCameraSettings(basicSettings.camera)
+            lgs.stores.replay.camera = basicSettings.camera
+            lgs.stores.replay.duration = basicSettings.duration
+            lgs.stores.replay.basicPreparationActive = true
             lgs.settings.ui.replay.recordingSync = false
             lgs.stores.replay.recordingSync = false
             if (lgs.stores.ui.video.cropper) {
@@ -123,22 +121,22 @@ export const JourneyReplayButton = (props) => {
             lgs.stores.ui.video.editing = true
             void Promise.resolve(__.ui.replay?.enterReplayPreparation?.({
                 journey,
-                shouldApply: () => lgs.stores.replay.simplePreparationActive === true
+                shouldApply: () => lgs.stores.replay.basicPreparationActive === true
                     && lgs.stores.ui.video.editing === true,
             })).catch(() => undefined)
             return
         }
         if (mode === REPLAY_USER_MODE_EXPERT) {
-            lgs.stores.replay.simplePreparationActive = false
+            lgs.stores.replay.basicPreparationActive = false
             lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
             lgs.stores.replay.userMode = REPLAY_USER_MODE_EXPERT
             let shouldPersistExpertCamera = false
             if (journey && !hasExpertReplayConfiguration(journey)) {
-                const simple = resolveSimpleReplaySettings({
-                    journey: journey.replay?.simple,
-                    user: lgs.settings.ui.replay.simple,
+                const basicSettings = resolveBasicReplaySettings({
+                    journey: getBasicReplaySettings(journey.replay),
+                    user: getBasicReplaySettings(lgs.settings.ui.replay),
                 })
-                const replay = initializeExpertReplayFromSimple(journey, simple)
+                const replay = initializeExpertReplayFromBasic(journey, basicSettings)
                 journey.replay = replay
                 shouldPersistExpertCamera = true
             }

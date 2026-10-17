@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-12
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ import {memo} from 'react'
  * @param {string} props.cropzoneId - Crop zone widget identifier.
  * @param {boolean} [props.mainTheme=false] - Use the main application theme.
  * @param {boolean} [props.inlineCustom=false] - Show custom preset controls inline.
- * @param {boolean} [props.compactSimple=false] - Use concise choices for Simple Replay.
+ * @param {boolean} [props.compactBasic=false] - Use concise choices for Basic Replay.
  * @param {boolean} [props.unifiedChoices=false] - Render ratio choices as matching Web Awesome buttons.
  * @returns {JSX.Element} Reusable menu content.
  */
@@ -41,7 +41,7 @@ export const VideoRecordingSettingsMenuContent = memo(({
     cropzoneId,
     mainTheme = false,
     inlineCustom = false,
-    compactSimple = false,
+    compactBasic = false,
     unifiedChoices = false,
 }) => {
     if (menu === 'ratio') {
@@ -54,7 +54,7 @@ export const VideoRecordingSettingsMenuContent = memo(({
 
     return <VideoPresetToolbar embedded
                                inlineCustom={inlineCustom}
-                               compactSimple={compactSimple}
+                               compactBasic={compactBasic}
                                idPrefix={inlineCustom ? 'timeline-video-preset' : 'video-preset'}
                                mainTheme={mainTheme}/>
 })

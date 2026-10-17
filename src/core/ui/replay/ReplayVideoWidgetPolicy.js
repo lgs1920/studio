@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,15 +39,15 @@ export const REPLAY_VIDEO_WIDGET_TYPES = Object.freeze([
 ])
 
 /**
- * Widget types required by Simple Replay video composition.
+ * Widget types required by Basic Replay video composition.
  */
-export const REPLAY_VIDEO_SIMPLE_WIDGET_TYPES = Object.freeze([
+export const REPLAY_VIDEO_BASIC_WIDGET_TYPES = Object.freeze([
     COMPASS_WIDGET,
     CREDITS_WIDGET,
     LOGO_WIDGET,
 ])
 
-const REPLAY_VIDEO_SIMPLE_WIDGET_TYPE_SET = new Set(REPLAY_VIDEO_SIMPLE_WIDGET_TYPES)
+const REPLAY_VIDEO_BASIC_WIDGET_TYPE_SET = new Set(REPLAY_VIDEO_BASIC_WIDGET_TYPES)
 
 const REPLAY_VIDEO_NON_CONTENT_TYPES = new Set([
     VIDEO_CROP_ZONE,
@@ -59,34 +59,34 @@ export const getReplayVideoWidgetType = widgetId => typeof widgetId === 'string'
     ? widgetId.split('#')[0]
     : ''
 
-const isSimpleReplayActive = () => isJourneyReplayBasicMode()
+const isBasicReplayActive = () => isJourneyReplayBasicMode()
 
 /**
  * Return the widget types that Replay must register for the active mode.
  *
  * @param {Object} options - Replay widget policy options.
- * @param {boolean} [options.simpleReplay] - Whether Simple Replay is active.
+ * @param {boolean} [options.basicReplay] - Whether Basic Replay is active.
  * @returns {string[]} Required widget type identifiers.
  */
-export const getReplayVideoWidgetTypes = ({simpleReplay = isSimpleReplayActive()} = {}) => (
-    simpleReplay ? REPLAY_VIDEO_SIMPLE_WIDGET_TYPES : REPLAY_VIDEO_WIDGET_TYPES
+export const getReplayVideoWidgetTypes = ({basicReplay = isBasicReplayActive()} = {}) => (
+    basicReplay ? REPLAY_VIDEO_BASIC_WIDGET_TYPES : REPLAY_VIDEO_WIDGET_TYPES
 )
 
-export const isReplayVideoWidgetAllowed = (widgetId, {simpleReplay = isSimpleReplayActive()} = {}) => {
+export const isReplayVideoWidgetAllowed = (widgetId, {basicReplay = isBasicReplayActive()} = {}) => {
     const widgetType = getReplayVideoWidgetType(widgetId)
     if (!widgetType || REPLAY_VIDEO_NON_CONTENT_TYPES.has(widgetType)) {
         return false
     }
 
-    return simpleReplay
-        ? REPLAY_VIDEO_SIMPLE_WIDGET_TYPE_SET.has(widgetType)
+    return basicReplay
+        ? REPLAY_VIDEO_BASIC_WIDGET_TYPE_SET.has(widgetType)
         : true
 }
 
 export const filterReplayVideoWidgetKeys = (widgetKeys, options = {}) => {
-    const simpleReplay = options.simpleReplay ?? isSimpleReplayActive()
+    const basicReplay = options.basicReplay ?? isBasicReplayActive()
     return [...new Set(widgetKeys ?? [])]
-        .filter(widgetId => isReplayVideoWidgetAllowed(widgetId, {simpleReplay}))
+        .filter(widgetId => isReplayVideoWidgetAllowed(widgetId, {basicReplay}))
 }
 
 /**
@@ -95,16 +95,16 @@ export const filterReplayVideoWidgetKeys = (widgetKeys, options = {}) => {
  * @param {Object} options - Widget lookup options.
  * @param {string[]|null} [options.widgetKeys=null] - Optional explicit IDs.
  * @param {string} [options.widgetsBoard=VIDEO_WIDGETS_BOARD] - Widget board.
- * @param {boolean|undefined} [options.simpleReplay] - Restrict to Simple Replay widgets.
+ * @param {boolean|undefined} [options.basicReplay] - Restrict to Basic Replay widgets.
  * @returns {string[]} Allowed widget instance IDs.
  */
 export const getReplayVideoWidgetKeys = ({
     widgetKeys = null,
     widgetsBoard = VIDEO_WIDGETS_BOARD,
-    simpleReplay = isSimpleReplayActive(),
+    basicReplay = isBasicReplayActive(),
 } = {}) => {
     if (Array.isArray(widgetKeys)) {
-        return filterReplayVideoWidgetKeys(widgetKeys, {simpleReplay})
+        return filterReplayVideoWidgetKeys(widgetKeys, {basicReplay})
     }
 
     const entries = new Map(
@@ -117,7 +117,7 @@ export const getReplayVideoWidgetKeys = ({
 
     return [...entries.entries()]
         .filter(([widgetId, entry]) => entry?.widgetsBoard === widgetsBoard
-            && isReplayVideoWidgetAllowed(widgetId, {simpleReplay}))
+            && isReplayVideoWidgetAllowed(widgetId, {basicReplay}))
         .sort(([, left], [, right]) => (left?.zIndex || 0) - (right?.zIndex || 0))
         .map(([widgetId]) => widgetId)
 }

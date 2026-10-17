@@ -7,7 +7,7 @@ Date: 2026-10-15
 
 ## Purpose
 
-Simple and Expert configure the same Replay mechanism and use the active mode's
+Basic and Expert configure the same Replay mechanism and use the active mode's
 camera settings. Capture paths consume that Replay state; they are not
 user-facing Replay modes. Linked Replay video uses the deterministic deferred
 MP4 exporter. Dry run and product export advance the main Studio Cesium viewer.
@@ -51,12 +51,12 @@ narrow crop, and at least one high-resolution output profile.
   preparation, playback/export startup, and the first Replay frame. Configured
   altitude, pitch, and angle must resolve to the same camera-to-marker range
   across crop positioning and the first camera command.
-- Save the departure marker's crop-relative screen position in Simple and Expert
+- Save the departure marker's crop-relative screen position in Basic and Expert
   Journey Replay data, reload the Journey, and verify preparation, playback, and
   export preserve that position when present.
 - Preparation and interactive Play wait for the final inertial wheel or drag
   zoom, including movement that continues beyond the first input debounce.
-  Verify constant altitude and ground offset in Simple and Expert. Cancellation
+  Verify constant altitude and ground offset in Basic and Expert. Cancellation
   resolves pending preparation/start requests without applying or saving the
   restored map view. Stop and rendering errors must preserve newer Journey
   camera values, including when the selected Journey changes before cleanup.
@@ -69,7 +69,7 @@ narrow crop, and at least one high-resolution output profile.
   predictive collision with a 3-second base transition horizon. Live tolerance
   and visibility corrections use a cubic ease-in/out flight of at least 3
   seconds, preserve a longer configured Ease duration, and do not restart while
-  the same transition remains active. Deterministic Simple Replay capture must
+  the same transition remains active. Deterministic Basic Replay capture must
   interpolate hard Navigation corrections over at least 3 replay-time seconds
   rather than applying them as an immediate camera frame.
 - Untimed routes and GPX recordings spanning many hours use the selected Replay
@@ -93,7 +93,7 @@ narrow crop, and at least one high-resolution output profile.
   be eased and retain the exact endpoint, including reverse playback. Absolute
   video time containing start clips does not imply Replay completion.
 - Replay camera height, pitch, and heading/offset resolve to the expected
-  target-relative camera range and angle in both Simple and Expert.
+  target-relative camera range and angle in both Basic and Expert.
 - Long untimed journeys remain smooth at both short and ordinary Replay
   durations. Check per-frame camera-anchor movement and heading, confirm the
   smoothing-pass offset stays within one quarter of the projected crop width,
@@ -140,7 +140,7 @@ narrow crop, and at least one high-resolution output profile.
 
 ## Required visual validation
 
-### Simple Replay Dry run
+### Basic Replay Dry run
 
 - Traverse every configured logical frame and start/stop phase with the normal
   camera, trace, and published widget state.

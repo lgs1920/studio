@@ -11,10 +11,10 @@ describes the code that currently exists. Planned work is tracked in the replay
 status document and in explicitly marked
 TODO specifications stored beside the current replay documentation.
 
-## Simple and Expert modes
+## Basic and Expert modes
 
-Simple and Expert are user-facing Replay configurations over the same Replay
-session, frame resolver, and camera/runtime. Simple provides a guided
+Basic and Expert are user-facing Replay configurations over the same Replay
+session, frame resolver, and camera/runtime. Basic provides a guided
 preparation with a restricted set of controls and widgets. Expert exposes
 additional camera, clip, and Replay controls. The selected mode changes
 configuration and preparation policy, not the Replay engine or video renderer.
@@ -22,7 +22,7 @@ Both modes use the configured Replay camera and the same playback and MP4
 export path. The current camera configuration controls heading/angle, pitch,
 and camera height. Cesium range (the perceived zoom) is derived from camera
 height and pitch, then carried in the same camera command used for interactive
-playback and export. Simple tracking resolves its Navigation marker policy from the active Simple
+playback and export. Basic tracking resolves its Navigation marker policy from the active Basic
 configuration, even when the separate Expert marker setting is trace-only.
 Startup and live camera commands aim at the same rendered terrain marker;
 GPX elevation does not replace that target. Supported pitch values, including
@@ -35,16 +35,22 @@ Start/stop clips may define their own camera movement.
 Completed videos open in the standard preview and sharing dialog.
 `ReplayMediaCapture` handles screenshots and completed-media handoff.
 
-The Simple settings popup offers 10, 15, 20, 30, 45, and 60-second durations, border/fill
+Basic Replay settings are stored under `basic` in global UI settings and on
+each Journey. Reads use `basic` when that property exists and fall back to the
+legacy `simple` key only when it is absent. Settings hydration migrates legacy
+values to `basic`, preferring `basic` when both keys exist. Every subsequent
+write stores `basic` and removes `simple`.
+
+The Basic settings popup offers 10, 15, 20, 30, 45, and 60-second durations, border/fill
 color swatches, and trace/marker size choices of 1, 1.5, and 2.3 times the
 product baseline. Explicit appearance choices are stored in
-`simple.presentation.sizeScale`, `fillColor`, and `borderColor`, on the Journey
+`basic.presentation.sizeScale`, `fillColor`, and `borderColor`, on the Journey
 and in the application defaults. Product dimensions remain unscaled in the
-normalized progression; the Simple renderer applies the factor at rendering
+normalized progression; the Basic renderer applies the factor at rendering
 time, after projection limits for the marker. Color inputs update every choice
 preview and the active Replay immediately. Expert appearance remains independent.
 
-Simple Replay offers an opt-in Dry run preference in the video settings popup.
+Basic Replay offers an opt-in Dry run preference in the video settings popup.
 It traverses the same fixed-timestamp timeline, including start and stop clips,
 and applies the same camera, trace, and logical widget state. Tile prewarming
 remains enabled according to the configured readiness policy. Dry run checks
@@ -92,7 +98,7 @@ contains the rounded base, tip, and camera icon together, retaining the projecte
 departure anchor where possible and translating the guide when needed to keep
 it usable. Crop replacement and ancestor layout changes refresh that constraint.
 These display adjustments never write camera settings or move the map camera.
-Entering Simple or Expert video preparation stops and awaits an existing normal
+Entering Basic or Expert video preparation stops and awaits an existing normal
 map orbit before framing the canonical journey departure in a static
 North-oriented view with Replay pitch and height. This explicit entry boundary
 waits for prior scene restoration and successful preparation, and rejects stale
@@ -111,7 +117,7 @@ is the current normal view. An isolated export lease snapshots only its own
 camera and leaves the main map camera alone. Replay applies its configured
 angle, pitch, and height before start clips.
 The departure marker's crop-relative screen position is persisted separately in
-the active Journey's Simple or Expert Replay settings. Preparation and playback
+the active Journey's Basic or Expert Replay settings. Preparation and playback
 reuse it when framing the departure, while camera height, pitch, and angle keep
 their independent settings.
 The normal camera manager suspends reads and persistence while the main camera
@@ -136,7 +142,7 @@ Terminal cleanup never persists a playback camera baseline. Outside preparation,
 it reloads runtime controls from the currently selected Journey's camera data.
 This also preserves newer saved edits and prevents an old session from writing
 its height or pitch into another Journey after selection changes.
-Simple Replay disables camera diagnostics, including when persisted or prepared
+Basic Replay disables camera diagnostics, including when persisted or prepared
 settings enable them. Expert Replay exposes the diagnostics setting.
 Diagnostics label ground offset separately from absolute Replay height.
 Recording diagnostics report the altitude mode, configured pitch, altitude,
@@ -151,7 +157,7 @@ composition. The `replay.camera.transfer` and `camera.view.apply` trace events
 compare configured altitude, pitch, and angle with physical camera height and
 camera-to-marker range at each transfer boundary.
 
-Simple Replay adds a fixed four-second trace-centroid focus phase after its
+Basic Replay adds a fixed four-second trace-centroid focus phase after its
 playback. Expert Replay uses its configured start and stop clips.
 
 ## Functional architecture
@@ -231,7 +237,7 @@ future route projections, then begins the correction before the marker reaches
 the boundary. Navigation keeps its confirmed predictive collision check with a
 3-second base transition horizon. Live tolerance and visibility corrections
 use a cubic ease-in/out camera flight lasting at least 3 seconds. Preserve
-any longer duration selected by the active camera Ease. Deterministic Simple
+any longer duration selected by the active camera Ease. Deterministic Basic
 Replay capture interpolates hard Navigation corrections on replay time for at
 least 3 seconds instead of applying an immediate camera frame. This correction
 timing does not change clip timing.
@@ -336,7 +342,7 @@ Readiness delays export wall time but never changes logical video time.
 `ReplayDeferredExporter` contains the deferred-export orchestration for
 preparation, frame rendering,
 readiness, overlay composition, encoding, cancellation, and cleanup.
-Its Simple Replay Dry run mode keeps logical frame updates, tile prewarming,
+Its Basic Replay Dry run mode keeps logical frame updates, tile prewarming,
 bounded tile-readiness checkpoints, cancellation, and cleanup. It skips widget capture,
 output-canvas composition, codec probing, and media creation.
 Product export and Dry run delegate the controller seek to their frame
@@ -372,7 +378,7 @@ codec keep-alive submissions while the next frame is being prepared.
 
 ### Recording preparation and map controls
 
-During Simple preparation, the runtime camera is authoritative for the drawer
+During Basic preparation, the runtime camera is authoritative for the drawer
 and partial cone edits. Duration or style hydration must not replace it with an
 older journey camera. Successful preparation persists that validated camera
 before recording transitions, so releasing the preparation flag cannot change

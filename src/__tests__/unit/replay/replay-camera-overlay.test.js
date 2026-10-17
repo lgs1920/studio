@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -119,7 +119,7 @@ describe('replay camera diagnostics overlay', () => {
         settings.camera.debug = userMode === 'expert'
         settings.camera.altitudeMode = altitudeMode
         settings.camera.altitude = altitudeMode === 'ground-offset' ? 485 : 1200
-        settings.simple = {camera: {...settings.camera, debug: false}}
+        settings.basic = {camera: {...settings.camera, debug: false}}
         const container = document.createElement('div')
         document.body.appendChild(container)
         const drawingContext = createDrawingContext()
@@ -195,7 +195,7 @@ describe('replay camera diagnostics overlay', () => {
         const settings = defaultJourneyReplaySettings()
         settings.userMode = 'expert'
         settings.camera.debug = false
-        settings.simple = {camera: {debug: false}}
+        settings.basic = {camera: {debug: false}}
         const container = document.createElement('div')
         document.body.appendChild(container)
         const state = {
@@ -228,7 +228,7 @@ describe('replay camera diagnostics overlay', () => {
         const settings = defaultJourneyReplaySettings()
         settings.userMode = userMode
         settings.camera.debug = userMode === 'expert'
-        settings.simple = {camera: {debug: false}}
+        settings.basic = {camera: {debug: false}}
         const setVisible = vi.fn()
         const updateOverlay = vi.fn()
         const sample = {progress: 0}

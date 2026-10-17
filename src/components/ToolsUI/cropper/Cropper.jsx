@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,7 +40,7 @@ import { CropZoneWidget }        from './widgets/CropZoneWidget'
 import { CropZoneInfoPopup }     from './widgets/CropZoneInfoPopup'
 import './style.css'
 
-export const Cropper = memo(({overlay = false, hideVideoWidgets = false, hideWidgetPanel = false, simplePreparationActive = false, className = '', context, options = {}, children, renderRatioWidget = true}) => {
+export const Cropper = memo(({overlay = false, hideVideoWidgets = false, hideWidgetPanel = false, basicPreparationActive = false, className = '', context, options = {}, children, renderRatioWidget = true}) => {
 
     const _cropperContainer = useRef(null)
     const _overlay = useRef(null)
@@ -56,7 +56,7 @@ export const Cropper = memo(({overlay = false, hideVideoWidgets = false, hideWid
     })
     const captureActive = Boolean(video.preRecording || video.exporting || video.snapshot || video.finalizing)
     const interactiveCrop = cropper.ratioEditor === true
-                            || simplePreparationActive === true
+                            || basicPreparationActive === true
                             || (video.editing === true && replay.recordingSync === true)
 
     useEffect(() => {
@@ -147,7 +147,7 @@ export const Cropper = memo(({overlay = false, hideVideoWidgets = false, hideWid
                     </div>
                 )}
                 {children}
-                {!captureActive && !hideWidgetPanel && !simplePreparationActive && (
+                {!captureActive && !hideWidgetPanel && !basicPreparationActive && (
                     <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS, JOURNEY_WIDGETS]}/>
                 )}
             </div>

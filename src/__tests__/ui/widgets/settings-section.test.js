@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -410,6 +410,35 @@ describe('SettingsSection', () => {
             label: 'Landing',
             slots: ['stop'],
         })
+    })
+
+    it('migrates persisted Replay UI settings from the legacy key to Basic', async () => {
+        const legacySettings = {duration: 20, dryRun: true}
+        lgs.db.settings.get.mockResolvedValue({
+            profile: {liveData: false},
+            replay: {
+                userMode: 'basic',
+                simple: legacySettings,
+            },
+        })
+
+        const section = new SettingsSection('ui')
+        await section.init()
+
+        expect(section.content.replay.basic).toEqual(legacySettings)
+        expect(section.content.replay).not.toHaveProperty('simple')
+        expect(lgs.db.settings.put).toHaveBeenCalledWith(
+            'ui',
+            expect.objectContaining({
+                replay: expect.objectContaining({
+                    userMode: 'basic',
+                    basic: legacySettings,
+                }),
+            }),
+            SETTINGS_STORE,
+        )
+        const persistedReplay = lgs.db.settings.put.mock.calls.at(-1)[1].replay
+        expect(persistedReplay).not.toHaveProperty('simple')
     })
 
     it('adds missing excluded primitive defaults without overwriting existing user choices', () => {

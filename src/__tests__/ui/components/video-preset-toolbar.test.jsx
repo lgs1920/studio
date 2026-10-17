@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-12
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,7 +27,7 @@ vi.mock('@Components/MainUI/video/toolbox/VideoFPSToolbar', () => ({
 }))
 
 vi.mock('@Components/MainUI/video/toolbox/VideoQualityToolbar', () => ({
-    VideoQualityToolbar: ({compactSimple}) => <div data-testid="quality-choices" data-compact-simple={compactSimple}/>,
+    VideoQualityToolbar: ({compactBasic}) => <div data-testid="quality-choices" data-compact-basic={compactBasic}/>,
 }))
 
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
@@ -80,13 +80,13 @@ describe('VideoPresetToolbar', () => {
     })
 
     it('keeps the preset choices distinct from the compact Flex quality labels', () => {
-        render(<VideoPresetToolbar embedded compactSimple inlineCustom/>)
+        render(<VideoPresetToolbar embedded compactBasic inlineCustom/>)
 
         for (const label of ['Low', 'Med', 'High', 'Ultra', 'Flex']) {
             expect(screen.getByRole('button', {name: label})).not.toBeNull()
         }
 
         fireEvent.click(screen.getByRole('button', {name: 'Flex'}))
-        expect(screen.getByTestId('quality-choices').dataset.compactSimple).toBe('true')
+        expect(screen.getByTestId('quality-choices').dataset.compactBasic).toBe('true')
     })
 })

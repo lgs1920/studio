@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-29
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,7 +39,7 @@ describe('CreditsWidget context menu', () => {
         globalThis.lgs = {
             gutter: {xs: 5},
             stores: {
-                replay: proxy({simplePreparationActive: true}),
+                replay: proxy({basicPreparationActive: true}),
                 ui: {
                     video: proxy({
                         editing:      true,
@@ -66,7 +66,7 @@ describe('CreditsWidget context menu', () => {
         globalThis.lgs = undefined
     })
 
-    it('disables the menu during Simple Replay', () => {
+    it('disables the menu during Basic Replay', () => {
         render(
             <CreditsWidget
                 context={proxy({widgetEditor: false, widgetsBoard: VIDEO_WIDGETS_BOARD})}
@@ -78,7 +78,7 @@ describe('CreditsWidget context menu', () => {
     })
 
     it('keeps the menu enabled in Expert Replay', () => {
-        lgs.stores.replay.simplePreparationActive = false
+        lgs.stores.replay.basicPreparationActive = false
 
         render(
             <CreditsWidget

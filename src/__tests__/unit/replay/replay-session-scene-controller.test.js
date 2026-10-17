@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -237,7 +237,7 @@ describe('JourneyReplaySessionSceneController', () => {
         call.restorePlaybackCameraSettings = options => restorePlaybackCameraSettings(mode, options)
         globalThis.lgs = {stores: {replay: {camera: state.playbackStartCameraSettings}, ui: {video: {editing: false}}}}
         const restoring = restorePlaybackSceneInternal(mode)
-        lgs.stores.replay.simplePreparationActive = true
+        lgs.stores.replay.basicPreparationActive = true
         lgs.stores.ui.video.editing = true
         lgs.stores.replay.camera = preparedCamera
         finishCleanup()

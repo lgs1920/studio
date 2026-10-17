@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-30
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,7 +61,7 @@ describe('journey visibility policy', () => {
         expect(getJourneyReplayHideOtherJourneys()).toBe(true)
     })
 
-    it('always hides other journeys in Simple Replay', () => {
+    it('always hides other journeys in Basic Replay', () => {
         globalThis.lgs.settings.ui.replay = {
             userMode: 'basic',
             hideOtherJourneys: false,

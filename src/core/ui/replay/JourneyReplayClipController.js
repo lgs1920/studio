@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,9 +38,9 @@ import {resolveJourneyReplayLogicalCameraPose} from './JourneyReplayLogicalCamer
 import {createReplayCameraCommand} from './ReplayCameraCommand'
 import {constrainReplayCameraFrameToCrop} from './JourneyReplayCameraCropConstraint'
 import {
-    createSimpleReplayTraceFocusClips,
-    SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID,
-} from './JourneyReplaySimpleFocus'
+    createBasicReplayTraceFocusClips,
+    BASIC_REPLAY_TRACE_FOCUS_INSTANCE_ID,
+} from './JourneyReplayBasicFocus'
 
 const SAFE_TOP_DOWN_PITCH = -(Math.PI / 2 - 0.0001)
 const LANDING_CAMERA_GROUND_OFFSET_METERS = 20
@@ -551,18 +551,18 @@ export const resolveJourneyReplayClipCameraPlan = (mode, {
                     plan.kind = 'focus'
                     plan.focusTarget = target
                     plan.rpm = Number.isFinite(Number(clip?.params?.rpm)) ? Number(clip.params.rpm) : 0
-                    const isSimpleTraceFocus = clip?.id === SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID
-                    if (isSimpleTraceFocus) {
+                    const isBasicTraceFocus = clip?.id === BASIC_REPLAY_TRACE_FOCUS_INSTANCE_ID
+                    if (isBasicTraceFocus) {
                         call.stopReplayCameraAltitudeTracking?.()
                     }
-                    const heightDelta = isSimpleTraceFocus
+                    const heightDelta = isBasicTraceFocus
                         ? finiteNumber(clip?.params?.heightDelta) ?? 0
                         : 0
                     const focusStartHeight = finiteNumber(continuityStartView.height)
                         ?? finiteNumber(baseView.cameraHeight)
                         ?? finiteNumber(clipHeight)
                         ?? 0
-                    const focusHeightBase = isSimpleTraceFocus
+                    const focusHeightBase = isBasicTraceFocus
                         ? finiteNumber(state.maxReplayCameraAltitude) ?? focusStartHeight
                         : focusStartHeight
                     plan.endView = {
@@ -913,7 +913,7 @@ export const clipListForSlot = (mode, slot) => {
 
     if (isJourneyReplayBasicMode()) {
         return slot === REPLAY_CLIP_SLOT_STOP
-            ? createSimpleReplayTraceFocusClips(currentJourneyReplayCameraSettings()).stop
+            ? createBasicReplayTraceFocusClips(currentJourneyReplayCameraSettings()).stop
             : []
     }
 

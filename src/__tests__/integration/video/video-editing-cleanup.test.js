@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -128,7 +128,7 @@ describe('cancelVideoEditing', () => {
         expect(lgs.stores.replay.recordingSync).toBe(false)
     })
 
-    it.each(['simple', 'expert'])('discards the active %s Replay recording and closes Replay', async mode => {
+    it.each(['basic', 'expert'])('discards the active %s Replay recording and closes Replay', async mode => {
         const abortExport = vi.fn()
         const invalidateRecording = vi.fn()
         const linkedPreparation = mode === 'expert'
@@ -145,7 +145,7 @@ describe('cancelVideoEditing', () => {
             playing: true,
             paused: true,
             recordingSync: linkedPreparation,
-            simplePreparationActive: !linkedPreparation,
+            basicPreparationActive: !linkedPreparation,
             mainUiHidden: true,
             deferredExportPlan: {runtime: {abortExport}},
         })
@@ -160,7 +160,7 @@ describe('cancelVideoEditing', () => {
         expect(abortExport).toHaveBeenCalledTimes(1)
         expect(lgs.stores.replay.deferredExportPlan).toBeNull()
         expect(lgs.stores.replay.recordingSync).toBe(false)
-        expect(lgs.stores.replay.simplePreparationActive).toBe(false)
+        expect(lgs.stores.replay.basicPreparationActive).toBe(false)
         expect(lgs.stores.replay.active).toBe(false)
         expect(lgs.stores.replay.playing).toBe(false)
         expect(lgs.stores.replay.paused).toBe(false)

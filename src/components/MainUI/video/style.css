@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-10
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,7 +41,7 @@
     max-width: max-content;
 }
 
-.simple-replay-settings-summary {
+.basic-replay-settings-summary {
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
@@ -49,29 +49,29 @@
     white-space: nowrap;
 }
 
-.simple-replay-settings-summary__item {
+.basic-replay-settings-summary__item {
     display: inline-flex;
     align-items: center;
     gap: var(--lgs-gutter-xxs);
 }
 
-.simple-replay-settings-summary__separator {
+.basic-replay-settings-summary__separator {
     align-self: stretch;
     margin-inline: var(--lgs-gutter-xs);
     border-inline-start: 1px solid var(--wa-color-surface-border, var(--lgs-card-on-map-border-color));
 }
 
-.simple-replay-settings-summary__item + .simple-replay-settings-summary__item::before {
+.basic-replay-settings-summary__item + .basic-replay-settings-summary__item::before {
     content: '·';
     margin-inline-end: var(--lgs-gutter-xxs);
     color: var(--wa-color-text-quiet);
 }
 
-.simple-replay-settings-summary__item wa-icon {
+.basic-replay-settings-summary__item wa-icon {
     font-size: var(--lgs-font-size-m);
 }
 
-.simple-replay-settings-summary wa-button::part(base) {
+.basic-replay-settings-summary wa-button::part(base) {
     padding-inline: var(--lgs-gutter-xxs);
 }
 
@@ -164,7 +164,7 @@
     box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large));
 }
 
-.video-recording-settings-popup--simple {
+.video-recording-settings-popup--basic {
     align-items: stretch;
     box-sizing: border-box;
     width: max-content;
@@ -172,7 +172,7 @@
     min-width: 0;
 }
 
-.video-recording-settings-popup--simple .simple-replay-settings-row {
+.video-recording-settings-popup--basic .basic-replay-settings-row {
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -181,19 +181,19 @@
     gap: var(--lgs-gutter-xs);
 }
 
-.video-recording-settings-popup--simple .simple-replay-settings-row > wa-icon {
+.video-recording-settings-popup--basic .basic-replay-settings-row > wa-icon {
     flex: 0 0 var(--lgs-dimension-s);
     font-size: var(--lgs-font-size-s);
     text-align: center;
 }
 
-.video-recording-settings-popup--simple .simple-replay-settings-row__label {
+.video-recording-settings-popup--basic .basic-replay-settings-row__label {
     flex: 1 1 auto;
     text-align: left;
     white-space: nowrap;
 }
 
-.simple-replay-dry-run-switch {
+.basic-replay-dry-run-switch {
     margin-inline-start: auto;
 
     &::part(label) {
@@ -201,35 +201,35 @@
     }
 }
 
-.simple-replay-appearance {
+.basic-replay-appearance {
     justify-content: flex-start !important;
 
-    & .simple-replay-appearance__reset::part(base) {
+    & .basic-replay-appearance__reset::part(base) {
         min-width: var(--lgs-dimension-s);
         min-height: var(--lgs-dimension-s);
         padding: 0;
     }
 
-    & .simple-replay-appearance__reset wa-icon {
+    & .basic-replay-appearance__reset wa-icon {
         font-size: var(--lgs-font-size-s);
     }
 
-    & .simple-replay-appearance__colors {
+    & .basic-replay-appearance__colors {
         display: flex;
         align-items: center;
         gap: var(--lgs-gutter-xs);
     }
 
-    & .simple-replay-appearance__sizes {
+    & .basic-replay-appearance__sizes {
         margin-inline-start: auto;
         min-width: 0;
     }
 
-    & .simple-replay-appearance__sizes::part(form-control-input) {
+    & .basic-replay-appearance__sizes::part(form-control-input) {
         gap: var(--lgs-gutter-xxs);
     }
 
-    & .simple-replay-appearance__sizes wa-radio {
+    & .basic-replay-appearance__sizes wa-radio {
         flex: 0 0 2.5rem;
         width: 2.5rem;
         height: var(--wa-form-control-height);
@@ -247,7 +247,7 @@
         }
     }
 
-    & .simple-replay-appearance__choice {
+    & .basic-replay-appearance__choice {
         display: flex;
         align-items: center;
         justify-content: center;
@@ -255,7 +255,7 @@
         line-height: 1;
     }
 
-    & .simple-replay-appearance__preview {
+    & .basic-replay-appearance__preview {
         display: block;
         flex: 0 0 2.25rem;
         width: 2.25rem;
@@ -264,19 +264,19 @@
     }
 }
 
-.video-recording-settings-popup.wa-theme-lgs1920 .simple-replay-appearance wa-radio.is-selected {
+.video-recording-settings-popup.wa-theme-lgs1920 .basic-replay-appearance wa-radio.is-selected {
     border-color: var(--wa-color-brand-border-normal);
     background-color: var(--wa-color-brand-fill-quiet);
     background-image: none;
 }
 
-.video-recording-settings-popup--simple .simple-replay-duration-buttons {
+.video-recording-settings-popup--basic .basic-replay-duration-buttons {
     flex-wrap: wrap;
 }
 
-.video-recording-settings-popup--simple .crop-ratio-popup-menu,
-.video-recording-settings-popup--simple .video-preset-toolbar-embedded,
-.video-recording-settings-popup--simple .video-preset-toolbar-embedded .video-preset-widget {
+.video-recording-settings-popup--basic .crop-ratio-popup-menu,
+.video-recording-settings-popup--basic .video-preset-toolbar-embedded,
+.video-recording-settings-popup--basic .video-preset-toolbar-embedded .video-preset-widget {
     flex: 1 1 auto;
     min-width: 0;
     padding: 0;
@@ -285,7 +285,7 @@
     box-shadow: none;
 }
 
-.video-recording-settings-popup--simple .video-preset-toolbar-embedded .video-preset-widget {
+.video-recording-settings-popup--basic .video-preset-toolbar-embedded .video-preset-widget {
     align-items: center;
     flex-direction: row;
     justify-content: flex-end;
@@ -293,13 +293,13 @@
     margin-inline-start: auto;
 }
 
-.video-recording-settings-popup--simple .crop-ratio-popup-menu {
+.video-recording-settings-popup--basic .crop-ratio-popup-menu {
     margin-inline-start: auto;
 }
 
-.video-recording-settings-popup--simple .crop-ratio-popup-menu ul,
-.video-recording-settings-popup--simple .video-preset-toolbar-embedded .video-choice-buttons,
-.simple-replay-duration-buttons {
+.video-recording-settings-popup--basic .crop-ratio-popup-menu ul,
+.video-recording-settings-popup--basic .video-preset-toolbar-embedded .video-choice-buttons,
+.basic-replay-duration-buttons {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
@@ -310,13 +310,13 @@
     justify-content: flex-end;
 }
 
-.video-recording-settings-popup--simple .video-preset-toolbar-embedded .video-choice-buttons {
+.video-recording-settings-popup--basic .video-preset-toolbar-embedded .video-choice-buttons {
     width: 100%;
     border: 0;
     background: transparent;
 }
 
-.video-recording-settings-popup--simple .crop-ratio-popup-menu li {
+.video-recording-settings-popup--basic .crop-ratio-popup-menu li {
     display: flex;
     flex: 0 0 auto;
     margin: 0;
@@ -324,27 +324,27 @@
     list-style: none;
 }
 
-.video-recording-settings-popup--simple .video-choice-button::part(base),
-.simple-replay-duration-buttons wa-button::part(base) {
+.video-recording-settings-popup--basic .video-choice-button::part(base),
+.basic-replay-duration-buttons wa-button::part(base) {
     padding-inline: var(--lgs-gutter-xs);
     border: 1px solid var(--wa-color-border-normal, var(--lgs-card-on-map-border-color)) !important;
 }
 
-.video-recording-settings-popup--simple .video-choice-button.is-selected::part(base),
-.simple-replay-duration-buttons wa-button.is-selected::part(base),
-.video-recording-settings-popup--simple .crop-ratio-popup-menu wa-button.crop-ratio-choice-button.is-selected::part(base) {
+.video-recording-settings-popup--basic .video-choice-button.is-selected::part(base),
+.basic-replay-duration-buttons wa-button.is-selected::part(base),
+.video-recording-settings-popup--basic .crop-ratio-popup-menu wa-button.crop-ratio-choice-button.is-selected::part(base) {
     border-color: var(--lgs-card-on-map-selected-border-color, var(--wa-color-brand-border-normal)) !important;
     background-color: var(--lgs-card-on-map-selected-bg-color, var(--wa-color-brand-fill-quiet)) !important;
     background-image: var(--lgs-card-on-map-selected-bg-image, none) !important;
     color: var(--lgs-card-on-map-selected-color, var(--wa-color-brand-on-normal));
 }
 
-.video-recording-settings-popup--simple .video-choice-buttons-on-map wa-button.video-choice-button::part(base) {
+.video-recording-settings-popup--basic .video-choice-buttons-on-map wa-button.video-choice-button::part(base) {
     border-color: var(--wa-color-border-normal, var(--lgs-card-on-map-border-color));
 }
 
 .video-recording-settings-popup.wa-theme-lgs1920 .video-choice-button.is-selected::part(base),
-.video-recording-settings-popup.wa-theme-lgs1920 .simple-replay-duration-buttons wa-button.is-selected::part(base),
+.video-recording-settings-popup.wa-theme-lgs1920 .basic-replay-duration-buttons wa-button.is-selected::part(base),
 .video-recording-settings-popup.wa-theme-lgs1920 .crop-ratio-popup-menu wa-button.crop-ratio-choice-button.is-selected::part(base) {
     border-color: var(--wa-color-brand-border-normal) !important;
     background-color: var(--wa-color-brand-fill-quiet) !important;
@@ -352,8 +352,8 @@
     color: var(--wa-color-brand-on-normal);
 }
 
-.video-preset-custom--simple .video-fps-widget,
-.video-preset-custom--simple .video-quality-widget {
+.video-preset-custom--basic .video-fps-widget,
+.video-preset-custom--basic .video-quality-widget {
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -361,31 +361,31 @@
     gap: var(--lgs-gutter-xs);
 }
 
-.video-preset-custom--simple {
+.video-preset-custom--basic {
     align-items: stretch;
     box-sizing: border-box;
     width: max-content;
     max-width: calc(100vw - 2 * var(--lgs-gutter-s));
 }
 
-.video-preset-custom--simple .video-fps-widget,
-.video-preset-custom--simple .video-quality-widget {
+.video-preset-custom--basic .video-fps-widget,
+.video-preset-custom--basic .video-quality-widget {
     box-sizing: border-box;
     min-width: 0;
 }
 
-.video-preset-custom--simple .video-fps-widget > span,
-.video-preset-custom--simple .video-quality-widget > span {
+.video-preset-custom--basic .video-fps-widget > span,
+.video-preset-custom--basic .video-quality-widget > span {
     flex: 0 0 4rem;
     text-align: left;
 }
 
-.video-preset-custom--simple .video-fps-widget .buttons-bar-on-map,
-.video-preset-custom--simple .video-quality-widget .buttons-bar-on-map {
+.video-preset-custom--basic .video-fps-widget .buttons-bar-on-map,
+.video-preset-custom--basic .video-quality-widget .buttons-bar-on-map {
     margin-inline-start: auto;
 }
 
-.simple-replay-duration-buttons {
+.basic-replay-duration-buttons {
     flex: 1 1 auto;
 }
 

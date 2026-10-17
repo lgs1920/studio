@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,15 +50,16 @@ import {
 import { normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
 import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
 import { REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT } from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
-import { SIMPLE_REPLAY_TRACE_FOCUS_DURATION_SECONDS } from '@Core/ui/replay/JourneyReplaySimpleFocus'
+import { BASIC_REPLAY_TRACE_FOCUS_DURATION_SECONDS } from '@Core/ui/replay/JourneyReplayBasicFocus'
 import {currentReplayJourney} from '@Core/ui/replay/ReplayUserModeConstants'
+import {getBasicReplaySettings, writeBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
 import {
-    normalizeSimpleReplaySettings,
+    normalizeBasicReplaySettings,
     syncJourneyExpertReplayCamera,
     syncJourneyExpertReplayProgression,
-    syncJourneySimpleReplayDuration,
-    syncJourneySimpleReplayCamera,
-    syncJourneySimpleReplayTrace,
+    syncJourneyBasicReplayDuration,
+    syncJourneyBasicReplayCamera,
+    syncJourneyBasicReplayTrace,
     REPLAY_USER_MODE_EXPERT,
 } from '@Core/ui/replay/ReplayUserModes'
 import {
@@ -463,11 +464,11 @@ export const JourneyReplayDrawer = memo(() => {
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
     const isExpertMode = effectiveReplaySettings.userMode === REPLAY_USER_MODE_EXPERT
-    const preparedSimpleCamera = replayState.simplePreparationActive === true
+    const preparedBasicCamera = replayState.basicPreparationActive === true
         && previousJourneySlug.current === journeySlug
         ? replayState.camera
         : null
-    const camera = normalizeJourneyReplayCamera(preparedSimpleCamera ?? effectiveReplaySettings.camera)
+    const camera = normalizeJourneyReplayCamera(preparedBasicCamera ?? effectiveReplaySettings.camera)
     const readiness = normalizeJourneyReplayReadiness(effectiveReplaySettings.readiness)
     const [activeTab, setActiveTab] = useState(REPLAY_TAB_RUNNER)
     const [advancedCameraPopupOpen, setAdvancedCameraPopupOpen] = useState(false)
@@ -525,7 +526,7 @@ export const JourneyReplayDrawer = memo(() => {
         const clipDurationSeconds = isExpertMode
             ? [...(clips.start ?? []), ...(clips.stop ?? [])]
                 .reduce((total, clip) => total + Math.max(0, finiteNumber(clip?.params?.duration) ?? 0), 0)
-            : SIMPLE_REPLAY_TRACE_FOCUS_DURATION_SECONDS
+            : BASIC_REPLAY_TRACE_FOCUS_DURATION_SECONDS
 
         return Math.max(0, finiteNumber(effectiveReplaySettings.duration) ?? 0) + clipDurationSeconds
     }, [clips.start, clips.stop, effectiveReplaySettings.duration, isExpertMode, replayState.duration])
@@ -552,8 +553,8 @@ export const JourneyReplayDrawer = memo(() => {
         replayRuntime.smoothing = normalizeJourneyReplaySmoothing(effectiveReplaySettings.smoothing)
         replayRuntime.marker = normalizeJourneyReplayMarker(effectiveReplaySettings.marker)
         // Runtime duration/style updates must not rehydrate older persisted camera
-        // values over the live Simple preparation. Explicit camera controls own it.
-        if (journeyChanged || replayRuntime.simplePreparationActive !== true) {
+        // values over the live Basic preparation. Explicit camera controls own it.
+        if (journeyChanged || replayRuntime.basicPreparationActive !== true) {
             replayRuntime.camera = normalizeJourneyReplayCamera(effectiveReplaySettings.camera)
         }
         replayRuntime.readiness = normalizeJourneyReplayReadiness(effectiveReplaySettings.readiness)
@@ -575,7 +576,7 @@ export const JourneyReplayDrawer = memo(() => {
         replayState.duration,
         replaySettings.duration,
         replaySettings.userMode,
-        replaySettings.simple,
+        replaySettings.basic,
                   replaySettings.poiDistance,
         replaySettings.profileInfo,
         replaySettings.progression,
@@ -592,7 +593,7 @@ export const JourneyReplayDrawer = memo(() => {
         clips,
         currentJourney?.replay?.start,
         currentJourney?.replay?.stop,
-        currentJourney?.replay?.simple,
+        getBasicReplaySettings(currentJourney?.replay),
         journeySlug,
     ])
 
@@ -712,14 +713,14 @@ export const JourneyReplayDrawer = memo(() => {
             lgs.settings.ui.replay.trace = nextTrace
         }
         else {
-            const journeyTrace = syncJourneySimpleReplayTrace(nextTrace)
+            const journeyTrace = syncJourneyBasicReplayTrace(nextTrace)
             if (journeyTrace === null) {
-                const simple = normalizeSimpleReplaySettings(lgs.settings.ui.replay.simple ?? {})
-                lgs.settings.ui.replay.simple = {
-                    ...simple,
-                    camera: toGlobalReplayCameraSettings(simple.camera),
+                const basicSettings = normalizeBasicReplaySettings(getBasicReplaySettings(lgs.settings.ui.replay) ?? {})
+                lgs.settings.ui.replay = writeBasicReplaySettings(lgs.settings.ui.replay, {
+                    ...basicSettings,
+                    camera: toGlobalReplayCameraSettings(basicSettings.camera),
                     trace: nextTrace,
-                }
+                })
             }
         }
         lgs.stores.replay.trace = nextTrace
@@ -758,13 +759,13 @@ export const JourneyReplayDrawer = memo(() => {
             syncJourneyExpertReplayCamera(nextCamera)
         }
         else {
-            const journeyCamera = syncJourneySimpleReplayCamera(nextCamera)
+            const journeyCamera = syncJourneyBasicReplayCamera(nextCamera)
             if (journeyCamera === null) {
-                const simple = normalizeSimpleReplaySettings(lgs.settings.ui.replay.simple ?? {})
-                lgs.settings.ui.replay.simple = {
-                    ...simple,
+                const basicSettings = normalizeBasicReplaySettings(getBasicReplaySettings(lgs.settings.ui.replay) ?? {})
+                lgs.settings.ui.replay = writeBasicReplaySettings(lgs.settings.ui.replay, {
+                    ...basicSettings,
                     camera: toGlobalReplayCameraSettings(nextCamera),
-                }
+                })
             }
         }
         lgs.stores.replay.camera = nextCamera
@@ -966,16 +967,16 @@ export const JourneyReplayDrawer = memo(() => {
         }
         const duration = clampDuration(event.target.value)
         if (!isExpertMode) {
-            const journeyDuration = syncJourneySimpleReplayDuration(duration)
+            const journeyDuration = syncJourneyBasicReplayDuration(duration)
             if (journeyDuration === null) {
-                const simple = normalizeSimpleReplaySettings({
-                    ...(lgs.settings.ui.replay.simple ?? {}),
+                const basicSettings = normalizeBasicReplaySettings({
+                    ...(getBasicReplaySettings(lgs.settings.ui.replay) ?? {}),
                     duration,
                 })
-                lgs.settings.ui.replay.simple = {
-                    ...simple,
-                    camera: toGlobalReplayCameraSettings(simple.camera),
-                }
+                lgs.settings.ui.replay = writeBasicReplaySettings(lgs.settings.ui.replay, {
+                    ...basicSettings,
+                    camera: toGlobalReplayCameraSettings(basicSettings.camera),
+                })
             }
         }
         else {

@@ -1,6 +1,6 @@
 replay:
   duration: 30
-  simple:
+  basic:
     duration: 15
     includeHiddenTracks: false
     readiness:

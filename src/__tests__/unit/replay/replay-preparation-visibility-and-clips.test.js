@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-30
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -75,7 +75,7 @@ describe('Replay preparation visibility and clip rules', () => {
             settings: {ui: {replay: {userMode: REPLAY_USER_MODE_EXPERT}}},
             stores: {
                 main: {components: {pois: {list: new Map([[poi.id, poi]])}}},
-                replay: {simplePreparationActive: false},
+                replay: {basicPreparationActive: false},
             },
             scene: {requestRender: vi.fn()},
         })
@@ -88,7 +88,7 @@ describe('Replay preparation visibility and clip rules', () => {
         expect(poi.entityVisible).toBe(true)
     })
 
-    it('uses the trace-focus outro in Simple mode while keeping Expert clips', () => {
+    it('uses the trace-focus outro in Basic mode while keeping Expert clips', () => {
         const startClips = [{id: 'start'}]
         const stopClips = [{id: 'stop'}]
         const mode = {
@@ -100,7 +100,7 @@ describe('Replay preparation visibility and clip rules', () => {
 
         vi.stubGlobal('lgs', {
             settings: {ui: {replay: {userMode: REPLAY_USER_MODE_BASIC}}},
-            stores:   {replay: {userMode: REPLAY_USER_MODE_EXPERT, simplePreparationActive: false}},
+            stores:   {replay: {userMode: REPLAY_USER_MODE_EXPERT, basicPreparationActive: false}},
         })
         expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_START)).toEqual([])
         expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_STOP)).toMatchObject([expect.objectContaining({
@@ -110,7 +110,7 @@ describe('Replay preparation visibility and clip rules', () => {
         })])
 
         lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
-        lgs.stores.replay.simplePreparationActive = true
+        lgs.stores.replay.basicPreparationActive = true
         expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_START)).toEqual([])
         expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_STOP)).toMatchObject([expect.objectContaining({
             id: 'simple-trace-focus',
@@ -118,7 +118,7 @@ describe('Replay preparation visibility and clip rules', () => {
             params: expect.objectContaining({duration: 4, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 15}),
         })])
 
-        lgs.stores.replay.simplePreparationActive = false
+        lgs.stores.replay.basicPreparationActive = false
         lgs.stores.replay.userMode = REPLAY_USER_MODE_BASIC
         lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_BASIC
         expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_START)).toEqual([])

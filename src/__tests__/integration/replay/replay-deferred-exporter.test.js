@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -381,12 +381,12 @@ describe('ReplayDeferredExporter', () => {
         expect(lastFrame.logicalFrame.phase).toMatchObject({kind: 'replay', progress: 0.15})
     })
 
-    it('includes the fixed trace-focus outro in a Simple Replay export timeline', () => {
+    it('includes the fixed trace-focus outro in a Basic Replay export timeline', () => {
         globalThis.lgs = {
             settings: {ui: {replay: {userMode: REPLAY_USER_MODE_EXPERT}}},
         }
         const replay = {
-            simplePreparationActive: true,
+            basicPreparationActive: true,
             clips: {
                 catalog: {},
                 start:   [{clipId: 'zoom-in', enabled: true, params: {duration: 5}}],
@@ -701,7 +701,7 @@ describe('ReplayDeferredExporter', () => {
 
         const result = await exporter.exportMp4({
             dryRun: true,
-            label: 'simple-replay-dry-run',
+            label: 'basic-replay-dry-run',
             dimensions: {width: 640, height: 360},
             buildCanvas,
             renderFrame: async ({frame}) => {

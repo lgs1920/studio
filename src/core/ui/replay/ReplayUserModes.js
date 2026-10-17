@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,14 +17,14 @@
 import {
     DEFAULT_REPLAY_CAMERA,
     REPLAY_INITIAL_CAMERA_ANGLE,
-    defaultJourneyReplaySimpleSettings,
+    defaultJourneyReplayBasicSettings,
     normalizeJourneyReplayCamera,
     normalizeJourneyReplayMarker,
     normalizeJourneyReplayProgressionStyle,
     normalizeJourneyReplayProfileInfo,
     normalizeJourneyReplayTrace,
-    normalizeSimpleReplayDuration,
-    resolveSimpleReplayPresentation,
+    normalizeBasicReplayDuration,
+    resolveBasicReplayPresentation,
     toGlobalReplayCameraSettings,
 } from './JourneyReplayProgressionStyle'
 
@@ -34,6 +34,7 @@ import {
     REPLAY_USER_MODE_EXPERT,
     resolveJourneyReplayUserMode,
 } from './ReplayUserModeConstants'
+import {getBasicReplaySettings, writeBasicReplaySettings} from './ReplayModeSettings'
 
 export {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT}
 export const DEFAULT_REPLAY_USER_MODE = REPLAY_USER_MODE_BASIC
@@ -50,10 +51,10 @@ const journeyReplayCameraAngle = camera => {
 }
 const expertCameraPersistTimers = new WeakMap()
 const expertProgressionPersistTimers = new WeakMap()
-const simpleCameraPersistTimers = new WeakMap()
-const simpleTracePersistTimers = new WeakMap()
-const simpleDurationPersistTimers = new WeakMap()
-const simplePresentationPersistTimers = new WeakMap()
+const basicCameraPersistTimers = new WeakMap()
+const basicTracePersistTimers = new WeakMap()
+const basicDurationPersistTimers = new WeakMap()
+const basicPresentationPersistTimers = new WeakMap()
 const journeyReplayStartPositionPersistPromises = new WeakMap()
 const EXPERT_CAMERA_PERSIST_DELAY_MS = 250
 
@@ -84,7 +85,9 @@ export const normalizeJourneyReplayStartPosition = position => {
  * @returns {{x: number, y: number}|null} Saved crop-relative position.
  */
 export const journeyReplayStartPosition = (journey, mode) => {
-    const settings = journey?.replay?.[mode === REPLAY_USER_MODE_EXPERT ? 'expert' : 'simple']
+    const settings = mode === REPLAY_USER_MODE_EXPERT
+        ? journey?.replay?.expert
+        : getBasicReplaySettings(journey?.replay)
     return normalizeJourneyReplayStartPosition(settings?.startPosition)
 }
 
@@ -103,14 +106,20 @@ export const syncJourneyReplayStartPosition = (position, journey, mode) => {
     }
 
     const replay = journey.replay ?? {}
-    const key = mode === REPLAY_USER_MODE_EXPERT ? 'expert' : 'simple'
-    const settings = replay[key] && typeof replay[key] === 'object' ? replay[key] : {}
-    journey.replay = {
-        ...replay,
-        [key]: {
-            ...settings,
+    if (mode === REPLAY_USER_MODE_EXPERT) {
+        journey.replay = {
+            ...replay,
+            expert: {
+                ...(replay.expert ?? {}),
+                startPosition: normalized,
+            },
+        }
+    }
+    else {
+        journey.replay = writeBasicReplaySettings(replay, {
+            ...(getBasicReplaySettings(replay) ?? {}),
             startPosition: normalized,
-        },
+        })
     }
     if (typeof journey.persistToDatabase === 'function') {
         const previousPersistence = journeyReplayStartPositionPersistPromises.get(journey)
@@ -271,48 +280,46 @@ export const syncJourneyExpertReplayProgression = progression => {
 }
 
 /**
- * Keep the current journey's Simple camera in sync with its live edits, then
+ * Keep the current journey's Basic camera in sync with its live edits, then
  * persist it after a short quiet period.
  *
  * @param {Object} camera - Complete normalized camera settings.
  * @param {Object|null} [journeyOverride=null] - Journey receiving the settings.
  * @returns {Object|null} The synchronized camera, or null without a journey.
  */
-export const syncJourneySimpleReplayCamera = (camera, journeyOverride = null) => {
+export const syncJourneyBasicReplayCamera = (camera, journeyOverride = null) => {
     const journey = journeyOverride ?? currentReplayJourney()
     if (!journey) {
         return null
     }
 
     const replay = journey.replay ?? {}
-    const simple = replay.simple && typeof replay.simple === 'object' ? replay.simple : {}
-    const nextCamera = normalizeJourneyReplayCamera(Object.assign({}, simple.camera, camera, {debug: false}))
-    journey.replay = {
-        ...replay,
-        simple: {
-            ...simple,
-            camera: nextCamera,
-        },
-    }
+    const basic = getBasicReplaySettings(replay) ?? {}
+    const nextCamera = normalizeJourneyReplayCamera(Object.assign({}, basic.camera, camera, {debug: false}))
+    journey.replay = writeBasicReplaySettings(replay, {
+        ...basic,
+        camera: nextCamera,
+    })
 
     const replaySettings = globalThis.lgs?.settings?.ui?.replay
     if (replaySettings) {
         replaySettings.camera = toGlobalReplayCameraSettings(nextCamera)
-        if (replaySettings.simple?.camera && typeof replaySettings.simple.camera === 'object') {
-            replaySettings.simple = {
-                ...replaySettings.simple,
+        const basicSettings = getBasicReplaySettings(replaySettings)
+        if (basicSettings?.camera && typeof basicSettings.camera === 'object') {
+            globalThis.lgs.settings.ui.replay = writeBasicReplaySettings(replaySettings, {
+                ...basicSettings,
                 camera: toGlobalReplayCameraSettings(nextCamera),
-            }
+            })
         }
     }
 
     if (typeof journey.persistToDatabase === 'function') {
-        const pendingTimer = simpleCameraPersistTimers.get(journey)
+        const pendingTimer = basicCameraPersistTimers.get(journey)
         if (pendingTimer !== undefined) {
             clearTimeout(pendingTimer)
         }
-        simpleCameraPersistTimers.set(journey, setTimeout(() => {
-            simpleCameraPersistTimers.delete(journey)
+        basicCameraPersistTimers.set(journey, setTimeout(() => {
+            basicCameraPersistTimers.delete(journey)
             void journey.persistToDatabase()
         }, EXPERT_CAMERA_PERSIST_DELAY_MS))
     }
@@ -321,7 +328,7 @@ export const syncJourneySimpleReplayCamera = (camera, journeyOverride = null) =>
 }
 
 /**
- * Persist a pending Simple or Expert camera edit before Replay recording starts.
+ * Persist a pending Basic or Expert camera edit before Replay recording starts.
  *
  * @param {Object|null} journey - Journey whose camera settings are being committed.
  * @returns {Promise<boolean>} Whether a pending camera edit was persisted.
@@ -332,7 +339,7 @@ export const flushJourneyReplayCameraPersistence = async journey => {
     }
 
     let pending = false
-    for (const timers of [simpleCameraPersistTimers, expertCameraPersistTimers]) {
+    for (const timers of [basicCameraPersistTimers, expertCameraPersistTimers]) {
         const timer = timers.get(journey)
         if (timer === undefined) {
             continue
@@ -350,38 +357,35 @@ export const flushJourneyReplayCameraPersistence = async journey => {
 }
 
 /**
- * Synchronize Simple Replay trace style edits with explicit journey settings.
+ * Synchronize Basic Replay trace style edits with explicit journey settings.
  *
  * @param {Object} trace - Complete trace settings.
- * @returns {Object|null} The synchronized trace settings, or null without journey-level Simple settings.
+ * @returns {Object|null} The synchronized trace settings, or null without journey-level Basic settings.
  */
-export const syncJourneySimpleReplayTrace = trace => {
+export const syncJourneyBasicReplayTrace = trace => {
     const journey = currentReplayJourney()
     const replay = journey?.replay
-    const simple = replay?.simple
-    if (!journey || !simple || typeof simple !== 'object') {
+    const basic = getBasicReplaySettings(replay)
+    if (!journey || !basic) {
         return null
     }
 
     const nextTrace = normalizeJourneyReplayTrace({
-        ...(simple.trace ?? {}),
+        ...(basic.trace ?? {}),
         ...trace,
     })
-    journey.replay = {
-        ...replay,
-        simple: {
-            ...simple,
-            trace: nextTrace,
-        },
-    }
+    journey.replay = writeBasicReplaySettings(replay, {
+        ...basic,
+        trace: nextTrace,
+    })
 
     if (typeof journey.persistToDatabase === 'function') {
-        const pendingTimer = simpleTracePersistTimers.get(journey)
+        const pendingTimer = basicTracePersistTimers.get(journey)
         if (pendingTimer !== undefined) {
             clearTimeout(pendingTimer)
         }
-        simpleTracePersistTimers.set(journey, setTimeout(() => {
-            simpleTracePersistTimers.delete(journey)
+        basicTracePersistTimers.set(journey, setTimeout(() => {
+            basicTracePersistTimers.delete(journey)
             void journey.persistToDatabase()
         }, EXPERT_CAMERA_PERSIST_DELAY_MS))
     }
@@ -390,36 +394,33 @@ export const syncJourneySimpleReplayTrace = trace => {
 }
 
 /**
- * Synchronize an edited Simple Replay duration with an explicitly configured
+ * Synchronize an edited Basic Replay duration with an explicitly configured
  * journey and persist it after editing settles.
  *
  * @param {number} duration - Replay duration in seconds.
- * @returns {number|null} The synchronized duration, or null without journey-level Simple settings.
+ * @returns {number|null} The synchronized duration, or null without journey-level Basic settings.
  */
-export const syncJourneySimpleReplayDuration = duration => {
+export const syncJourneyBasicReplayDuration = duration => {
     const journey = currentReplayJourney()
     const replay = journey?.replay
-    const simple = replay?.simple
-    if (!journey || !simple || typeof simple !== 'object') {
+    const basic = getBasicReplaySettings(replay)
+    if (!journey || !basic) {
         return null
     }
 
-    const nextDuration = normalizeSimpleReplayDuration(duration)
-    journey.replay = {
-        ...replay,
-        simple: {
-            ...simple,
-            duration: nextDuration,
-        },
-    }
+    const nextDuration = normalizeBasicReplayDuration(duration)
+    journey.replay = writeBasicReplaySettings(replay, {
+        ...basic,
+        duration: nextDuration,
+    })
 
     if (typeof journey.persistToDatabase === 'function') {
-        const pendingTimer = simpleDurationPersistTimers.get(journey)
+        const pendingTimer = basicDurationPersistTimers.get(journey)
         if (pendingTimer !== undefined) {
             clearTimeout(pendingTimer)
         }
-        simpleDurationPersistTimers.set(journey, setTimeout(() => {
-            simpleDurationPersistTimers.delete(journey)
+        basicDurationPersistTimers.set(journey, setTimeout(() => {
+            basicDurationPersistTimers.delete(journey)
             void journey.persistToDatabase()
         }, EXPERT_CAMERA_PERSIST_DELAY_MS))
     }
@@ -428,12 +429,12 @@ export const syncJourneySimpleReplayDuration = duration => {
 }
 
 /**
- * Return product defaults for the compact Simple Replay workflow.
+ * Return product defaults for the compact Basic Replay workflow.
  *
- * @returns {Object} Simple Replay defaults.
+ * @returns {Object} Basic Replay defaults.
  */
-export const defaultSimpleReplaySettings = () => {
-    const defaults = defaultJourneyReplaySimpleSettings()
+export const defaultBasicReplaySettings = () => {
+    const defaults = defaultJourneyReplayBasicSettings()
     const camera = {...defaults.camera}
     delete camera.altitude
     delete camera.pitch
@@ -447,24 +448,24 @@ export const defaultSimpleReplaySettings = () => {
 }
 
 /**
- * Persist compact Simple appearance edits on the active journey after input settles.
- * @param {Object} presentation - Complete normalized Simple presentation.
+ * Persist compact Basic appearance edits on the active journey after input settles.
+ * @param {Object} presentation - Complete normalized Basic presentation.
  * @returns {Object|null} Saved presentation, or null without an active journey.
  */
-export const syncJourneySimpleReplayPresentation = presentation => {
+export const syncJourneyBasicReplayPresentation = presentation => {
     const journey = currentReplayJourney()
     if (!journey) {
         return null
     }
     const replay = journey.replay ?? {}
-    journey.replay = {
-        ...replay,
-        simple: {...replay.simple, presentation},
-    }
+    journey.replay = writeBasicReplaySettings(replay, {
+        ...(getBasicReplaySettings(replay) ?? {}),
+        presentation,
+    })
     if (typeof journey.persistToDatabase === 'function') {
-        clearTimeout(simplePresentationPersistTimers.get(journey))
-        simplePresentationPersistTimers.set(journey, setTimeout(() => {
-            simplePresentationPersistTimers.delete(journey)
+        clearTimeout(basicPresentationPersistTimers.get(journey))
+        basicPresentationPersistTimers.set(journey, setTimeout(() => {
+            basicPresentationPersistTimers.delete(journey)
             void journey.persistToDatabase()
         }, EXPERT_CAMERA_PERSIST_DELAY_MS))
     }
@@ -472,13 +473,13 @@ export const syncJourneySimpleReplayPresentation = presentation => {
 }
 
 /**
- * Normalize compact Simple Replay settings.
+ * Normalize compact Basic Replay settings.
  *
  * @param {Object} settings - Candidate settings.
  * @returns {Object} Normalized settings.
  */
-export const normalizeSimpleReplaySettings = (settings = {}) => {
-    const defaults = defaultSimpleReplaySettings()
+export const normalizeBasicReplaySettings = (settings = {}) => {
+    const defaults = defaultBasicReplaySettings()
     const cameraSettings = {
         ...defaults.camera,
         ...(settings?.camera ?? {}),
@@ -492,10 +493,10 @@ export const normalizeSimpleReplaySettings = (settings = {}) => {
         debug: false,
     })
     return {
-        duration: normalizeSimpleReplayDuration(settings?.duration ?? defaults.duration),
+        duration: normalizeBasicReplayDuration(settings?.duration ?? defaults.duration),
         dryRun: settings?.dryRun === true,
         camera,
-        presentation: resolveSimpleReplayPresentation(settings?.presentation, defaults.presentation),
+        presentation: resolveBasicReplayPresentation(settings?.presentation, defaults.presentation),
         marker: normalizeJourneyReplayMarker({
             ...defaults.marker,
             ...(settings?.marker ?? {}),
@@ -508,12 +509,12 @@ export const normalizeSimpleReplaySettings = (settings = {}) => {
 }
 
 /**
- * Resolve Simple Replay settings using journey, user, and product precedence.
+ * Resolve Basic Replay settings using journey, user, and product precedence.
  *
  * @param {Object} options - Resolution sources.
- * @returns {Object} Effective Simple Replay settings.
+ * @returns {Object} Effective Basic Replay settings.
  */
-export const resolveSimpleReplaySettings = ({journey, user, product} = {}) => normalizeSimpleReplaySettings({
+export const resolveBasicReplaySettings = ({journey, user, product} = {}) => normalizeBasicReplaySettings({
     ...product,
     ...user,
     ...journey,
@@ -557,27 +558,27 @@ export const hasExpertReplayConfiguration = journey => Boolean(
 )
 
 /**
- * Initialize Expert settings from Simple Replay without replacing existing data.
+ * Initialize Expert settings from Basic Replay without replacing existing data.
  *
  * @param {Object} journey - Journey data to update.
- * @param {Object} simple - Effective Simple Replay settings.
+ * @param {Object} basicSettings - Effective Basic Replay settings.
  * @returns {Object} Journey replay data.
  */
-export const initializeExpertReplayFromSimple = (journey, simple) => {
+export const initializeExpertReplayFromBasic = (journey, basicSettings) => {
     const replay = journey?.replay ?? {}
     if (hasExpertReplayConfiguration(journey)) {
         return replay
     }
 
-    const savedSimpleCamera = journey?.replay?.simple?.camera ?? {}
+    const savedBasicCamera = getBasicReplaySettings(journey?.replay)?.camera ?? {}
     const camera = normalizeExpertReplayCamera({
-        ...simple?.camera,
-        cameraAngle: journeyReplayCameraAngle(savedSimpleCamera),
+        ...basicSettings?.camera,
+        cameraAngle: journeyReplayCameraAngle(savedBasicCamera),
     })
-    if (!hasFiniteCameraValue(savedSimpleCamera.altitude ?? savedSimpleCamera.groundOffset)) {
+    if (!hasFiniteCameraValue(savedBasicCamera.altitude ?? savedBasicCamera.groundOffset)) {
         delete camera.altitude
     }
-    if (!hasFiniteCameraValue(savedSimpleCamera.pitch)) {
+    if (!hasFiniteCameraValue(savedBasicCamera.pitch)) {
         delete camera.pitch
     }
 
@@ -585,8 +586,8 @@ export const initializeExpertReplayFromSimple = (journey, simple) => {
         ...replay,
         expert: {
             camera,
-            progression: normalizeJourneyReplayProgressionStyle(simple?.presentation?.progression),
-            profileInfo: normalizeJourneyReplayProfileInfo(simple?.presentation?.profileInfo),
+            progression: normalizeJourneyReplayProgressionStyle(basicSettings?.presentation?.progression),
+            profileInfo: normalizeJourneyReplayProfileInfo(basicSettings?.presentation?.profileInfo),
         },
     }
 }

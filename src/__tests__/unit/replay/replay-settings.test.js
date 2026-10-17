@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -181,7 +181,7 @@ describe('replay settings normalization', () => {
                     replay: {
                         duration: 42,
                         camera: {altitude: 900, pitch: -25, cameraAngle: 70, driftSensitivity: 0.4},
-                        simple: {
+                        basic: {
                             duration: 20,
                             camera: {altitude: 800, pitch: -35, cameraAngle: -45, canRoll: false},
                         },
@@ -193,13 +193,13 @@ describe('replay settings normalization', () => {
         try {
             const settings = ensureJourneyReplaySettings()
             expect(settings.duration).toBe(42)
-            expect(settings.simple.duration).toBe(20)
+            expect(settings.basic.duration).toBe(20)
             expect(settings.camera).not.toHaveProperty('altitude')
             expect(settings.camera).not.toHaveProperty('pitch')
             expect(settings.camera).toMatchObject({cameraAngle: 0, driftSensitivity: 0.4})
-            expect(settings.simple.camera).not.toHaveProperty('altitude')
-            expect(settings.simple.camera).not.toHaveProperty('pitch')
-            expect(settings.simple.camera).toMatchObject({cameraAngle: 0, canRoll: false})
+            expect(settings.basic.camera).not.toHaveProperty('altitude')
+            expect(settings.basic.camera).not.toHaveProperty('pitch')
+            expect(settings.basic.camera).toMatchObject({cameraAngle: 0, canRoll: false})
             expect(defaultJourneyReplaySettings().camera.cameraAngle).toBe(0)
         }
         finally {
@@ -247,14 +247,14 @@ describe('replay settings normalization', () => {
                                            }).playback.tilePreloadHorizonMs).toBe(3000)
     })
 
-    it('forces Simple Replay camera, hidden-track, and tile-readiness settings', () => {
+    it('forces Basic Replay camera, hidden-track, and tile-readiness settings', () => {
         const previousLgs = globalThis.lgs
         globalThis.lgs = {
             settings: {
                 ui: {
                     replay: {
                         userMode: 'basic',
-                        simple: {
+                        basic: {
                             includeHiddenTracks: true,
                             readiness: {enabled: true, prewarmEnabled: true},
                             camera: {canDrift: true, canRoll: true},

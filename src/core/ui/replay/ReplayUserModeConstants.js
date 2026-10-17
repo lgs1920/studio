@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,7 +30,7 @@ export const currentReplayJourney = () => globalThis.lgs?.stores?.main?.theJourn
 /**
  * Resolve the selected Replay mode without allowing the runtime store's
  * initial Basic default to override an explicitly saved Expert preference.
- * A live Simple preparation remains authoritative until that preparation is
+ * A live Basic preparation remains authoritative until that preparation is
  * left.
  *
  * @param {Object} options - Optional settings and runtime state.
@@ -42,7 +42,7 @@ export const resolveJourneyReplayUserMode = ({
     settings = globalThis.lgs?.settings?.ui?.replay,
     replay = globalThis.lgs?.stores?.replay,
 } = {}) => {
-    if (replay?.simplePreparationActive === true) {
+    if (replay?.basicPreparationActive === true) {
         return REPLAY_USER_MODE_BASIC
     }
 

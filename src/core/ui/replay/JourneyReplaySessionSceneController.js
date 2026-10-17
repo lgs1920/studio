@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -594,7 +594,7 @@ export const restorePlaybackCameraSettings = (mode) => {
 
         // A previous session can finish cleanup after the next preparation has
         // started. Restoring its map view must not overwrite the new Replay edits.
-        const preparationActive = store?.simplePreparationActive === true
+        const preparationActive = store?.basicPreparationActive === true
             || globalThis.lgs?.stores?.ui?.video?.editing === true
         if (preparationActive) {
             return null

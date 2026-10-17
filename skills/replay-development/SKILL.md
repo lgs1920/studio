@@ -42,7 +42,7 @@ Preserve these boundaries:
 - Qualification and readiness work must be cancellable and bounded; slider
   interaction must not synchronously compile a complete trajectory.
 - Follow [the normal Cesium and Replay camera ownership rules](../../PROJECT_RULES.md#normal-cesium-and-replay-camera-ownership).
-  Store Replay height, pitch, and camera angle in the active Journey's Simple or Expert camera data. Global Replay settings omit height and pitch and keep camera angle at the initial value `0`. A Journey without saved camera pose starts from the active Cesium height and pitch, then saves those values on the Journey; migrate legacy angle fields on the Journey instead of falling back to global settings.
+  Store Replay height, pitch, and camera angle in the active Journey's Basic or Expert camera data. Persist Basic settings under `basic`: reads prefer that key and fall back to legacy `simple` only when it is absent, while every write stores `basic` and removes `simple`. Global Replay settings omit height and pitch and keep camera angle at the initial value `0`. A Journey without saved camera pose starts from the active Cesium height and pitch, then saves those values on the Journey; migrate legacy angle fields on the Journey instead of falling back to global settings.
   Entering video preparation stops and awaits normal map rotation and presents
   a North-oriented view of the canonical departure using Replay pitch and height.
   Only this explicit entry boundary frames the map, after successful preparation
@@ -59,7 +59,7 @@ Preserve these boundaries:
   camera-only path section with a chord only when its cross-track amplitude is
   below half the projected crop width. Test long untimed journeys at short and
   ordinary durations, then visually inspect a real Replay export.
-  Simple Replay keeps Navigation tracking. Its diagnostic overlay must use the
+  Basic Replay keeps Navigation tracking. Its diagnostic overlay must use the
   exact adaptive Navigation trigger zone evaluated by the runtime collision
   check, plus the matching inner recenter threshold; verify the visible zone
   at low and high camera heights and crop sizes.
@@ -69,7 +69,7 @@ Preserve these boundaries:
   base transition horizon. Live tolerance and visibility corrections need a
   cubic ease-in/out flight of at least 3 seconds and must preserve any longer
   active Ease duration without restarting the same transition on every frame.
-  Deterministic Simple Replay must interpolate hard Navigation corrections on
+  Deterministic Basic Replay must interpolate hard Navigation corrections on
   replay time for at least 3 seconds instead of applying an immediate camera frame.
   Convert tracking lookahead seconds through the configured Replay duration,
   never GPX recording speed; untimed routes must still anticipate. Confirm a

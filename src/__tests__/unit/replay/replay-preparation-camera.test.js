@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-26
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,16 +30,16 @@ describe('replay preparation camera', () => {
     it('keeps the prepared Basic pitch when Replay reconfigures against the selected journey', () => {
         const settings = defaultJourneyReplaySettings()
         settings.userMode = 'basic'
-        settings.simple = {
+        settings.basic = {
             camera: {...settings.camera, pitch: -65},
         }
         const journey = {
             slug: 'selected-journey',
-            replay: {simple: {camera: {...settings.camera, pitch: -65}}},
+            replay: {basic: {camera: {...settings.camera, pitch: -65}}},
         }
         const staleJourney = {
             slug: 'previous-journey',
-            replay: {simple: {camera: {...settings.camera, pitch: -10}}},
+            replay: {basic: {camera: {...settings.camera, pitch: -10}}},
         }
         const sampler = {hasSamples: true, totalDistance: 1200}
         const configureController = vi.fn()
@@ -61,7 +61,7 @@ describe('replay preparation camera', () => {
                 main: {theJourney: journey},
                 replay: {
                     userMode: 'basic',
-                    simplePreparationActive: true,
+                    basicPreparationActive: true,
                     camera: {...settings.camera, pitch: -32},
                 },
             },
@@ -390,7 +390,7 @@ describe('replay preparation camera', () => {
             stores: {replay: {camera: settings.camera, marker: settings.marker}},
         }
 
-        const journey = {replay: {simple: {}}}
+        const journey = {replay: {basic: {}}}
         const preparation = enterReplayPreparation(mode, {
             journey,
             shouldApply: () => true,
@@ -407,7 +407,7 @@ describe('replay preparation camera', () => {
         await expect(preparation).resolves.toBe(true)
         expect(call.cameraRecenterFrame).toHaveBeenCalledWith(expect.objectContaining({sample, heading: 0}))
         expect(lgs.camera.setView).toHaveBeenCalledWith({destination: frame.destination, orientation: {direction: frame.direction, up: frame.correctedUp}})
-        expect(journey.replay.simple.startPosition).toEqual({x: 0.68, y: 0.72})
+        expect(journey.replay.basic.startPosition).toEqual({x: 0.68, y: 0.72})
         expect(call.placeCameraAtPlaybackStart).toHaveBeenCalledWith(sample, 0, {
             desiredPosition: {x: 0.68, y: 0.72},
             journey,

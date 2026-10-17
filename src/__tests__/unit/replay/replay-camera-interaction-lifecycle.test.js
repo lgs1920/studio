@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -155,7 +155,7 @@ describe('JourneyReplay camera interaction lifecycle', () => {
         const screenPositions = {x: 500, y: 500}
         let persistedReplay = null
         const journey = {
-            replay: {simple: {startPosition: {x: 0.5, y: 0.5}}},
+            replay: {basic: {startPosition: {x: 0.5, y: 0.5}}},
             persistToDatabase: vi.fn(async function () {
                 persistedReplay = JSON.parse(JSON.stringify(this.replay))
             }),
@@ -216,9 +216,9 @@ describe('JourneyReplay camera interaction lifecycle', () => {
             }, 50)
             await vi.advanceTimersByTimeAsync(360)
 
-            expect(journey.replay.simple.startPosition).toEqual({x: 0.72, y: 0.34})
+            expect(journey.replay.basic.startPosition).toEqual({x: 0.72, y: 0.34})
             expect(journey.persistToDatabase).toHaveBeenCalledOnce()
-            expect(persistedReplay.simple.startPosition).toEqual({x: 0.72, y: 0.34})
+            expect(persistedReplay.basic.startPosition).toEqual({x: 0.72, y: 0.34})
             expect(state.preparationCameraGesturePromise).toBeNull()
         }
         finally {
@@ -232,11 +232,11 @@ describe('JourneyReplay camera interaction lifecycle', () => {
         const camera = {...settings.camera, cameraAngle: 180}
         const persistToDatabase = vi.fn()
         const journey = {
-            replay: {simple: {camera: {...camera, cameraAngle: 168}}},
+            replay: {basic: {camera: {...camera, cameraAngle: 168}}},
             persistToDatabase,
         }
         settings.userMode = 'basic'
-        settings.simple = {camera}
+        settings.basic = {camera}
         globalThis.lgs = {
             settings: {ui: {replay: settings}},
             stores: {replay: {camera}},
@@ -251,10 +251,10 @@ describe('JourneyReplay camera interaction lifecycle', () => {
             }, {cameraAngle: 32})
 
             expect(next).toMatchObject({cameraAngle: 32})
-            expect(globalThis.lgs.settings.ui.replay.simple.camera.cameraAngle).toBe(0)
-            expect(globalThis.lgs.settings.ui.replay.simple.camera).not.toHaveProperty('altitude')
-            expect(globalThis.lgs.settings.ui.replay.simple.camera).not.toHaveProperty('pitch')
-            expect(journey.replay.simple.camera).toMatchObject({
+            expect(globalThis.lgs.settings.ui.replay.basic.camera.cameraAngle).toBe(0)
+            expect(globalThis.lgs.settings.ui.replay.basic.camera).not.toHaveProperty('altitude')
+            expect(globalThis.lgs.settings.ui.replay.basic.camera).not.toHaveProperty('pitch')
+            expect(journey.replay.basic.camera).toMatchObject({
                 cameraAngle: 32,
             })
             expect(globalThis.lgs.stores.replay.camera).toMatchObject({cameraAngle: 32})
@@ -313,7 +313,7 @@ describe('JourneyReplay camera interaction lifecycle', () => {
 
     it('stores prepared ground-offset zoom relative to the rendered Replay target', () => {
         const settings = defaultJourneyReplaySettings()
-        settings.simple = {camera: {...settings.camera, altitudeMode: 'ground-offset'}}
+        settings.basic = {camera: {...settings.camera, altitudeMode: 'ground-offset'}}
         const persistSettings = vi.fn()
         const sample = {longitude: 2, latitude: 48}
         const mode = {
@@ -334,7 +334,7 @@ describe('JourneyReplay camera interaction lifecycle', () => {
         globalThis.lgs = {
             settings: {ui: {replay: settings}},
             stores: {
-                replay: {camera: settings.simple.camera, simplePreparationActive: true},
+                replay: {camera: settings.basic.camera, basicPreparationActive: true},
                 ui: {video: {editing: true}},
             },
             viewer: {camera: {
@@ -349,7 +349,7 @@ describe('JourneyReplay camera interaction lifecycle', () => {
             altitude: 510,
             altitudeMode: 'ground-offset',
             cameraAngle: settings.camera.cameraAngle,
-            pitch: settings.simple.camera.pitch,
+            pitch: settings.basic.camera.pitch,
         }), {journey: null})
     })
 

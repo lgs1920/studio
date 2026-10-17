@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,22 +28,23 @@ import {
     REPLAY_VIDEO_QUALITY,
 } from '@Core/ui/replay/ReplayVideoSettings'
 import {
-    DEFAULT_SIMPLE_REPLAY_DURATION,
-    normalizeSimpleReplayDuration,
-    SIMPLE_REPLAY_DURATIONS,
+    DEFAULT_BASIC_REPLAY_DURATION,
+    normalizeBasicReplayDuration,
+    BASIC_REPLAY_DURATIONS,
     toGlobalReplayCameraSettings,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {getBasicReplaySettings, writeBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
 import {isJourneyReplayDryRunActive} from '@Core/ui/replay/JourneyReplayRuntime'
 import { WaButton, WaIcon, WaSwitch, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { memo, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
 import { VideoRecordingSettingsMenuContent } from './VideoRecordingSettingsMenus'
-import {SimpleReplayAppearanceSettings} from './SimpleReplayAppearanceSettings'
+import {BasicReplayAppearanceSettings} from './BasicReplayAppearanceSettings'
 import '../style.css'
 
 const RATIO_POPUP = 'ratio'
 const VIDEO_PRESET_POPUP = 'video-preset'
-const SIMPLE_SETTINGS_POPUP = 'simple-settings'
+const BASIC_SETTINGS_POPUP = 'basic-settings'
 
 /**
  * VideoRecordingSettingsToolbar renders the horizontal video setup HUD.
@@ -75,10 +76,10 @@ export const VideoRecordingSettingsToolbar = memo(({
                               && !video.exporting
                               && !video.snapshot
                               && !video.finalizing
-    const simplePreparation = replay.simplePreparationActive === true
-    const compactReplaySettings = simplePreparation || timelineSettings
-    const dryRunEnabled = simplePreparation
-                          && (video.dryRunSelection ?? replaySettings?.simple?.dryRun) === true
+    const basicPreparation = replay.basicPreparationActive === true
+    const compactReplaySettings = basicPreparation || timelineSettings
+    const dryRunEnabled = basicPreparation
+                          && (video.dryRunSelection ?? getBasicReplaySettings(replaySettings)?.dryRun) === true
     const linkedPlaybackActive = timelineSettings && isJourneyReplayDryRunActive(replay, video)
     const showVideoOptions = mode !== 'actions'
     const showActions = mode !== 'video-options'
@@ -89,8 +90,8 @@ export const VideoRecordingSettingsToolbar = memo(({
         ? ['Med', 'High', 'Ultra'][video.quality] ?? fullQualityName
         : fullQualityName
     const currentFPS = REPLAY_VIDEO_FPS[video.fps] ?? REPLAY_VIDEO_FPS[DEFAULT_REPLAY_VIDEO_FPS_INDEX]
-    const simpleDuration = normalizeSimpleReplayDuration(
-        replaySettings?.simple?.duration ?? DEFAULT_SIMPLE_REPLAY_DURATION,
+    const basicDuration = normalizeBasicReplayDuration(
+        getBasicReplaySettings(replaySettings)?.duration ?? DEFAULT_BASIC_REPLAY_DURATION,
     )
 
     /**
@@ -204,35 +205,35 @@ export const VideoRecordingSettingsToolbar = memo(({
     }, [$replay, $video, dryRunEnabled, syncCropFrame, timelineSettings])
 
     /**
-     * Persist the Simple Replay Dry run preference without touching video quality.
+     * Persist the Basic Replay Dry run preference without touching video quality.
      * @param {Event} event - Dry run switch change event.
      * @returns {void} Nothing.
      */
     const handleDryRunChange = useCallback(event => {
         const checked = event.currentTarget?.checked ?? event.target?.checked
-        const simple = lgs.settings.ui.replay.simple ?? {}
-        lgs.settings.ui.replay.simple = {
-            ...simple,
+        const basic = getBasicReplaySettings(lgs.settings.ui.replay) ?? {}
+        lgs.settings.ui.replay = writeBasicReplaySettings(lgs.settings.ui.replay, {
+            ...basic,
             dryRun: checked === true,
-        }
+        })
         $video.dryRunSelection = checked === true
     }, [$video])
 
     /**
-     * Store the selected Simple Replay duration for playback and export.
+     * Store the selected Basic Replay duration for playback and export.
      * @param {Event} event - Duration select change event.
      * @returns {void} Nothing.
      */
-    const handleSimpleDurationChange = useCallback(value => {
-        const duration = normalizeSimpleReplayDuration(value)
+    const handleBasicDurationChange = useCallback(value => {
+        const duration = normalizeBasicReplayDuration(value)
         $replay.duration = duration
         lgs.settings.ui.replay.duration = duration
-        const simple = lgs.settings.ui.replay.simple ?? {}
-        lgs.settings.ui.replay.simple = {
-            ...simple,
+        const basic = getBasicReplaySettings(lgs.settings.ui.replay) ?? {}
+        lgs.settings.ui.replay = writeBasicReplaySettings(lgs.settings.ui.replay, {
+            ...basic,
             duration,
-            ...(simple.camera ? {camera: toGlobalReplayCameraSettings(simple.camera)} : {}),
-        }
+            ...(basic.camera ? {camera: toGlobalReplayCameraSettings(basic.camera)} : {}),
+        })
     }, [$replay])
 
     useEffect(() => {
@@ -315,40 +316,40 @@ export const VideoRecordingSettingsToolbar = memo(({
 
     const replaySettingsTrigger = compactReplaySettings ? (
         <>
-            <div className="simple-replay-settings-summary" aria-label="Current Replay settings">
+            <div className="basic-replay-settings-summary" aria-label="Current Replay settings">
                 <WaTooltip for={replaySettingsTriggerId} placement="top">{'Video Settings'}</WaTooltip>
                 <WaButton
                     id={replaySettingsTriggerId}
                     size="s"
                     variant="brand"
-                    appearance={openPopup === SIMPLE_SETTINGS_POPUP ? 'outlined' : 'plain'}
+                    appearance={openPopup === BASIC_SETTINGS_POPUP ? 'outlined' : 'plain'}
                     aria-label="Video Settings"
-                    aria-expanded={openPopup === SIMPLE_SETTINGS_POPUP}
-                    onClick={() => togglePopup(SIMPLE_SETTINGS_POPUP)}
+                    aria-expanded={openPopup === BASIC_SETTINGS_POPUP}
+                    onClick={() => togglePopup(BASIC_SETTINGS_POPUP)}
                 >
                     <WaIcon name="gear" variant="regular" label=""/>
                 </WaButton>
-                <span className="simple-replay-settings-summary__separator" aria-hidden="true"/>
-                <span className="simple-replay-settings-summary__item">
+                <span className="basic-replay-settings-summary__separator" aria-hidden="true"/>
+                <span className="basic-replay-settings-summary__item">
                     <WaIcon name="crop-simple" label=""/>
                     <span>{currentRatio?.label ?? video.ratio}</span>
                 </span>
-                <span className="simple-replay-settings-summary__item">
+                <span className="basic-replay-settings-summary__item">
                     <WaIcon name={dryRunEnabled ? 'bolt' : 'ranking-star'}
                             variant={dryRunEnabled ? 'regular' : undefined}
                             label=""/>
                     <span>{dryRunEnabled ? 'Dry run' : `${currentQuality} · ${currentFPS} FPS`}</span>
                 </span>
-                {simplePreparation && (
-                    <span className="simple-replay-settings-summary__item">
+                {basicPreparation && (
+                    <span className="basic-replay-settings-summary__item">
                         <WaIcon name="clock" label=""/>
-                        <span>{simpleDuration === 60 ? '1 min' : `${simpleDuration}s`}</span>
+                        <span>{basicDuration === 60 ? '1 min' : `${basicDuration}s`}</span>
                     </span>
                 )}
             </div>
             <LGSPopup
                 anchor={replaySettingsTriggerId}
-                active={openPopup === SIMPLE_SETTINGS_POPUP}
+                active={openPopup === BASIC_SETTINGS_POPUP}
                 onRequestClose={() => setOpenPopup(null)}
                 placement="bottom"
                 flip
@@ -356,21 +357,21 @@ export const VideoRecordingSettingsToolbar = memo(({
                 distance={8}
                 strategy="fixed"
             >
-                <div className={`video-recording-settings-popup video-recording-settings-popup--simple lgs-card ${mainTheme ? 'wa-theme-lgs1920' : 'wa-theme-lgs1920-on-map'}`}>
-                    <div className="simple-replay-settings-row" role="group" aria-label="Aspect ratio">
+                <div className={`video-recording-settings-popup video-recording-settings-popup--basic lgs-card ${mainTheme ? 'wa-theme-lgs1920' : 'wa-theme-lgs1920-on-map'}`}>
+                    <div className="basic-replay-settings-row" role="group" aria-label="Aspect ratio">
                         <WaIcon name="crop-simple" label=""/>
-                        <span className="simple-replay-settings-row__label">{'Ratio'}</span>
+                        <span className="basic-replay-settings-row__label">{'Ratio'}</span>
                         <VideoRecordingSettingsMenuContent menu="ratio"
                                                            context={$cropper}
                                                            cropzoneId={VIDEO_CROP_ZONE}
                                                            unifiedChoices
                                                            mainTheme={mainTheme}/>
                     </div>
-                    {simplePreparation && (
-                        <div className="simple-replay-settings-row" role="group" aria-label="Dry run">
+                    {basicPreparation && (
+                        <div className="basic-replay-settings-row" role="group" aria-label="Dry run">
                             <WaIcon name="bolt" variant="regular" label=""/>
                             <WaSwitch
-                                className="simple-replay-dry-run-switch"
+                                className="basic-replay-dry-run-switch"
                                 size="xs"
                                 label-at-start
                                 checked={dryRunEnabled}
@@ -381,32 +382,32 @@ export const VideoRecordingSettingsToolbar = memo(({
                         </div>
                     )}
                     {!dryRunEnabled && (
-                        <div className="simple-replay-settings-row" role="group" aria-label="Video preset">
+                        <div className="basic-replay-settings-row" role="group" aria-label="Video preset">
                             <WaIcon name="ranking-star" label=""/>
-                            <span className="simple-replay-settings-row__label">{'Preset'}</span>
+                            <span className="basic-replay-settings-row__label">{'Preset'}</span>
                             <VideoRecordingSettingsMenuContent menu="preset"
                                                                context={$cropper}
                                                                cropzoneId={VIDEO_CROP_ZONE}
-                                                               compactSimple
+                                                               compactBasic
                                                                mainTheme={mainTheme}/>
                         </div>
                     )}
-                    {simplePreparation && (
-                        <SimpleReplayAppearanceSettings/>
+                    {basicPreparation && (
+                        <BasicReplayAppearanceSettings/>
                     )}
-                    {simplePreparation && (
-                        <div className="simple-replay-settings-row" role="group" aria-label="Duration">
+                    {basicPreparation && (
+                        <div className="basic-replay-settings-row" role="group" aria-label="Duration">
                             <WaIcon name="clock" label=""/>
-                            <span className="simple-replay-settings-row__label">{'Duration'}</span>
-                            <div className="simple-replay-duration-buttons">
-                                {SIMPLE_REPLAY_DURATIONS.map(duration => (
+                            <span className="basic-replay-settings-row__label">{'Duration'}</span>
+                            <div className="basic-replay-duration-buttons">
+                                {BASIC_REPLAY_DURATIONS.map(duration => (
                                     <WaButton key={duration}
-                                              className={`video-choice-button${simpleDuration === duration ? ' is-selected' : ''}`}
+                                              className={`video-choice-button${basicDuration === duration ? ' is-selected' : ''}`}
                                               size="s"
                                               variant="neutral"
-                                              appearance={simpleDuration === duration ? 'outlined' : 'plain'}
-                                              aria-pressed={simpleDuration === duration ? 'true' : 'false'}
-                                              onClick={() => handleSimpleDurationChange(duration)}>
+                                              appearance={basicDuration === duration ? 'outlined' : 'plain'}
+                                              aria-pressed={basicDuration === duration ? 'true' : 'false'}
+                                              onClick={() => handleBasicDurationChange(duration)}>
                                         {duration === 60 ? '1 min' : `${duration}s`}
                                     </WaButton>
                                 ))}
@@ -421,7 +422,7 @@ export const VideoRecordingSettingsToolbar = memo(({
     return (
         <div className={`video-recording-settings-toolbar lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal ${mainTheme ? 'wa-theme-lgs1920' : 'wa-theme-lgs1920-on-map'}${layout === 'timeline-drawer' ? ' video-recording-settings-toolbar--timeline-drawer' : ''}`}>
             <div className="video-recording-settings-menu" role="toolbar" aria-label="Video recording settings">
-                {showVideoOptions && !simplePreparation ? <WaButton
+                {showVideoOptions && !basicPreparation ? <WaButton
                     id="video-ratio-settings-trigger"
                     size="s"
                     appearance={openPopup === RATIO_POPUP ? 'outlined' : 'plain'}
@@ -435,7 +436,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                     <WaIcon slot="end" name={getCaretIcon(popupDirections.ratio)} variant="solid" label=""/>
                 </WaButton> : null}
 
-                {showVideoOptions && !simplePreparation ? <LGSPopup
+                {showVideoOptions && !basicPreparation ? <LGSPopup
                     anchor="video-ratio-settings-trigger"
                     active={openPopup === RATIO_POPUP}
                     onRequestClose={() => setOpenPopup(null)}
@@ -451,7 +452,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                                                        mainTheme={mainTheme}/>
                 </LGSPopup> : null}
 
-                {showVideoOptions && !simplePreparation ? <WaButton
+                {showVideoOptions && !basicPreparation ? <WaButton
                     id="video-quality-fps-settings-trigger"
                     size="s"
                     appearance={openPopup === VIDEO_PRESET_POPUP ? 'outlined' : 'plain'}
@@ -464,7 +465,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                     <WaIcon slot="end" name={getCaretIcon(popupDirections.preset)} variant="solid" label=""/>
                 </WaButton> : null}
 
-                {showVideoOptions && !simplePreparation ? <LGSPopup
+                {showVideoOptions && !basicPreparation ? <LGSPopup
                     anchor="video-quality-fps-settings-trigger"
                     active={openPopup === VIDEO_PRESET_POPUP}
                     onRequestClose={() => setOpenPopup(null)}

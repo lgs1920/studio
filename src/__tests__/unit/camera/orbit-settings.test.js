@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-09-06
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -254,5 +254,26 @@ describe('target rotation settings', () => {
         await persistOrbitSettings({element: CURRENT_POI, id: poi.id}, 'panorama', {rpm: 0.8})
 
         expect(updatePOI).toHaveBeenCalledWith(poi.id, {panorama: {rpm: 0.8}})
+    })
+})
+
+describe('Journey Replay settings migration', () => {
+    it('normalizes persisted legacy Replay settings to the Basic key on deserialization', () => {
+        const legacySettings = {duration: 20, camera: {cameraAngle: 45}}
+        const journey = Journey.deserialize({
+            object: {
+                replay: {
+                    start: [],
+                    stop: [],
+                    simple: legacySettings,
+                    expert: {camera: {cameraAngle: -90}},
+                },
+            },
+            reset: true,
+        })
+
+        expect(journey.replay.basic).toEqual(legacySettings)
+        expect(journey.replay).not.toHaveProperty('simple')
+        expect(journey.replay.expert).toEqual({camera: {cameraAngle: -90}})
     })
 })

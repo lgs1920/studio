@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,7 +40,7 @@ import {
     JOURNEY_REPLAY_INTERNAL_CALL,
     JOURNEY_REPLAY_INTERNAL_STATE,
 } from '@Core/ui/replay/JourneyReplayInternal'
-import {SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID} from '@Core/ui/replay/JourneyReplaySimpleFocus'
+import {BASIC_REPLAY_TRACE_FOCUS_INSTANCE_ID} from '@Core/ui/replay/JourneyReplayBasicFocus'
 
 describe('logical replay clip camera path', () => {
     afterEach(() => {
@@ -339,7 +339,7 @@ describe('logical replay clip camera path', () => {
         expect(plan.endView.height).toBeGreaterThan(plan.startView.height)
     })
 
-    it('uses the tracked maximum replay altitude for the Simple Replay trace focus', async () => {
+    it('uses the tracked maximum replay altitude for the Basic Replay trace focus', async () => {
         const sample = {longitude: 2, latitude: 48, altitude: 120}
         const target = {longitude: 2.05, latitude: 48.05, altitude: 135}
         const stopReplayCameraAltitudeTracking = vi.fn()
@@ -367,7 +367,7 @@ describe('logical replay clip camera path', () => {
 
         const plan = await resolveJourneyReplayClipCameraPlan(mode, {
             clip: {
-                id: SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID,
+                id: BASIC_REPLAY_TRACE_FOCUS_INSTANCE_ID,
                 clipId: 'focus',
                 params: {duration: 4, heightDelta: 2000, pitch: -30},
             },

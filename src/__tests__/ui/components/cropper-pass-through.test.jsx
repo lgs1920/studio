@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -143,7 +143,7 @@ describe('Cropper pointer pass-through', () => {
         expect(container.querySelector('.crop-overlay-blockers')).toBeNull()
     })
 
-    it('does not mount video widgets when Simple Replay is active', () => {
+    it('does not mount video widgets when Basic Replay is active', () => {
         const context = proxy({id: 'video-crop-zone'})
         const {container} = render(<Cropper overlay hideVideoWidgets context={context}/>)
 

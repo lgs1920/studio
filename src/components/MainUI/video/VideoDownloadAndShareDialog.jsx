@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-04
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -111,7 +111,7 @@ export const VideoDownloadAndShareDialog = () => {
         sanitizeFilenameStem(__.mediaCapture.filename?.({}) || fallback, fallback)
     ), [])
     const isReplayVideoLinked = lgs.stores?.replay?.recordingSync === true
-                                || lgs.stores?.replay?.simplePreparationActive === true
+                                || lgs.stores?.replay?.basicPreparationActive === true
     const getVideoFilenameStem = useCallback(() => (
         sanitizeFilenameStem(_mediaBlob.current.filename || getMediaFilenameStem(), DEFAULT_VIDEO_FILENAME)
     ), [getMediaFilenameStem])

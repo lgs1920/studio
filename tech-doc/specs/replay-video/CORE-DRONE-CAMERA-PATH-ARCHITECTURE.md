@@ -15,7 +15,7 @@ default and it is not persisted as a product feature in V1. Journey remains the
 source of truth for replay-driven camera motion, and replay materializes the
 canonical path at runtime from the journey state.
 
-Simple and Expert must consume the same path engine. Interactive playback and
+Basic and Expert must consume the same path engine. Interactive playback and
 Replay export must evaluate the same canonical path definition for a given
 journey state. Cesium should only be used by adapters and runtime services.
 
@@ -105,7 +105,7 @@ deterministic fallback for both the marker and the camera.
 
 ### Camera heading anticipation and tight zigzags (2026-10-11)
 
-Simple Replay applies a minimum camera Ease of `0.3`; Expert Replay keeps its
+Basic Replay applies a minimum camera Ease of `0.3`; Expert Replay keeps its
 persisted Ease value. The value controls both the existing time-normalized
 heading interpolation and a route-heading anticipation horizon from `2.5` to
 `4` seconds. Interactive playback and fixed-time export use the same camera
@@ -1801,7 +1801,7 @@ Later, `track-follow` and `bezier-camera` can become generated
 ## Runtime and target boundary
 
 The camera path engine resolves poses from Replay progress and delegates
-rendering to the active Cesium adapter. Simple and Expert share the same
+rendering to the active Cesium adapter. Basic and Expert share the same
 Replay camera definition and export frame contract.
 
 ### Replay, start clips, and stop clips
@@ -2155,7 +2155,7 @@ are:
 | Component | Status | Responsibility |
 | --- | --- | --- |
 | `cesium` | Already installed, Apache-2.0 | Runtime camera application, WGS84 conversions, local ENU frames, terrain/tile visibility probes, scene picking, and optional spline primitives. |
-| Turf modules | Already installed, MIT | Simple geospatial helpers when useful: bearing, distance, nearest point, and centroid helpers. |
+| Turf modules | Already installed, MIT | Basic geospatial helpers when useful: bearing, distance, nearest point, and centroid helpers. |
 | `bezier-easing` | Selected V1 dependency, MIT | CSS-like cubic-bezier temporal easing for public `[x1, y1, x2, y2]` easing curves. |
 
 Everything else should be custom project code.
@@ -2362,7 +2362,7 @@ clips continue to use the live end-of-replay camera state.
 - Minimum clearance above terrain.
 - Ability to bake runtime corrections into deterministic export paths.
 
-### V5 - Preset Library and Simple Map Authoring
+### V5 - Preset Library and Basic Map Authoring
 
 - Keyframe editing on the Cesium map.
 - Numeric editing for duration, easing, altitude, and target policy.

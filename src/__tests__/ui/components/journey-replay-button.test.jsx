@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-28
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,11 +50,11 @@ describe('JourneyReplayButton synchronized video entry point', () => {
                         cropper: proxy({}),
                     }),
                 },
-                replay: proxy({recordingSync: false, simplePreparationActive: false}),
+                replay: proxy({recordingSync: false, basicPreparationActive: false}),
             },
             settings: {
                 ui: {
-                    replay: proxy({userMode: 'basic', simple: null, recordingSync: false}),
+                    replay: proxy({userMode: 'basic', basic: null, recordingSync: false}),
                 },
             },
         }
@@ -70,12 +70,12 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         const enterReplayPreparation = vi.fn()
         globalThis.__.ui.replay = {enterReplayPreparation}
         globalThis.lgs.settings.ui.replay.duration = 60
-        globalThis.lgs.settings.ui.replay.simple = {
+        globalThis.lgs.settings.ui.replay.basic = {
             duration: 10,
             camera: {headingOffset: 8, pitch: -48, positionMode: 'behind'},
         }
         globalThis.lgs.theJourney.replay = {
-            simple: {camera: {headingOffset: -24, pitch: -48, positionMode: 'behind'}},
+            basic: {camera: {headingOffset: -24, pitch: -48, positionMode: 'behind'}},
         }
         render(
             <JourneyReplayButton
@@ -98,9 +98,9 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         expect(preparationOptions.shouldApply()).toBe(false)
         globalThis.lgs.stores.ui.video.editing = true
         expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
-        expect(globalThis.lgs.settings.ui.replay.simple.camera).not.toHaveProperty('pitch')
-        expect(globalThis.lgs.settings.ui.replay.simple.camera.cameraAngle).toBe(0)
-        expect(globalThis.lgs.theJourney.replay.simple.camera).toMatchObject({
+        expect(globalThis.lgs.settings.ui.replay.basic.camera).not.toHaveProperty('pitch')
+        expect(globalThis.lgs.settings.ui.replay.basic.camera.cameraAngle).toBe(0)
+        expect(globalThis.lgs.theJourney.replay.basic.camera).toMatchObject({
             cameraAngle: 156,
             pitch: -48,
         })
@@ -112,8 +112,8 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         })
         expect(globalThis.lgs.settings.ui.replay.duration).toBe(60)
         expect(globalThis.lgs.stores.replay.duration).toBe(10)
-        expect(globalThis.lgs.settings.ui.replay.simple.camera.debug).toBe(false)
-        expect(globalThis.lgs.stores.replay.simplePreparationActive).toBe(true)
+        expect(globalThis.lgs.settings.ui.replay.basic.camera.debug).toBe(false)
+        expect(globalThis.lgs.stores.replay.basicPreparationActive).toBe(true)
         await waitFor(() => {
             const icon = screen.getByRole('button', {name: 'Start Basic Replay'}).querySelector('[data-icon="video-down-to-line"]')
             expect(icon).not.toBeNull()
@@ -126,7 +126,7 @@ describe('JourneyReplayButton synchronized video entry point', () => {
 
     it('restores the Expert duration after leaving Basic Replay', () => {
         globalThis.lgs.settings.ui.replay.duration = 60
-        globalThis.lgs.settings.ui.replay.simple = {duration: 10}
+        globalThis.lgs.settings.ui.replay.basic = {duration: 10}
         globalThis.lgs.theJourney.replay = {
             expert: {camera: {altitude: 900, pitch: -60}},
         }
@@ -148,14 +148,14 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         expect(globalThis.lgs.settings.ui.replay.duration).toBe(60)
     })
 
-    it('migrates a legacy Simple camera to one angle when entering Expert Replay', () => {
+    it('migrates a legacy Basic camera to one angle when entering Expert Replay', () => {
         globalThis.lgs.theJourney.replay = {
-            simple: {camera: {positionMode: 'system'}},
+            basic: {camera: {positionMode: 'system'}},
         }
 
         render(
             <JourneyReplayButton
-                id="launch-expert-replay-from-simple-camera"
+                id="launch-expert-replay-from-basic-camera"
                 mode="expert"
                 ariaLabel="Expert Replay"
             />,
@@ -209,7 +209,7 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         expect(globalThis.lgs.stores.replay.userMode).toBe('expert')
         expect(globalThis.lgs.settings.ui.replay.recordingSync).toBe(true)
         expect(globalThis.lgs.stores.replay.recordingSync).toBe(true)
-        expect(globalThis.lgs.stores.replay.simplePreparationActive).toBe(false)
+        expect(globalThis.lgs.stores.replay.basicPreparationActive).toBe(false)
         expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
         expect(globalThis.lgs.stores.ui.video.timelinePreviewActive).toBe(true)
         expect(globalThis.lgs.stores.ui.video.cropper).toMatchObject({

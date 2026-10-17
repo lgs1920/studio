@@ -1,8 +1,8 @@
 # Replay Core
 
-Simple and Expert Replay both use deterministic deferred MP4 export and share
+Basic and Expert Replay both use deterministic deferred MP4 export and share
 the same journey sampler, Replay session, camera resolver, and frame timeline.
-Simple is the guided preparation mode: it applies the compact Simple camera
+Basic is the guided preparation mode: it applies the compact Basic camera
 settings and a restricted control/widget policy. Expert exposes the additional
 camera and clip controls. Both modes use the active mode's camera settings for
 preparation, playback, and export. Camera height and pitch determine the

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,8 +42,9 @@ import {
 import {
     REPLAY_USER_MODE_BASIC,
     syncJourneyExpertReplayCamera,
-    syncJourneySimpleReplayCamera,
+    syncJourneyBasicReplayCamera,
 } from '@Core/ui/replay/ReplayUserModes'
+import {getBasicReplaySettings, writeBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
 import {useOptionalSnapshot, useProxyValue} from '@Utils/ValtioUtils'
 import {useCallback, useEffect, useRef, useSyncExternalStore} from 'react'
 import {useSnapshot} from 'valtio'
@@ -88,7 +89,7 @@ const subscribeToCropElement = onChange => {
 
 /**
  * Mount the 3D camera guide during Replay preparation and animate it along the
- * trace during Simple or Expert playback.
+ * trace during Basic or Expert playback.
  *
  * @returns {null} This component renders no DOM content.
  */
@@ -99,9 +100,9 @@ export const JourneyReplayCameraAngleGuide = () => {
     const replaySettings = useOptionalSnapshot(lgs.settings?.ui?.replay, DEFAULT_REPLAY_ANGLE_GUIDE_SETTINGS)
     const journeySlug = useProxyValue(lgs.stores.main, main => main.theJourney?.slug ?? null, null)
     const cameraSettings = replaySettings.userMode === REPLAY_USER_MODE_BASIC
-        ? replay.simplePreparationActive === true && replay.camera
+        ? replay.basicPreparationActive === true && replay.camera
             ? replay.camera
-            : replaySettings.simple?.camera ?? getJourneyReplaySettings().camera
+            : getBasicReplaySettings(replaySettings)?.camera ?? getJourneyReplaySettings().camera
         : replay.camera ?? replaySettings.camera
     const camera = normalizeJourneyReplayCamera(cameraSettings)
     const cameraAngle = camera.cameraAngle
@@ -143,8 +144,11 @@ export const JourneyReplayCameraAngleGuide = () => {
         const nextCamera = normalizeJourneyReplayCamera({...currentCamera, ...updates})
         settings.camera = toGlobalReplayCameraSettings(nextCamera)
         if (settings.userMode === REPLAY_USER_MODE_BASIC) {
-            settings.simple = {...settings.simple, camera: toGlobalReplayCameraSettings(nextCamera)}
-            syncJourneySimpleReplayCamera(nextCamera)
+            lgs.settings.ui.replay = writeBasicReplaySettings(settings, {
+                ...(getBasicReplaySettings(settings) ?? {}),
+                camera: toGlobalReplayCameraSettings(nextCamera),
+            })
+            syncJourneyBasicReplayCamera(nextCamera)
         }
         else {
             syncJourneyExpertReplayCamera(nextCamera)

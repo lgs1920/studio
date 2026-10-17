@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,7 +25,7 @@ import {attachReplayFrameIntent, publishReplayFrameState} from './ReplayFramePub
 import {createReplayRenderModeContract} from './ReplayRenderModeContract'
 import {getJourneyReplaySettings, normalizeJourneyReplayCamera} from './JourneyReplayProgressionStyle'
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
-import {REPLAY_SIMPLE_CAMERA_MIN_EASING} from './JourneyReplayCameraMotionSmoothing'
+import {REPLAY_BASIC_CAMERA_MIN_EASING} from './JourneyReplayCameraMotionSmoothing'
 
 /**
  * Converts a value to a finite number.
@@ -256,9 +256,9 @@ export const replayStore = () => globalThis.lgs?.stores?.replay
 /**
  * Resolve the camera settings used by Replay preparation and capture.
  *
- * Simple preparation updates the runtime camera while effective settings may
+ * Basic preparation updates the runtime camera while effective settings may
  * still reflect the configured values. Prefer the prepared camera during that
- * phase and keep runtime diagnostics available in Simple Replay.
+ * phase and keep runtime diagnostics available in Basic Replay.
  *
  * @param {Object} [options] - Replay settings resolution options.
  * @returns {Object} Normalized camera settings for the current Replay.
@@ -266,18 +266,18 @@ export const replayStore = () => globalThis.lgs?.stores?.replay
 export const currentJourneyReplayCameraSettings = (options = {}) => {
     const settings = getJourneyReplaySettings(options)
     const store = replayStore()
-    const simplePreparation = store?.simplePreparationActive === true
-    const camera = simplePreparation && store?.camera
+    const basicPreparation = store?.basicPreparationActive === true
+    const camera = basicPreparation && store?.camera
         ? {...settings.camera, ...store.camera}
         : settings.camera
     const normalizedCamera = normalizeJourneyReplayCamera(camera)
     const runtimeCamera = isJourneyReplayBasicMode()
-        && normalizedCamera.hysteresis.easing < REPLAY_SIMPLE_CAMERA_MIN_EASING
+        && normalizedCamera.hysteresis.easing < REPLAY_BASIC_CAMERA_MIN_EASING
         ? {
             ...normalizedCamera,
             hysteresis: {
                 ...normalizedCamera.hysteresis,
-                easing: REPLAY_SIMPLE_CAMERA_MIN_EASING,
+                easing: REPLAY_BASIC_CAMERA_MIN_EASING,
             },
         }
         : normalizedCamera
@@ -316,7 +316,7 @@ export const isJourneyReplayVideoCaptureActive = () => {
     // Link state can remain armed after playback, so combine it with a capture phase.
     const replayVideoLinked = store?.recordingSync === true
                               || settings?.recordingSync === true
-                              || store?.simplePreparationActive === true
+                              || store?.basicPreparationActive === true
     const videoCaptureActive = video?.preRecording === true
                                 || video?.exporting === true
                                 || video?.snapshot === true
@@ -414,12 +414,12 @@ export const currentJourneyReplaySample = controller => controller?.currentSampl
 export const currentJourneyReplayPoiBehavior = () => {
     const settings = getJourneyReplaySettings()
     const store = replayStore()
-    const simpleMode = isJourneyReplayBasicMode()
+    const basicMode = isJourneyReplayBasicMode()
     return {
         hideAllPoisDuringJourneyReplay: settings.hideAllPoisDuringJourneyReplay === true
-                                        || (!simpleMode && store?.hideAllPoisDuringJourneyReplay === true),
+                                        || (!basicMode && store?.hideAllPoisDuringJourneyReplay === true),
         animateAllPoisDuringJourneyReplay: settings.animateAllPoisDuringJourneyReplay === true
-                                           || (!simpleMode && store?.animateAllPoisDuringJourneyReplay === true),
+                                           || (!basicMode && store?.animateAllPoisDuringJourneyReplay === true),
     }
 }
 

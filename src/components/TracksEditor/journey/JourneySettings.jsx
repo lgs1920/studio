@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-17
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,9 +57,10 @@ import {
 import { Utils }                      from '@Editor/Utils'
 import { TrackUtils }                 from '@Utils/cesium/TrackUtils'
 import {
-    defaultSimpleReplaySettings,
-    normalizeSimpleReplaySettings,
+    defaultBasicReplaySettings,
+    normalizeBasicReplaySettings,
 }                                     from '@Core/ui/replay/ReplayUserModes'
+import {getBasicReplaySettings, writeBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
 import {
     applyElevationCoordinatesToFeature, flattenFeatureGeometryCoordinates, prepareJourneyElevationCoordinates,
 }                                     from '@Utils/cesium/elevationCoordinateUtils'
@@ -200,7 +201,7 @@ export const JourneySettings = () => {
             journey?.POIsVisible !== false,
             journey?.tracks?.size ?? 0,
             journey?.pois?.size ?? 0,
-            JSON.stringify(journey?.replay?.simple ?? null),
+            JSON.stringify(getBasicReplaySettings(journey?.replay) ?? null),
         ].join('|')
     }, '')
     void journeyRevision
@@ -208,7 +209,7 @@ export const JourneySettings = () => {
     const {running, target} = useSnapshot($uiRotate)
     const {open} = useSnapshot($drawers)
     const journeySlug = journey?.slug ?? null
-    const simpleReplay = normalizeSimpleReplaySettings(journey?.replay?.simple)
+    const basicReplay = normalizeBasicReplaySettings(getBasicReplaySettings(journey?.replay))
 
     const _title = useRef(null)
     const _description = useRef(null)
@@ -368,15 +369,17 @@ export const JourneySettings = () => {
     }
 
     /**
-     * Persist one Simple Replay camera setting for the edited journey.
+     * Persist one Basic Replay camera setting for the edited journey.
      *
      * @param {string} key - Camera setting name.
      * @param {number} value - New numeric value.
      * @returns {Promise<void>} Resolves after the journey update.
      */
-    const setSimpleReplayCamera = async (key, value) => {
-        const savedCamera = $journeyEditor.journey.replay?.simple?.camera ?? {}
-        const current = normalizeSimpleReplaySettings($journeyEditor.journey.replay?.simple)
+    const setBasicReplayCamera = async (key, value) => {
+        const replay = $journeyEditor.journey.replay ?? {}
+        const basic = getBasicReplaySettings(replay)
+        const savedCamera = basic?.camera ?? {}
+        const current = normalizeBasicReplaySettings(basic)
         const hasStoredNumber = candidate => candidate !== null
             && candidate !== undefined
             && Number.isFinite(Number(candidate))
@@ -391,26 +394,23 @@ export const JourneySettings = () => {
         if (key !== 'pitch' && !hasStoredNumber(savedCamera.pitch)) {
             delete camera.pitch
         }
-        $journeyEditor.journey.replay = {
-            ...$journeyEditor.journey.replay,
-            simple: {
-                ...current,
-                camera,
-            },
-        }
+        $journeyEditor.journey.replay = writeBasicReplaySettings(replay, {
+            ...current,
+            camera,
+        })
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
     }
 
     /**
-     * Restore product defaults for the edited journey's Simple Replay.
+     * Restore product defaults for the edited journey's Basic Replay.
      *
      * @returns {Promise<void>} Resolves after the journey update.
      */
-    const resetSimpleReplay = async () => {
-        $journeyEditor.journey.replay = {
-            ...$journeyEditor.journey.replay,
-            simple: defaultSimpleReplaySettings(),
-        }
+    const resetBasicReplay = async () => {
+        $journeyEditor.journey.replay = writeBasicReplaySettings(
+            $journeyEditor.journey.replay,
+            defaultBasicReplaySettings(),
+        )
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
     }
 
@@ -777,36 +777,36 @@ export const JourneySettings = () => {
                                             />
                                         </WaCard>
                                         <TrackSettings/>
-                                        <WaDetails className="lgs--details-hoverable" name="simple-replay-settings">
-                                            <span slot="summary"><WaIcon name="video-down-to-line" variant="regular"/> Simple Replay</span>
+                                        <WaDetails className="lgs--details-hoverable" name="basic-replay-settings">
+                                            <span slot="summary"><WaIcon name="video-down-to-line" variant="regular"/> Basic Replay</span>
                                             <p>Basic Replay uses these journey defaults before user defaults.</p>
                                             <WaInput
                                                 appearance="filled"
                                                 type="number"
                                                 label="Camera angle"
-                                                value={simpleReplay.camera.cameraAngle}
+                                                value={basicReplay.camera.cameraAngle}
                                                 min={-180}
                                                 max={180}
-                                                onChange={event => setSimpleReplayCamera('cameraAngle', Number(event.target.value))}
+                                                onChange={event => setBasicReplayCamera('cameraAngle', Number(event.target.value))}
                                             />
                                             <WaInput
                                                 appearance="filled"
                                                 type="number"
                                                 label="Pitch"
-                                                value={simpleReplay.camera.pitch}
+                                                value={basicReplay.camera.pitch}
                                                 min={-89}
                                                 max={-5}
-                                                onChange={event => setSimpleReplayCamera('pitch', Number(event.target.value))}
+                                                onChange={event => setBasicReplayCamera('pitch', Number(event.target.value))}
                                             />
                                             <WaInput
                                                 appearance="filled"
                                                 type="number"
                                                 label="Fixed height"
-                                                value={simpleReplay.camera.altitude}
+                                                value={basicReplay.camera.altitude}
                                                 min={10}
-                                                onChange={event => setSimpleReplayCamera('altitude', Number(event.target.value))}
+                                                onChange={event => setBasicReplayCamera('altitude', Number(event.target.value))}
                                             />
-                                            <WaButton appearance="outlined" onClick={resetSimpleReplay}>Reset Simple Replay</WaButton>
+                                            <WaButton appearance="outlined" onClick={resetBasicReplay}>Reset Basic Replay</WaButton>
                                         </WaDetails>
                                     </WaCard>
                                 </LGSScrollbars>

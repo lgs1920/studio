@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-10
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,14 +42,14 @@ vi.mock('@Components/JourneyReplay/JourneyReplayProgressBar', () => ({JourneyRep
 beforeEach(() => {
     const settings = defaultJourneyReplaySettings()
     settings.userMode = 'basic'
-    settings.simple = {camera: {...settings.camera, altitude: 539, pitch: -5}}
+    settings.basic = {camera: {...settings.camera, altitude: 539, pitch: -5}}
     vi.stubGlobal('lgs', {
         colors: {poiDefault: '#fff', poiDefaultBackground: '#000'},
         settings: proxy({ui: {replay: settings}, unitSystem: {current: 0}}),
         stores: {
             ui: proxy({drawers: {open: REPLAY_DRAWER}, video: {editing: true}}),
             main: proxy({theJourney: {slug: 'prepared'}, components: {pois: {list: proxyMap()}}}),
-            replay: proxy({...settings, camera: {...settings.simple.camera}, simplePreparationActive: true, nearbyPois: []}),
+            replay: proxy({...settings, camera: {...settings.basic.camera}, basicPreparationActive: true, nearbyPois: []}),
         },
         scene: {requestRender: vi.fn(), globe: {getHeight: () => 120}},
         viewer: {container: document.body, entities: {getById: () => null}, dataSources: {length: 0, getByName: () => []}},
@@ -72,13 +72,13 @@ it.each([-23, -45, -65])('commits pitch %s through the real Web Awesome preparat
     await render(<JourneyReplayDrawer/>)
     await page.getByLabelText('Pitch (deg)').fill(String(pitch))
     await expect.poll(() => lgs.stores.replay.camera.pitch).toBe(pitch)
-    await expect.poll(() => lgs.stores.main.theJourney.replay.simple.camera.pitch).toBe(pitch)
+    await expect.poll(() => lgs.stores.main.theJourney.replay.basic.camera.pitch).toBe(pitch)
     await page.getByLabelText('Altitude (m)').fill('2630')
     await expect.poll(() => lgs.stores.replay.camera.altitude).toBe(2630)
     expect(lgs.stores.replay.camera.pitch).toBe(pitch)
     page.getByLabelText('Pitch (deg)').element().focus()
-    expect(lgs.stores.main.theJourney.replay.simple.camera).toMatchObject({pitch, altitude: 2630})
-    expect(lgs.settings.ui.replay.simple.camera).not.toHaveProperty('pitch')
-    expect(lgs.settings.ui.replay.simple.camera).not.toHaveProperty('altitude')
-    expect(lgs.settings.ui.replay.simple.camera.cameraAngle).toBe(0)
+    expect(lgs.stores.main.theJourney.replay.basic.camera).toMatchObject({pitch, altitude: 2630})
+    expect(lgs.settings.ui.replay.basic.camera).not.toHaveProperty('pitch')
+    expect(lgs.settings.ui.replay.basic.camera).not.toHaveProperty('altitude')
+    expect(lgs.settings.ui.replay.basic.camera.cameraAngle).toBe(0)
 })

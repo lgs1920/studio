@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-02-20
- * Last modified: 2026-02-20
+ * Created on: 2024-05-25
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ import {
     isSettingPathExcluded,
     shouldTraverseSettingPath,
 } from '@Core/settings/settingsExclusions'
+import {migrateLegacyBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
 import { detailedDiff }       from 'deep-object-diff'
 import { proxy, subscribe }   from 'valtio'
 
@@ -102,11 +103,17 @@ export class SettingsSection {
             }
         }
         else {
-            const updated = this.update(data, configFromJSON)
+            const replayMigration = this.key === 'ui' && data?.replay
+                ? migrateLegacyBasicReplaySettings(data.replay)
+                : {settings: data?.replay, migrated: false}
+            const origin = replayMigration.migrated
+                ? {...data, replay: replayMigration.settings}
+                : data
+            const updated = this.update(origin, configFromJSON)
             this.#content = proxy(updated instanceof Object ? updated : {__value: updated})
             lgs.configuration[this.key] = JSON.parse(JSON.stringify(updated))
 
-            if (this.hasChanged()) {
+            if (this.hasChanged() || replayMigration.migrated) {
                 await this.save()
             }
             this.subscribeToChange()

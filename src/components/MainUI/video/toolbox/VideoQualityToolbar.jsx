@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@ import { WaButton, WaTooltip }          from '@awesome.me/webawesome/dist/react'
 import { Fragment } from 'react'
 import { useSnapshot }                  from 'valtio'
 
-export const VideoQualityToolbar = ({choicesOnMap = false, compactSimple = false}) => {
+export const VideoQualityToolbar = ({choicesOnMap = false, compactBasic = false}) => {
     const $video = lgs.stores.ui.video
     const $videoSettings = lgs.settings.ui.video
     const video = useSnapshot($video)
@@ -55,7 +55,7 @@ export const VideoQualityToolbar = ({choicesOnMap = false, compactSimple = false
                             appearance={index === video.quality ? 'outlined' : 'plain'}
                             onClick={() => handleChangeQuality(index)}
                         >
-                            {compactSimple ? ['Med', 'High', 'Ultra'][index] : short}
+                            {compactBasic ? ['Med', 'High', 'Ultra'][index] : short}
                         </WaButton>
                     </Fragment>
                 ))}

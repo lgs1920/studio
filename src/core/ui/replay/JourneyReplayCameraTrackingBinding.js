@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-03
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -574,7 +574,7 @@ const updateCameraTracking = (mode, {
     }
 
     const settings = getJourneyReplaySettings()
-    // Simple playback retains its configured Navigation policy independently
+    // Basic playback retains its configured Navigation policy independently
     // from Expert marker-mode settings.
     const markerSettings = normalizeJourneyReplayMarker(
         isJourneyReplayBasicMode()

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,9 +32,10 @@ import {
     REPLAY_USER_MODE_BASIC,
     REPLAY_USER_MODE_EXPERT,
     syncJourneyExpertReplayCamera,
-    syncJourneySimpleReplayCamera,
+    syncJourneyBasicReplayCamera,
 } from '@Core/ui/replay/ReplayUserModes'
 import {resolveJourneyReplayUserMode} from '@Core/ui/replay/ReplayUserModeConstants'
+import {getBasicReplaySettings, writeBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
 import {
     hasManageableWidgets,
     openWidgetManagementDrawer,
@@ -753,11 +754,11 @@ const replayCameraKeyboardAction = event => {
             replay: lgs.stores.replay,
         })
         if (userMode === REPLAY_USER_MODE_BASIC) {
-            lgs.settings.ui.replay.simple = {
-                ...lgs.settings.ui.replay.simple,
+            lgs.settings.ui.replay = writeBasicReplaySettings(lgs.settings.ui.replay, {
+                ...(getBasicReplaySettings(lgs.settings.ui.replay) ?? {}),
                 camera: toGlobalReplayCameraSettings(nextCamera),
-            }
-            syncJourneySimpleReplayCamera(nextCamera)
+            })
+            syncJourneyBasicReplayCamera(nextCamera)
         }
         else if (userMode === REPLAY_USER_MODE_EXPERT) {
             syncJourneyExpertReplayCamera(nextCamera)

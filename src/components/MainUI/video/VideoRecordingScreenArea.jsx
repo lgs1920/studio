@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-30
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -145,7 +145,7 @@ export const VideoRecordingScreenArea = memo(() => {
     const isJourneyReplaySyncRequested = useCallback(() => (
         lgs.stores.replay.recordingSync === true
         || lgs.settings?.ui?.replay?.recordingSync === true
-        || lgs.stores.replay.simplePreparationActive === true
+        || lgs.stores.replay.basicPreparationActive === true
     ), [])
 
     const exportJourneyReplayFrameByFrame = useCallback(async ({renderSpec, startToken}) => {
@@ -484,7 +484,7 @@ export const VideoRecordingScreenArea = memo(() => {
 
     const synchronizedRecording = video.exporting
                                   && (lgs.stores.replay.recordingSync === true
-                                      || lgs.stores.replay.simplePreparationActive === true)
+                                      || lgs.stores.replay.basicPreparationActive === true)
 
     return (
         <>

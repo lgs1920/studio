@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,9 +17,10 @@
 import {captureReplayEntryCameraState, replayOwnedCameraFor} from './ReplayCameraOwnership'
 import {replayCameraFor} from './ReplayRenderTarget'
 import {
-    createSimpleReplayTraceFocusClips,
-    SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID,
-} from './JourneyReplaySimpleFocus'
+    createBasicReplayTraceFocusClips,
+    BASIC_REPLAY_TRACE_FOCUS_INSTANCE_ID,
+} from './JourneyReplayBasicFocus'
+import {getBasicReplaySettings} from './ReplayModeSettings'
 
 
 /**
@@ -100,9 +101,9 @@ import {
  * @returns {boolean} Whether the camera settings were seeded.
  */
 const seedReplayCameraFromCesium = (mode, journey) => {
-    const simpleMode = isJourneyReplayBasicMode()
-    const savedCamera = simpleMode
-        ? journey?.replay?.simple?.camera
+    const basicMode = isJourneyReplayBasicMode()
+    const savedCamera = basicMode
+        ? getBasicReplaySettings(journey?.replay)?.camera
         : journey?.replay?.expert?.camera ?? journey?.replay?.camera
     const hasSavedValue = key => {
         const value = key === 'altitude'
@@ -134,7 +135,7 @@ const seedReplayCameraFromCesium = (mode, journey) => {
         cameraAngle: hasSavedAngle
             ? currentSettings.cameraAngle
             : REPLAY_INITIAL_CAMERA_ANGLE,
-        debug: simpleMode ? false : currentSettings.debug,
+        debug: basicMode ? false : currentSettings.debug,
         pitch: pitchIsSaved || pitch === null ? currentSettings.pitch : radiansToDegrees(pitch),
     })
 
@@ -285,8 +286,8 @@ export const configure = (mode, options = {}) => {
         }
 
         const replay = getJourneyReplaySettings({journey})
-        const simpleReplay = isJourneyReplayBasicMode()
-        const includeHiddenTracks = simpleReplay
+        const basicReplay = isJourneyReplayBasicMode()
+        const includeHiddenTracks = basicReplay
             ? false
             : options.includeHiddenTracks ?? false
         const scope = REPLAY_SCOPE_ALL_TRACKS
@@ -296,12 +297,12 @@ export const configure = (mode, options = {}) => {
         const trace = options.trace ?? replay.trace
         const smoothing = normalizeJourneyReplaySmoothing(options.smoothing ?? replay.smoothing)
         const marker = options.marker ?? replay.marker
-        const camera = simpleReplay
-            ? store?.simplePreparationActive === true
+        const camera = basicReplay
+            ? store?.basicPreparationActive === true
                 ? currentJourneyReplayCameraSettings({journey})
                 : replay.camera
             : options.camera ?? replay.camera
-        const readiness = normalizeJourneyReplayReadiness(simpleReplay
+        const readiness = normalizeJourneyReplayReadiness(basicReplay
             ? {...replay.readiness, enabled: false, prewarmEnabled: false}
             : options.readiness ?? replay.readiness)
         const samplerConfigKey = call.samplerConfigurationKey({
@@ -316,8 +317,8 @@ export const configure = (mode, options = {}) => {
             settingsClips: replay.clips,
             journey,
         })
-        const clips = simpleReplay
-            ? createSimpleReplayTraceFocusClips(camera)
+        const clips = basicReplay
+            ? createBasicReplayTraceFocusClips(camera)
             : resolvedClips
 
         if (state.samplerConfigKey !== samplerConfigKey || !state.sampler) {
@@ -389,12 +390,12 @@ export const prepareReplayCamera = async (mode, {
     state.replayEntryCameraState = null
     call.updateCameraFromCesiumControls?.({journey})
     const store = replayStore()
-    const simplePreparation = isJourneyReplayBasicMode()
-        && (store?.simplePreparationActive === true
+    const basicPreparation = isJourneyReplayBasicMode()
+        && (store?.basicPreparationActive === true
             || globalThis.lgs?.stores?.ui?.video?.editing === true)
     // configure() rebuilds the sampler and also hydrates runtime settings. Keep
     // the camera that the user just prepared across that hydration boundary.
-    let preparedSimpleCamera = simplePreparation && store?.camera
+    let preparedBasicCamera = basicPreparation && store?.camera
         ? normalizeJourneyReplayCamera(store.camera)
         : null
     const sampler = call.configure({journey, progress: 0})
@@ -404,17 +405,17 @@ export const prepareReplayCamera = async (mode, {
     }
     state.replayPreparationSample = sample
 
-    const replayPreparationActive = store?.simplePreparationActive === true
+    const replayPreparationActive = store?.basicPreparationActive === true
         || globalThis.lgs?.stores?.ui?.video?.editing === true
-    if (replayPreparationActive && seedReplayCameraFromCesium(mode, journey) && simplePreparation) {
-        preparedSimpleCamera = store?.camera
+    if (replayPreparationActive && seedReplayCameraFromCesium(mode, journey) && basicPreparation) {
+        preparedBasicCamera = store?.camera
             ? normalizeJourneyReplayCamera(store.camera)
             : null
     }
 
     const replaySettings = getJourneyReplaySettings({journey})
-    const cameraSettings = preparedSimpleCamera ?? currentJourneyReplayCameraSettings({journey})
-    if (preparedSimpleCamera && store) {
+    const cameraSettings = preparedBasicCamera ?? currentJourneyReplayCameraSettings({journey})
+    if (preparedBasicCamera && store) {
         store.camera = cameraSettings
     }
     const markerSettings = normalizeJourneyReplayMarker(
@@ -437,7 +438,7 @@ export const prepareReplayCamera = async (mode, {
     // preview. Keep its normal-camera return snapshot, but never persist its old
     // Replay settings when recording cleanup restores that preview's scene.
     state.playbackStartCameraSettings = null
-    // Commit the validated Simple preparation before capture changes UI phases.
+    // Commit the validated Basic preparation before capture changes UI phases.
     // Later configuration reads must resolve the same values after its runtime
     // preparation flag is released, rather than an older journey baseline.
     if (isJourneyReplayBasicMode()) {
@@ -494,8 +495,8 @@ export const enterReplayPreparation = async (mode, {
         return false
     }
 
-    const simplePreparation = isJourneyReplayBasicMode()
-    if (simplePreparation) {
+    const basicPreparation = isJourneyReplayBasicMode()
+    if (basicPreparation) {
         call.hideOtherJourneysVisibility()
     }
 
@@ -645,16 +646,16 @@ export const start = (mode, options = {}) => {
     state.cameraStateRestoredBeforeSceneCleanup = false
     state.replayExportClipFrameState = null
     const preparedCameraStore = replayStore()
-    const preserveSimplePreparationCamera = isJourneyReplayBasicMode()
-        && (preparedCameraStore?.simplePreparationActive === true
+    const preserveBasicPreparationCamera = isJourneyReplayBasicMode()
+        && (preparedCameraStore?.basicPreparationActive === true
             || globalThis.lgs?.stores?.ui?.video?.editing === true)
-    const preparedSimpleCamera = preserveSimplePreparationCamera && preparedCameraStore?.camera
+    const preparedBasicCamera = preserveBasicPreparationCamera && preparedCameraStore?.camera
         ? normalizeJourneyReplayCamera(preparedCameraStore.camera)
         : null
     traceStartStep('configure.begin')
     const sampler = call.configure(options)
-    if (preparedSimpleCamera) {
-        preparedCameraStore.camera = preparedSimpleCamera
+    if (preparedBasicCamera) {
+        preparedCameraStore.camera = preparedBasicCamera
     }
     traceStartStep('configure.end', {hasSampler: Boolean(sampler?.hasSamples)})
     if (!sampler?.hasSamples) {
@@ -881,18 +882,18 @@ export const preparePlaybackSceneForExport = async (mode, {
 
         const safeProgress = Math.max(0, Math.min(1, Number(progress) || 0))
         const preparedCameraStore = replayStore()
-        const preserveSimplePreparationCamera = isJourneyReplayBasicMode()
-            && (preparedCameraStore?.simplePreparationActive === true
+        const preserveBasicPreparationCamera = isJourneyReplayBasicMode()
+            && (preparedCameraStore?.basicPreparationActive === true
                 || globalThis.lgs?.stores?.ui?.video?.editing === true)
-        const preparedSimpleCamera = preserveSimplePreparationCamera && preparedCameraStore?.camera
+        const preparedBasicCamera = preserveBasicPreparationCamera && preparedCameraStore?.camera
             ? normalizeJourneyReplayCamera(preparedCameraStore.camera)
             : null
         const sampler = call.configure({
             journey,
             progress: safeProgress,
         }) ?? state.sampler
-        if (preparedSimpleCamera) {
-            preparedCameraStore.camera = preparedSimpleCamera
+        if (preparedBasicCamera) {
+            preparedCameraStore.camera = preparedBasicCamera
         }
         const sample = sampler?.atProgress?.(safeProgress)
                        ?? state.controller?.currentSample?.()
@@ -1350,7 +1351,7 @@ export const renderReplayExportFrame = async (mode, {
         const isFinalExportFrame = phase?.isFinalSceneFrame === true
                                    || phase?.isLastPhaseFrame === true
         const stopClip = phase?.slot === REPLAY_CLIP_SLOT_STOP
-        if (phase?.clip?.id === SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID) {
+        if (phase?.clip?.id === BASIC_REPLAY_TRACE_FOCUS_INSTANCE_ID) {
             call.stopReplayCameraAltitudeTracking()
         }
         const staticCompletedTrace = (stopClip || replayPhase)

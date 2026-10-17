@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-10
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,7 +50,7 @@ export const DetachedWidgetPortal = () => {
                               || video.exporting
                               || video.snapshot
                               || video.finalizing
-                              || replay.simplePreparationActive
+                              || replay.basicPreparationActive
 
     if (replayVideoPhase
         || !widgetId

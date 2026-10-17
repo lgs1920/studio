@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -47,7 +47,8 @@ import {
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {replayCameraFor, replaySceneFor, replayViewerFor} from './ReplayRenderTarget'
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
-import {syncJourneyExpertReplayCamera, syncJourneySimpleReplayCamera} from './ReplayUserModes'
+import {getBasicReplaySettings, writeBasicReplaySettings} from './ReplayModeSettings'
+import {syncJourneyExpertReplayCamera, syncJourneyBasicReplayCamera} from './ReplayUserModes'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
@@ -674,11 +675,11 @@ export const persistCameraSettings =  (mode, updates, {journey = null} = {}) => 
         if (globalThis.lgs?.settings?.ui?.replay) {
             globalThis.lgs.settings.ui.replay.camera = toGlobalReplayCameraSettings(next)
             if (isBasicMode) {
-                const simple = globalThis.lgs.settings.ui.replay.simple ?? {}
-                globalThis.lgs.settings.ui.replay.simple = {
-                    ...simple,
-                    camera: toGlobalReplayCameraSettings({...simple.camera, ...next}),
-                }
+                const basic = getBasicReplaySettings(globalThis.lgs.settings.ui.replay) ?? {}
+                globalThis.lgs.settings.ui.replay = writeBasicReplaySettings(globalThis.lgs.settings.ui.replay, {
+                    ...basic,
+                    camera: toGlobalReplayCameraSettings({...basic.camera, ...next}),
+                })
             }
         }
         if (globalThis.lgs?.stores?.replay) {
@@ -688,7 +689,7 @@ export const persistCameraSettings =  (mode, updates, {journey = null} = {}) => 
             syncJourneyExpertReplayCamera(next, journey)
         }
         else {
-            syncJourneySimpleReplayCamera(next, journey)
+            syncJourneyBasicReplayCamera(next, journey)
         }
 
         return next

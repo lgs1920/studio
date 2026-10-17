@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -83,7 +83,7 @@ import {
 import {createReplayRecordingPerformance} from '@Core/ui/replay/ReplayRecordingPerformance'
 import {REPLAY_VIDEO_FPS} from '@Core/ui/replay/ReplayVideoSettings'
 import {isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
-import {createSimpleReplayTraceFocusClips} from '@Core/ui/replay/JourneyReplaySimpleFocus'
+import {createBasicReplayTraceFocusClips} from '@Core/ui/replay/JourneyReplayBasicFocus'
 import {
     normalizeMediabunnyMetadataTags,
 }                              from '@Core/ui/replay/ReplayMediaMetadata'
@@ -653,7 +653,7 @@ const resolveReplayExportClips = ({replay = defaultReplayStore()} = {}) => {
     )
 
     if (isJourneyReplayBasicMode({replay})) {
-        return createSimpleReplayTraceFocusClips(replay?.camera ?? currentJourneyReplayCameraSettings())
+        return createBasicReplayTraceFocusClips(replay?.camera ?? currentJourneyReplayCameraSettings())
     }
 
     return clips

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-08
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,6 +36,7 @@ import { UIToast }            from '@Utils/UIToast'
 import { ElevationServer }    from './Elevation/ElevationServer'
 import { MapElement }         from './MapElement'
 import { getOrbitSettings }   from './OrbitSettings'
+import {getBasicReplaySettings, migrateLegacyBasicReplaySettings} from './ui/replay/ReplayModeSettings'
 import { Track }              from './Track'
 
 const START_STOP_TOO_CLOSE_DISTANCE = 100
@@ -107,12 +108,14 @@ export class Journey extends MapElement {
             this.camera = options.camera ?? null
             this.rotation = options.rotation ?? {}
             this.panorama = options.panorama ?? {}
-            this.replay = options.replay ?? {
-                start: [],
-                stop:  [],
-                simple: null,
-                expert: null,
-            }
+            this.replay = options.replay
+                ? migrateLegacyBasicReplaySettings(options.replay).settings
+                : {
+                    start: [],
+                    stop:  [],
+                    basic: null,
+                    expert: null,
+                }
         }
 
     }
@@ -300,14 +303,15 @@ export class Journey extends MapElement {
             instance.renderSmoothing,
             defaultTrackRenderSmoothing(),
         )
+        const replay = instance.replay ?? {}
+        const basic = getBasicReplaySettings(replay)
         instance.replay = {
-            start: Array.isArray(instance.replay?.start) ? instance.replay.start : [],
-            stop:  Array.isArray(instance.replay?.stop) ? instance.replay.stop : [],
-            ...(instance.replay?.simple && typeof instance.replay.simple === 'object'
-                ? {simple: instance.replay.simple}
+            start: Array.isArray(replay.start) ? replay.start : [],
+            stop:  Array.isArray(replay.stop) ? replay.stop : [],
+            ...(basic ? {basic}
                 : {}),
-            ...(instance.replay?.expert && typeof instance.replay.expert === 'object'
-                ? {expert: instance.replay.expert}
+            ...(replay.expert && typeof replay.expert === 'object'
+                ? {expert: replay.expert}
                 : {}),
         }
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import {
     getReplayVideoWidgetKeys,
     isReplayVideoWidgetAllowed,
     REPLAY_VIDEO_WIDGET_TYPES,
-    REPLAY_VIDEO_SIMPLE_WIDGET_TYPES,
+    REPLAY_VIDEO_BASIC_WIDGET_TYPES,
 } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {afterEach, describe, expect, it} from 'vitest'
 
@@ -30,24 +30,24 @@ describe('Replay video widget policy', () => {
         globalThis.lgs = undefined
     })
 
-    it('requires Compass in Simple Replay and leaves it optional in Expert Replay', () => {
+    it('requires Compass in Basic Replay and leaves it optional in Expert Replay', () => {
         expect(REPLAY_VIDEO_WIDGET_TYPES).toEqual([
             'credits-widget',
             'logo-widget',
         ])
-        expect(REPLAY_VIDEO_SIMPLE_WIDGET_TYPES).toEqual([
+        expect(REPLAY_VIDEO_BASIC_WIDGET_TYPES).toEqual([
             'compass-widget',
             'credits-widget',
             'logo-widget',
         ])
-        expect(getReplayVideoWidgetTypes({simpleReplay: false})).toBe(REPLAY_VIDEO_WIDGET_TYPES)
-        expect(getReplayVideoWidgetTypes({simpleReplay: true})).toBe(REPLAY_VIDEO_SIMPLE_WIDGET_TYPES)
+        expect(getReplayVideoWidgetTypes({basicReplay: false})).toBe(REPLAY_VIDEO_WIDGET_TYPES)
+        expect(getReplayVideoWidgetTypes({basicReplay: true})).toBe(REPLAY_VIDEO_BASIC_WIDGET_TYPES)
     })
 
     it('allows every content widget and excludes capture infrastructure', () => {
         globalThis.lgs = {
             settings: {ui: {replay: {userMode: 'expert'}}},
-            stores: {replay: {userMode: 'expert', simplePreparationActive: false}},
+            stores: {replay: {userMode: 'expert', basicPreparationActive: false}},
         }
         expect(filterReplayVideoWidgetKeys([
             'journey-stats-widget#1',
@@ -76,13 +76,13 @@ describe('Replay video widget policy', () => {
             'credits-widget#video',
             'logo-widget',
             'text-widget#title',
-        ], {simpleReplay: true})).toEqual([
+        ], {basicReplay: true})).toEqual([
             'compass-widget#1',
             'credits-widget#video',
             'logo-widget',
         ])
-        expect(isReplayVideoWidgetAllowed('journey-stats-widget#1', {simpleReplay: true})).toBe(false)
-        expect(isReplayVideoWidgetAllowed('text-widget#title', {simpleReplay: true})).toBe(false)
+        expect(isReplayVideoWidgetAllowed('journey-stats-widget#1', {basicReplay: true})).toBe(false)
+        expect(isReplayVideoWidgetAllowed('text-widget#title', {basicReplay: true})).toBe(false)
         expect(isReplayVideoWidgetAllowed('video-crop-zone')).toBe(false)
         expect(isReplayVideoWidgetAllowed('replay-timeline-widget')).toBe(false)
     })
@@ -103,7 +103,7 @@ describe('Replay video widget policy', () => {
         globalThis.lgs = {
             settings: {ui: {replay: {userMode: 'expert'}}},
             stores: {
-                replay: {userMode: 'basic', simplePreparationActive: false},
+                replay: {userMode: 'basic', basicPreparationActive: false},
                 ui: {
                     widget: {
                         list: new Map([
@@ -115,7 +115,7 @@ describe('Replay video widget policy', () => {
             },
         }
 
-        expect(getReplayVideoWidgetKeys({simpleReplay: false})).toEqual([
+        expect(getReplayVideoWidgetKeys({basicReplay: false})).toEqual([
             'text-widget#title',
             'compass-widget#1',
             'journey-stats-widget',

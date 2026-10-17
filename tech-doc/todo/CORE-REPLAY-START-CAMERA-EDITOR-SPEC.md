@@ -193,7 +193,7 @@ must not define the replay start pose.
 
 ### 3.5 Replay export camera ownership
 
-Simple and Expert use the same isolated export camera. It follows the canonical
+Basic and Expert use the same isolated export camera. It follows the canonical
 Replay pose and resolved start-clip plan independently from the interactive map
 camera. The render target is fixed for the lifetime of an export.
 
@@ -429,9 +429,9 @@ playback owns the camera, unless the explicit editor mode is active.
 - Make the last start clip frame equal the canonical replay start pose.
 - Remove the current deferred replay recenter as a competing authority.
 
-### Phase 6: Validate Simple and Expert camera behavior
+### Phase 6: Validate Basic and Expert camera behavior
 
-- Verify Simple and Expert use the same camera pose and clip plan.
+- Verify Basic and Expert use the same camera pose and clip plan.
 - Verify export uses the isolated Replay camera in both modes.
 - Expose preparation, rendering, encoding, completion, and failure progress.
 - Verify preview camera navigation does not alter export output.
@@ -461,7 +461,7 @@ playback owns the camera, unless the explicit editor mode is active.
 
 - Replay without start clips begins on the canonical start pose.
 - Replay with one or more start clips ends the clips on the canonical pose.
-- Simple and Expert produce the same logical camera poses.
+- Basic and Expert produce the same logical camera poses.
 - Both configurations export through the isolated Replay camera.
 - Export progress identifies the current phase.
 - Moving the preview camera during offscreen Replay export does not change the
@@ -493,5 +493,5 @@ playback owns the camera, unless the explicit editor mode is active.
    replay start anchor. No separate external arrival camera is required.
 4. Opening the Replay drawer automatically focuses the camera editor on the
    relevant replay anchor.
-5. Simple and Expert share the isolated Replay export camera and progress
+5. Basic and Expert share the isolated Replay export camera and progress
    reporting. Camera ownership remains fixed during an active export.

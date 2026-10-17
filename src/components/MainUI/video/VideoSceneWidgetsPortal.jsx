@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-28
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,14 +44,14 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                               || video.finalizing === true
     const synchronizedRecording = video.exporting === true
                                   && replay.recordingSync === true
-    const simpleReplay = isJourneyReplayBasicMode({replay})
+    const basicReplay = isJourneyReplayBasicMode({replay})
     const previewOnly = videoCaptureActive || synchronizedRecording
     const _rehydrateKey = useRef('')
     const allWidgetEntries = Array.from(list.entries())
         .filter(([, props]) => props?.widgetsBoard === VIDEO_WIDGETS_BOARD)
         .sort(([, a], [, b]) => (b.zIndex || 0) - (a.zIndex || 0))
     const widgetEntries = allWidgetEntries
-        .filter(([key]) => filterReplayVideoWidgetKeys([key], {simpleReplay}).length > 0)
+        .filter(([key]) => filterReplayVideoWidgetKeys([key], {basicReplay}).length > 0)
     const widgetIds = widgetEntries.map(([key]) => key).join('|')
 
     const [boardElement, setBoardElement] = useState(null)
@@ -147,7 +147,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
         const registeredWidgetTypes = new Set(
             widgetIds.split('|').filter(Boolean).map(widgetId => widgetId.split('#')[0]),
         )
-        for (const widgetType of getReplayVideoWidgetTypes({simpleReplay})) {
+        for (const widgetType of getReplayVideoWidgetTypes({basicReplay})) {
             const alreadyRegistered = registeredWidgetTypes.has(widgetType)
             if (!alreadyRegistered) {
                 void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetType, {
@@ -158,7 +158,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                 })
             }
         }
-    }, [boardReady, hidden, simpleReplay, widgetIds])
+    }, [boardReady, hidden, basicReplay, widgetIds])
 
     useEffect(() => {
         if (!boardReady || hidden || !videoCaptureActive || !widgetIds) {
@@ -176,7 +176,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
 
         __.ui.widgetManager.invalidateRuntimeByBoard(VIDEO_WIDGETS_BOARD)
         void __.ui.widgetManager.rehydrateWidgetsByBoard(VIDEO_WIDGETS_BOARD)
-    }, [boardReady, hidden, simpleReplay, videoCaptureActive, widgetIds])
+    }, [boardReady, hidden, basicReplay, videoCaptureActive, widgetIds])
 
     useEffect(() => {
         if (!videoCaptureActive) {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -49,7 +49,7 @@ describe('JourneyReplayRuntime', () => {
         expect(isJourneyReplayDryRunActive({...replay, paused: true}, {...video, preRecording: true})).toBe(false)
     })
 
-    it('uses the prepared Simple camera and preserves enabled diagnostics', () => {
+    it('uses the prepared Basic camera and preserves enabled diagnostics', () => {
         const previousLgs = globalThis.lgs
         try {
             globalThis.lgs = {
@@ -58,7 +58,7 @@ describe('JourneyReplayRuntime', () => {
                     ui: {
                         replay: {
                             userMode: 'basic',
-                            simple: {
+                            basic: {
                                 camera: {altitude: 900, pitch: -45, debug: false},
                             },
                         },
@@ -66,7 +66,7 @@ describe('JourneyReplayRuntime', () => {
                 },
                 stores: {
                     replay: {
-                        simplePreparationActive: true,
+                        basicPreparationActive: true,
                         camera: {altitude: 1250, pitch: -32, debug: true},
                     },
                 },
@@ -98,7 +98,7 @@ describe('JourneyReplayRuntime', () => {
                 },
                 stores: {
                     replay: {
-                        simplePreparationActive: false,
+                        basicPreparationActive: false,
                         camera: {altitude: 1100, debug: false},
                     },
                 },
@@ -114,14 +114,14 @@ describe('JourneyReplayRuntime', () => {
         }
     })
 
-    it('ignores stale POI visibility flags from an Expert session in Simple mode', () => {
+    it('ignores stale POI visibility flags from an Expert session in Basic mode', () => {
         const previousLgs = globalThis.lgs
         try {
             globalThis.lgs = {
                 settings: {ui: {replay: {userMode: 'basic'}}},
                 stores: {
                     replay: {
-                        simplePreparationActive: true,
+                        basicPreparationActive: true,
                         hideAllPoisDuringJourneyReplay: true,
                         animateAllPoisDuringJourneyReplay: true,
                     },

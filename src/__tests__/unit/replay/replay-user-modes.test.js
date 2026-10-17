@@ -8,25 +8,25 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    defaultSimpleReplaySettings,
+    defaultBasicReplaySettings,
     flushJourneyReplayCameraPersistence,
     flushJourneyReplayStartPositionPersistence,
     hasExpertReplayConfiguration,
-    initializeExpertReplayFromSimple,
-    normalizeSimpleReplaySettings,
+    initializeExpertReplayFromBasic,
+    normalizeBasicReplaySettings,
     normalizeReplayUserMode,
     journeyReplayStartPosition,
-    resolveSimpleReplaySettings,
+    resolveBasicReplaySettings,
     syncJourneyExpertReplayCamera,
     syncJourneyExpertReplayProgression,
-    syncJourneySimpleReplayCamera,
+    syncJourneyBasicReplayCamera,
     syncJourneyReplayStartPosition,
     REPLAY_USER_MODE_BASIC,
     REPLAY_USER_MODE_EXPERT,
@@ -48,20 +48,47 @@ describe('Replay user modes', () => {
     it('persists the departure screen position separately on each Journey and Replay mode', async () => {
         const persistSimple = vi.fn()
         const persistExpert = vi.fn()
-        const simpleJourney = {slug: 'simple-journey', replay: {}, persistToDatabase: persistSimple}
+        const basicJourney = {slug: 'basic-journey', replay: {}, persistToDatabase: persistSimple}
         const expertJourney = {slug: 'expert-journey', replay: {}, persistToDatabase: persistExpert}
 
-        expect(syncJourneyReplayStartPosition({x: 0.72, y: 0.34}, simpleJourney, REPLAY_USER_MODE_BASIC))
+        expect(syncJourneyReplayStartPosition({x: 0.72, y: 0.34}, basicJourney, REPLAY_USER_MODE_BASIC))
             .toEqual({x: 0.72, y: 0.34})
         expect(syncJourneyReplayStartPosition({x: 0.28, y: 0.66}, expertJourney, REPLAY_USER_MODE_EXPERT))
             .toEqual({x: 0.28, y: 0.66})
 
-        expect(journeyReplayStartPosition(simpleJourney, REPLAY_USER_MODE_BASIC)).toEqual({x: 0.72, y: 0.34})
+        expect(journeyReplayStartPosition(basicJourney, REPLAY_USER_MODE_BASIC)).toEqual({x: 0.72, y: 0.34})
         expect(journeyReplayStartPosition(expertJourney, REPLAY_USER_MODE_EXPERT)).toEqual({x: 0.28, y: 0.66})
-        await expect(flushJourneyReplayStartPositionPersistence(simpleJourney)).resolves.toBe(true)
+        await expect(flushJourneyReplayStartPositionPersistence(basicJourney)).resolves.toBe(true)
         await expect(flushJourneyReplayStartPositionPersistence(expertJourney)).resolves.toBe(true)
         expect(persistSimple).toHaveBeenCalledOnce()
         expect(persistExpert).toHaveBeenCalledOnce()
+    })
+
+    it('moves legacy Journey settings to the Basic key when persisting a Basic edit', async () => {
+        const persistToDatabase = vi.fn(async () => undefined)
+        const journey = {
+            slug: 'legacy-journey',
+            replay: {
+                simple: {
+                    duration: 30,
+                    startPosition: {x: 0.25, y: 0.75},
+                    camera: {cameraAngle: 45},
+                },
+            },
+            persistToDatabase,
+        }
+
+        expect(journeyReplayStartPosition(journey, REPLAY_USER_MODE_BASIC)).toEqual({x: 0.25, y: 0.75})
+        syncJourneyReplayStartPosition({x: 0.6, y: 0.4}, journey, REPLAY_USER_MODE_BASIC)
+
+        expect(journey.replay.basic).toEqual({
+            duration: 30,
+            startPosition: {x: 0.6, y: 0.4},
+            camera: {cameraAngle: 45},
+        })
+        expect(journey.replay).not.toHaveProperty('simple')
+        await expect(flushJourneyReplayStartPositionPersistence(journey)).resolves.toBe(true)
+        expect(persistToDatabase).toHaveBeenCalledOnce()
     })
 
     it('defaults to Basic and normalizes unknown modes', () => {
@@ -70,14 +97,14 @@ describe('Replay user modes', () => {
         expect(normalizeReplayUserMode(REPLAY_USER_MODE_EXPERT)).toBe(REPLAY_USER_MODE_EXPERT)
     })
 
-    it('keeps Simple camera policies when product YAML has not loaded yet', () => {
+    it('keeps Basic camera policies when product YAML has not loaded yet', () => {
         vi.stubGlobal('lgs', {
             settings: {ui: {replay: {userMode: REPLAY_USER_MODE_BASIC}}},
-            stores: {replay: {userMode: REPLAY_USER_MODE_BASIC, simplePreparationActive: false}},
+            stores: {replay: {userMode: REPLAY_USER_MODE_BASIC, basicPreparationActive: false}},
         })
 
         try {
-            const defaults = defaultSimpleReplaySettings()
+            const defaults = defaultBasicReplaySettings()
             expect(defaults.camera).toMatchObject({canDrift: false, canRoll: false})
             expect(defaults.marker.mode).toBe('navigation')
             expect(defaults.trace.mode).toBe('progressive')
@@ -87,13 +114,13 @@ describe('Replay user modes', () => {
         }
     })
 
-    it('prefers the saved mode to the runtime store default while Simple preparation stays Basic', () => {
+    it('keeps active Basic preparation authoritative over the saved Expert mode', () => {
         const settings = {userMode: REPLAY_USER_MODE_EXPERT}
-        const replay = {userMode: REPLAY_USER_MODE_BASIC, simplePreparationActive: false}
+        const replay = {userMode: REPLAY_USER_MODE_BASIC, basicPreparationActive: false}
 
         expect(resolveJourneyReplayUserMode({settings, replay})).toBe(REPLAY_USER_MODE_EXPERT)
         expect(isJourneyReplayBasicMode({settings, replay})).toBe(false)
-        expect(resolveJourneyReplayUserMode({settings, replay: {...replay, simplePreparationActive: true}}))
+        expect(resolveJourneyReplayUserMode({settings, replay: {...replay, basicPreparationActive: true}}))
             .toBe(REPLAY_USER_MODE_BASIC)
         expect(resolveJourneyReplayUserMode({settings: {}, replay: {userMode: REPLAY_USER_MODE_EXPERT}}))
             .toBe(REPLAY_USER_MODE_EXPERT)
@@ -102,29 +129,29 @@ describe('Replay user modes', () => {
     it('resolves compact appearance overrides without scaling product widths repeatedly or changing Expert style', () => {
         vi.stubGlobal('lgs', {
             savedConfiguration: {ui: {replay: replayYamlDefaults}},
-            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_BASIC, simple: {
+            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_BASIC, basic: {
                 presentation: {sizeScale: 1.5, fillColor: '#008000'},
             }}}},
-            stores: {replay: {simplePreparationActive: true}},
+            stores: {replay: {basicPreparationActive: true}},
             theJourney: {replay: {
-                simple: {presentation: {sizeScale: 2.3, borderColor: '#0000ff'}},
+                basic: {presentation: {sizeScale: 2.3, borderColor: '#0000ff'}},
                 expert: {progression: {fill: {color: '#ffffff', width: 7}, border: {width: 3}}},
             }},
         })
         try {
-            const resolved = resolveSimpleReplaySettings({
-                user: globalThis.lgs.settings.ui.replay.simple,
-                journey: globalThis.lgs.theJourney.replay.simple,
+            const resolved = resolveBasicReplaySettings({
+                user: globalThis.lgs.settings.ui.replay.basic,
+                journey: globalThis.lgs.theJourney.replay.basic,
             })
             expect(resolved.presentation).toMatchObject({sizeScale: 2.3, fillColor: '#008000', borderColor: '#0000ff'})
-            const normalized = normalizeSimpleReplaySettings(resolved)
-            expect(normalized.presentation.progression.fill.width).toBe(replayYamlDefaults.simple.presentation.progression.fill.width)
+            const normalized = normalizeBasicReplaySettings(resolved)
+            expect(normalized.presentation.progression.fill.width).toBe(replayYamlDefaults.basic.presentation.progression.fill.width)
             expect(getJourneyReplaySettings().progression).toMatchObject({
                 sizeScale: 2.3, fill: {color: '#008000', width: 4}, border: {color: '#0000ff', width: 2},
             })
-            expect(normalizeSimpleReplaySettings({presentation: {sizeScale: 99}}).presentation.sizeScale).toBe(1)
-            expect(normalizeSimpleReplaySettings({presentation: null}).presentation.sizeScale).toBe(1)
-            globalThis.lgs.stores.replay.simplePreparationActive = false
+            expect(normalizeBasicReplaySettings({presentation: {sizeScale: 99}}).presentation.sizeScale).toBe(1)
+            expect(normalizeBasicReplaySettings({presentation: null}).presentation.sizeScale).toBe(1)
+            globalThis.lgs.stores.replay.basicPreparationActive = false
             globalThis.lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
             expect(getJourneyReplaySettings().progression.fill).toMatchObject({color: '#ffffff', width: 7})
         }
@@ -134,8 +161,8 @@ describe('Replay user modes', () => {
     })
 
     it('resolves journey settings over user and product settings', () => {
-        const product = defaultSimpleReplaySettings()
-        const resolved = resolveSimpleReplaySettings({
+        const product = defaultBasicReplaySettings()
+        const resolved = resolveBasicReplaySettings({
             product,
             user: {camera: {altitude: 900}},
             journey: {camera: {cameraAngle: 45}},
@@ -146,12 +173,12 @@ describe('Replay user modes', () => {
         expect(resolved.camera.altitudeMode).toBe('constant')
     })
 
-    it('keeps Simple Replay in Navigation mode and enables zone diagnostics', () => {
+    it('keeps Basic Replay in Navigation mode and enables zone diagnostics', () => {
         vi.stubGlobal('lgs', {
             settings: {ui: {replay: {userMode: REPLAY_USER_MODE_BASIC}}},
-            stores: {replay: {simplePreparationActive: false}},
+            stores: {replay: {basicPreparationActive: false}},
         })
-        const journey = {replay: {simple: {marker: {mode: 'navigation'}}}}
+        const journey = {replay: {basic: {marker: {mode: 'navigation'}}}}
 
         try {
             expect(getJourneyReplaySettings({journey}).marker.mode).toBe('navigation')
@@ -163,18 +190,18 @@ describe('Replay user modes', () => {
         }
     })
 
-    it.each(['constant', 'ground-offset'])('resolves the prepared Simple pitch and %s altitude from its Journey', altitudeMode => {
+    it.each(['constant', 'ground-offset'])('resolves the prepared Basic pitch and %s altitude from its Journey', altitudeMode => {
         const camera = {altitude: 2630, pitch: -23, cameraAngle: -113, altitudeMode}
-        expect(normalizeSimpleReplaySettings({camera}).camera).toMatchObject(camera)
-        expect(resolveSimpleReplaySettings({user: {camera}}).camera).toMatchObject({
+        expect(normalizeBasicReplaySettings({camera}).camera).toMatchObject(camera)
+        expect(resolveBasicReplaySettings({user: {camera}}).camera).toMatchObject({
             altitude: DEFAULT_REPLAY_CAMERA.altitude,
             pitch: DEFAULT_REPLAY_CAMERA.pitch,
             cameraAngle: 0,
         })
-        const journey = {slug: 'prepared', replay: {simple: {camera}}}
+        const journey = {slug: 'prepared', replay: {basic: {camera}}}
         vi.stubGlobal('lgs', {
-            settings: {ui: {replay: {userMode: 'basic', simple: {camera: {altitude: 480, pitch: -5, cameraAngle: 45}}}}},
-            stores: {main: {theJourney: journey}, replay: {simplePreparationActive: false}},
+            settings: {ui: {replay: {userMode: 'basic', basic: {camera: {altitude: 480, pitch: -5, cameraAngle: 45}}}}},
+            stores: {main: {theJourney: journey}, replay: {basicPreparationActive: false}},
         })
         try {
             expect(getJourneyReplaySettings().camera).toMatchObject(camera)
@@ -184,11 +211,11 @@ describe('Replay user modes', () => {
         }
     })
 
-    it('reads Simple Replay presentation defaults from YAML and keeps them separate from Expert persistence', () => {
+    it('reads Basic Replay presentation defaults from YAML and keeps them separate from Expert persistence', () => {
         const previousLgs = globalThis.lgs
         const journey = {
             replay: {
-                simple: {
+                basic: {
                     presentation: {
                         progression: {
                             fill: {color: '#008000', width: 7},
@@ -210,7 +237,7 @@ describe('Replay user modes', () => {
                 ui: {
                     replay: {
                         userMode: REPLAY_USER_MODE_BASIC,
-                        simple: {
+                        basic: {
                             presentation: {
                                 progression: {
                                     fill: {color: '#008000', width: 7},
@@ -221,13 +248,13 @@ describe('Replay user modes', () => {
                     },
                 },
             },
-            stores: {replay: {userMode: REPLAY_USER_MODE_BASIC, simplePreparationActive: false}},
+            stores: {replay: {userMode: REPLAY_USER_MODE_BASIC, basicPreparationActive: false}},
         }
 
         try {
-            const defaults = defaultSimpleReplaySettings()
-            const yamlProgression = replayYamlDefaults.simple.presentation.progression
-            const normalized = normalizeSimpleReplaySettings({
+            const defaults = defaultBasicReplaySettings()
+            const yamlProgression = replayYamlDefaults.basic.presentation.progression
+            const normalized = normalizeBasicReplaySettings({
                 camera: {debug: true, positionMode: 'ahead'},
                 marker: {mode: 'trace'},
                 trace: {mode: 'full'},
@@ -275,29 +302,29 @@ describe('Replay user modes', () => {
         }
     })
 
-    it.each([false, true])('enables Simple runtime diagnostics without changing persisted settings, preparation: %s', simplePreparationActive => {
+    it.each([false, true])('enables Basic runtime diagnostics without changing persisted settings, preparation: %s', basicPreparationActive => {
         vi.stubGlobal('lgs', {
-            settings: {ui: {replay: {userMode: 'basic', simple: {camera: {debug: true}}}}},
-            stores: {replay: {simplePreparationActive, camera: {debug: true}}},
-            theJourney: {replay: {simple: {camera: {debug: true}}}},
+            settings: {ui: {replay: {userMode: 'basic', basic: {camera: {debug: true}}}}},
+            stores: {replay: {basicPreparationActive, camera: {debug: true}}},
+            theJourney: {replay: {basic: {camera: {debug: true}}}},
         })
         try {
             expect(getJourneyReplaySettings().camera.debug).toBe(true)
             expect(currentJourneyReplayCameraSettings().debug).toBe(true)
-            expect(lgs.theJourney.replay.simple.camera.debug).toBe(true)
+            expect(lgs.theJourney.replay.basic.camera.debug).toBe(true)
         }
         finally {
             vi.unstubAllGlobals()
         }
     })
 
-    it('gives Simple a smooth camera response while keeping Expert Ease adjustable', () => {
+    it('gives Basic a smooth camera response while keeping Expert Ease adjustable', () => {
         vi.stubGlobal('lgs', {
             settings: {ui: {replay: {userMode: REPLAY_USER_MODE_BASIC}}},
-            stores:   {replay: {simplePreparationActive: false}},
+            stores:   {replay: {basicPreparationActive: false}},
             theJourney: {
                 replay: {
-                    simple: {camera: {hysteresis: {easing: 0.12}}},
+                    basic: {camera: {hysteresis: {easing: 0.12}}},
                     expert: {camera: {hysteresis: {easing: 0.12}}},
                 },
             },
@@ -328,7 +355,7 @@ describe('Replay user modes', () => {
         const previousLgs = globalThis.lgs
         globalThis.lgs = {
             settings: {ui: {replay: {camera: {altitude: 1300, pitch: -20, cameraAngle: 80}}}},
-            stores: {replay: {userMode: REPLAY_USER_MODE_EXPERT, simplePreparationActive: false}},
+            stores: {replay: {userMode: REPLAY_USER_MODE_EXPERT, basicPreparationActive: false}},
             theJourney: {replay: {expert: {camera: {altitude: 2100}}}},
         }
 
@@ -381,49 +408,49 @@ describe('Replay user modes', () => {
         }
     })
 
-    it('defaults Simple Replay to 15 seconds and accepts only the supported durations', () => {
-        expect(defaultSimpleReplaySettings().duration).toBe(15)
-        expect(defaultSimpleReplaySettings().dryRun).toBe(false)
-        expect(normalizeSimpleReplaySettings({duration: 10}).duration).toBe(10)
-        expect(normalizeSimpleReplaySettings({duration: 20}).duration).toBe(20)
-        expect(normalizeSimpleReplaySettings({duration: 25}).duration).toBe(15)
+    it('defaults Basic Replay to 15 seconds and accepts only the supported durations', () => {
+        expect(defaultBasicReplaySettings().duration).toBe(15)
+        expect(defaultBasicReplaySettings().dryRun).toBe(false)
+        expect(normalizeBasicReplaySettings({duration: 10}).duration).toBe(10)
+        expect(normalizeBasicReplaySettings({duration: 20}).duration).toBe(20)
+        expect(normalizeBasicReplaySettings({duration: 25}).duration).toBe(15)
 
-        const resolved = resolveSimpleReplaySettings({
+        const resolved = resolveBasicReplaySettings({
             user: {duration: 10},
             journey: {duration: 30},
         })
         expect(resolved.duration).toBe(30)
     })
 
-    it('persists Dry run as a user Simple Replay preference and ignores Journey values', () => {
+    it('persists Dry run as a user Basic Replay preference and ignores Journey values', () => {
         const savedUserSettings = {dryRun: true}
-        const restoredUserSettings = normalizeSimpleReplaySettings(savedUserSettings)
+        const restoredUserSettings = normalizeBasicReplaySettings(savedUserSettings)
 
         expect(restoredUserSettings.dryRun).toBe(true)
-        expect(resolveSimpleReplaySettings({
+        expect(resolveBasicReplaySettings({
             user: restoredUserSettings,
             journey: {dryRun: false},
         }).dryRun).toBe(true)
-        expect(resolveSimpleReplaySettings({
+        expect(resolveBasicReplaySettings({
             user: {dryRun: false},
             journey: {dryRun: true},
         }).dryRun).toBe(false)
     })
 
     it('initializes Expert once and preserves it on mode switches', () => {
-        const simple = defaultSimpleReplaySettings()
+        const basicSettings = defaultBasicReplaySettings()
         const journey = {replay: {start: [], stop: []}}
-        const initialized = initializeExpertReplayFromSimple(journey, simple)
+        const initialized = initializeExpertReplayFromBasic(journey, basicSettings)
         const existing = {replay: {expert: {camera: {altitude: 500}}}}
 
         expect(hasExpertReplayConfiguration(journey)).toBe(false)
         expect(initialized.expert.camera).not.toHaveProperty('altitude')
         expect(initialized.expert.camera).not.toHaveProperty('pitch')
         expect(initialized.expert.camera.cameraAngle).toBe(0)
-        expect(initializeExpertReplayFromSimple({replay: {start: [], stop: []}}, {
+        expect(initializeExpertReplayFromBasic({replay: {start: [], stop: []}}, {
             camera: {positionMode: 'system'},
         }).expert.camera.cameraAngle).toBe(0)
-        expect(initializeExpertReplayFromSimple(existing, simple)).toBe(existing.replay)
+        expect(initializeExpertReplayFromBasic(existing, basicSettings)).toBe(existing.replay)
     })
 
     it('uses and persists the edited Expert camera as the journey replay camera', () => {
@@ -478,23 +505,23 @@ describe('Replay user modes', () => {
         const persistToDatabase = vi.fn(async () => {})
         const camera = {altitude: 2630, pitch: -23, cameraAngle: -113}
         const journey = userMode === REPLAY_USER_MODE_BASIC
-            ? {replay: {simple: {camera: {...camera}}}, persistToDatabase}
+            ? {replay: {basic: {camera: {...camera}}}, persistToDatabase}
             : {replay: {expert: {camera: {...camera}}}, persistToDatabase}
         const replaySettings = {
             userMode,
             camera: {...camera},
-            simple: userMode === REPLAY_USER_MODE_BASIC ? {camera: {...camera}} : null,
+            basic: userMode === REPLAY_USER_MODE_BASIC ? {camera: {...camera}} : null,
         }
         globalThis.lgs = {
             settings: {ui: {replay: replaySettings}},
-            stores: {replay: {userMode, simplePreparationActive: userMode === REPLAY_USER_MODE_BASIC}},
+            stores: {replay: {userMode, basicPreparationActive: userMode === REPLAY_USER_MODE_BASIC}},
             theJourney: journey,
         }
         vi.useFakeTimers()
 
         try {
             if (userMode === REPLAY_USER_MODE_BASIC) {
-                syncJourneySimpleReplayCamera(camera, journey)
+                syncJourneyBasicReplayCamera(camera, journey)
             }
             else {
                 syncJourneyExpertReplayCamera(camera, journey)
@@ -529,15 +556,15 @@ describe('Replay user modes', () => {
             persistToDatabase,
         }
         const progression = {
-            ...defaultSimpleReplaySettings().presentation.progression,
+            ...defaultBasicReplaySettings().presentation.progression,
             fill: {
-                ...defaultSimpleReplaySettings().presentation.progression.fill,
+                ...defaultBasicReplaySettings().presentation.progression.fill,
                 color: '#445566',
             },
         }
         globalThis.lgs = {
             settings: {ui: {replay: {userMode: REPLAY_USER_MODE_EXPERT}}},
-            stores: {replay: {userMode: REPLAY_USER_MODE_BASIC, simplePreparationActive: false}},
+            stores: {replay: {userMode: REPLAY_USER_MODE_BASIC, basicPreparationActive: false}},
             theJourney: journey,
         }
         vi.useFakeTimers()
@@ -563,7 +590,7 @@ describe('Replay user modes', () => {
         }
     })
 
-    it('does not synchronize Expert camera edits while Simple Replay is active', () => {
+    it('does not synchronize Expert camera edits while Basic Replay is active', () => {
         const previousLgs = globalThis.lgs
         const journey = {
             replay: {expert: {camera: {altitude: 900, pitch: -60}}},

@@ -19,12 +19,12 @@ controller. It is not yet the future persisted multi-track authoring model descr
 
 This document is also the current record of the former 1.0.0 Replay Timeline
 preview scope. In linked video preparation, the timeline provides a
-non-recording preparation surface before any video capture. Simple and Expert
+non-recording preparation surface before any video capture. Basic and Expert
 use the same Replay session and timeline projection; user mode controls the
 available preparation features. The canonical Replay
 clock remains the authority for the playhead, scrubbing, playback, and
 visibility projection. Replay preparation is the only video creation flow;
-Simple and Expert both export from this Replay state.
+Basic and Expert both export from this Replay state.
 
 The preparation surface does not encode a video. It stays outside the captured
 video board, while the surrounding Replay editor keeps ownership of settings,

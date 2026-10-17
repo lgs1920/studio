@@ -12,9 +12,9 @@ and target behavior belong in the current architecture and focused TODO specs.
 
 ## Replay user modes
 
-Simple and Expert are user-facing configuration modes for the same Replay
+Basic and Expert are user-facing configuration modes for the same Replay
 session, frame resolver, camera/runtime, and timeline. They do not select
-separate replay engines. Simple applies a restricted preparation and widget
+separate replay engines. Basic applies a restricted preparation and widget
 policy and uses the guided camera configuration; Expert exposes the additional
 camera, clip, and replay controls. Both modes use the active mode's normalized
 camera settings for interactive preparation/playback and the same deterministic
@@ -22,7 +22,7 @@ Replay export path. Pitch sets the viewing angle and configured camera height
 determines the target-relative range used as zoom. The single `cameraAngle` is
 measured from the route tangent:
 `0°` is along the trace, `+90°` right, `-90°` left, and `±180°` behind. The
-camera always looks back toward the replay anchor. During Simple or Expert
+camera always looks back toward the replay anchor. During Basic or Expert
 preparation, the guide anchor and bearing follow the current Cesium projection.
 The cone has a CSS-pixel display length independent of map zoom; only
 explicit Replay height edits change its requested size. A final screen-space
@@ -44,18 +44,18 @@ Only dragging the camera icon adjusts its azimuth, while the cone tip adjusts
 height. During preparation, dragging the simulated-route arrow changes the
 visible source-trace distance from 60 to 1,200 metres. The complete DOM guide is
 hidden while either route endpoint is outside the viewport or terrain-occluded.
-Simple Replay disables camera diagnostics and adds a fixed four-second
+Basic Replay disables camera diagnostics and adds a fixed four-second
 trace-centroid focus phase after playback. Expert Replay exposes the camera
 diagnostics setting and uses configured start/stop clips that can override the
 camera for their own phases.
 
-Simple and Expert Replay recording use the deferred MP4 exporter, publish
+Basic and Expert Replay recording use the deferred MP4 exporter, publish
 deterministic frame progress to the Replay monitor, and hand the completed MP4
 to the standard preview and sharing dialog. All video files are created by
 Replay MP4 export. `ReplayMediaCapture` handles still screenshots and media
 handoff; it does not encode video.
 
-Simple Replay additionally has an opt-in Dry run setting. It walks the complete
+Basic Replay additionally has an opt-in Dry run setting. It walks the complete
 configured timeline with camera, trace, and logical widget updates. Tile
 prewarming remains enabled, with readiness checks bounded to 250 ms at phase
 boundaries and final frames. Intermediate frames do not synchronously flush
@@ -71,30 +71,30 @@ the production controller, renderer, and a real Cesium Camera reduced the
 profiled Dry-run frame-work interval from 22.9 s to 2.0 s. This excludes WebGL
 rendering, tile loading, bitmap capture, and encoding; it is not an end-to-end
 recording benchmark or visual validation.
-The Simple settings popup also exposes border/fill colors and three fixed
+The Basic settings popup also exposes border/fill colors and three fixed
 trace/marker scales, with reactive previews and Journey persistence. Its duration
 choices include 45 seconds and one minute.
 
-Simple/Expert support is present but incomplete:
+Basic/Expert support is present but incomplete:
 
-- Expert camera and progression settings are initialized from Simple settings
+- Expert camera and progression settings are initialized from Basic settings
   on first entry. Camera edits from the drawer and direct map interaction, plus
   progression edits from the drawer, synchronize with `journey.replay.expert`
   and persist after editing settles. Profile-info edits still need a matching
   journey writeback.
-- Replay mode resolution now treats an active Simple preparation as Basic,
+- Replay mode resolution keeps Basic authoritative while its preparation is active,
   then prefers the saved mode over the runtime store's default. Remaining
   render-plan and context signatures still need to include the effective
   mode/configuration consistently. Replay now resolves the selected journey
   from the main store before the legacy global reference and keeps the live
   camera pitch when Basic preparation rebuilds its sampler.
-- Simple defaults differ between runtime normalization and
+- Basic defaults differ between runtime normalization and
   `public/replay.yaml`; align the defaults so imported and freshly-created
   settings resolve consistently.
 
 ## Implemented on `refactor/replay-architecture`
 
-- Opt-in Simple Replay Dry run over the complete deterministic timeline, with
+- Opt-in Basic Replay Dry run over the complete deterministic timeline, with
   camera/trace/widget-state updates, tile prewarming and bounded tile readiness.
   It skips widget bitmap capture, image composition, and media output; its
   compact monitor reports progress and frame counts without a preview. Record
@@ -113,7 +113,7 @@ Simple/Expert support is present but incomplete:
 - Explicit owner-scoped viewer, scene, and canvas render targets.
 - Optional isolated no-loop `CesiumWidget` implementation with scene descriptor
   replication for explicit off-screen render targets.
-- Simple and Expert product MP4 recording keeps the main Cesium scene visible,
+- Basic and Expert product MP4 recording keeps the main Cesium scene visible,
   synchronously renders each export frame during tile readiness, and copies the
   main canvas into the video composer.
 - Deterministic Replay MP4 export at fixed frame timestamps, with monitor
@@ -139,13 +139,13 @@ Simple/Expert support is present but incomplete:
 - Crop-aware isolated export camera frustums and readiness identity for 2D,
   terrain, and 3D Tiles capture.
 - Frame-accurate export trace updates and deterministic Navigation camera updates.
-- Shared Replay camera-motion smoothing for Simple and Expert playback and
+- Shared Replay camera-motion smoothing for Basic and Expert playback and
   export. Heading anticipation and a short camera-anchor smoothing window scale
   with Replay duration. The smoothing-pass offset stays within one quarter of
   the projected crop width; the trace, marker, and visibility constraints use
   the original route sample. Tight alternating turns still use the separate
   camera-only chord rule when their cross-track spread is below half the
-  projected crop width. Simple has a minimum Ease of `0.3`; Expert uses its
+  projected crop width. Basic has a minimum Ease of `0.3`; Expert uses its
   saved Ease. Long untimed journeys at short playback durations still need
   visual export validation.
 - Dynamic tracking confirms a sustained exit with two future route projections
@@ -153,7 +153,7 @@ Simple/Expert support is present but incomplete:
   Navigation retains its confirmed predictive collision check with a
   3-second base transition horizon. Live tolerance and visibility corrections
   use a cubic ease-in/out camera flight of at least 3 seconds, preserving any
-  longer duration from the active camera Ease. Deterministic Simple Replay
+  longer duration from the active camera Ease. Deterministic Basic Replay
   capture interpolates hard Navigation corrections for at least 3 replay-time
   seconds. Normal frame tracking and clip timing keep their existing behavior.
 - Tracking anticipation uses the selected Replay duration for both timed and
@@ -217,13 +217,13 @@ subject to the validation gates below.
 | Status | Target | Work item | Detailed specification |
 | --- | --- | --- | --- |
 | PARTIAL / TODO | 1.0.0 | Complete synchronized replay-start camera editing while preserving the implemented canonical camera and clip continuity | [Start camera editor](../../todo/CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md) |
-| PARTIAL / TODO | 1.0.0 | Validate Simple Replay Dry run visually on a real reference journey and confirm completion and cancellation cleanup in a WebGL browser | [Dry run issue #533](https://github.com/lgs1920/studio/issues/533) |
+| PARTIAL / TODO | 1.0.0 | Validate Basic Replay Dry run visually on a real reference journey and confirm completion and cancellation cleanup in a WebGL browser | [Dry run issue #533](https://github.com/lgs1920/studio/issues/533) |
 | PARTIAL / TODO | 1.0.0 | Validate main-scene product MP4 export on fixed imagery, terrain, and 3D Tiles journeys, including recording with the browser window fully covered; prove camera parity, return-view restoration, and visual quality | [Replay quality validation](CORE-REPLAY-QUALITY-VALIDATION.md) |
 | IMPLEMENTED | 1.0.0 | Deliver linked Replay preparation as a compact controlled Timeline preview | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
 | PARTIAL / TODO | 1.0.0 follow-up | Connect remaining Timeline domain commands, Action Mode, clip double-click navigation, and persisted visibility/order changes | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
 | TODO | 1.1.0 | Replace separated clip controls with the normalized editable multi-track replay timeline | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
 | TODO | 1.1.0 | Persist timeline authoring and make Replay playback and export consume the edited domain model | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
-| PARTIAL | Unplanned | Finish Simple/Expert settings ownership, effective-mode propagation, and consistent Simple defaults | [Replay user modes](#replay-user-modes) |
+| PARTIAL | Unplanned | Finish Basic/Expert settings ownership, effective-mode propagation, and consistent Basic defaults | [Replay user modes](#replay-user-modes) |
 | TODO | 1.1.0 | Drive POI animation and displayed fields from canonical replay time | [POI animation](../../todo/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md) |
 | TODO | 1.1.0 | Align clip altitude inputs and continuity across reordered sequences | [Clip altitude alignment](../../todo/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md) |
 | TODO | 1.1.0 | Add explicit Automatic, 720p, 1080p, and 4K Replay output profiles with capability checks | [Replay resolution profiles](../../todo/REPLAY_VIDEO_RESOLUTION_PROFILES_SPEC.md) |

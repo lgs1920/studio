@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -1593,7 +1593,7 @@ describe('replay camera tracking', () => {
         }
     })
 
-    it('shows the Simple Navigation zone diagnostics used by camera tracking', () => {
+    it('shows the Basic Navigation zone diagnostics used by camera tracking', () => {
         const journey = makeJourney([
                                         makeTrack({
                                                       slug:        'track#journey#gpx#main',
@@ -1603,14 +1603,14 @@ describe('replay camera tracking', () => {
         const previousLgs = globalThis.lgs
         const replay = defaultJourneyReplaySettings()
         replay.userMode = REPLAY_USER_MODE_BASIC
-        replay.simple = {
+        replay.basic = {
             camera: {...replay.camera, debug: false},
             marker: {mode: REPLAY_MARKER_MODE_NAVIGATION},
         }
         journey.replay = {
-            simple: {
-                camera: {...replay.simple.camera},
-                marker: {...replay.simple.marker},
+            basic: {
+                camera: {...replay.basic.camera},
+                marker: {...replay.basic.marker},
             },
         }
         const canvas = {
@@ -1642,7 +1642,7 @@ describe('replay camera tracking', () => {
                 replay: proxy({
                                       progress: 0,
                                       userMode: REPLAY_USER_MODE_BASIC,
-                                      camera:   replay.simple.camera,
+                                      camera:   replay.basic.camera,
                                       recordingSync: true,
                                   }),
             },
@@ -1907,7 +1907,7 @@ describe('replay camera tracking', () => {
     it.each([
         {name: 'deterministic capture', logicalCamera: true, recordingSync: false, video: {preRecording: true}},
         {name: 'armed recording link', logicalCamera: false, recordingSync: true, video: {}},
-    ])('interpolates Simple replay collision corrections on the $name clock', ({logicalCamera, recordingSync, video}) => {
+    ])('interpolates Basic replay collision corrections on the $name clock', ({logicalCamera, recordingSync, video}) => {
         const journey = makeJourney([
             makeTrack({
                 slug:        'track#journey#gpx#main',

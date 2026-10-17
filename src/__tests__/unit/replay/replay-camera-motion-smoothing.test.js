@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-11
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import {
     replayCameraHeadingLookaheadSeconds,
     replayCameraHeadingWindowMeters,
     replayCameraPositionSmoothingWindowMeters,
-    REPLAY_SIMPLE_CAMERA_MIN_EASING,
+    REPLAY_BASIC_CAMERA_MIN_EASING,
 } from '@Core/ui/replay/JourneyReplayCameraMotionSmoothing'
 import {describe, expect, it} from 'vitest'
 
@@ -29,7 +29,7 @@ describe('Replay camera motion smoothing', () => {
         expect(replayCameraHeadingLookaheadSeconds(0.3))
             .toBeGreaterThan(replayCameraHeadingLookaheadSeconds(null))
         expect(replayCameraHeadingLookaheadSeconds(0.5)).toBe(4)
-        expect(REPLAY_SIMPLE_CAMERA_MIN_EASING).toBe(0.3)
+        expect(REPLAY_BASIC_CAMERA_MIN_EASING).toBe(0.3)
     })
 
     it('scales heading distance to Replay duration and caps it for short videos', () => {

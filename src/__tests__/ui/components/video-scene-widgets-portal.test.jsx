@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-27
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -136,8 +136,8 @@ describe('VideoSceneWidgetsPortal', () => {
         )
     })
 
-    it('keeps only Compass, Credits, and Logo during Simple Replay', async () => {
-        globalThis.lgs.stores.replay.simplePreparationActive = true
+    it('keeps only Compass, Credits, and Logo during Basic Replay', async () => {
+        globalThis.lgs.stores.replay.basicPreparationActive = true
 
         render(<VideoSceneWidgetsPortal context={proxy({})}/>)
 

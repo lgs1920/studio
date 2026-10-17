@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-29
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -239,7 +239,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
         ))
     })
 
-    it('shows the cone during Simple Replay using its effective trace-relative camera', async () => {
+    it('shows the cone during Basic Replay using its effective trace-relative camera', async () => {
         const sample = {
             longitude:  2.5,
             latitude:   48.5,
@@ -262,7 +262,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
             },
             stores: {
                 main: proxy({theJourney: {slug: 'journey-a', tracks: new Map()}}),
-                replay: proxy({active: false, liveSample: null, sample: null, simplePreparationActive: true}),
+                replay: proxy({active: false, liveSample: null, sample: null, basicPreparationActive: true}),
                 ui: {
                     drawers: proxy({open: null}),
                     video: proxy({
@@ -337,20 +337,20 @@ describe('JourneyReplayCameraAngleGuide component', () => {
         expect(guideHarness.mount).not.toHaveBeenCalled()
     })
 
-    it('persists dragged cone angle and altitude through Simple camera settings', async () => {
-        const simpleCamera = {
+    it('persists dragged cone angle and altitude through Basic camera settings', async () => {
+        const basicCamera = {
             altitude: 1200,
             cameraAngle: 180,
         }
         const journey = {
-            replay: {simple: {camera: {...simpleCamera}}},
+            replay: {basic: {camera: {...basicCamera}}},
             slug: 'journey-a',
             tracks: new Map(),
         }
         const settings = proxy({
             userMode: 'basic',
-            camera: {...simpleCamera},
-            simple: {camera: {...simpleCamera}},
+            camera: {...basicCamera},
+            basic: {camera: {...basicCamera}},
         })
         const refresh = vi.fn()
         const refreshCamera = vi.fn()
@@ -374,9 +374,9 @@ describe('JourneyReplayCameraAngleGuide component', () => {
             guideHarness.mount.mock.calls.at(-1)[3].onCameraChange({altitude: 600, cameraAngle: -150})
         })
 
-        expect(settings.simple.camera).not.toHaveProperty('altitude')
-        expect(settings.simple.camera.cameraAngle).toBe(0)
-        expect(journey.replay.simple.camera).toMatchObject({altitude: 600, cameraAngle: -150})
+        expect(settings.basic.camera).not.toHaveProperty('altitude')
+        expect(settings.basic.camera.cameraAngle).toBe(0)
+        expect(journey.replay.basic.camera).toMatchObject({altitude: 600, cameraAngle: -150})
         expect(globalThis.lgs.stores.replay.camera).toMatchObject({altitude: 600, cameraAngle: -150})
         expect(refresh).not.toHaveBeenCalled()
         expect(refreshCamera).not.toHaveBeenCalled()

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -307,7 +307,7 @@ export const MainUI = memo(() => {
                         <JourneyGroupsDrawer/>
                         <JourneyReplayDrawer/>
                         <MapPOIEditPanel/>
-                        {replay.simplePreparationActive !== true
+                        {replay.basicPreparationActive !== true
                          && !video.preRecording && !video.exporting && !video.snapshot && !video.finalizing && (
                             <WidgetManagementDrawer/>
                         )}

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-11
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,8 +18,8 @@
  * Shared, deterministic tuning for Replay camera motion.
  */
 
-/** Minimum camera Ease applied to Simple Replay playback. */
-export const REPLAY_SIMPLE_CAMERA_MIN_EASING = 0.3
+/** Minimum camera Ease applied to Basic Replay playback. */
+export const REPLAY_BASIC_CAMERA_MIN_EASING = 0.3
 /** Shortest route-heading anticipation horizon, in seconds. */
 export const REPLAY_CAMERA_HEADING_LOOKAHEAD_MIN_SECONDS = 2.5
 /** Longest route-heading anticipation horizon, in seconds. */
@@ -56,7 +56,7 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
 /**
  * Increase route-heading anticipation with the existing camera Ease value.
- * Expert already persists and exposes this value; Simple uses the smooth
+ * Expert already persists and exposes this value; Basic uses the smooth
  * floor above so both modes share the same camera path policy.
  *
  * @param {number} easing - Normalized camera Ease setting.

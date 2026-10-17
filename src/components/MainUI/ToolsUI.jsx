@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-19
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -70,7 +70,7 @@ export const ToolsUI = () => {
 
     useEffect(() => {
         const captureActive = video.preRecording || video.exporting || video.snapshot || video.finalizing
-        const replayLinked = replay.recordingSync === true || replay.simplePreparationActive === true
+        const replayLinked = replay.recordingSync === true || replay.basicPreparationActive === true
         const preparationActive = video.editing && replayLinked && !captureActive
         if (!preparationActive) {
             _replayPreparationActive.current = false
@@ -88,13 +88,13 @@ export const ToolsUI = () => {
             shouldApply: () => transitionActive
                            && lgs.stores.ui.video.editing === true
                            && (lgs.stores.replay.recordingSync === true
-                               || lgs.stores.replay.simplePreparationActive === true),
+                               || lgs.stores.replay.basicPreparationActive === true),
         })).catch(() => undefined)
 
         return () => {
             transitionActive = false
         }
-    }, [replay.recordingSync, replay.simplePreparationActive, video.editing, video.finalizing, video.preRecording, video.exporting, video.snapshot])
+    }, [replay.recordingSync, replay.basicPreparationActive, video.editing, video.finalizing, video.preRecording, video.exporting, video.snapshot])
 
     useEffect(() => {
         const appContainer = document.getElementById('lgs1920-container')
@@ -119,8 +119,8 @@ export const ToolsUI = () => {
                     <Cropper overlay source={lgs.canvas}
                              context={$cropper} className="video-cropper"
                              hideVideoWidgets={false}
-                             hideWidgetPanel={replay.simplePreparationActive === true}
-                             simplePreparationActive={replay.simplePreparationActive === true}
+                             hideWidgetPanel={replay.basicPreparationActive === true}
+                             basicPreparationActive={replay.basicPreparationActive === true}
                              renderRatioWidget={false}
                              options={{infoComponent: <VideoSettingsInfo/>}}/>
                     {!(video.timelinePreviewActive === true && replay.recordingSync === true) && (

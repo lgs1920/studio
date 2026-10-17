@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -1255,18 +1255,18 @@ export class JourneyReplayCesiumRenderer {
         return this.#limitTracePositions(remaining)
     }
 
-    /** Resolve active-mode colors and apply Simple scaling without changing baseline dimensions. */
+    /** Resolve active-mode colors and apply Basic scaling without changing baseline dimensions. */
     #style = () => {
         const settings = getJourneyReplaySettings()
         const replayStore = globalThis.lgs?.stores?.replay
-        const simpleMode = isJourneyReplayBasicMode()
+        const basicMode = isJourneyReplayBasicMode()
         const progression = normalizeJourneyReplayProgressionStyle(
-            simpleMode ? settings.progression : replayStore?.progression ?? settings.progression,
+            basicMode ? settings.progression : replayStore?.progression ?? settings.progression,
         )
-        const trace = normalizeJourneyReplayTrace(simpleMode ? settings.trace : replayStore?.trace ?? settings.trace)
+        const trace = normalizeJourneyReplayTrace(basicMode ? settings.trace : replayStore?.trace ?? settings.trace)
         const fill = progression.fill
         const border = progression.border
-        const sizeScale = simpleMode ? progression.sizeScale ?? 1 : 1
+        const sizeScale = basicMode ? progression.sizeScale ?? 1 : 1
         const remaining = trace.remaining
         const fillColor = fill.color ?? this.#options.color ?? DEFAULT_COLOR
         const borderColor = border.color ?? this.#options.border ?? DEFAULT_BORDER

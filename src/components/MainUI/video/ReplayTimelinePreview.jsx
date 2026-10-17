@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -523,7 +523,7 @@ export const ReplayTimelinePreview = forwardRef(({
         }
 
         const renderer = WidgetDynamicRenderer.instance
-        getReplayVideoWidgetTypes({simpleReplay: replay.simplePreparationActive === true}).forEach(widgetType => {
+        getReplayVideoWidgetTypes({basicReplay: replay.basicPreparationActive === true}).forEach(widgetType => {
             void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetType, {
                 widgetsBoard: VIDEO_WIDGETS_BOARD,
                 forceRefresh: true,
@@ -531,7 +531,7 @@ export const ReplayTimelinePreview = forwardRef(({
                 console.error(`[LGS1920][ReplayWidgets] Failed to register ${widgetType}`, error)
             })
         })
-    }, [linkedPreparation, replay.simplePreparationActive])
+    }, [linkedPreparation, replay.basicPreparationActive])
 
     const projectionReplay = useMemo(() => ({
         deferredExportPlan: replay.deferredExportPlan,

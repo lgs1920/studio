@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-12
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {REPLAY_VIDEO_FPS, REPLAY_VIDEO_QUALITY} from '@Core/ui/replay/ReplayVideoSettings'
+import {getBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
 import { useSnapshot }         from 'valtio'
 
 export const VideoSettingsInfo = () => {
@@ -25,8 +26,8 @@ export const VideoSettingsInfo = () => {
     const fps = REPLAY_VIDEO_FPS[video.fps]
     const quality = REPLAY_VIDEO_QUALITY[video.quality]
     const ratio = lgs.configuration.videoFormats.find(f => f.value === video.ratio)?.label ?? String(video.ratio)
-    const dryRunActive = replay.simplePreparationActive === true
-                         && (video.dryRunSelection ?? replaySettings?.simple?.dryRun) === true
+    const dryRunActive = replay.basicPreparationActive === true
+                         && (video.dryRunSelection ?? getBasicReplaySettings(replaySettings)?.dryRun) === true
 
     return (
         <div className="video-settings-info">
