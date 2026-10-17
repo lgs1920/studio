@@ -17,7 +17,6 @@
 import {
     normalizeTrackRenderSmoothing, smoothCoordinateSegment,
 }                                                                 from '@Utils/cesium/trackRenderSmoothing'
-import { getTerrainAlignedTrackRenderContent }                   from '@Utils/cesium/trackTerrainAlignment'
 import { TrackUtils }                                             from '@Utils/cesium/TrackUtils'
 import {
     ArcType, CallbackProperty, Cartesian3, Cartographic, Color, CustomDataSource, HeightReference,
@@ -90,21 +89,6 @@ const finiteNumber = value => {
 const isUsableCartesian3 = value => Boolean(value)
     && [value.x, value.y, value.z].every(component => Number.isFinite(component))
 
-/**
- * Measure the local east/north distance between two longitude and latitude pairs.
- *
- * @param {Array<number>} start - First longitude and latitude pair.
- * @param {Array<number>} stop - Second longitude and latitude pair.
- * @returns {{east: number, north: number}} Local offset in meters.
- */
-const localCoordinateOffset = (start, stop) => {
-    const latitude = ((Number(start?.[1]) + Number(stop?.[1])) / 2) * (Math.PI / 180)
-    return {
-        east:  (Number(stop?.[0]) - Number(start?.[0])) * (Math.PI / 180) * Math.cos(latitude) * 6378137,
-        north: (Number(stop?.[1]) - Number(start?.[1])) * (Math.PI / 180) * 6378137,
-    }
-}
-
 export class JourneyReplayCesiumRenderer {
     #source = null
     #cursor = null
@@ -120,7 +104,6 @@ export class JourneyReplayCesiumRenderer {
     #journeySlug = null
     #options = {}
     #sample = null
-    #lastUpdateOptions = null
     #lastPathGeometryUpdate = 0
     #lastPathGeometryDistance = null
     #lastTraceStyleKey = null
@@ -129,9 +112,6 @@ export class JourneyReplayCesiumRenderer {
     #maskedTrackSources = new Map()
     #traceGuide = null
     #traceGuideKey = null
-    #terrainAlignedRoute = new Map()
-    #terrainAlignmentPromise = Promise.resolve(false)
-    #terrainAlignmentGeneration = 0
     #providedTraceGuide = null
     #providedTraceGuideSource = null
     #completedTracePositionsFactory = null
@@ -176,7 +156,6 @@ export class JourneyReplayCesiumRenderer {
         this.#options = {...this.#options, ...options}
         this.#providedTraceGuide = null
         this.#providedTraceGuideSource = null
-        this.#startTerrainAlignment(this.#sampler)
         this.#invalidateDynamicTraceFrames()
         this.#journeySlug = this.#sampler?.journey?.slug ?? globalThis.lgs?.theJourney?.slug ?? 'current'
         this.#traceVisible = true
@@ -188,172 +167,6 @@ export class JourneyReplayCesiumRenderer {
         this.#raiseSourceToTop()
         this.#maskOriginalTrackSources()
         return this
-    }
-
-    /**
-     * Start preparing render-only aligned coordinates for the selected Replay tracks.
-     *
-     * @param {object|null} sampler - Active Replay path sampler.
-     * @returns {void}
-     */
-    #startTerrainAlignment = sampler => {
-        const generation = ++this.#terrainAlignmentGeneration
-        this.#terrainAlignedRoute.clear()
-        this.#traceGuide = null
-        this.#traceGuideKey = null
-        this.#terrainAlignmentPromise = this.#buildTerrainAlignedRoute(sampler).then(route => {
-            if (generation !== this.#terrainAlignmentGeneration || sampler !== this.#sampler) {
-                return false
-            }
-
-            this.#terrainAlignedRoute = route
-            this.#traceGuide = null
-            this.#traceGuideKey = null
-            this.#providedTraceGuide = null
-            this.#providedTraceGuideSource = null
-            if (route.size > 0 && this.#sample && this.#traceVisible) {
-                this.update({
-                    sample: this.#sample,
-                    sampler: this.#sampler,
-                    forceGeometry: true,
-                    ...(this.#lastUpdateOptions ?? {}),
-                })
-            }
-
-            return route.size > 0
-        }).catch(() => false)
-    }
-
-    /**
-     * Build aligned coordinate arrays while preserving the sampler's logical path.
-     *
-     * @param {object|null} sampler - Replay path sampler.
-     * @returns {Promise<Map<string, object>>} Aligned coordinates keyed by track segment.
-     */
-    #buildTerrainAlignedRoute = async sampler => {
-        const provider = this.#scene()?.globe?.terrainProvider ?? this.#viewer()?.terrainProvider
-        const route = new Map()
-        if (!sampler || !provider) {
-            return route
-        }
-
-        await Promise.all((sampler.logicalTrackPath ?? []).map(async path => {
-            const track = sampler.journey?.tracks?.get?.(path.trackSlug)
-            const sourceSegments = path.segments ?? []
-            if (sourceSegments.length === 0) {
-                return
-            }
-
-            const pixelsPerMeter = track ? TrackUtils.meterWidthToPixelScale(track) : 0
-            const replayStyle = this.#style()
-            const replayStrokeWidth = this.#traceWidth(
-                replayStyle,
-                replayStyle.fillWidth + (replayStyle.borderWidth * 2),
-                'border',
-            )
-            const replayWidthMeters = pixelsPerMeter > 0 ? replayStrokeWidth / pixelsPerMeter : 0
-            const trackWidthMeters = track
-                ? TrackUtils.getTrackTerrainAlignmentWidthMeters(track)
-                : 0
-
-            const baseContent = {
-                type: 'Feature',
-                geometry: {
-                    type: sourceSegments.length === 1 ? 'LineString' : 'MultiLineString',
-                    coordinates: sourceSegments.length === 1 ? sourceSegments[0] : sourceSegments,
-                },
-                properties: {},
-            }
-            const alignedContent = await getTerrainAlignedTrackRenderContent(baseContent, {
-                provider,
-                traceWidthMeters: Math.max(replayWidthMeters, trackWidthMeters),
-            })
-            const geometry = alignedContent?.geometry
-            const alignedSegments = geometry?.type === 'LineString'
-                ? [geometry.coordinates]
-                : geometry?.type === 'MultiLineString' ? geometry.coordinates : []
-            path.segments.forEach((sourceCoordinates, segmentIndex) => {
-                const alignedCoordinates = alignedSegments[segmentIndex]
-                if (sourceCoordinates?.length !== alignedCoordinates?.length) {
-                    return
-                }
-
-                route.set(`${path.trackSlug}:${segmentIndex}`, {
-                    sourceCoordinates,
-                    alignedCoordinates,
-                })
-            })
-        }))
-
-        return route
-    }
-
-    /**
-     * Resolve the aligned position corresponding to one logical Replay sample.
-     *
-     * @param {object} sample - Logical Replay sample.
-     * @returns {Array<number>|null} Aligned longitude and latitude, when available.
-     */
-    #alignedCoordinateForSample = sample => {
-        const route = this.#terrainAlignedRoute.get(`${sample?.trackSlug}:${sample?.segmentIndex}`)
-        if (!route) {
-            return null
-        }
-
-        const index = Math.max(0, Math.min(route.alignedCoordinates.length - 1, Number(sample?.pointIndex) || 0))
-        if (sample?.interpolated !== true) {
-            return route.alignedCoordinates[index] ?? null
-        }
-
-        const startIndex = Number(sample?.source?.startPoint?.pointIndex)
-        const stopIndex = Number(sample?.source?.endPoint?.pointIndex)
-        const start = route.alignedCoordinates[startIndex]
-        const stop = route.alignedCoordinates[stopIndex]
-        const sourceStart = route.sourceCoordinates[startIndex]
-        const sourceStop = route.sourceCoordinates[stopIndex]
-        if (!start || !stop || !sourceStart || !sourceStop) {
-            return route.alignedCoordinates[index] ?? null
-        }
-
-        const ratio = Math.max(0, Math.min(1, Number(sample?.segmentRatio) || 0))
-        const easedRatio = ratio * ratio * (3 - (2 * ratio))
-        const startOffset = localCoordinateOffset(sourceStart, start)
-        const stopOffset = localCoordinateOffset(sourceStop, stop)
-        const east = startOffset.east + ((stopOffset.east - startOffset.east) * easedRatio)
-        const north = startOffset.north + ((stopOffset.north - startOffset.north) * easedRatio)
-        const latitude = Number(sample.latitude)
-        const longitudeScale = Math.max(0.01, Math.cos(latitude * (Math.PI / 180)))
-        return [
-            Number(sample.longitude) + ((east / (6378137 * longitudeScale)) * (180 / Math.PI)),
-            latitude + ((north / 6378137) * (180 / Math.PI)),
-        ]
-    }
-
-    /**
-     * Apply the nearest route correction to a camera-guide point for trace display only.
-     *
-     * @param {object} coordinate - Longitude and latitude to adjust.
-     * @returns {object} Render coordinate, unchanged when no aligned route is available.
-     */
-    #alignedGuideCoordinate = coordinate => {
-        if (this.#terrainAlignedRoute.size === 0) {
-            return coordinate
-        }
-
-        const progress = finiteNumber(coordinate?.progress)
-        const nearest = progress === null
-            ? this.#sampler?.nearestToLonLat?.(coordinate)
-            : this.#sampler?.atProgress?.(progress)
-        const aligned = this.#alignedCoordinateForSample(nearest)
-        if (!nearest || !aligned) {
-            return coordinate
-        }
-
-        return {
-            ...coordinate,
-            longitude: Number(coordinate.longitude) + Number(aligned[0] - nearest.longitude),
-            latitude: Number(coordinate.latitude) + Number(aligned[1] - nearest.latitude),
-        }
     }
 
     /**
@@ -386,17 +199,6 @@ export class JourneyReplayCesiumRenderer {
         this.#sampler = sampler
         this.#journeySlug = sampler?.journey?.slug ?? globalThis.lgs?.theJourney?.slug ?? 'current'
         this.#sample = sample
-        this.#lastUpdateOptions = {
-            allowPlaybackGeometryUpdate,
-            freezeDynamic,
-            syncCursorToTrace,
-            hideCursor,
-            hideTrace,
-            showTrace,
-            hideRemainingTrace,
-            staticCompletedTrace,
-            completedTraceMode,
-        }
         const requestedTraceVisibility = hideTrace === true
             ? false
             : (typeof showTrace === 'boolean' ? showTrace : null)
@@ -511,9 +313,6 @@ export class JourneyReplayCesiumRenderer {
     clear = () => {
         const source = this.#source
 
-        this.#terrainAlignmentGeneration += 1
-        this.#terrainAlignedRoute.clear()
-        this.#terrainAlignmentPromise = Promise.resolve(false)
         this.#restoreOriginalTrackSources()
         this.#removeTraceGeometry(source)
 
@@ -526,7 +325,6 @@ export class JourneyReplayCesiumRenderer {
         this.#lineEntities.clear()
         this.#sampler = null
         this.#sample = null
-        this.#lastUpdateOptions = null
         this.#lastPathGeometryUpdate = 0
         this.#lastPathGeometryDistance = null
         this.#lastTraceStyleKey = null
@@ -541,46 +339,6 @@ export class JourneyReplayCesiumRenderer {
         this.#traceHidden = false
         this.#traceVisible = true
         this.#requestRender()
-    }
-
-    /**
-     * Wait for terrain-aligned trace geometry with a bounded export delay.
-     *
-     * @param {object} options - Readiness options.
-     * @param {number} options.timeoutMs - Maximum alignment wait in milliseconds.
-     * @param {AbortSignal|null} options.signal - Optional export cancellation signal.
-     * @returns {Promise<boolean>} Whether aligned geometry completed before the bound.
-     */
-    prepareTerrainAlignedTrace = async ({timeoutMs = 5000, signal = null} = {}) => {
-        const alignmentPromise = this.#terrainAlignmentPromise
-        if (signal?.aborted) {
-            return false
-        }
-
-        let timeoutId = null
-        let removeAbortListener = null
-        const timeoutPromise = new Promise(resolve => {
-            timeoutId = setTimeout(() => resolve(false), Math.max(0, timeoutMs))
-            if (signal) {
-                const abort = () => resolve(false)
-                signal.addEventListener('abort', abort, {once: true})
-                removeAbortListener = () => signal.removeEventListener('abort', abort)
-            }
-        })
-        const completed = await Promise.race([alignmentPromise, timeoutPromise])
-        clearTimeout(timeoutId)
-        removeAbortListener?.()
-
-        if (completed !== true && alignmentPromise === this.#terrainAlignmentPromise) {
-            this.#terrainAlignmentGeneration += 1
-            this.#terrainAlignedRoute.clear()
-            this.#terrainAlignmentPromise = Promise.resolve(false)
-            this.#traceGuide = null
-            this.#providedTraceGuide = null
-            this.#invalidateDynamicTraceFrames()
-        }
-
-        return completed === true
     }
 
     setTraceVisibility = (visible = true) => {
@@ -882,61 +640,12 @@ export class JourneyReplayCesiumRenderer {
         .filter(Boolean)
 
     /**
-     * Shift a sampler segment by interpolating its prepared route offsets.
+     * Convert logical route coordinates into ground-clamped Cartesian positions.
      *
      * @param {Array<Array<number>>} coordinates - Logical segment coordinates.
-     * @param {object|null} segment - Sampler segment metadata.
-     * @returns {Array<Array<number>>} Coordinates used for rendering.
-     */
-    #alignedSegmentCoordinates = (coordinates, segment) => {
-        const route = this.#terrainAlignedRoute.get(`${segment?.trackSlug}:${segment?.segmentIndex}`)
-        if (!route || route.sourceCoordinates.length < 2 || coordinates.length === 0) {
-            return coordinates
-        }
-
-        let routeIndex = 0
-        return coordinates.map(coordinate => {
-            while (routeIndex < route.sourceCoordinates.length - 2) {
-                const currentOffset = localCoordinateOffset(route.sourceCoordinates[routeIndex], coordinate)
-                const nextOffset = localCoordinateOffset(route.sourceCoordinates[routeIndex + 1], coordinate)
-                if (Math.hypot(nextOffset.east, nextOffset.north) > Math.hypot(currentOffset.east, currentOffset.north)) {
-                    break
-                }
-                routeIndex++
-            }
-
-            const sourceStart = route.sourceCoordinates[routeIndex]
-            const sourceStopIndex = Math.min(route.sourceCoordinates.length - 1, routeIndex + 1)
-            const sourceStop = route.sourceCoordinates[sourceStopIndex]
-            const segmentOffset = localCoordinateOffset(sourceStart, sourceStop)
-            const targetOffset = localCoordinateOffset(sourceStart, coordinate)
-            const lengthSquared = (segmentOffset.east ** 2) + (segmentOffset.north ** 2)
-            const ratio = lengthSquared > 0
-                ? Math.max(0, Math.min(1, ((targetOffset.east * segmentOffset.east) + (targetOffset.north * segmentOffset.north)) / lengthSquared))
-                : 0
-            const offsetStart = localCoordinateOffset(sourceStart, route.alignedCoordinates[routeIndex])
-            const offsetStop = localCoordinateOffset(sourceStop, route.alignedCoordinates[sourceStopIndex])
-            const east = offsetStart.east + ((offsetStop.east - offsetStart.east) * ratio)
-            const north = offsetStart.north + ((offsetStop.north - offsetStart.north) * ratio)
-            const latitude = Number(coordinate[1])
-            const longitudeScale = Math.max(0.01, Math.cos(latitude * (Math.PI / 180)))
-
-            return [
-                Number(coordinate[0]) + ((east / (6378137 * longitudeScale)) * (180 / Math.PI)),
-                latitude + ((north / 6378137) * (180 / Math.PI)),
-                ...coordinate.slice(2),
-            ]
-        })
-    }
-
-    /**
-     * Convert logical route coordinates into terrain-aligned Cartesian positions.
-     *
-     * @param {Array<Array<number>>} coordinates - Logical segment coordinates.
-     * @param {object|null} segment - Sampler segment metadata.
      * @returns {Array<Cartesian3>} Cartesian positions used for rendered Replay lines.
      */
-    #groundPositionsFromCoordinates = (coordinates, segment = null) => this.#alignedSegmentCoordinates(coordinates, segment)
+    #groundPositionsFromCoordinates = coordinates => coordinates
         .map(coordinate => this.#groundPositionFromCoordinate(coordinate))
         .filter(Boolean)
 
@@ -984,7 +693,6 @@ export class JourneyReplayCesiumRenderer {
             last?.progress ?? 1,
             last?.longitude ?? 0,
             last?.latitude ?? 0,
-            this.#terrainAlignmentGeneration,
             smoothing.enabled ? 1 : 0,
             smoothing.step,
         ].join(':')
@@ -999,13 +707,10 @@ export class JourneyReplayCesiumRenderer {
                 return null
             }
 
-            const aligned = this.#alignedCoordinateForSample(sample)
-            const renderLongitude = Number(aligned?.[0] ?? longitude)
-            const renderLatitude = Number(aligned?.[1] ?? latitude)
             return {
-                longitude: renderLongitude,
-                latitude:  renderLatitude,
-                position: this.#groundPositionFromCoordinate({longitude: renderLongitude, latitude: renderLatitude}),
+                longitude,
+                latitude,
+                position: this.#groundPositionFromCoordinate({longitude, latitude}),
                 progress,
             }
         })
@@ -1061,16 +766,15 @@ export class JourneyReplayCesiumRenderer {
             this.#providedTraceGuideSource = guideSource
             this.#providedTraceGuide = (guideSource ?? [])
                 .map(entry => {
-                    const alignedEntry = this.#alignedGuideCoordinate(entry)
-                    const position = this.#groundPositionFromCoordinate(alignedEntry)
+                    const position = this.#groundPositionFromCoordinate(entry)
                     const progress = finiteNumber(entry?.progress)
                     if (!position || progress === null) {
                         return null
                     }
 
                     return {
-                        longitude: Number(alignedEntry.longitude),
-                        latitude:  Number(alignedEntry.latitude),
+                        longitude: Number(entry.longitude),
+                        latitude:  Number(entry.latitude),
                         position,
                         progress,
                     }
@@ -2080,7 +1784,7 @@ export class JourneyReplayCesiumRenderer {
         const activeKeys = new Set()
 
         segments.forEach(segment => {
-            const positions = this.#groundPositionsFromCoordinates(segment.coordinates ?? [], segment)
+            const positions = this.#groundPositionsFromCoordinates(segment.coordinates ?? [])
             const fillWidth = style.fillWidth
             const borderWidth = fillWidth + (style.borderWidth * 2)
             const renderedFillWidth = this.#traceWidth(style, fillWidth)
@@ -2184,7 +1888,7 @@ export class JourneyReplayCesiumRenderer {
         const activeKeys = new Set()
 
         segments.forEach(segment => {
-            const positions = this.#groundPositionsFromCoordinates(segment.coordinates ?? [], segment)
+            const positions = this.#groundPositionsFromCoordinates(segment.coordinates ?? [])
             const fillWidth = this.#traceWidth(style, style.fillWidth, 'border')
             if (positions.length < 2) {
                 return

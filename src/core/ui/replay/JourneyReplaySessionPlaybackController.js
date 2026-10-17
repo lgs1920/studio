@@ -1240,7 +1240,6 @@ export const endReplayCameraExport = (mode, ) => {
  * @param {object} options - Frame rendering inputs.
  * @param {object|null} options.phase - Resolved export phase.
  * @param {object|null} options.frame - Source timeline frame.
- * @param {object|null} options.plan - Deferred export plan and cancellation state.
  * @param {object|null} options.controller - Active export controller.
  * @param {object} options.resolvedSample - Sample resolved for this frame.
  * @param {boolean} options.dryRun - Whether to throttle trace geometry updates.
@@ -1249,14 +1248,12 @@ export const endReplayCameraExport = (mode, ) => {
 export const renderReplayExportFrame = async (mode, {
     phase = null,
     frame = null,
-    plan,
     controller = mode[JOURNEY_REPLAY_INTERNAL_STATE].controller,
     resolvedSample = undefined,
     dryRun = false,
 } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        await state.renderer.prepareTerrainAlignedTrace?.({signal: plan?.runtime?.abortController?.signal})
         const activeController = controller ?? state.controller
         const replayPhase = phase?.kind === 'replay' || !phase?.clip
         const isDryRunBoundary = frame?.isFirst === true

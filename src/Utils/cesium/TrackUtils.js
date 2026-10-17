@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,6 @@ import { TerrainUtils }                                from '@Utils/cesium/Terra
 import {
     getTrackRenderContent, trackRenderSmoothingKey,
 }                                                      from '@Utils/cesium/trackRenderSmoothing'
-import { getTerrainAlignedTrackRenderContent }         from '@Utils/cesium/trackTerrainAlignment'
 import {
     getTrackDashPattern, normalizeTrackRenderStyle, TRACK_RENDER_WIDTH_UNITS,
 }                                                      from '@Utils/cesium/trackRenderStyle'
@@ -451,28 +450,6 @@ export class TrackUtils {
         color:     track?.color,
         thickness: track?.thickness,
     })
-
-    /**
-     * Estimate the full visible track width in meters for terrain alignment.
-     *
-     * @param {object} track - Track whose render width should be measured.
-     * @param {object} style - Normalized track render style.
-     * @returns {number} Estimated full width in meters.
-     */
-    static getTrackTerrainAlignmentWidthMeters = (track, style = TrackUtils.getTrackRenderStyle(track)) => {
-        if (style.widthUnit === TRACK_RENDER_WIDTH_UNITS.METERS) {
-            const underlayWidth = style.underlay.enabled ? style.underlay.meterWidth : 0
-            return Math.max(style.meterWidth, underlayWidth)
-        }
-
-        const pixelsPerMeter = TrackUtils.meterWidthToPixelScale(track)
-        if (pixelsPerMeter <= 0) {
-            return 0
-        }
-
-        const underlayWidth = style.underlay.enabled ? style.underlay.pixelWidth : 0
-        return Math.max(style.farPixelWidth, underlayWidth) / pixelsPerMeter
-    }
 
     static cssColor = (value, fallback = CColor.WHITE) => colorFromUnknown(value, fallback)
 
@@ -1318,8 +1295,6 @@ export class TrackUtils {
                 const geometryKey = geometrySignature(track)
                 const terrainProvider = lgs.viewer?.terrainProvider
                 const style = TrackUtils.getTrackRenderStyle(track)
-                const traceWidthMeters = TrackUtils.getTrackTerrainAlignmentWidthMeters(track, style)
-                const alignmentWidthKey = traceWidthMeters.toFixed(3)
                 const usePrimitive = canUseTrackPrimitive(track, style, renderMode)
                 const nextRenderMode = usePrimitive ? 'primitive' : 'entities'
                 const hasGeometry = usePrimitive
@@ -1328,20 +1303,15 @@ export class TrackUtils {
                 const needsGeometryLoad = !hasGeometry
                                           || source.__lgsTrackGeometryKey !== geometryKey
                                           || source.__lgsRenderSmoothingKey !== smoothingKey
-                                          || source.__lgsTrackAlignmentWidthKey !== alignmentWidthKey
                                           || source.__lgsTrackTerrainProvider !== terrainProvider
                                           || source.__lgsTrackRenderMode !== nextRenderMode
                 if (needsGeometryLoad) {
                     const baseRenderContent = getTrackRenderContent(track, {forRender: true})
-                    const renderContent = await getTerrainAlignedTrackRenderContent(baseRenderContent, {
-                        provider: terrainProvider,
-                        traceWidthMeters,
-                    })
                     if (usePrimitive) {
                         TrackUtils.removeTrackStyleEntities(source)
                         source.entities.removeAll()
                         removeTrackPrimitive(source)
-                        source.__lgsTrackPrimitive = GeoJsonPrimitive.fromGeoJson(renderContent, {
+                        source.__lgsTrackPrimitive = GeoJsonPrimitive.fromGeoJson(baseRenderContent, {
                                                                                      allowPicking:    true,
                                                                                      heightReference: HeightReference.CLAMP_TO_GROUND,
                                                                                      pickObjectFactory: () => ({id: track.slug}),
@@ -1351,14 +1321,13 @@ export class TrackUtils {
                     }
                     else {
                         removeTrackPrimitive(source)
-                        await source.load(renderContent, {
+                        await source.load(baseRenderContent, {
                             clampToGround: true,
                             name:          track.title,
                         })
                     }
                     source.__lgsTrackGeometryKey = geometryKey
                     source.__lgsRenderSmoothingKey = smoothingKey
-                    source.__lgsTrackAlignmentWidthKey = alignmentWidthKey
                     source.__lgsTrackTerrainProvider = terrainProvider
                     source.__lgsTrackRenderMode = nextRenderMode
                 }

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-01
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,11 +23,11 @@ import { MapterhornTerrainProvider } from './MapterhornTerrainProvider'
 import { CesiumTerrainProvider, EllipsoidTerrainProvider, Terrain, sampleTerrain, sampleTerrainMostDetailed } from 'cesium'
 
 /**
- * Redraw loaded tracks after their terrain provider changes.
+ * Redraw loaded, ground-clamped tracks after their terrain provider changes.
  *
  * @returns {Promise<void>} Completion of the loaded track redraw requests.
  */
-const refreshTrackTerrainAlignment = async () => {
+const refreshTracksOnTerrainChange = async () => {
     const journeys = new Set(globalThis.lgs?.journeys?.values?.() ?? [])
     const editorJourney = globalThis.lgs?.theJourneyEditorProxy?.journey
     if (editorJourney) {
@@ -108,7 +108,7 @@ export class TerrainUtils {
             if (terrain) {
                 await lgs.scene.setTerrain(terrain)
                 __.ui.poiManager?.refreshTerrainClamping?.()
-                await refreshTrackTerrainAlignment()
+                await refreshTracksOnTerrainChange()
             }
         }
         catch (error) {
