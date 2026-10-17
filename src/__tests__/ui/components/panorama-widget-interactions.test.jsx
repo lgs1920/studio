@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-11
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { CURRENT_POI } from '@Core/constants'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
@@ -354,8 +354,10 @@ describe('PanoramaWidget interactions', () => {
         const view = render(<PanoramaWidget/>)
         expect(view.container.querySelector('.camera-adjustment-widget-shell.adjustment-visible')).toBeNull()
 
-        lgs.camera.positionCartographic.height = 1300
-        cameraChangedListeners[0]()
+        await act(async () => {
+            lgs.camera.positionCartographic.height = 1300
+            cameraChangedListeners.forEach(listener => listener())
+        })
 
         await waitFor(() => {
             expect(view.container.querySelector('.camera-adjustment-widget-shell.adjustment-visible')).not.toBeNull()

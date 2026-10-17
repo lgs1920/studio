@@ -107,6 +107,17 @@ const MY_LIBRARY_KITS = [
 registerIconLibraryFromKits('my-library', MY_LIBRARY_KITS)
 ```
 
+The application also bundles the Classic Regular `ruler-vertical` definition from
+`@fortawesome/pro-regular-svg-icons`. It uses an explicit `regular` registration
+in the same bootstrap registry, so the camera adjustment overlay does not depend
+on the remote Kit subset for its height-above-ground icon.
+
+The overlay calculates vertical clearance from the physical camera's cartographic
+height minus the cached terrain height at that same longitude and latitude. It
+formats this value in meters or feet using the active unit system and displays
+an em dash while terrain height is unavailable. Camera changes, updated terrain
+tiles, and unit preference changes refresh the reading without modifying the camera.
+
 `registerIconLibraryFromKits(libraryName, kits)` performs two registrations during application
 initialization:
 

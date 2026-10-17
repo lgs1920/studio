@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,9 +22,9 @@ import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/R
 import { foot, meter, UnitUtils } from '@Utils/UnitUtils'
 import { cameraViewToSlippyLevel } from '@Utils/cesium/CameraLevel'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
-import { WaIcon } from '@awesome.me/webawesome/dist/react'
+import { WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { Math as CesiumMath } from 'cesium'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 
 const CAMERA_ADJUSTMENT_WIDGET = 'camera-adjustment-widget'
 const CAMERA_CHANGE_RETRY_DELAY = 100
@@ -67,20 +67,105 @@ const DEFAULT_VIDEO_OVERLAY_STATE = {
     preRecording: false,
 }
 
+/**
+ * Normalize an optional camera metric without introducing a nonfinite display value.
+ *
+ * @param {*} value - Raw camera metric.
+ * @returns {number} Finite value or zero.
+ */
 const numericValueOf = value => {
     const numericValue = Number(value)
     return Number.isFinite(numericValue) ? numericValue : 0
 }
 
-const formatCameraAdjustmentValues = position => ({
-    height: UnitUtils.formatMetric(numericValueOf(position?.height), {
-        units: [meter, foot],
-        precision: 0,
-    }).full,
+/**
+ * Format a camera elevation using the active measurement system.
+ *
+ * @param {number} height - Elevation in meters.
+ * @param {number} unitSystem - Selected metric or imperial system.
+ * @returns {string} Rounded elevation with its unit.
+ */
+const formatCameraHeight = (height, unitSystem) => UnitUtils.formatMetric(height, {
+    units: [meter, foot][unitSystem] ?? meter,
+    precision: 0,
+}).full
+
+/**
+ * Format a live camera pose for the shared adjustment overlay.
+ *
+ * @param {Object} position - Raw camera metrics.
+ * @param {number} unitSystem - Selected metric or imperial system.
+ * @returns {Object} Display-ready camera metrics.
+ */
+const formatCameraAdjustmentValues = (position, unitSystem) => ({
+    height: formatCameraHeight(numericValueOf(position?.height), unitSystem),
     pitch: `${Math.round(numericValueOf(position?.pitch))}°`,
     level: position?.level ?? null,
 })
 
+/**
+ * Read the vertical camera clearance from already available terrain tiles.
+ *
+ * @returns {number|null} Clearance in meters, or null when the terrain height is unknown.
+ */
+const currentCameraHeightAboveGround = () => {
+    const position = lgs.camera?.positionCartographic
+    if (!Number.isFinite(position?.height)) {
+        return null
+    }
+
+    const terrainHeight = (lgs.scene ?? lgs.viewer?.scene)?.globe?.getHeight?.(position)
+    return Number.isFinite(terrainHeight) ? position.height - terrainHeight : null
+}
+
+/**
+ * Subscribe to camera clearance without controlling overlay visibility or camera state.
+ *
+ * @param {boolean} isVisible - Whether the widget is mounted.
+ * @returns {number|null} Current clearance in meters or null while unavailable.
+ */
+const useCameraHeightAboveGround = isVisible => {
+    /** Observe Cesium movement and terrain updates for the mounted overlay. */
+    const subscribeToHeight = useCallback(notify => {
+        if (!isVisible) {
+            return () => {}
+        }
+
+        let retryTimer = null
+        let removeCameraListener = null
+        let removeTerrainListener = null
+
+        /** Wait for viewer initialization before observing its public events. */
+        const attach = () => {
+            if (!lgs.camera?.changed?.addEventListener) {
+                retryTimer = window.setTimeout(attach, CAMERA_CHANGE_RETRY_DELAY)
+                return
+            }
+
+            removeCameraListener = lgs.camera.changed.addEventListener(notify)
+            const globe = (lgs.scene ?? lgs.viewer?.scene)?.globe
+            removeTerrainListener = globe?.tileLoadProgressEvent?.addEventListener(notify)
+            notify()
+        }
+
+        attach()
+        return () => {
+            window.clearTimeout(retryTimer)
+            removeCameraListener?.()
+            removeTerrainListener?.()
+        }
+    }, [isVisible])
+
+    /** Re-read terrain on parent updates as well as Cesium event notifications. */
+    const readHeight = useCallback(() => isVisible ? currentCameraHeightAboveGround() : null, [isVisible])
+    return useSyncExternalStore(subscribeToHeight, readHeight, readHeight)
+}
+
+/**
+ * Read the physical camera pose without changing its configuration or ownership.
+ *
+ * @returns {Object|null} Camera movement key and raw display metrics.
+ */
 const currentCameraMovementSnapshot = () => {
     const camera = lgs.camera
     const cartographic = camera?.positionCartographic
@@ -142,6 +227,7 @@ export const CameraAdjustmentOverlay = memo(({
 }) => {
     const replay = useOptionalSnapshot(lgs.stores?.replay, DEFAULT_REPLAY_OVERLAY_STATE)
     const video = useOptionalSnapshot(lgs.stores?.ui?.video, DEFAULT_VIDEO_OVERLAY_STATE)
+    const {current: unitSystem} = useOptionalSnapshot(lgs.settings?.unitSystem)
     const replayCamera = replay.camera ?? {}
     const dryRunActive = isJourneyReplayDryRunActive(replay, video)
     const hasReplayCameraAngle = [REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT].includes(replay.userMode)
@@ -153,6 +239,8 @@ export const CameraAdjustmentOverlay = memo(({
     const _child = useRef({})
     const lastCameraKey = useRef(null)
     const [cameraChange, setCameraChange] = useState(null)
+    const heightAboveGround = useCameraHeightAboveGround(isVisible)
+    const heightAboveGroundId = useId()
     const widgetConfig = config ?? DEFAULT_CAMERA_ADJUSTMENT_CONFIG
 
     /**
@@ -199,6 +287,7 @@ export const CameraAdjustmentOverlay = memo(({
         let retryTimer = null
         let removeChangedListener = null
 
+        /** Refresh visible metrics after physical camera movement. */
         const handleCameraChange = () => {
             const snapshot = currentCameraMovementSnapshot()
             if (!snapshot || snapshot.key === lastCameraKey.current) {
@@ -206,7 +295,8 @@ export const CameraAdjustmentOverlay = memo(({
             }
 
             lastCameraKey.current = snapshot.key
-            setCameraChange({values: formatCameraAdjustmentValues(snapshot.position)})
+            // Keep raw meters so unit changes also update an already visible reading.
+            setCameraChange({position: snapshot.position})
 
             if (cameraChangeTimer.current) {
                 window.clearTimeout(cameraChangeTimer.current)
@@ -221,6 +311,7 @@ export const CameraAdjustmentOverlay = memo(({
             }, ADJUSTMENT_OVERLAY_DELAY)
         }
 
+        /** Attach the camera movement listener once the viewer is available. */
         const attachCameraListener = () => {
             if (cancelled) {
                 return
@@ -249,7 +340,12 @@ export const CameraAdjustmentOverlay = memo(({
         }
     }, [isVisible, widgetConfig])
 
-    const displayedValues = cameraChange?.values ?? values ?? {height: '', level: null, pitch: ''}
+    const displayedValues = cameraChange
+        ? formatCameraAdjustmentValues(cameraChange.position, unitSystem)
+        : values ?? {height: '', level: null, pitch: ''}
+    const displayedHeightAboveGround = heightAboveGround === null
+        ? '—'
+        : formatCameraHeight(heightAboveGround, unitSystem)
     const displayedVisible = visible || cameraChange !== null
 
     return (
@@ -264,6 +360,12 @@ export const CameraAdjustmentOverlay = memo(({
                     <WaIcon name="video" variant="regular"/>
                     <strong>{displayedValues.height}</strong>
                 </span>
+                <span className="camera-adjustment-metric" id={heightAboveGroundId}
+                      aria-label="Height above ground" tabIndex={displayedVisible ? 0 : -1}>
+                    <WaIcon name="ruler-vertical" variant="regular"/>
+                    <strong>{displayedHeightAboveGround}</strong>
+                </span>
+                <WaTooltip for={heightAboveGroundId} disabled={!displayedVisible}>Height above ground</WaTooltip>
                 <span className="camera-adjustment-metric">
                     <WaIcon name="angle" variant="regular"/>
                     <strong>{displayedValues.pitch}</strong>
