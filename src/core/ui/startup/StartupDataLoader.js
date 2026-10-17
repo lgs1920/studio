@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -283,7 +283,7 @@ export class StartupDataLoader {
                 journey = Journey.deserialize({object: {...packet.data, tracks: [{__type: 'Map'}]}, reset: true})
                 journey.cameraOrigin = journey.camera
                 journey.globalSettings()
-                lgs.saveJourneyInContext(journey)
+                lgs.saveJourneyInContext(journey, {loaded: false})
                 await prepareCurrentJourney()
                 await ensureJourneyDataSource()
                 return
@@ -395,6 +395,7 @@ export class StartupDataLoader {
             })
         }
         this.#loadedJourneySlugs.add(journey.slug)
+        lgs.markJourneyLoaded?.(journey.slug)
         await yieldStartupTask()
         return journey
     }

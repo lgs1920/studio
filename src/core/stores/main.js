@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-03-12
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -146,6 +146,7 @@ export const main = {
     theJourney:     null,
     readyForTheShow: false,
     journeysReady:   false,
+    loadedJourneySlugs: [],
     fullSize:       false,
     canViewJourneyData: false,
     canViewProfile: false,

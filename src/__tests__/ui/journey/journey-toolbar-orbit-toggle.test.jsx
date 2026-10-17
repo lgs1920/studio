@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { JourneyToolbar } from '@Editor/JourneyToolbar'
+import { Utils } from '@Editor/Utils'
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
@@ -24,11 +25,20 @@ vi.mock('@Components/ToggleStateIcon', () => ({
 }))
 
 vi.mock('@Editor/journey/JourneySelector', () => ({
-    JourneySelector: ({disabled}) => <div data-testid="journey-selector" data-disabled={disabled}/>,
+    JourneySelector: ({disabled, journeys = [], onChange}) => (
+        <>
+            <div data-testid="journey-selector"
+                 data-disabled={disabled}
+                 data-available={journeys.map(journey => journey.slug).join(',')}/>
+            <button data-testid="select-loaded-journey" onClick={() => onChange?.({target: {value: 'journey-b'}})}/>
+            <button data-testid="select-unloaded-journey" onClick={() => onChange?.({target: {value: 'journey-c'}})}/>
+        </>
+    ),
 }))
 
 vi.mock('@Editor/Utils', () => ({
     Utils: {
+        updateJourneyEditor: vi.fn(async () => undefined),
         updateJourney: vi.fn(async () => undefined),
         renderJourneySettings: vi.fn(),
     },
@@ -43,6 +53,7 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
 
 describe('JourneyToolbar orbit toggle', () => {
     beforeEach(() => {
+        vi.clearAllMocks()
         globalThis.__ = {
             ui: {
                 cameraManager: {
@@ -91,6 +102,7 @@ describe('JourneyToolbar orbit toggle', () => {
                 }),
                 main: proxy({
                     journeysReady: true,
+                    loadedJourneySlugs: ['journey-a'],
                     components: proxy({
                         journeyEditor: proxy({
                             list: [1],
@@ -205,10 +217,24 @@ describe('JourneyToolbar orbit toggle', () => {
         expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-disabled')).toBe('true')
     })
 
-    it('disables journey selection until every journey is ready', () => {
+    it('keeps loaded journeys selectable while other journeys are still loading', async () => {
+        lgs.stores.main.components.journeyEditor.list.splice(0, 1, 'journey-a', 'journey-b', 'journey-c')
+        lgs.getJourneyBySlug.mockImplementation(slug => ['journey-a', 'journey-b', 'journey-c'].includes(slug) ? {slug} : undefined)
         globalThis.lgs.stores.main.journeysReady = false
         const {container} = render(<JourneyToolbar/>)
 
         expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-disabled')).toBe('true')
+        expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-available')).toBe('journey-a')
+
+        lgs.stores.main.loadedJourneySlugs.push('journey-b')
+        await waitFor(() => expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-disabled')).toBe('false'))
+        expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-disabled')).toBe('false')
+        expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-available')).toBe('journey-a,journey-b')
+
+        fireEvent.click(container.querySelector('[data-testid="select-loaded-journey"]'))
+        await waitFor(() => expect(Utils.updateJourneyEditor).toHaveBeenCalledWith('journey-b', {}))
+
+        fireEvent.click(container.querySelector('[data-testid="select-unloaded-journey"]'))
+        expect(Utils.updateJourneyEditor).toHaveBeenCalledTimes(1)
     })
 })

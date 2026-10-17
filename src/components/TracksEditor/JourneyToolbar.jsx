@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-29
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -56,9 +56,19 @@ export const JourneyToolbar = (props) => {
     const journeyLoaderStore = lgs.stores.ui.mainUI.journeyLoader
     const $editorStore = lgs.theJourneyEditorProxy
     const journeyVisible = useProxyValue($editorStore, editor => Boolean(editor?.journey) && editor.journey.visible !== false, false)
-    const journeysReady = useProxyValue(lgs.stores.main, main => main.journeysReady === true, false)
-    const journeySelectionDisabled = !journeysReady || typeof lgs.getJourneyBySlug === 'function'
-        && journeyEditor.list.some(slug => !lgs.getJourneyBySlug(slug))
+    const loadedJourneySlugsVersion = useProxyValue(
+        lgs.stores.main,
+        main => Array.isArray(main.loadedJourneySlugs) ? main.loadedJourneySlugs.join('\u0000') : null,
+        null,
+    )
+    const loadedJourneySlugs = loadedJourneySlugsVersion === null
+        ? null
+        : new Set(loadedJourneySlugsVersion ? loadedJourneySlugsVersion.split('\u0000') : [])
+    const selectableJourneys = journeyEditor.list
+        .map(slug => lgs.getJourneyBySlug?.(slug))
+        .filter(journey => journey && (!loadedJourneySlugs || loadedJourneySlugs.has(journey.slug)))
+    const selectableJourneySlugs = new Set(selectableJourneys.map(journey => journey.slug))
+    const journeySelectionDisabled = selectableJourneySlugs.size < 2
 
     const video = useSnapshot(lgs.stores.ui.video)
     const captureActive = video.preRecording || video.exporting || video.recording || video.snapshot || video.finalizing
@@ -98,10 +108,11 @@ export const JourneyToolbar = (props) => {
      * @param {Event} event - The change event from the journey selector
      */
     const newJourneySelection = async (event) => {
-        if (journeySelectionDisabled) {
+        const selectedJourneySlug = event?.target?.value
+        if (journeySelectionDisabled || !selectedJourneySlug || !selectableJourneySlugs.has(selectedJourneySlug)) {
             return
         }
-        await Utils.updateJourneyEditor(event.target.value, {})
+        await Utils.updateJourneyEditor(selectedJourneySlug, {})
     }
 
     /**
@@ -225,6 +236,7 @@ export const JourneyToolbar = (props) => {
                 <WaCard className="journey-toolbar lgs--toolbar wa-theme-lgs1920-on-map"
                         ref={_journeyToolbar}>
                     <JourneySelector onChange={newJourneySelection}
+                                     journeys={selectableJourneys}
                                      disabled={journeySelectionDisabled}
                                      single="true"
                                      closeOnOutsidePointerDown

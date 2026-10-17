@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -97,6 +97,7 @@ describe('startup data loader', () => {
 
         globalThis.lgs = {
             journeys:             new Map(),
+            markJourneyLoaded:    vi.fn(),
             saveJourneyInContext: journey => globalThis.lgs.journeys.set(journey.slug, journey),
             scene:                {requestRender: vi.fn()},
             settings:              {journey: {hideOtherJourneys: true}},
@@ -137,6 +138,7 @@ describe('startup data loader', () => {
 
             await expect(loader.loadRemainingJourneys()).resolves.toHaveLength(1)
             expect(globalThis.lgs.stores.main.journeysReady).toBe(true)
+            expect(globalThis.lgs.markJourneyLoaded).toHaveBeenCalledWith('journey-a')
             await drawCompleted
             expect(mocks.draw).toHaveBeenCalledOnce()
             expect(mocks.draw).toHaveBeenCalledWith(expect.objectContaining({slug: 'track-a'}), {
@@ -231,6 +233,7 @@ describe('startup data loader', () => {
 
         globalThis.lgs = {
             journeys:             new Map(),
+            markJourneyLoaded:    vi.fn(),
             saveJourneyInContext: journey => globalThis.lgs.journeys.set(journey.slug, journey),
             scene:                {requestRender: vi.fn()},
             stores:               {main: {journeysReady: false, readyForTheShow: false}},
@@ -255,6 +258,8 @@ describe('startup data loader', () => {
             await expect(loader.loadRemainingJourneys()).resolves.toHaveLength(2)
             expect(workers).toHaveLength(1)
             expect(globalThis.lgs.stores.main.journeysReady).toBe(true)
+            expect(globalThis.lgs.markJourneyLoaded).toHaveBeenCalledWith('journey-a')
+            expect(globalThis.lgs.markJourneyLoaded).toHaveBeenCalledWith('journey-b')
             await vi.waitFor(() => expect(mocks.draw).toHaveBeenCalledTimes(2))
         }
         finally {

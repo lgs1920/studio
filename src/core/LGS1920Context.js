@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -360,7 +360,15 @@ export class LGS1920Context {
      *
      * @param journey
      */
-    saveJourneyInContext = (journey) => {
+    markJourneyLoaded = slug => {
+        if (typeof slug !== 'string' || !slug || this.mainProxy.loadedJourneySlugs.includes(slug)) {
+            return
+        }
+
+        this.mainProxy.loadedJourneySlugs.push(slug)
+    }
+
+    saveJourneyInContext = (journey, {loaded = true} = {}) => {
         if (journey) {
             const index = this.mainProxy.components.journeyEditor.list.findIndex(item => item === journey.slug)
             if (index >= 0) {
@@ -373,6 +381,9 @@ export class LGS1920Context {
                 this.mainProxy.components.journeyEditor.list.push(journey.slug)
             }
             this.mainProxy.canViewJourneyData = true
+            if (loaded) {
+                this.markJourneyLoaded(journey.slug)
+            }
         }
     }
 
