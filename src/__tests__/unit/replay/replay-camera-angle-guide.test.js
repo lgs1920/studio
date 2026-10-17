@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -1243,7 +1243,7 @@ describe('replay camera angle map guide', () => {
         expect(Math.hypot(
             Number(tipDragTarget.getAttribute('cx')) - projectedAnchor.x,
             Number(tipDragTarget.getAttribute('cy')) - projectedAnchor.y,
-        )).toBeGreaterThan(tipRadius)
+        )).toBeCloseTo(tipRadius, 8)
         mapPickEnabled = false
         expect(updateJourneyReplayCameraAngleGuide(viewer, resolveJourneyReplayCameraAngleGuide({
             camera: {headingOffset: 133, positionMode: 'ahead'},
@@ -1639,20 +1639,11 @@ describe('replay camera angle map guide', () => {
         expect([cameraAxis.getAttribute('x2'), cameraAxis.getAttribute('y2')]).not.toEqual(cameraPositionAtConfiguredAngle)
         const conePathBeforeAltitudeChange = outerPath.getAttribute('d')
         const lowerCameraGuide = resolveJourneyReplayCameraAngleGuide({
-            camera: {altitude: 600, cameraAngle: 12},
+            camera: {altitude: 600, cameraAngle: 12.6},
             journey,
-            sample: {
-                longitude:  2.002,
-                latitude:   48.002,
-                altitude:   120,
-                source: {
-                    startPoint: {longitude: 2.001, latitude: 48.001, altitude: 110},
-                    endPoint:   {longitude: 2.003, latitude: 48.003, altitude: 130},
-                },
-            },
         })
         updateJourneyReplayCameraAngleGuide(viewer, lowerCameraGuide)
-        expect(outerPath.getAttribute('d')).not.toBe(conePathBeforeAltitudeChange)
+        expect(outerPath.getAttribute('d')).toBe(conePathBeforeAltitudeChange)
         occludeDeparture = true
         postRenderListener()
         expect(overlay.style.visibility).toBe('hidden')

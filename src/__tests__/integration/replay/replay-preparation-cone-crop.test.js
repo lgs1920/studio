@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-15
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -138,10 +138,32 @@ const installPreparationGuide = ({supplyCrop = true, altitude = 1200} = {}) => {
         updateJourneyReplayCameraAngleGuide(viewer, guide)
     }
 
-    return {viewer, guide, crop, overlay, camera, onCameraChange, setMapView, setCrop, readGuide, expectInsideCrop}
+    return {viewer, journey, guide, crop, overlay, camera, onCameraChange, setMapView, setCrop, readGuide, expectInsideCrop}
 }
 
 describe('Replay preparation cone crop with a real Cesium camera', () => {
+    it('keeps its display geometry unchanged when the prepared Replay height changes', () => {
+        const fixture = installPreparationGuide()
+        const initialGuide = fixture.readGuide()
+        const cameraPosition = Cartesian3.clone(fixture.camera.positionWC)
+        const cameraDirection = Cartesian3.clone(fixture.camera.directionWC)
+        const cameraUp = Cartesian3.clone(fixture.camera.upWC)
+
+        for (const altitude of [10, 539, 3454, 100000]) {
+            const guide = resolveJourneyReplayCameraAngleGuide({
+                journey: fixture.journey,
+                camera: {altitude, cameraAngle: 55},
+            })
+            updateJourneyReplayCameraAngleGuide(fixture.viewer, guide)
+            fixture.expectInsideCrop()
+            expect(fixture.readGuide()).toEqual(initialGuide)
+            expect(Cartesian3.distance(fixture.camera.positionWC, cameraPosition)).toBeLessThan(1e-7)
+            expect(Cartesian3.distance(fixture.camera.directionWC, cameraDirection)).toBeLessThan(1e-12)
+            expect(Cartesian3.distance(fixture.camera.upWC, cameraUp)).toBeLessThan(1e-12)
+        }
+        expect(fixture.onCameraChange).not.toHaveBeenCalled()
+    })
+
     it('keeps the same CSS pixel size when only the Cesium zoom changes', () => {
         const fixture = installPreparationGuide()
         const initialLength = fixture.readGuide().length

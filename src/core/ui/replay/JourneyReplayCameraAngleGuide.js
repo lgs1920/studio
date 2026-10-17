@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-17
  *
  *
  * Copyright © 2026 LGS1920
@@ -77,8 +77,6 @@ const CAMERA_ANGLE_GUIDE_SNAP_MARKER_RADIUS_PIXELS = 5
 const CAMERA_ANGLE_GUIDE_ANGLE_LABEL_OFFSET_PIXELS = 12
 const CAMERA_ANGLE_GUIDE_MIN_CAMERA_ALTITUDE_METERS = 10
 const CAMERA_ANGLE_GUIDE_MAX_CAMERA_ALTITUDE_METERS = 100000
-const CAMERA_ANGLE_GUIDE_MIN_CONE_SCALE = 0.25
-const CAMERA_ANGLE_GUIDE_MAX_CONE_SCALE = 3.5
 const CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS = 5
 const CAMERA_ANGLE_GUIDE_PICK_HEIGHT_TOLERANCE_METERS = 12
 const CAMERA_ANGLE_GUIDE_DEPTH_CLEARANCE_METERS = 8
@@ -111,7 +109,6 @@ const guideGeometryKeyFrom = guide => `${[
     guide?.directionPoint?.latitude,
     guide?.directionPoint?.height,
     guide?.cameraGroundHeight,
-    guide?.cameraAltitude,
     guide?.coneHeight,
     guide?.axisHeading,
 ].map(value => Number.isFinite(Number(value)) ? Number(value).toFixed(12) : '').join('|')}|${guide?.routePositionKey ?? ''}|${guide?.looped === true}`
@@ -2127,19 +2124,14 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     if (!record.screenLocked || !Number.isFinite(record.coneLength)) {
         record.coneLength = coneLengthFrom(viewer, record.anchor, record.coneLength)
     }
-    const coneScale = Number.isFinite(record.guide.cameraAltitude)
-        ? Math.max(
-            CAMERA_ANGLE_GUIDE_MIN_CONE_SCALE,
-            Math.min(CAMERA_ANGLE_GUIDE_MAX_CONE_SCALE, record.guide.cameraAltitude / CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS),
-        )
-        : 1
+    // Replay altitude controls camera framing, never the guide's display scale.
     const geometry = coneGeometryFrom(
         viewer,
         record.anchor,
         record.transform,
         record.guide,
         coneHeading,
-        record.coneLength * coneScale,
+        record.coneLength,
         record.screenLocked ? record.preparationIconGap : null,
     )
     const routeProjectionState = updateRouteGuideOverlay(viewer, record, width, height, geometry.videoIconPosition)
@@ -2181,7 +2173,7 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
             anchor: routeProjectionState.sections[0]?.[0] ?? outerBaseCenter ?? record.projectedAnchor
                 ?? {x: width / 2, y: height / 2},
             direction: record.preparationScreenDirection ?? {x: Math.sin(screenHeading), y: -Math.cos(screenHeading)},
-            length: CAMERA_ANGLE_GUIDE_PREPARATION_LENGTH_PIXELS * coneScale,
+            length: CAMERA_ANGLE_GUIDE_PREPARATION_LENGTH_PIXELS,
             baseWidthScale,
             iconGap: CAMERA_ANGLE_GUIDE_ICON_GAP_PIXELS,
             bounds: cameraIconCropBounds,
@@ -2950,8 +2942,9 @@ const bindGuideDragInteractions = (viewer, record) => {
             return
         }
         const point = pointerPositionFrom(event)
-        const deltaX = point.x - record.projectedAnchor.x
-        const deltaY = point.y - record.projectedAnchor.y
+        const startAnchor = {...record.projectedAnchor}
+        const deltaX = point.x - startAnchor.x
+        const deltaY = point.y - startAnchor.y
         if (Math.hypot(deltaX, deltaY) < 1) {
             return
         }
@@ -2961,6 +2954,9 @@ const bindGuideDragInteractions = (viewer, record) => {
             altitudeDraggable: !routeLengthDrag,
             angleDraggable: cameraIconDrag,
             routeDraggable: routeLengthDrag,
+            // Keep the gesture origin stable: updateGuideOverlay may translate
+            // the displayed cone to keep it inside the crop on every move.
+            startAnchor,
             startAngle: Math.atan2(deltaY, deltaX),
             startAltitude: record.guide.cameraAltitude ?? CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS,
             startRadius: Math.hypot(deltaX, deltaY),
@@ -3065,8 +3061,8 @@ const bindGuideDragInteractions = (viewer, record) => {
             resizeRouteFromPointer(viewer, record, point)
             return
         }
-        const deltaX = point.x - record.projectedAnchor.x
-        const deltaY = point.y - record.projectedAnchor.y
+        const deltaX = point.x - dragState.startAnchor.x
+        const deltaY = point.y - dragState.startAnchor.y
         if (Math.hypot(deltaX, deltaY) < 1) {
             return
         }

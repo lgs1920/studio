@@ -48,7 +48,12 @@ Preserve these boundaries:
   Only this explicit entry boundary frames the map, after successful preparation
   and stale-transition checks.
   Subsequent preparation edits and guide refreshes do not move the map camera
-  or infer Replay settings from that normal view. Playback saves the current normal view before applying the configured
+  or infer Replay settings from that normal view. The preparation cone uses a
+  fixed CSS-pixel size independent of Cesium zoom and Replay camera height.
+  Only fitting the complete guide inside the current crop may reduce its
+  displayed size. Never derive that size from Replay altitude or persist crop
+  layout adjustments into camera settings.
+  Playback saves the current normal view before applying the configured
   Replay pose, then restores that view and its Cesium reference frame on every terminal path. Keep the normal
   return snapshot separate from the Replay entry pose and export context.
 - Keep camera-motion smoothing separate from the journey sample used by the

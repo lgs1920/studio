@@ -92,8 +92,9 @@ Constant altitude stores absolute prepared height. Ground
 offset stores that height minus the rendered Replay target height. Neither input
 rewrites the cone angle. Ordinary Cesium navigation and playback/capture
 camera feedback never write Replay settings.
-The preparation cone uses a CSS-pixel layout independent of Cesium zoom. Replay
-height edits determine its requested display length. The final crop constraint
+The preparation cone uses a fixed CSS-pixel layout independent of Cesium zoom
+and configured Replay camera height. Height edits do not resize or rebuild its
+display geometry. The final crop constraint
 contains the rounded base, tip, and camera icon together, retaining the projected
 departure anchor where possible and translating the guide when needed to keep
 it usable. Crop replacement and ancestor layout changes refresh that constraint.
