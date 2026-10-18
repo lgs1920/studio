@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -247,8 +247,18 @@ export const resolveReplayTimelineWidgetVisibility = ({
     const exactTracks = tracks.filter(track => getReplayTimelineTrackWidgetIds(track).includes(String(resolvedWidgetId)))
     const matchingTracks = exactTracks.length > 0
         ? exactTracks
-        : tracks.filter(track => getReplayTimelineTrackWidgetIds(track).some(id => id.split('#')[0] === requestedWidgetType))
+        : String(resolvedWidgetId).includes('#')
+            ? []
+            : tracks.filter(track => getReplayTimelineTrackWidgetIds(track).some(id => id.split('#')[0] === requestedWidgetType))
     if (matchingTracks.length === 0) {
+        const widgetManifest = preparationTimeline.widgetManifest
+        const knownWidget = Array.isArray(widgetManifest) && widgetManifest.some(id => (
+            String(id) === String(resolvedWidgetId)
+            || String(id).split('#')[0] === requestedWidgetType
+        ))
+        if (knownWidget) {
+            return false
+        }
         return null
     }
 

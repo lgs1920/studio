@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-27
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -92,7 +92,7 @@ describe('VideoSceneWidgetsPortal', () => {
                     widget: {
                         list: proxyMap([
                             ['credits-widget#video', {widgetsBoard: 'video-crop-zone', zIndex: 10000}],
-                            ['text-widget#title', {widgetsBoard: 'video-crop-zone', zIndex: 4000}],
+                            ['text-widget#title', {widgetsBoard: 'video-crop-zone', zIndex: 4000, visible: false}],
                             ['replay-timeline-widget', {widgetsBoard: 'video-crop-zone', zIndex: 3000}],
                             ['video-crop-zone', {widgetsBoard: 'video-crop-zone', zIndex: 1}],
                         ]),

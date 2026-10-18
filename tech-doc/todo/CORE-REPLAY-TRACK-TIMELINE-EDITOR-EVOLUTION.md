@@ -1,14 +1,17 @@
 # Replay Track Timeline Editor Evolution
 
-Status: **TODO**
+Status: **TODO — Studio canonical authoring model and integration**
 
-Target release: `1.0.0` (controlled preparation projection) and `1.1.0` (editable authoring timeline)
+Target release: `1.0.0` preparation surface (delivered) and `1.1.0` Studio authoring integration (planned)
 
-Date: 2026-07-16
+Date: 2026-10-18
 
 ## Goal
 
-Replace the current separated `start` / `replay` / `stop` clip UI with a video-editor-like track timeline inside the Replay drawer.
+Complete Studio's Replay authoring workflow on top of the generic timeline
+editor provided by the sibling `@lgs1920/timeline` project. Replace the
+separated `start` / `replay` / `stop` clip UI with a domain-backed track
+timeline in the Replay drawer.
 
 The replay itself must remain mandatory. The main replay track should contain:
 
@@ -22,7 +25,10 @@ The editor must work in the existing Replay drawer, including the stacked/mobile
 
 ## Delivery split
 
-The work tracked by this specification is delivered in two compatible slices:
+The work tracked by this specification is delivered in two compatible slices.
+The generic editing surface is maintained in the sibling Timeline project;
+this document tracks Studio's projection, domain model, persistence, and Replay
+integration.
 
 ### 1.0.0 — Linked video preparation preview
 
@@ -31,26 +37,31 @@ The work tracked by this specification is delivered in two compatible slices:
   active video widget, while keeping Logo and Credits fixed at the top.
 - Show `Start`, `Replay`, and `Stop` phase segments on the replay track.
 - Show Dynamic Stats and Journey Stats visibility intervals on the widget track.
-- Allow playhead movement, play, pause, replay, and the local projection
-  interactions supported by the current Timeline component without persisting
-  an authoring timeline.
+- Allow playhead movement, play, pause, and the local projection interactions
+  supported by the Timeline component.
+- Persist a preparation snapshot in `journey.replay.videoTimeline` for widget
+  row membership, row order, visibility, and the selected Journey's playhead.
 - Drive the scene from the canonical Replay frame contract without creating a second clock.
 - Keep the Timeline outside the captured video board.
 
 The delivered preparation behavior is documented in the
 [Replay Timeline preparation implementation](../specs/replay-video/CORE-REPLAY-TIMELINE-IMPLEMENTATION.md).
 
-### 1.1.0 — Editable authoring timeline
+### 1.1.0 — Canonical Studio authoring integration
 
-- Persist the normalized `journey.replay.timeline` model.
-- Replace the existing clip lists with the complete multi-track editor.
-- Add editable widget tracks, clip movement, trimming, overlap validation, effects,
-  migration, and mobile editing behavior.
+- Define and persist the canonical `journey.replay.timeline` model.
+- Migrate the current `journey.replay.videoTimeline` preparation snapshot and
+  the existing `journey.replay.start` / `journey.replay.stop` configuration.
+- Replace the separate start/stop clip lists with domain-backed authoring on
+  the existing multi-track editor.
+- Add domain validation and commands for widget tracks, clip movement,
+  trimming, overlap rules, and the supported effects.
 - Make interactive playback and deterministic export consume the normalized timeline.
 
-The 1.0.0 preparation surface remains a controlled projection of this future
-model. Its local interactions must not introduce a second persisted data model
-that would need to be discarded by the 1.1.0 editor.
+The 1.0.0 surface already persists an editor snapshot. Treat that snapshot as
+migration input, not as the canonical source for all Replay authoring,
+playback, and export. Keep widget screen geometry separate from timeline row
+order and clip visibility.
 
 ## Current State
 
@@ -65,10 +76,22 @@ The current replay/video implementation already has several useful building bloc
 - `ReplayOverlayResolver.js` already distinguishes replay video phases and controls replay-driven widget visibility.
 - The widget stack already supports board-scoped widget geometry through `VIDEO_WIDGETS_BOARD`, persisted ratios, `react-moveable`, and the video overlay composer.
 - `CanvasOverlayComposer` already composites video widgets into deferred Replay exports.
+- The sibling [`@lgs1920/timeline`](https://github.com/lgs1920/timeline) project
+  provides a controlled, domain-neutral editing surface. Studio currently pins
+  version `1.4.1`, which supports generic track and clip editing, snapping,
+  collision policies, visibility, duplicate/cut operations, undo/redo, and
+  namespaced host events.
+- Studio stores the linked-preparation state in
+  `journey.replay.videoTimeline` and uses its widget manifest and tracks to
+  restore rows and resolve Replay visibility. Widget configuration and screen
+  position remain global.
 
-This means the hard part is not drawing rectangles on a timeline. The hard part is defining a stable timeline data model and making interactive playback and Replay export consume the same clip state.
+The generic editor surface is implemented. The remaining work is defining a
+stable Studio domain model and making interactive playback and Replay export
+consume the same validated clip state.
 
-The normalized timeline is the single source of truth for playback and export:
+Once the canonical Studio model is delivered, it will be the single source of
+truth for playback and export:
 
 - Interactive playback uses the timeline for Replay synchronization, phase changes, and widget visibility.
 - MP4 export uses the same timeline for deterministic frame generation, Replay phases, and widget visibility.
@@ -324,82 +347,41 @@ Recommended mobile behavior:
 
 The existing `drawer-is-stacked` class and `PanelActions` pattern should be reused.
 
-## Pure Custom Option
+## Selected Timeline Component and Studio Boundary
 
-Build the timeline editor in the project, using the existing stack:
+Studio uses the sibling [`@lgs1920/timeline`](https://github.com/lgs1920/timeline)
+package, currently pinned to version `1.4.1`. The package already provides the
+generic editor surface: track and clip editing, movement and trimming,
+snapping, collision policies, visibility actions, duplication, cut, undo/redo,
+and controlled DOM events. Its React adapter exposes the same controlled model.
 
-- React + Valtio for UI state.
-- Web Awesome components for buttons, selects, menus, and drawers.
-- Existing `LGSScrollbars`.
-- Existing `SortableJS` for widget track ordering, with the replay-main track excluded from the sortable list.
-- Existing widget manager and `react-moveable` for widget screen geometry.
-- Plain pointer events for clip move/trim interactions.
+The package does not own a clock, persistence, or application rules. Studio
+supplies its projection and accepts supported edits through the application
+adapter. Keep the Web Component domain-neutral; do not implement a second
+timeline UI in Studio or add Replay-specific behavior to the sibling package.
 
-Optional additions:
+Studio currently persists a preparation snapshot in
+`journey.replay.videoTimeline`. The remaining work is not to build the editor
+surface again. It is to define the canonical Studio model, validate domain
+commands, migrate existing Replay clip configuration and the preparation
+snapshot, and ensure interactive playback and export consume the same model.
 
-- `react-window` if rendering all tracks and clips becomes costly. With only 20 tracks, this is probably not needed in V1 unless each track contains many clips.
-- `@dnd-kit/core` / `@dnd-kit/sortable` if SortableJS becomes limiting for accessible, touch-friendly track reordering. It should not be required for clip resizing.
+## Remaining Studio Architecture
 
-Advantages:
-
-- Exact fit with the mandatory Replay phase, widget visibility, mobile drawer, interactive playback, and export.
-- No calendar/date model translation.
-- No imperative third-party timeline state fighting React/Valtio.
-- Smaller visual integration cost with the current drawer and Web Awesome style.
-- Lower licensing risk.
-
-Costs:
-
-- The project owns snapping, collision detection, trim handles, keyboard movement, and accessibility.
-- More tests are needed because timeline edits directly affect video export.
-- More implementation work than dropping in a timeline package.
-
-The current 1.0.0 preparation surface uses the standalone `@lgs1920/timeline`
-Web Component through an application-owned adapter. Keep the normalized model,
-Replay clock, domain commands, and persistence in Studio. The package remains a
-generic rendering and pointer-input surface. The future 1.1.0 work should
-extend this boundary with domain authoring commands instead of introducing a
-second timeline implementation.
-
-## Open Source Package Options
-
-Package metadata was checked on 2026-09-18.
-
-| Package | Fit | License / compatibility | Strengths | Gaps | Verdict |
-| --- | --- | --- | --- | --- | --- |
-| `@lgs1920/timeline` | Current | Standalone project package used by Studio. | Generic Web Component, controlled state, track/clip editing, slots, replay-safe event boundary, and current Web Awesome integration. | Studio still needs domain commands, persisted authoring, and playback action wiring. | Keep as the single timeline surface and extend the Studio adapter. |
-| `react-calendar-timeline` | Medium | MIT. npm reports `0.30.0-beta.4`; README says the beta targets React 18/19 and Vite. | Mature group/item model, move/resize/group change, headers, markers. | Calendar/date semantics are awkward for a seconds-based video editor. Current React 19 support is beta. Styling a video-editor drawer may be expensive. | Possible, but too calendar-shaped for this feature. |
-| `vis-timeline` | Low-medium | MIT or Apache-2.0. npm reports `8.5.2`. | Powerful standalone groups/items/ranges editor with create/edit/delete support. | Imperative DOM library, not React-native. Adds more non-React state, moment-era dependencies, and styling isolation work. | Avoid for this React drawer. |
-| `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/react` | Building block | MIT. `@dnd-kit/react` supports React 18/19; `@dnd-kit/core` is widely used but older API. | Accessible drag/drop, touch and keyboard sensors, extensible collision rules. | Not a timeline. We still build time math, trim handles, snapping, and rendering. | Good optional dependency for custom implementation, especially track reordering and future keyboard DnD. |
-| `react-window` | Building block | MIT. npm reports `2.2.7`, React 18/19. | Efficient list/grid virtualization. | Not an editor. Adds complexity if used too early. | Keep as optional; probably not needed for 20 tracks in V1. |
-| `@twick/*` | Low | Twick uses a Sustainable Use License with SaaS/commercial restrictions. | Rich media editor SDK with timeline/canvas packages. | License is not a clean permissive open-source fit for this AGPL project. It overlaps with existing replay/export architecture. | Do not use. |
-| `react-video-editor-timeline` | Low | MIT, but npm package depends on React 17, React DOM 17, React Scripts 4, and Ant Design 4. | Video/audio timeline intent. | Incompatible dependency profile for this React 19/Vite project. | Do not use. |
-
-## Recommended Architecture
-
-Use the existing `@lgs1920/timeline` Web Component with a Studio-owned
-normalized model and domain adapter.
-
-The project already owns the Replay clock, export frame loop, widget board, and overlay composition. A third-party timeline can only solve the visible editor surface. It cannot remove the need for a project-specific runtime model.
-
-Recommended compromise:
-
-1. Build `ReplayTrackTimelineModel` first.
-2. Extend the current compact stacked-widget surface with explicit domain
-   commands for row and action changes.
-3. Keep the preview interaction surface intentionally small:
-   - move the cursor;
-   - play, pause, and replay;
-   - render controlled, locked actions only.
-4. For the 1.1.0 editor, add the full authoring interaction surface:
-   - move clip;
-   - trim left/right;
-   - add/remove clip;
-   - add/remove/collapse track;
-   - select clip and edit fields;
-   - snap to frames/seconds.
-5. Keep all actions controlled and block move/resize callbacks for locked 1.0.0 clips.
-6. Only add `@dnd-kit` if 1.1.0 track reordering or mobile drag behavior becomes unreliable with existing code.
+1. Define and validate the canonical `journey.replay.timeline` model, including
+   migration from `journey.replay.start`, `journey.replay.stop`, and the
+   `journey.replay.videoTimeline` preparation snapshot.
+2. Route timeline events through explicit Studio domain commands. Preserve the
+   mandatory Replay phase, widget-track limits, clip constraints, and the
+   separation between timeline order/visibility and global widget geometry.
+3. Replace the separate start/stop clip editor only after migration and
+   compatibility behavior are covered.
+4. Use the normalized Studio model for interactive Replay visibility and
+   deterministic export frame composition.
+5. Add only the authoring controls and effects required by the product model;
+   reuse the generic editing interactions already provided by Timeline.
+6. Keep transport and structural edit locking controlled by Studio during
+   playback, recording, and export.
 
 ## Validation Rules
 
@@ -467,9 +449,11 @@ Effects must be deterministic and based only on frame time. They must not use in
 
 ## Implementation Plan
 
-### Phase 1: Model and Migration
+### Phase 1: Canonical Model and Migration — Pending
 
-- Add `ReplayTrackTimelineModel.js`.
+- Define the canonical Studio timeline schema and its normalizer.
+- Migrate `journey.replay.start`, `journey.replay.stop`, and the current
+  `journey.replay.videoTimeline` preparation snapshot.
 - Add unit tests for:
   - empty timeline creation;
   - migration from `journey.replay.start/stop`;
@@ -477,37 +461,39 @@ Effects must be deterministic and based only on frame time. They must not use in
   - 20 widget track cap;
   - overlap rejection;
   - active widget clips by timestamp.
-- Update drawer runtime setup to expose `replayRuntime.timeline`.
-- Keep writing generated `journey.replay.start/stop` for compatibility.
+- Update Replay runtime setup to expose the normalized model.
+- Keep legacy clip data readable until the migration is stable.
 
-### Phase 2: Read-only Timeline Preview — 1.0.0
+### Phase 2: Linked Preparation Preview — 1.0.0 — Delivered
 
-- Add `JourneyReplayTimelinePreview` using the xzdarcy adapter.
-- Render exactly the replay and Replay widgets tracks.
-- Render Start, Replay, and Stop actions as locked controlled actions.
-- Render Dynamic Stats and Journey Stats visibility intervals from
-  `ReplayOverlayResolver`.
-- Connect cursor, play, pause, and replay to the canonical Replay frame scheduler.
-- Keep the widget outside the captured crop and keep export as an explicit action.
+- Use `@lgs1920/timeline` through the controlled `ReplayTimelinePreview` adapter.
+- Project the Replay phases and eligible widget tracks from the existing Replay
+  configuration.
+- Connect cursor, play, pause, seeking, widget visibility, and row order to
+  canonical Replay state and the Journey preparation snapshot.
+- Keep the timeline outside the captured crop and export as an explicit action.
 
-### Phase 3: Timeline Drawer UI — 1.1.0
+### Phase 3: Domain-Backed Authoring in the Replay Drawer — Planned
 
 - Replace `JourneyReplayClipsTab` with `JourneyReplayTimelineTab`.
 - Keep `JourneyReplayClipsTab` available until the migration is stable.
-- Implement replay-main track with start/replay/stop clips.
-- Implement widget track creation and basic widget clip creation.
-- Implement widget track drag reorder while keeping replay-main pinned as the lowest track.
-- Implement selection and inspector.
-- Lock edits while Replay is playing or export is active.
+- Use the Timeline package's existing track and clip editing controls.
+- Map edits to the validated canonical model and preserve replay-main ordering
+  and start/replay/stop constraints.
+- Implement domain-backed track and clip creation, removal, selection, and
+  inspector actions.
+- Keep structural edits locked while Replay is playing or export is active.
 
-### Phase 4: Runtime and Overlay Visibility
+### Phase 4: Canonical Runtime and Export Integration — Planned
 
-- Replace the local phase builder in `ReplayDeferredExporter` with the normalized timeline phases.
-- Publish `activeWidgetClips` in interactive Replay and export frame state.
-- Extend `ReplayOverlayResolver` to resolve widget visibility from timeline clips.
+- Replace the local phase builder in `ReplayDeferredExporter` with canonical
+  timeline phases.
+- Publish active widget clips in interactive Replay and export frame state.
+- Resolve widget visibility from the canonical model in both playback and
+  export.
 - Extend `ReplayVideoOverlayComposer` overlay options with deterministic opacity/transform output.
 
-### Phase 5: Mobile and Recording Polish
+### Phase 5: Mobile and Recording Polish — Partially Covered by Timeline Package
 
 - Tune stacked drawer layout.
 - Add touch-specific handle sizes.
@@ -522,6 +508,9 @@ Effects must be deterministic and based only on frame time. They must not use in
 - Update Replay docs and user-facing changelog.
 
 ## Test Matrix
+
+The sibling Timeline project covers generic editing interactions. These tests
+cover Studio's schema, migration, Replay projection, and export integration.
 
 Unit:
 
@@ -565,13 +554,11 @@ Manual:
 - Editing while replay is running can desynchronize controller state. V1 should lock structural edits during playback/export.
 - Widget geometry and widget timeline are separate concepts. The UI must make it clear that timeline clips control time, while widget edit mode controls screen position and size.
 - Export will reveal any non-deterministic effect implementation. Effects must be computed from frame time, not CSS animation clocks.
-- A third-party timeline package may look faster at first but can become expensive if it fights the Replay drawer, Web Awesome styling, mobile behavior, and deterministic frame export.
+- Timeline package upgrades can change generic interaction behavior. Keep the
+  Studio adapter on the public controlled properties and events, and validate
+  upgrades against both the package suite and Studio integration tests.
 
 ## External References Checked
 
-- `@lgs1920/timeline`: sibling package at `../timeline`
-- `react-calendar-timeline`: https://github.com/namespace-ee/react-calendar-timeline
-- `vis-timeline`: https://github.com/visjs/vis-timeline
-- `dnd-kit`: https://github.com/clauderic/dnd-kit and https://dndkit.com/
-- `react-window`: https://github.com/bvaughn/react-window and https://react-window.vercel.app/
-- `Twick`: https://ncounterspecialist.github.io/twick/ and https://github.com/ncounterspecialist/twick/blob/main/LICENSE.md
+- `@lgs1920/timeline` 1.4.1: sibling package at `../timeline` and
+  https://github.com/lgs1920/timeline

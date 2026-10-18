@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,8 +18,8 @@
  * Replay Timeline preview for linked video preparation.
  *
  * The application provides the initial widget and clip projection. Timeline
- * edits remain local to the timeline until an explicit output adapter is
- * introduced.
+ * edits are saved on the current Journey and replayed through the canonical
+ * Replay visibility resolver.
  */
 
 import {forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState} from 'react'
@@ -44,7 +44,14 @@ import {
     groupWidgetEntries,
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
 import {WidgetDynamicRenderer} from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
-import {getReplayVideoWidgetTypes} from '@Core/ui/replay/ReplayVideoWidgetPolicy'
+import {filterReplayVideoWidgetKeys, getReplayVideoWidgetTypes} from '@Core/ui/replay/ReplayVideoWidgetPolicy'
+import {
+    isReplayTimelineSourceUnchanged,
+    normalizeJourneyReplayVideoTimeline,
+    resolveReplayTimelineWidgetIds,
+    resolveReplayTimelineWidgetManifest,
+    restoreReplayTimelineTracks,
+} from '@Core/ui/replay/ReplayTimelinePersistence'
 import {createReplayScrubScheduler} from '@Core/ui/replay/ReplayScrubScheduler'
 import {publishReplayTimelineTime} from '@Core/ui/replay/ReplayFramePublisher'
 import {useOptionalSnapshot, useProxyValue} from '@Utils/ValtioUtils'
@@ -114,10 +121,12 @@ const resolvePreparationClips = (replay, journey, settingsClips = {}) => {
  * @returns {Object} Projection-specific journey inputs.
  */
 const resolvePreparationJourney = journey => ({
+    slug: journey?.slug ?? null,
     title: journey?.title ?? journey?.name ?? '',
     replay: {
         start: journey?.replay?.start,
         stop: journey?.replay?.stop,
+        videoTimeline: journey?.replay?.videoTimeline ?? null,
     },
 })
 
@@ -255,10 +264,13 @@ const cloneReplayTimelineTracks = tracks => JSON.parse(JSON.stringify(Array.isAr
  *
  * @param {CustomEvent} event - Timeline edit event.
  * @param {HTMLElement} element - Timeline custom element.
- * @param {string} sourceSignature - Base projection signature.
+ * @param {Object} projection - Current normalized Replay projection.
+ * @param {Object} options - Journey and registered-widget metadata.
+ * @param {string|null} options.journeySlug - Journey owning the timeline.
+ * @param {string[]} options.widgetManifest - Known widget instances.
  * @returns {Object|null} Shared preparation state or null when no tracks exist.
  */
-const buildReplayTimelineEditState = (event, element, sourceSignature) => {
+const buildReplayTimelineEditState = (event, element, projection, {journeySlug, widgetManifest} = {}) => {
     const detail = event?.detail ?? {}
     const dataTimeline = detail.data?.timeline ?? {}
     const currentTimeline = element?.timeline ?? {}
@@ -276,14 +288,67 @@ const buildReplayTimelineEditState = (event, element, sourceSignature) => {
         ?? currentTimeline.rangeEndMillis)
 
     return {
-        sourceSignature,
+        version: 1,
+        journeySlug: journeySlug ?? null,
+        sourceSignature: projection.signature,
+        source: {...projection.source},
+        direction: projection.direction,
+        fps: projection.fps,
+        widgetManifest: [...(widgetManifest ?? [])],
         timeline: {
             durationMillis: Number.isFinite(durationMillis) ? durationMillis : currentTimeline.durationMillis,
             rangeStartMillis: Number.isFinite(rangeStartMillis) ? rangeStartMillis : 0,
             rangeEndMillis: Number.isFinite(rangeEndMillis) ? rangeEndMillis : currentTimeline.rangeEndMillis,
+            currentTimeMillis: Number(element?.currentTimeMillis) || 0,
         },
         tracks: cloneReplayTimelineTracks(tracks),
     }
+}
+
+/**
+ * Save a Replay video timeline snapshot on its owning Journey.
+ *
+ * @param {Object|null} journey - Journey receiving the snapshot.
+ * @param {Object} timeline - Serializable timeline state.
+ * @returns {Object|null} Normalized persisted state.
+ */
+const persistJourneyReplayVideoTimeline = (journey, timeline) => {
+    if (!journey || typeof journey.slug !== 'string' || journey.slug.trim() === '') {
+        return null
+    }
+
+    const normalized = normalizeJourneyReplayVideoTimeline({
+        version: timeline.version,
+        journeySlug: journey.slug,
+        sourceSignature: timeline.sourceSignature,
+        source: timeline.source,
+        direction: timeline.direction,
+        fps: timeline.fps,
+        timeline: timeline.timeline,
+        widgetManifest: timeline.widgetManifest,
+        tracks: timeline.tracks,
+    })
+    if (!normalized) {
+        return null
+    }
+
+    journey.replay = {
+        ...(journey.replay ?? {}),
+        videoTimeline: normalized,
+    }
+
+    if (typeof journey.persistToDatabase === 'function') {
+        try {
+            void Promise.resolve(journey.persistToDatabase()).catch(error => {
+                console.error(`[LGS1920][ReplayTimeline] Failed to save the timeline for ${journey.slug}.`, error)
+            })
+        }
+        catch (error) {
+            console.error(`[LGS1920][ReplayTimeline] Failed to save the timeline for ${journey.slug}.`, error)
+        }
+    }
+
+    return normalized
 }
 
 /**
@@ -492,13 +557,14 @@ export const ReplayTimelinePreview = forwardRef(({
             name: currentJourney?.name ?? '',
             start: currentJourney?.replay?.start ?? [],
             stop: currentJourney?.replay?.stop ?? [],
+            videoTimeline: currentJourney?.replay?.videoTimeline ?? null,
         })
-    }, '{"slug":null,"title":"","name":"","start":[],"stop":[]}')
+    }, '{"slug":null,"title":"","name":"","start":[],"stop":[],"videoTimeline":null}')
     const journeyProjectionInputs = useMemo(() => {
         try {
             return JSON.parse(journeyProjectionSignature)
         } catch {
-            return {slug: null, title: '', name: '', start: [], stop: []}
+            return {slug: null, title: '', name: '', start: [], stop: [], videoTimeline: null}
         }
     }, [journeyProjectionSignature])
     const journey = journeyProjectionInputs.slug
@@ -517,22 +583,6 @@ export const ReplayTimelinePreview = forwardRef(({
                                && !video.exporting
                                && !video.finalizing
 
-    useEffect(() => {
-        if (!linkedPreparation || !globalThis.__?.widgets?.get || !globalThis.__?.ui?.widgetManager) {
-            return
-        }
-
-        const renderer = WidgetDynamicRenderer.instance
-        getReplayVideoWidgetTypes({basicReplay: replay.basicPreparationActive === true}).forEach(widgetType => {
-            void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetType, {
-                widgetsBoard: VIDEO_WIDGETS_BOARD,
-                forceRefresh: true,
-            }).catch(error => {
-                console.error(`[LGS1920][ReplayWidgets] Failed to register ${widgetType}`, error)
-            })
-        })
-    }, [linkedPreparation, replay.basicPreparationActive])
-
     const projectionReplay = useMemo(() => ({
         deferredExportPlan: replay.deferredExportPlan,
         duration: replay.duration,
@@ -548,14 +598,19 @@ export const ReplayTimelinePreview = forwardRef(({
     const journeyName = journeyProjectionInputs.slug ? journeyProjectionInputs.name || journey?.name : journey?.name
     const journeyReplayStart = journeyProjectionInputs.slug ? journeyProjectionInputs.start : journey?.replay?.start
     const journeyReplayStop = journeyProjectionInputs.slug ? journeyProjectionInputs.stop : journey?.replay?.stop
+    const journeyReplayVideoTimeline = journeyProjectionInputs.slug
+        ? journeyProjectionInputs.videoTimeline
+        : journey?.replay?.videoTimeline
     const projectionJourney = useMemo(() => resolvePreparationJourney({
+        slug: journeyProjectionInputs.slug,
         title: journeyTitle,
         name: journeyName,
         replay: {
             start: journeyReplayStart,
             stop: journeyReplayStop,
+            videoTimeline: journeyReplayVideoTimeline,
         },
-    }), [journeyTitle, journeyName, journeyReplayStart, journeyReplayStop])
+    }), [journeyProjectionInputs.slug, journeyTitle, journeyName, journeyReplayStart, journeyReplayStop, journeyReplayVideoTimeline])
     const projection = useMemo(() => {
         const nextProjection = buildReplayPreparationTimeline({
             videoTimeline: projectionReplay.deferredExportPlan?.videoTimeline ?? null,
@@ -569,9 +624,36 @@ export const ReplayTimelinePreview = forwardRef(({
         return nextProjection
     }, [projectionJourney, projectionReplay, projectionReplaySettings, video.fps, widgetOrder])
     const preparationTimeline = replay.preparationTimeline
+    const journeyTimeline = useMemo(
+        () => normalizeJourneyReplayVideoTimeline(projectionJourney.replay.videoTimeline),
+        [projectionJourney.replay.videoTimeline],
+    )
+    const currentTimelineBelongsToJourney = projectionJourney.slug
+        ? preparationTimeline?.journeySlug === projectionJourney.slug
+        : preparationTimeline?.journeySlug == null
     const hasCurrentPreparationTimeline = preparationTimeline != null
-        && (preparationTimeline.sourceSignature == null || preparationTimeline.sourceSignature === projection.signature)
-    const preparedTimeline = hasCurrentPreparationTimeline ? preparationTimeline?.timeline ?? null : null
+        && currentTimelineBelongsToJourney
+        && preparationTimeline.sourceSignature === projection.signature
+    const journeyTimelineBelongsToJourney = journeyTimeline != null
+        && (!projectionJourney.slug || journeyTimeline.journeySlug === projectionJourney.slug)
+    const canRestoreJourneyTimeline = journeyTimelineBelongsToJourney
+        && (journeyTimeline.sourceSignature === projection.signature
+            || isReplayTimelineSourceUnchanged(journeyTimeline, projection))
+    const restoredTimelineState = useMemo(() => canRestoreJourneyTimeline ? {
+        version: journeyTimeline.version,
+        journeySlug: projectionJourney.slug ?? journeyTimeline.journeySlug,
+        sourceSignature: projection.signature,
+        source: {...projection.source},
+        direction: projection.direction,
+        fps: projection.fps,
+        widgetManifest: journeyTimeline.widgetManifest,
+        timeline: journeyTimeline.timeline,
+        tracks: journeyTimeline.tracks,
+    } : null, [canRestoreJourneyTimeline, journeyTimeline, projection, projectionJourney.slug])
+    const effectivePreparationTimeline = hasCurrentPreparationTimeline
+        ? preparationTimeline
+        : restoredTimelineState
+    const preparedTimeline = effectivePreparationTimeline?.timeline ?? null
     const persistedTimelineView = replaySettings?.timeline ?? {}
     const persistedZoomPercent = Number(persistedTimelineView.zoomPercent)
     const hasPersistedZoom = Number.isFinite(persistedZoomPercent)
@@ -620,25 +702,92 @@ export const ReplayTimelinePreview = forwardRef(({
         hostInteraction: 'selectable',
         hostNoDragClass: 'lgs-widget-no-drag',
     }), [horizontalZoomPercent, hasPersistedZoom, keyboardZoomActive, preparedTimeline, projection.signature, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
-    const baseTracks = useMemo(() => toDisplayTracks(projection.tracks), [projection])
-    const preparationTracks = hasCurrentPreparationTimeline ? preparationTimeline?.tracks : null
+    const projectedBaseTracks = useMemo(() => toDisplayTracks(projection.tracks), [projection])
+    const baseTracks = useMemo(() => canRestoreJourneyTimeline
+        ? restoreReplayTimelineTracks({
+            baseTracks: projectedBaseTracks,
+            savedTimeline: journeyTimeline,
+            projection,
+        })
+        : projectedBaseTracks, [canRestoreJourneyTimeline, journeyTimeline, projectedBaseTracks, projection])
+    const widgetManifest = useMemo(() => resolveReplayTimelineWidgetManifest(
+        widgetOrder,
+        [
+            ...(journeyTimeline?.widgetManifest ?? []),
+            ...resolveReplayTimelineWidgetIds(journeyTimeline?.tracks),
+        ],
+    ), [journeyTimeline, widgetOrder])
+    const preparationTracks = effectivePreparationTimeline?.tracks
     // Detach nested Valtio read proxies before the component snapshots edits for undo/redo.
     const tracks = useMemo(() => cloneReplayTimelineTracks(
         Array.isArray(preparationTracks) ? preparationTracks : baseTracks,
     ), [preparationTracks, baseTracks])
 
     useEffect(() => {
+        if (!linkedPreparation || !globalThis.__?.widgets?.get || !globalThis.__?.ui?.widgetManager) {
+            return
+        }
+
+        const renderer = WidgetDynamicRenderer.instance
+        const basicReplay = replay.basicPreparationActive === true
+        for (const widgetType of getReplayVideoWidgetTypes({basicReplay})) {
+            void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetType, {
+                widgetsBoard: VIDEO_WIDGETS_BOARD,
+                forceRefresh: true,
+            }).catch(error => {
+                console.error(`[LGS1920][ReplayWidgets] Failed to register ${widgetType}`, error)
+            })
+        }
+
+        const currentWidgetIds = new Set(Array.from(widgetList.entries())
+            .filter(([, entry]) => entry?.widgetsBoard === VIDEO_WIDGETS_BOARD)
+            .map(([id]) => id))
+        const currentWidgetTypes = new Set([...currentWidgetIds].map(id => id.split('#')[0]))
+        for (const widgetId of filterReplayVideoWidgetKeys(widgetManifest, {basicReplay})) {
+            if (currentWidgetIds.has(widgetId)
+                || (widgetId === widgetId.split('#')[0] && currentWidgetTypes.has(widgetId))) {
+                continue
+            }
+
+            void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetId, {
+                widgetsBoard: VIDEO_WIDGETS_BOARD,
+                forceRefresh: true,
+            }).catch(error => {
+                console.error(`[LGS1920][ReplayWidgets] Failed to restore ${widgetId}`, error)
+            })
+        }
+    }, [journeyTimeline, linkedPreparation, replay.basicPreparationActive, widgetList, widgetManifest])
+
+    useEffect(() => {
         const currentPreparationTimeline = lgs.stores.replay.preparationTimeline
-        const hasCompatiblePreparationTimeline = currentPreparationTimeline?.sourceSignature == null
-                                                 ? Array.isArray(currentPreparationTimeline?.tracks)
-                                                 : currentPreparationTimeline.sourceSignature === projection.signature
+        const currentStateBelongsToJourney = projectionJourney.slug
+            ? currentPreparationTimeline?.journeySlug === projectionJourney.slug
+            : currentPreparationTimeline?.journeySlug == null
+        const hasCompatiblePreparationTimeline = currentStateBelongsToJourney
+            && currentPreparationTimeline?.sourceSignature === projection.signature
         if (!linkedPreparation || hasCompatiblePreparationTimeline) {
             return
         }
 
-        // Publish the base projection before edits so frame composition always has timeline visibility data.
-        lgs.stores.replay.preparationTimeline = {
+        // Restore this Journey's edit state, or publish its first projection, before playback.
+        const nextTimeline = restoredTimelineState ? {
+            ...restoredTimelineState,
+            widgetManifest,
+            timeline: {
+                ...restoredTimelineState.timeline,
+                durationMillis: timeline.durationMillis,
+                rangeStartMillis: timeline.rangeStartMillis,
+                rangeEndMillis: timeline.rangeEndMillis,
+            },
+            tracks: cloneReplayTimelineTracks(baseTracks),
+        } : {
+            version: 1,
+            journeySlug: projectionJourney.slug ?? null,
             sourceSignature: projection.signature,
+            source: {...projection.source},
+            direction: projection.direction,
+            fps: projection.fps,
+            widgetManifest,
             timeline: {
                 durationMillis: timeline.durationMillis,
                 rangeStartMillis: timeline.rangeStartMillis,
@@ -646,7 +795,11 @@ export const ReplayTimelinePreview = forwardRef(({
             },
             tracks: cloneReplayTimelineTracks(baseTracks),
         }
-    }, [baseTracks, linkedPreparation, projection.signature, timeline.durationMillis, timeline.rangeEndMillis, timeline.rangeStartMillis])
+        lgs.stores.replay.preparationTimeline = nextTimeline
+        if (projectionJourney.slug) {
+            persistJourneyReplayVideoTimeline(journey, nextTimeline)
+        }
+    }, [baseTracks, journey, linkedPreparation, projection.direction, projection.fps, projection.signature, projection.source, projectionJourney.slug, restoredTimelineState, timeline.durationMillis, timeline.rangeEndMillis, timeline.rangeStartMillis, widgetManifest])
 
     const sliderMinMillis = Number.isFinite(Number(timeline.rangeStartMillis))
         ? Number(timeline.rangeStartMillis)
@@ -656,9 +809,15 @@ export const ReplayTimelinePreview = forwardRef(({
         : timeline.durationMillis
     // Keep the live frame out of render-time snapshot tracking. Playback updates
     // the slider imperatively through the subscription effect below.
+    const journeyTimelineTimeMillis = Number(preparedTimeline?.currentTimeMillis)
     const persistedTimelineTimeMillis = Number(persistedTimelineView.currentTimeMillis)
-    const initialTimelineTimeMillis = Number.isFinite(persistedTimelineTimeMillis)
-        ? Math.max(sliderMinMillis, Math.min(sliderMaxMillis, persistedTimelineTimeMillis))
+    const preferredInitialTimelineTimeMillis = projectionJourney.slug
+        ? journeyTimelineTimeMillis
+        : Number.isFinite(journeyTimelineTimeMillis)
+            ? journeyTimelineTimeMillis
+            : persistedTimelineTimeMillis
+    const initialTimelineTimeMillis = Number.isFinite(preferredInitialTimelineTimeMillis)
+        ? Math.max(sliderMinMillis, Math.min(sliderMaxMillis, preferredInitialTimelineTimeMillis))
         : sliderMinMillis
     const _pendingPlayhead = useRef(null)
     const _preservedPlayheadTimeMillis = useRef(null)
@@ -667,12 +826,49 @@ export const ReplayTimelinePreview = forwardRef(({
         const safeTime = Number.isFinite(requestedTime) ? requestedTime : sliderMinMillis
         return Math.max(sliderMinMillis, Math.min(sliderMaxMillis, safeTime))
     }, [sliderMaxMillis, sliderMinMillis])
-    const persistTimelineView = useCallback(updates => {
+    const persistJourneyTimelinePlayhead = useCallback(timeMillis => {
+        if (!journey || !projectionJourney.slug) {
+            return
+        }
+
+        const currentState = lgs.stores.replay.preparationTimeline
+        const sameJourneyState = currentState?.journeySlug === projectionJourney.slug
+        const baseState = sameJourneyState ? currentState : {
+            version: 1,
+            journeySlug: projectionJourney.slug,
+            sourceSignature: projection.signature,
+            source: {...projection.source},
+            direction: projection.direction,
+            fps: projection.fps,
+            timeline: {
+                durationMillis: timeline.durationMillis,
+                rangeStartMillis: timeline.rangeStartMillis,
+                rangeEndMillis: timeline.rangeEndMillis,
+            },
+            widgetManifest,
+            tracks,
+        }
+        persistJourneyReplayVideoTimeline(journey, {
+            ...baseState,
+            timeline: {
+                ...baseState.timeline,
+                currentTimeMillis: timeMillis,
+            },
+            widgetManifest,
+            tracks: cloneReplayTimelineTracks(baseState.tracks ?? tracks),
+        })
+    }, [journey, projection.direction, projection.fps, projection.signature, projection.source, projectionJourney.slug, timeline.durationMillis, timeline.rangeEndMillis, timeline.rangeStartMillis, tracks, widgetManifest])
+
+    const persistTimelineView = useCallback((updates, {persistJourneyPlayhead = true} = {}) => {
         const settings = lgs.settings?.ui?.replay
-        if (!settings) return
-        settings.timeline ??= {}
-        Object.assign(settings.timeline, updates)
-    }, [])
+        if (settings) {
+            settings.timeline ??= {}
+            Object.assign(settings.timeline, updates)
+        }
+        if (persistJourneyPlayhead && Number.isFinite(Number(updates.currentTimeMillis))) {
+            persistJourneyTimelinePlayhead(Number(updates.currentTimeMillis))
+        }
+    }, [persistJourneyTimelinePlayhead])
 
     const persistVerticalScrollTop = useCallback(value => {
         const scrollTop = Number(value)
@@ -728,7 +924,7 @@ export const ReplayTimelinePreview = forwardRef(({
         const {progress} = resolveReplayPositionAtTime(projection.timeline, timeMillis)
         const pendingPlayhead = {timeMillis}
         _pendingPlayhead.current = pendingPlayhead
-        persistTimelineView({currentTimeMillis: timeMillis})
+        persistTimelineView({currentTimeMillis: timeMillis}, {persistJourneyPlayhead: settled})
         publishReplayTimelineTime({replay: lgs.stores.replay, timeMillis})
         if (_timeline.current) {
             applyTimelinePlayheadTime(_timeline.current, timeMillis)
@@ -767,13 +963,18 @@ export const ReplayTimelinePreview = forwardRef(({
     const handleTimelinePlay = useCallback(event => {
         const replayMode = __.ui.replay
         const detail = event?.detail ?? {}
-        const timeMillis = normalizeTimelineTime(detail.timeMillis)
+        const eventTimeMillis = Number(detail.timeMillis)
+        const requestedTimeMillis = normalizeTimelineTime(Number.isFinite(eventTimeMillis)
+            ? eventTimeMillis
+            : _timeline.current?.currentTimeMillis)
+        const isAtTimelineEnd = requestedTimeMillis >= sliderMaxMillis
+        const timeMillis = isAtTimelineEnd ? sliderMinMillis : requestedTimeMillis
         const {progress, skipStartClips} = resolveReplayPositionAtTime(projection.timeline, timeMillis)
 
         persistTimelineView({currentTimeMillis: timeMillis})
         publishReplayTimelineTime({replay: lgs.stores.replay, timeMillis})
         lgs.stores.replay.toolbarVisible = true
-        if (lgs.stores.replay.paused === true) {
+        if (lgs.stores.replay.paused === true && !isAtTimelineEnd) {
             return replayMode?.resume?.()
         }
 
@@ -781,7 +982,7 @@ export const ReplayTimelinePreview = forwardRef(({
             progress,
             ...(skipStartClips ? {skipStartClips: true} : {}),
         })
-    }, [normalizeTimelineTime, persistTimelineView, projection.timeline])
+    }, [normalizeTimelineTime, persistTimelineView, projection.timeline, sliderMaxMillis, sliderMinMillis])
 
     /**
      * Pause the canonical interactive Replay clock.
@@ -882,7 +1083,7 @@ export const ReplayTimelinePreview = forwardRef(({
                     ? resolveCurrentTimeMillis(replayStore, {
                         durationMillis: timeline.durationMillis,
                     })
-                    : Number.isFinite(persistedTimelineTimeMillis)
+                    : Number.isFinite(journeyTimelineTimeMillis) || Number.isFinite(persistedTimelineTimeMillis)
                         ? initialTimelineTimeMillis
                         : localTimeMillis
             const controlledState = {
@@ -921,8 +1122,14 @@ export const ReplayTimelinePreview = forwardRef(({
             if (Number.isFinite(localTimeMillis)) {
                 _preservedPlayheadTimeMillis.current = localTimeMillis
             }
-            const editState = buildReplayTimelineEditState(event, element, projection.signature)
-            if (editState) lgs.stores.replay.preparationTimeline = editState
+            const editState = buildReplayTimelineEditState(event, element, projection, {
+                journeySlug: projectionJourney.slug,
+                widgetManifest,
+            })
+            if (editState) {
+                lgs.stores.replay.preparationTimeline = editState
+                persistJourneyReplayVideoTimeline(journey, editState)
+            }
         }
         const eventNames = REPLAY_TIMELINE_EDIT_EVENTS.map(name => `lgs1920-timeline-${name}`)
         eventNames.forEach(name => element.addEventListener(name, persistTimelineEdit))
@@ -930,7 +1137,7 @@ export const ReplayTimelinePreview = forwardRef(({
         return () => {
             eventNames.forEach(name => element.removeEventListener(name, persistTimelineEdit))
         }
-    }, [linkedPreparation, projection.signature])
+    }, [journey, linkedPreparation, projection, projectionJourney.slug, widgetManifest])
 
     useEffect(() => {
         const element = _timeline.current

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-02
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import {
     isVideoWidgetEditorPhase,
     resolveReplayExportFrameState,
+    resolveReplayTimelineWidgetVisibility,
     resolveReplayVisibilityState,
     resolveReplayVideoStatsWidgetVisibility,
     resolveVideoOverlayVisibility,
@@ -93,6 +94,24 @@ describe('replay stats widget visibility', () => {
         globalThis.lgs.settings.ui.replay.recordingSync = true
 
         expect(shouldShowDynamicStatsWidget(globalThis.lgs.stores.replay)).toBe(true)
+    })
+
+    it('does not use a sibling widget row for a removed concrete instance', () => {
+        globalThis.lgs.stores.replay.preparationTimeline = {
+            tracks: [{
+                id: 'dynamic-stats-widget#visible',
+                widgetId: 'dynamic-stats-widget#visible',
+                visible: true,
+                clips: [{start: 0, end: 10, visible: true}],
+            }],
+            widgetManifest: ['dynamic-stats-widget#removed', 'dynamic-stats-widget#visible'],
+            timeline: {durationMillis: 10_000, currentTimeMillis: 4_000},
+        }
+
+        expect(resolveReplayTimelineWidgetVisibility({
+            widgetId: 'dynamic-stats-widget#removed',
+            replay: globalThis.lgs.stores.replay,
+        })).toBe(false)
     })
 
     it('hides the dynamic stats widget on the last two replay frames', () => {
@@ -447,6 +466,21 @@ describe('replay stats widget visibility', () => {
 
         replay.preparationTimeline.tracks[0].visible = false
         expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#1', replay})).toBe(false)
+    })
+
+    it('keeps a widget absent when its Journey timeline row was removed', () => {
+        const replay = {
+            recordingSync: true,
+            dynamicFrameState: {active: true, frameTimeMs: 1000},
+            preparationTimeline: {
+                widgetManifest: ['text-widget#removed'],
+                timeline: {durationMillis: 5000},
+                tracks: [],
+            },
+        }
+
+        expect(resolveReplayTimelineWidgetVisibility({widgetId: 'text-widget#removed', replay})).toBe(false)
+        expect(resolveReplayTimelineWidgetVisibility({widgetId: 'other-widget#1', replay})).toBe(null)
     })
 
     it('uses the canonical timeline playhead over stale preparation and active-frame times', () => {

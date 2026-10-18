@@ -31,7 +31,7 @@ below by engineering domain rather than storage directory.
 - [Replay encoder and frame-rendering pipeline overlap analysis](todo/CORE-REPLAY-ENCODER-PIPELINE-OVERLAP-ANALYSIS.md)
 - [Replay recording loops and time-ranged object visibility](todo/CORE-REPLAY-RECORDING-LOOPS-AND-TIME-RANGED-OBJECTS.md)
 - [Replay start camera editor and clip synchronization](todo/CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md)
-- [Replay track timeline editor](todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) — TODO, 1.0.0 preview / 1.1.0 editor
+- [Replay track timeline editor](todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) — TODO for Studio's canonical model and playback/export integration; generic editor surface delivered by `@lgs1920/timeline` 1.4.1
 - [POI animation during replay](todo/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
 - [Clip altitude alignment](todo/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
 - [Drone camera 3D path editor](todo/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md)

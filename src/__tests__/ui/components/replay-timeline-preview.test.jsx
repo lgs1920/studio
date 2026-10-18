@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,6 +46,19 @@ vi.mock('@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender', () => ({
 import {ReplayTimelinePreview} from '@Components/MainUI/video/ReplayTimelinePreview'
 
 describe('ReplayTimelinePreview', () => {
+    const setCurrentJourney = (replay = {}) => {
+        const journey = proxy({
+            slug: 'journey-1',
+            title: 'Journey',
+            replay: {start: [], stop: [], ...replay},
+            persistToDatabase: vi.fn(async () => undefined),
+        })
+        globalThis.lgs.theJourney = journey
+        globalThis.lgs.getJourneyBySlug = vi.fn(() => journey)
+        globalThis.lgs.stores.main.theJourney = journey
+        return journey
+    }
+
     beforeEach(() => {
         widgetRendererHarness.renderWidget.mockClear()
         globalThis.__ = {
@@ -302,6 +315,21 @@ describe('ReplayTimelinePreview', () => {
         expect(globalThis.lgs.stores.ui.video.exporting).toBe(false)
     })
 
+    it('restarts from the timeline start when play is requested at the end', () => {
+        globalThis.lgs.settings.ui.replay.timeline = {currentTimeMillis: 4_000}
+        globalThis.lgs.stores.replay.paused = true
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-play', {
+            detail: {timeMillis: 4_000, source: 'timeline-play'},
+        }))
+
+        expect(globalThis.__.ui.replay.start).toHaveBeenCalledWith({progress: 0})
+        expect(globalThis.__.ui.replay.resume).not.toHaveBeenCalled()
+        expect(globalThis.lgs.stores.replay.timeline.currentTimeMillis).toBe(0)
+    })
+
     it('starts at the Replay phase without replaying preceding start clips', () => {
         globalThis.lgs.stores.replay.clips = {
             catalog: {
@@ -438,6 +466,89 @@ describe('ReplayTimelinePreview', () => {
 
         await waitFor(() => expect(lgs.stores.replay.preparationTimeline.tracks
             .find(track => track.id === 'dynamic-stats-widget').visible).toBe(false))
+    })
+
+    it('persists and restores edited widget rows on their Journey', async () => {
+        const journey = setCurrentJourney()
+        const firstRender = render(<ReplayTimelinePreview/>)
+        const firstTimeline = firstRender.container.querySelector('lgs1920-timeline')
+
+        await waitFor(() => expect(lgs.stores.replay.preparationTimeline?.journeySlug).toBe('journey-1'))
+        const tracks = JSON.parse(JSON.stringify(firstTimeline.tracks))
+        tracks.find(track => track.id === 'dynamic-stats-widget').visible = false
+        firstTimeline.dispatchEvent(new CustomEvent('lgs1920-timeline-track-visibility-change', {
+            bubbles: true,
+            detail: {tracks},
+        }))
+
+        await waitFor(() => expect(journey.replay.videoTimeline?.tracks
+            .find(track => track.id === 'dynamic-stats-widget').visible).toBe(false))
+        expect(journey.persistToDatabase).toHaveBeenCalled()
+
+        firstRender.unmount()
+        lgs.stores.replay.preparationTimeline = null
+        const restoredRender = render(<ReplayTimelinePreview/>)
+        const restoredTimeline = restoredRender.container.querySelector('lgs1920-timeline')
+
+        await waitFor(() => expect(restoredTimeline.tracks
+            .find(track => track.id === 'dynamic-stats-widget').visible).toBe(false))
+    })
+
+    it('starts a new Journey at its timeline start instead of another Journey’s global playhead', async () => {
+        setCurrentJourney()
+        globalThis.lgs.settings.ui.replay.timeline = {currentTimeMillis: 2_500}
+        globalThis.lgs.stores.replay.dynamicFrameState = null
+        globalThis.lgs.stores.replay.timeline = {currentTimeMillis: 2_500}
+
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+
+        await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(0))
+    })
+
+    it('writes a Journey playhead to storage only after a seek settles', async () => {
+        const journey = setCurrentJourney()
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+
+        await waitFor(() => expect(journey.replay.videoTimeline).toBeTruthy())
+        journey.persistToDatabase.mockClear()
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-seek', {
+            bubbles: true,
+            detail: {timeMillis: 2_000, settled: false},
+        }))
+        expect(journey.persistToDatabase).not.toHaveBeenCalled()
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-seek', {
+            bubbles: true,
+            detail: {timeMillis: 2_000, settled: true},
+        }))
+
+        await waitFor(() => expect(journey.replay.videoTimeline.timeline.currentTimeMillis).toBe(2_000))
+        expect(journey.persistToDatabase).toHaveBeenCalledOnce()
+    })
+
+    it('mounts widget instances retained by a Journey timeline manifest', async () => {
+        setCurrentJourney({
+            videoTimeline: {
+                version: 1,
+                journeySlug: 'journey-1',
+                sourceSignature: 'stale-source',
+                widgetManifest: ['text-widget#journey-title'],
+                tracks: [],
+            },
+        })
+
+        render(<ReplayTimelinePreview/>)
+
+        await waitFor(() => expect(widgetRendererHarness.renderWidget).toHaveBeenCalledWith(
+            'multi-purpose-widgets',
+            'text-widget#journey-title',
+            {
+                widgetsBoard: 'video-crop-zone',
+                forceRefresh: true,
+            },
+        ))
     })
 
     it('keeps the optimistic playhead while Replay publishes a stale frame', async () => {
