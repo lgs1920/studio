@@ -18,6 +18,7 @@ implementation documents. Implemented behavior and current architecture belong u
 - [Journey import formats](JOURNEY_IMPORT_FORMATS_SPEC.md)
 - [Cloud synchronization](CLOUD-SYNC-TODO.md)
 - [Journey and track map selection](CORE-JOURNEY-CLICK-OVERLAY-SELECTION-SPEC.md)
+- [GPX trace editor](CORE-JOURNEY-GPX-TRACE-EDITOR-SPEC.md)
 
 ## Replay and Video
 

@@ -72,6 +72,7 @@ below by engineering domain rather than storage directory.
 - [Journey import formats](todo/JOURNEY_IMPORT_FORMATS_SPEC.md)
 - [Cloud synchronization](todo/CLOUD-SYNC-TODO.md)
 - [Journey and track map selection](todo/CORE-JOURNEY-CLICK-OVERLAY-SELECTION-SPEC.md)
+- [GPX trace editor](todo/CORE-JOURNEY-GPX-TRACE-EDITOR-SPEC.md)
 
 ## User Interface, Widgets, and Assets
 
