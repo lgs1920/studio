@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,9 @@ import bbox                                            from '@turf/bbox'
 import { default as centroid }                         from '@turf/centroid'
 import { SceneUtils }                                  from '@Utils/cesium/SceneUtils'
 import { TerrainUtils }                                from '@Utils/cesium/TerrainUtils'
+import {
+    getCachedTerrainAlignmentResult, getTerrainAlignedTrackContent, resolveTrackTerrainAlignmentWidthMeters,
+}                                                      from '@Utils/cesium/trackTerrainAlignment'
 import {
     getTrackRenderContent, trackRenderSmoothingKey,
 }                                                      from '@Utils/cesium/trackRenderSmoothing'
@@ -54,6 +57,15 @@ export const JOURNEY_WAITING = 3
 export const JOURNEY_DENIED = 4
 
 const TRACK_STYLE_ENTITY_MARKER = '#lgs-track-style#'
+const TRACK_TERRAIN_DIAGNOSTIC_ENTITY_MARKER = '#lgs-track-terrain-diagnostic#'
+const TRACK_TERRAIN_DIAGNOSTIC_COLORS = Object.freeze({
+    'ambiguous':                          '#d500f9',
+    'cliff-candidate-rejected':            '#ff00a8',
+    'correction-rejected-for-continuity':  '#ffca28',
+    'correction-rejected-for-geometry':    '#ff9100',
+    'no-matching-terrain':                 '#00e5ff',
+    'terrain-unavailable':                 '#2979ff',
+})
 const TRACK_LOCATOR_MARKER_ENTITY_MARKER = '#lgs-track-locator-marker#'
 const TRACK_LOCATOR_MARKER_TOOLTIP_CLASS = 'track-locator-marker-tooltip'
 const TRACK_DISPLAY_MODES = Object.freeze({
@@ -71,6 +83,13 @@ const TRACK_WIDTH_CHANGE_EPSILON = 0.25
 const TRACK_PRIMITIVE_MIN_POINTS = 4096
 
 const isTrackStyleEntity = entity => `${entity?.id ?? ''}`.includes(TRACK_STYLE_ENTITY_MARKER)
+/**
+ * Identify map entities that highlight unresolved terrain-alignment samples.
+ *
+ * @param {object} entity - Cesium entity to inspect.
+ * @returns {boolean} Whether the entity belongs to the terrain diagnostic overlay.
+ */
+const isTrackTerrainDiagnosticEntity = entity => `${entity?.id ?? ''}`.includes(TRACK_TERRAIN_DIAGNOSTIC_ENTITY_MARKER)
 const isTrackLocatorMarkerEntity = entity => `${entity?.id ?? ''}`.includes(TRACK_LOCATOR_MARKER_ENTITY_MARKER)
 const trackReferencePointCache = new WeakMap()
 const trackDrawStates = new WeakMap()
@@ -120,7 +139,9 @@ const trackPointCount = track => {
 }
 
 const hasTrackGeometryEntities = source => Boolean(source?.__lgsTrackPrimitive)
-                                             || source?.entities?.values?.some(entity => entity.polyline && !isTrackStyleEntity(entity))
+                                             || source?.entities?.values?.some(entity => entity.polyline
+                                                 && !isTrackStyleEntity(entity)
+                                                 && !isTrackTerrainDiagnosticEntity(entity))
 
 const canUseTrackPrimitive = (track, style, renderMode) => renderMode === 'primitive'
                                               && typeof GeoJsonPrimitive?.fromGeoJson === 'function'
@@ -451,6 +472,131 @@ export class TrackUtils {
         thickness: track?.thickness,
     })
 
+    /**
+     * Resolve the trace's world-space width for terrain-edge sampling.
+     *
+     * @param {object} track - Track whose visible width is being measured.
+     * @returns {number} Effective trace width in metres.
+     */
+    static getTrackTerrainAlignmentWidthMeters = track => {
+        const style = TrackUtils.getTrackRenderStyle(track)
+        return resolveTrackTerrainAlignmentWidthMeters(track, {
+            pixelsPerMeter: style.widthUnit === TRACK_RENDER_WIDTH_UNITS.PIXELS
+                ? TrackUtils.meterWidthToPixelScale(track)
+                : 0,
+        })
+    }
+
+    /**
+     * Refresh track and parent journey metrics from aligned coordinates without mutating source GPX content.
+     *
+     * @param {object} track - Track whose route coordinates were aligned.
+     * @param {object} content - Aligned GeoJSON content used for calculations.
+     * @returns {void} Updated metrics are written to the in-memory models.
+     */
+    static refreshMetricsForAlignedTrack = (track, content) => {
+        if (typeof track?.calculateMetrics !== 'function') {
+            return
+        }
+
+        track.calculateMetrics({content})
+        const editorJourney = globalThis.lgs?.theJourneyEditorProxy?.journey
+        const journey = editorJourney?.slug === track.parent
+            ? editorJourney
+            : globalThis.lgs?.getJourneyBySlug?.(track.parent)
+        if (!journey) {
+            return
+        }
+
+        if (journey.tracks?.size === 1) {
+            journey.metrics = track.metrics
+            return
+        }
+
+        journey.metrics ??= {points: [], global: {}}
+        const points = []
+        journey.tracks?.forEach?.(journeyTrack => points.push(...(journeyTrack.metrics?.points ?? [])))
+        journey.metrics.points = points
+        journey.metrics.global = journey.setGlobalMetrics?.() ?? journey.metrics.global
+    }
+
+    /**
+     * Replace terrain-alignment diagnostics with colored markers for unresolved route sections.
+     *
+     * @param {object} source - Track Cesium data source.
+     * @param {object} track - Track metadata used for diagnostic identifiers.
+     * @param {Array<object>} diagnostics - Failed or ambiguous point records.
+     * @returns {void} The source diagnostic entities are updated in place.
+     */
+    static updateTerrainAlignmentDiagnostics = (source, track, diagnostics = []) => {
+        if (!source?.entities) {
+            return
+        }
+
+        source.entities.values
+              .filter(isTrackTerrainDiagnosticEntity)
+              .forEach(entity => source.entities.remove(entity))
+
+        const ordered = [...diagnostics].sort((first, second) => (
+            first.segmentIndex - second.segmentIndex || first.coordinateIndex - second.coordinateIndex
+        ))
+        const runs = []
+        ordered.forEach((diagnostic) => {
+            const run = runs.at(-1)
+            const previous = run?.at(-1)
+            if (previous
+                && previous.segmentIndex === diagnostic.segmentIndex
+                && previous.coordinateIndex + 1 === diagnostic.coordinateIndex) {
+                run.push(diagnostic)
+            }
+            else {
+                runs.push([diagnostic])
+            }
+        })
+
+        const maximumDiagnosticMarkers = 100
+        const markerStride = Math.max(1, Math.ceil(runs.length / maximumDiagnosticMarkers))
+        runs.forEach((run, index) => {
+            if (index % markerStride !== 0 && index !== runs.length - 1) {
+                return
+            }
+
+            const diagnostic = run[Math.floor(run.length / 2)]
+            const coordinate = diagnostic.coordinate
+            const reasonSet = new Set(run.map(point => point.reason))
+            const reasons = [...reasonSet].join(', ')
+            const colorHex = TRACK_TERRAIN_DIAGNOSTIC_COLORS[diagnostic.reason] ?? '#ffca28'
+            const borderErrors = run.flatMap(point => point.borderErrorsMeters ?? [])
+                                    .filter(Number.isFinite)
+                                    .map(Math.abs)
+            const maximumBorderError = borderErrors.length > 0 ? Math.max(...borderErrors) : null
+            const errorSummary = maximumBorderError === null
+                ? ''
+                : `; maximum terrain/GPX border error: ${maximumBorderError.toFixed(1)} m`
+            const maximumBreak = run.reduce((maximum, point) => Math.max(maximum, point.terrainBreakMeters ?? 0), 0)
+            const breakSummary = maximumBreak > 0 ? `; maximum longitudinal residual break: ${maximumBreak.toFixed(1)} m` : ''
+            const referenceOffset = diagnostic.heightReferenceOffsetMeters ?? 0
+            const referenceSummary = referenceOffset ? `; vertical comparison offset: ${referenceOffset.toFixed(1)} m` : ''
+            source.entities.add({
+                id:          `${track.slug}${TRACK_TERRAIN_DIAGNOSTIC_ENTITY_MARKER}${diagnostic.segmentIndex}#${diagnostic.coordinateIndex}#point`,
+                name:        'Terrain alignment diagnostic',
+                description: `${run.length} consecutive track point(s) were not moved: ${reasons}${errorSummary}${breakSummary}${referenceSummary}`,
+                position:    Cartesian3.fromDegrees(
+                    Number(coordinate[0]),
+                    Number(coordinate[1]),
+                    Number.isFinite(Number(coordinate[2])) ? Number(coordinate[2]) : 0,
+                ),
+                point:       {
+                    pixelSize:       13,
+                    color:           CColor.fromCssColorString(colorHex),
+                    outlineColor:    CColor.WHITE,
+                    outlineWidth:    2,
+                    heightReference: HeightReference.CLAMP_TO_GROUND,
+                },
+            })
+        })
+    }
+
     static cssColor = (value, fallback = CColor.WHITE) => colorFromUnknown(value, fallback)
 
     static createTrackMaterial = (style, color = style.color) => {
@@ -474,17 +620,18 @@ export class TrackUtils {
             return null
         }
 
+        const content = getTerrainAlignedTrackContent(track)
         const cached = trackReferencePointCache.get(track)
-        if (cached?.content === track?.content) {
+        if (cached?.content === content) {
             return cached.referencePoint
         }
 
         try {
-            const center = centroid(track.content)
+            const center = centroid(content)
             const coordinates = center?.geometry?.coordinates
             if (!Array.isArray(coordinates) || coordinates.length < 2) {
                 trackReferencePointCache.set(track, {
-                    content:        track?.content,
+                    content,
                     referencePoint: null,
                 })
                 return null
@@ -497,14 +644,14 @@ export class TrackUtils {
             }
 
             trackReferencePointCache.set(track, {
-                content: track.content,
+                content,
                 referencePoint,
             })
             return referencePoint
         }
         catch {
             trackReferencePointCache.set(track, {
-                content:        track?.content,
+                content,
                 referencePoint: null,
             })
             return null
@@ -1147,7 +1294,9 @@ export class TrackUtils {
         const style = TrackUtils.getTrackRenderStyle(track)
         TrackUtils.removeTrackWidthUpdater(source)
 
-        const baseEntities = source.entities.values.filter(entity => entity.polyline && !isTrackStyleEntity(entity))
+        const baseEntities = source.entities.values.filter(entity => (
+            entity.polyline && !isTrackStyleEntity(entity) && !isTrackTerrainDiagnosticEntity(entity)
+        ))
         const mainMaterial = TrackUtils.createTrackMaterial(style)
         const underlayMaterial = style.underlay.enabled
                                ? TrackUtils.createTrackMaterial({
@@ -1293,8 +1442,15 @@ export class TrackUtils {
             case DRAWING_FROM_UI: {
                 const smoothingKey = trackRenderSmoothingKey(track)
                 const geometryKey = geometrySignature(track)
-                const terrainProvider = lgs.viewer?.terrainProvider
+                const terrainProvider = lgs.viewer?.terrainProvider ?? lgs.scene?.globe?.terrainProvider
                 const style = TrackUtils.getTrackRenderStyle(track)
+                const traceWidthMeters = TrackUtils.getTrackTerrainAlignmentWidthMeters(track)
+                const alignmentWidthKey = traceWidthMeters.toFixed(3)
+                const alignment = getCachedTerrainAlignmentResult(track, {
+                    provider: terrainProvider,
+                    traceWidthMeters,
+                })
+                const alignmentEnabled = alignment.enabled
                 const usePrimitive = canUseTrackPrimitive(track, style, renderMode)
                 const nextRenderMode = usePrimitive ? 'primitive' : 'entities'
                 const hasGeometry = usePrimitive
@@ -1304,9 +1460,15 @@ export class TrackUtils {
                                           || source.__lgsTrackGeometryKey !== geometryKey
                                           || source.__lgsRenderSmoothingKey !== smoothingKey
                                           || source.__lgsTrackTerrainProvider !== terrainProvider
+                                          || source.__lgsTrackAlignmentWidthKey !== alignmentWidthKey
+                                          || source.__lgsTrackTerrainAlignmentEnabled !== alignmentEnabled
                                           || source.__lgsTrackRenderMode !== nextRenderMode
                 if (needsGeometryLoad) {
-                    const baseRenderContent = getTrackRenderContent(track, {forRender: true})
+                    const previousAlignedContent = source.__lgsTrackAlignedContent ?? track.content
+                    const renderTrack = alignment.content === track.content
+                        ? track
+                        : {...track, content: alignment.content}
+                    const baseRenderContent = getTrackRenderContent(renderTrack, {forRender: true})
                     if (usePrimitive) {
                         TrackUtils.removeTrackStyleEntities(source)
                         source.entities.removeAll()
@@ -1329,7 +1491,15 @@ export class TrackUtils {
                     source.__lgsTrackGeometryKey = geometryKey
                     source.__lgsRenderSmoothingKey = smoothingKey
                     source.__lgsTrackTerrainProvider = terrainProvider
+                    source.__lgsTrackAlignmentWidthKey = alignmentWidthKey
+                    source.__lgsTrackTerrainAlignmentEnabled = alignmentEnabled
                     source.__lgsTrackRenderMode = nextRenderMode
+                    source.__lgsTrackAlignedContent = alignment.content
+                    source.__lgsTrackTerrainAlignmentSummary = {statistics: alignment.statistics, verticalReference: alignment.verticalReference}
+                    TrackUtils.updateTerrainAlignmentDiagnostics(source, track, alignment.diagnostics)
+                    if (previousAlignedContent !== alignment.content) {
+                        TrackUtils.refreshMetricsForAlignedTrack(track, alignment.content)
+                    }
                 }
                 const styleKey = trackStyleSignature(style)
                 if (needsGeometryLoad || source.__lgsTrackStyleKey !== styleKey || !source.__lgsTrackWidthUpdater) {
@@ -1373,13 +1543,14 @@ export class TrackUtils {
             journey = lgs.journeys.get(track.parent)
         }
 
-        const trackBbox = TrackUtils.extendBbox(bbox(track.content), 0)
+        const content = getTerrainAlignedTrackContent(track)
+        const trackBbox = TrackUtils.extendBbox(bbox(content), 0)
         let rectangle = Rectangle.fromDegrees(trackBbox[0], trackBbox[1], trackBbox[2], trackBbox[3])
 
         if (journey.camera === null || resetCamera) {
             const destination = lgs.camera.getRectangleCameraCoordinates(rectangle)
             const cartographic = Cartographic.fromCartesian(destination)
-            const center = centroid(track.content.geometry.coordinates)
+            const center = centroid(content.geometry.coordinates)
 
             let position
             switch (lgs.settings.scene.mode.value) {

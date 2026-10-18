@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2024-02-17
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import { CURRENT_TRACK, DRAWING_FROM_UI, FOCUS_ON_FEATURE }                   fr
 import { MapElement }                                                         from '@Core/MapElement'
 import { normalizeTrackRenderSmoothing }                                      from '@Utils/cesium/trackRenderSmoothing'
 import { normalizeTrackRenderStyle }                                          from '@Utils/cesium/trackRenderStyle'
+import { getTerrainAlignedTrackContent }                                     from '@Utils/cesium/trackTerrainAlignment'
 import { FEATURE, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
 import { Mobility }                                                           from '@Utils/Mobility'
 import { decodeHTMLEntities }                                                 from '@Utils/TextUtils'
@@ -380,26 +381,26 @@ export class Track extends MapElement {
      * Aggregate Geo Json data in order to have longitude, latitude, altitude,time
      * for each point (altitude and time may not exist)
      *
-     * @param geoJson
+     * @param {object} [content] - GeoJSON content used for metric calculation.
      * @return {[[{longitude, latitude, altitude,time}]]}  This is  multi segment format
      *         ie [[segment][[segment]]] event if it is a line string
      *
      */
-    aggregateDataForMetrics = () => {
+    aggregateDataForMetrics = (content = getTerrainAlignedTrackContent(this)) => {
         const aggregateData = []
         // Only for Feature Collections that are Line or multi line string typ
-        const type = this.content.geometry.type
+        const type = content?.geometry?.type
 
-        if (this.content.type === FEATURE &&
+        if (content?.type === FEATURE &&
             [FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING].includes(type)) {
             // According to type (Line or multiline), we transform the
             // coordinates in order to be  in (real or simulated) multiline mode
             const segments = type === FEATURE_LINE_STRING
-                             ? [this.content.geometry.coordinates]
-                             : this.content.geometry.coordinates
+                             ? [content.geometry.coordinates]
+                             : content.geometry.coordinates
 
             // Same for times data if exists
-            const times = this.content.properties?.coordinateProperties?.times
+            const times = content.properties?.coordinateProperties?.times
 
             let timeCursor = 0
             segments.forEach((segment, index) => {
@@ -568,14 +569,17 @@ export class Track extends MapElement {
     }
 
     /**
-     * Compute all metrics from a track
+     * Compute all metrics from the supplied track geometry or its source content.
      *
      * set metrics as  {[metrics/all points,global]}
+     * @param {object} [options] - Metric input options.
+     * @param {object} [options.content] - GeoJSON geometry used for calculations.
+     * @returns {void} Metrics are stored on this track.
      */
-    calculateMetrics = () => {
+    calculateMetrics = ({content = getTerrainAlignedTrackContent(this)} = {}) => {
 
         let featureMetrics = []
-        const aggregates = this.aggregateDataForMetrics()
+        const aggregates = this.aggregateDataForMetrics(content)
         const activityProfile = Track.activityProfile(this.activity, this.activitySettings)
         let minHeight
         let maxHeight

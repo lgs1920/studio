@@ -22,6 +22,7 @@ import {
 import { MapPOI }                        from '@Core/MapPOI'
 import { gpx, kml }                      from '@tmcw/togeojson'
 import { getGeom }                       from '@turf/invariant'
+import { normalizeAntiCliffCorrectionData } from '@Utils/cesium/antiCliffCorrections'
 import { defaultTrackRenderSmoothing, normalizeTrackRenderSmoothing } from '@Utils/cesium/trackRenderSmoothing'
 
 import {
@@ -77,9 +78,13 @@ export class Journey extends MapElement {
     hasTime = false
 
     tracksLoaded = false
+    antiCliffCorrection = false
+    antiCliffCorrectionData = null
 
     constructor(title, type, options = {}) {
         super(CURRENT_JOURNEY)
+        this.antiCliffCorrection = options.antiCliffCorrection === true
+        this.antiCliffCorrectionData = normalizeAntiCliffCorrectionData(options.antiCliffCorrectionData)
 
 
         if (title) {
@@ -298,6 +303,9 @@ export class Journey extends MapElement {
     static deserialize = (props) => {
         props.instance = new Journey()
         let instance = super.deserialize(props)
+        instance.antiCliffCorrection = instance.antiCliffCorrection === true
+        instance.antiCliffCorrectionData = normalizeAntiCliffCorrectionData(instance.antiCliffCorrectionData)
+        delete instance.antiCliffCorrectionAvailable
         instance.activity ??= Journey.defaultActivity()
         instance.activitySettings = Journey.activityProfile(instance.activity, instance.activitySettings)
         instance.renderSmoothing = normalizeTrackRenderSmoothing(
@@ -330,7 +338,10 @@ export class Journey extends MapElement {
     }
 
     static unproxify = (object) => {
-        return super.serialize({...object, ...{__class: Journey}})
+        const persistedJourney = {...object}
+        delete persistedJourney.antiCliffCorrectionAvailable
+        persistedJourney.antiCliffCorrectionData = normalizeAntiCliffCorrectionData(persistedJourney.antiCliffCorrectionData)
+        return super.serialize({...persistedJourney, ...{__class: Journey}})
     }
 
     /**
@@ -862,9 +873,13 @@ export class Journey extends MapElement {
      *
      * Tracks with attached flags are first drawn then we add all POIs
      *
-     * @param action
-     * @param mode
-     * @return {Promise<void>}
+     * @param {object} [options] - Journey drawing options.
+     * @param {number} [options.action] - Drawing action applied to every track.
+     * @param {number} [options.mode] - Camera focus mode after drawing.
+     * @param {boolean} [options.hideOtherJourneys=false] - Hide tracks outside the active journey.
+     * @param {string|null} [options.currentJourneySlug] - Active journey identifier.
+     * @param {boolean} [options.forceCurrentVisible=false] - Keep the active journey visible.
+     * @returns {Promise<void>} Resolves after the journey tracks have been drawn.
      */
     draw = async ({
                       action = DRAWING_FROM_UI,

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-17
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ import {
     ToggleStateIcon,
 }                                     from '@Components/ToggleStateIcon'
 import {
-    CURRENT_JOURNEY, EDIT_JOURNEY_ICON, JOURNEY_EDITOR_DRAWER, ORIGIN_STORE, REMOVE_JOURNEY_IN_EDIT, ROTATION_ICON,
+    CURRENT_JOURNEY, DRAWING_FROM_UI, EDIT_JOURNEY_ICON, JOURNEY_EDITOR_DRAWER, NO_FOCUS, ORIGIN_STORE, REMOVE_JOURNEY_IN_EDIT, ROTATION_ICON,
     SIMULATE_ALTITUDE,
     UPDATE_JOURNEY_SILENTLY,
 } from '@Core/constants'
@@ -56,6 +56,8 @@ import {
 }                                     from '@Editor/track/TrackStyleSettings'
 import { Utils }                      from '@Editor/Utils'
 import { TrackUtils }                 from '@Utils/cesium/TrackUtils'
+import {checkTrackTerrainAlignment, prepareTerrainAlignedTrackContent} from '@Utils/cesium/trackTerrainAlignment'
+import {createTrackTerrainAlignmentProgressMarker} from '@Utils/cesium/trackTerrainProgressMarker'
 import {
     defaultBasicReplaySettings,
     normalizeBasicReplaySettings,
@@ -79,7 +81,7 @@ import { useProxyValue }               from '@Utils/ValtioUtils'
 import { getGlobalHideOtherJourneys, refreshJourneyVisibility } from '@Core/ui/JourneyVisibility'
 import { decodeHTMLEntities }         from '@Utils/TextUtils'
 import {
-    WaButton, WaCard, WaDetails, WaIcon, WaInput, WaOption, WaSelect, WaTab, WaTabGroup, WaTabPanel,
+    WaButton, WaCard, WaDetails, WaIcon, WaInput, WaOption, WaProgressBar, WaSelect, WaSwitch, WaTab, WaTabGroup, WaTabPanel,
     WaTextarea, WaTooltip,
 }                                     from '@awesome.me/webawesome/dist/react'
 import { useEffect, useRef, useState } from 'react'
@@ -98,6 +100,18 @@ const PANELS = {
 }
 
 const {DATA, EDIT, POINTS, POIS} = PANELS
+
+const trackCoordinateCount = track => {
+    const geometry = track?.content?.geometry
+    if (geometry?.type === 'LineString') {
+        return Math.max(1, geometry.coordinates?.length ?? 0)
+    }
+    if (geometry?.type === 'MultiLineString') {
+        return Math.max(1, geometry.coordinates?.reduce((total, segment) => total + (segment?.length ?? 0), 0) ?? 0)
+    }
+
+    return 1
+}
 const EXPORT_DIALOG_FORMATS = {
     FILE: [
         {value: JOURNEY_EXPORT_FORMATS.GPX, label: 'gpx'},
@@ -126,6 +140,16 @@ const REPORT_EXPORT_STAGE_ICONS = {
 
 const journeyEditorStore = () => lgs.stores.journeyEditor
 
+/** Let React paint the initial correction state before terrain work starts. */
+const waitForBrowserPaint = () => new Promise((resolve) => {
+    if (typeof globalThis.requestAnimationFrame !== 'function') {
+        globalThis.setTimeout(resolve, 0)
+        return
+    }
+
+    globalThis.requestAnimationFrame(() => globalThis.requestAnimationFrame(resolve))
+})
+
 const setJourneyEditorElevationServer = (value) => {
     journeyEditorStore().journey.elevationServer = value
 }
@@ -146,6 +170,33 @@ const setJourneyEditorJourneyVisible = (value) => {
 
 const setJourneyEditorPOIsVisible = (value) => {
     journeyEditorStore().journey.POIsVisible = value
+}
+
+const setJourneyEditorAntiCliffCorrection = (journeySlug, value) => {
+    const contextualJourney = lgs.getJourneyBySlug?.(journeySlug)
+    const editorJourney = journeyEditorStore().journey
+    if (contextualJourney) {
+        contextualJourney.antiCliffCorrection = value
+    }
+    if (editorJourney?.slug === journeySlug && editorJourney !== contextualJourney) {
+        editorJourney.antiCliffCorrection = value
+    }
+}
+
+const setJourneyEditorAntiCliffCorrectionData = (journeySlug, value) => {
+    const contextualJourney = lgs.getJourneyBySlug?.(journeySlug)
+    const editorJourney = journeyEditorStore().journey
+    if (contextualJourney) {
+        contextualJourney.antiCliffCorrectionData = value
+    }
+    if (editorJourney?.slug === journeySlug && editorJourney !== contextualJourney) {
+        editorJourney.antiCliffCorrectionData = value
+    }
+}
+
+const currentAntiCliffTerrainId = () => {
+    const terrainId = lgs.settings?.layers?.terrain
+    return terrainId === null || terrainId === undefined || terrainId === '' ? null : String(terrainId)
 }
 
 const setJourneyEditorTabState = (tabName, eventType = 'wa-tab-show') => {
@@ -199,6 +250,7 @@ export const JourneySettings = () => {
             journey?.elevationServer ?? '',
             journey?.visible !== false,
             journey?.POIsVisible !== false,
+            journey?.antiCliffCorrection === true,
             journey?.tracks?.size ?? 0,
             journey?.pois?.size ?? 0,
             JSON.stringify(getBasicReplaySettings(journey?.replay) ?? null),
@@ -218,11 +270,21 @@ export const JourneySettings = () => {
     const _elevationRequestId = useRef(0)
     const _exportFormat = useRef(JOURNEY_EXPORT_FORMATS.GPX)
     const _exportFileName = useRef('')
+    const _antiCliffOperationId = useRef(0)
+    const _antiCliffProgressMarker = useRef(null)
 
     const [exportFormat, setExportFormatState] = useState(JOURNEY_EXPORT_FORMATS.GPX)
     const [exportFileName, setExportFileNameState] = useState('')
     const [exportChoiceOpen, setExportChoiceOpen] = useState(false)
     const [reportExportAnimation, setReportExportAnimation] = useState(null)
+    const [antiCliffOperation, setAntiCliffOperation] = useState({
+        saving: false,
+        journeySlug: null,
+        operationId: 0,
+        progress: null,
+    })
+    const antiCliffSaving = antiCliffOperation.journeySlug === journeySlug && antiCliffOperation.saving
+    const antiCliffProgress = antiCliffOperation.journeySlug === journeySlug ? antiCliffOperation.progress : null
 
     const serverList = (() => {
         const list = []
@@ -399,6 +461,246 @@ export const JourneySettings = () => {
             camera,
         })
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
+    }
+
+    /**
+     * Persist the Journey's anti-cliff option, check tracks on demand, and correct confirmed discrepancies.
+     *
+     * @param {Event} event - Switch change event.
+     * @returns {Promise<void>} Resolves after the Journey has been redrawn.
+     */
+    const setAntiCliffCorrection = async (event) => {
+        const enabled = event.target.checked === true
+        if (journey.antiCliffCorrection === enabled || antiCliffSaving) {
+            return
+        }
+
+        const terrainId = currentAntiCliffTerrainId()
+        const savedCorrectionDataMatchesTerrain = terrainId !== null
+            && journey.antiCliffCorrectionData?.terrainId === terrainId
+        if (enabled && terrainId && !savedCorrectionDataMatchesTerrain) {
+            setJourneyEditorAntiCliffCorrectionData(journeySlug, null)
+        }
+        const correctionTracks = savedCorrectionDataMatchesTerrain
+            ? {...journey.antiCliffCorrectionData.tracks}
+            : {}
+
+        const operationId = _antiCliffOperationId.current + 1
+        _antiCliffOperationId.current = operationId
+        _antiCliffProgressMarker.current?.clear()
+        _antiCliffProgressMarker.current = null
+        setAntiCliffOperation({
+            saving: true,
+            journeySlug,
+            operationId,
+            progress: enabled ? 0 : null,
+        })
+        setJourneyEditorAntiCliffCorrection(journeySlug, enabled)
+        await waitForBrowserPaint()
+        let progressMarker = null
+        let updated
+        try {
+            updated = await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
+        }
+        catch (error) {
+            console.error('[JourneySettings] Failed to persist anti-cliff correction:', error)
+            if (_antiCliffOperationId.current !== operationId) {
+                return
+            }
+            setJourneyEditorAntiCliffCorrection(journeySlug, !enabled)
+            UIToast.error({
+                caption: 'Journey update failed',
+                text:    'The anti-cliff setting could not be saved.',
+                errors:  error,
+            })
+            setAntiCliffOperation(current => current.operationId === operationId
+                ? {...current, saving: false, progress: null}
+                : current)
+            return
+        }
+
+        if (_antiCliffOperationId.current === operationId && enabled) {
+            progressMarker = createTrackTerrainAlignmentProgressMarker({viewer: lgs.viewer})
+            _antiCliffProgressMarker.current = progressMarker
+        }
+
+        try {
+            updated ??= lgs.getJourneyBySlug?.(journey.slug) ?? lgs.theJourney ?? journey
+            if (enabled) {
+                setAntiCliffOperation(current => current.operationId === operationId
+                    ? {...current, saving: false}
+                    : current)
+            }
+            const tracks = Array.from(updated.tracks?.values?.() ?? [])
+
+            if (enabled && tracks.length > 0) {
+                const weights = tracks.map(trackCoordinateCount)
+                const totalWeight = weights.reduce((total, weight) => total + weight, 0)
+                let completedWeight = 0
+
+                for (const [index, track] of tracks.entries()) {
+                    if (_antiCliffOperationId.current !== operationId) {
+                        return
+                    }
+                    const weight = weights[index]
+                    const traceWidthMeters = TrackUtils.getTrackTerrainAlignmentWidthMeters(track)
+                    /** Report one track's weighted share of the Journey operation. */
+                    const reportTrackProgress = value => {
+                        if (_antiCliffOperationId.current !== operationId) {
+                            return
+                        }
+                        const percentage = Math.round(((completedWeight + (weight * value / 100)) / totalWeight) * 100)
+                        setAntiCliffOperation(current => current.operationId === operationId && current.progress !== percentage
+                            ? {...current, progress: percentage}
+                            : current)
+                    }
+                    /**
+                     * Update the transient marker while this operation still owns the active Journey editor.
+                     *
+                     * @param {Array<number>} coordinate - Route point being checked or corrected.
+                     * @returns {void} The active marker is updated when the operation still owns it.
+                     */
+                    const reportTrackLocation = coordinate => {
+                        if (_antiCliffOperationId.current === operationId
+                            && journeyEditorStore().journey?.slug === journeySlug) {
+                            progressMarker?.update(coordinate)
+                        }
+                    }
+                    const hasSavedTrackResult = savedCorrectionDataMatchesTerrain
+                        && Object.hasOwn(correctionTracks, track.slug)
+                    if (hasSavedTrackResult) {
+                        const firstCorrection = correctionTracks[track.slug]?.[0]?.correctedCoordinate
+                        if (firstCorrection) {
+                            reportTrackLocation(firstCorrection)
+                        }
+                        await prepareTerrainAlignedTrackContent(track, {
+                            traceWidthMeters,
+                            onProgress: reportTrackProgress,
+                        })
+                    }
+                    else {
+                        const check = await checkTrackTerrainAlignment(track, {
+                            traceWidthMeters,
+                            onProgress: value => reportTrackProgress(value * 0.3),
+                            onLocation: reportTrackLocation,
+                        })
+                        if (_antiCliffOperationId.current !== operationId) {
+                            return
+                        }
+
+                        if (check.status === 'needs-correction') {
+                            const prepared = await prepareTerrainAlignedTrackContent(track, {
+                                traceWidthMeters,
+                                onProgress: value => reportTrackProgress(30 + (value * 0.7)),
+                            })
+                            if (prepared.diagnostics?.some(item => item.reason === 'terrain-unavailable')) {
+                                delete correctionTracks[track.slug]
+                            }
+                            else {
+                                correctionTracks[track.slug] = prepared.corrections ?? []
+                            }
+                        }
+                        else if (check.status === 'clean') {
+                            correctionTracks[track.slug] = []
+                        }
+                    }
+                    if (_antiCliffOperationId.current !== operationId) {
+                        return
+                    }
+                    reportTrackProgress(100)
+                    completedWeight += weight
+                }
+            }
+
+            if (_antiCliffOperationId.current !== operationId) {
+                return
+            }
+            if (enabled && updated.antiCliffCorrection !== false && terrainId && Object.keys(correctionTracks).length > 0) {
+                const correctionData = {terrainId, tracks: correctionTracks}
+                setJourneyEditorAntiCliffCorrectionData(journeySlug, correctionData)
+                updated.antiCliffCorrectionData = correctionData
+                await updated.persistToDatabase?.()
+            }
+
+            if (_antiCliffOperationId.current !== operationId) {
+                return
+            }
+            setAntiCliffOperation(current => current.operationId === operationId
+                ? {...current, saving: true}
+                : current)
+            await updated.draw?.({
+                action:           DRAWING_FROM_UI,
+                mode:             NO_FOCUS,
+            })
+        }
+        catch (error) {
+            console.error('[JourneySettings] Failed to correct terrain alignment:', error)
+            UIToast.error({
+                caption: 'Anti-cliff correction failed',
+                text:    'The Journey could not be redrawn with corrected track geometry.',
+                errors:  error,
+            })
+        }
+        finally {
+            progressMarker?.clear()
+            if (_antiCliffProgressMarker.current === progressMarker) {
+                _antiCliffProgressMarker.current = null
+            }
+            setAntiCliffOperation(current => current.operationId === operationId
+                ? {...current, saving: false, progress: null}
+                : current)
+        }
+    }
+
+    /** Clear the Journey anti-cliff flag and saved points, cancelling any active terrain operation. */
+    const resetAntiCliffCorrection = async () => {
+        if (!journeySlug) {
+            return
+        }
+
+        const previousEnabled = journey.antiCliffCorrection === true
+        const previousCorrectionData = journey.antiCliffCorrectionData ?? null
+        const operationId = _antiCliffOperationId.current + 1
+        _antiCliffOperationId.current = operationId
+        _antiCliffProgressMarker.current?.clear()
+        _antiCliffProgressMarker.current = null
+        setAntiCliffOperation({saving: true, journeySlug, operationId, progress: null})
+        setJourneyEditorAntiCliffCorrection(journeySlug, false)
+        setJourneyEditorAntiCliffCorrectionData(journeySlug, null)
+
+        let persisted = false
+        try {
+            await waitForBrowserPaint()
+            const updated = await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
+            if (_antiCliffOperationId.current !== operationId) {
+                return
+            }
+            persisted = true
+            const updatedJourney = updated ?? lgs.getJourneyBySlug?.(journeySlug) ?? journey
+            await updatedJourney.draw?.({
+                action: DRAWING_FROM_UI,
+                mode:   NO_FOCUS,
+            })
+        }
+        catch (error) {
+            console.error('[JourneySettings] Failed to reset anti-cliff correction:', error)
+            if (_antiCliffOperationId.current === operationId && !persisted) {
+                setJourneyEditorAntiCliffCorrection(journeySlug, previousEnabled)
+                setJourneyEditorAntiCliffCorrectionData(journeySlug, previousCorrectionData)
+            }
+            if (_antiCliffOperationId.current === operationId) {
+                UIToast.error({
+                    caption: 'Anti-cliff reset failed',
+                    text:    'The Journey could not be reset to its original track geometry.',
+                    errors:  error,
+                })
+            }
+        }
+        finally {
+            setAntiCliffOperation(current => current.operationId === operationId
+                ? {...current, saving: false, progress: null}
+                : current)
+        }
     }
 
     /**
@@ -752,6 +1054,38 @@ export const JourneySettings = () => {
                                                     </WaOption>
                                                 ))}
                                             </WaSelect>
+                                        </div>
+                                        <div className={`lgs--journey-antcliff-setting${antiCliffProgress !== null ? ' is-processing' : ''}`}>
+                                            <WaSwitch
+                                                size="xs"
+                                                label-at-start
+                                                {...(antiCliffProgress === null ? {'width-auto': true} : {})}
+                                                checked={journey.antiCliffCorrection === true}
+                                                disabled={antiCliffSaving}
+                                                onChange={setAntiCliffCorrection}
+                                            >
+                                                {'Anti-cliff correction'}
+                                            </WaSwitch>
+                                            {antiCliffProgress !== null && (
+                                                <div className="lgs--journey-antcliff-progress-column">
+                                                    <WaProgressBar
+                                                        className="lgs--journey-antcliff-progress"
+                                                        label="Anti-cliff check and correction progress"
+                                                        value={antiCliffProgress}
+                                                    />
+                                                </div>
+                                            )}
+                                            <WaButton
+                                                className="lgs--journey-antcliff-reset"
+                                                size="s"
+                                                appearance="plain"
+                                                variant="neutral"
+                                                aria-label="Reset anti-cliff correction"
+                                                title="Reset anti-cliff correction"
+                                                onClick={resetAntiCliffCorrection}
+                                            >
+                                                <WaIcon size="s" name="arrow-rotate-left" variant="regular"/>
+                                            </WaButton>
                                         </div>
                                         <h3 className="track-data-title">
                                             <WaIcon name="pen-swirl" variant="regular"/>

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-07
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,46 @@
 
 #journey-editor-drawer wa-switch::part(control) {
     margin-left: var(--lgs-gutter);
+}
+
+.lgs--journey-antcliff-setting {
+    display: grid;
+    align-items: center;
+    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
+    min-width: 0;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs--journey-antcliff-setting wa-switch {
+    min-width: 0;
+}
+
+.lgs--journey-antcliff-setting.is-processing {
+    align-items: center;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+
+.lgs--journey-antcliff-setting.is-processing wa-switch {
+    width: 100%;
+}
+
+.lgs--journey-antcliff-progress-column {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.lgs--journey-antcliff-progress {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+    margin: 0;
+}
+
+.lgs--journey-antcliff-reset {
+    align-self: center;
+    justify-self: end;
 }
 
 #journey-editor-drawer .selector-wrapper {
