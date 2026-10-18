@@ -2,7 +2,7 @@
 
 Status: current implementation inventory
 
-Date: 2026-10-15
+Date: 2026-10-18
 
 ## Purpose
 
@@ -13,10 +13,11 @@ and target behavior belong in the current architecture and focused TODO specs.
 ## Replay user modes
 
 Basic and Expert are user-facing configuration modes for the same Replay
-session, frame resolver, camera/runtime, and timeline. They do not select
-separate replay engines. Basic applies a restricted preparation and widget
-policy and uses the guided camera configuration; Expert exposes the additional
-camera, clip, and replay controls. Both modes use the active mode's normalized
+session, frame resolver, and camera/runtime. They do not select separate replay
+engines. Basic applies a restricted preparation and widget policy and uses the
+guided camera configuration; Expert exposes the additional camera, clip, and
+Replay controls. The linked preparation Timeline is available in Expert; Basic
+Replay has no Timeline. Both modes use the active mode's normalized
 camera settings for interactive preparation/playback and the same deterministic
 Replay export path. Pitch sets the viewing angle and configured camera height
 determines the target-relative range used as zoom. The single `cameraAngle` is
@@ -186,8 +187,16 @@ Basic/Expert support is present but incomplete:
 - Moving clip readiness separated from settled waits.
 - Linked-video Replay preparation timeline with a normalized transient
   multi-track projection, controlled playhead and scrubbing, widget visibility
-  tracks, widget-row ordering, local clip edits, a resizable track-title legend,
-  bounded ruler zoom, and throttled transient scrubbing.
+  tracks and event ranges, widget-row ordering, a Journey-scoped snapshot,
+  pre-Replay and post-Replay clip duration edits handed back to the existing
+  Journey clip configuration, a resizable track-title legend, bounded ruler
+  zoom, and throttled transient scrubbing. Playback and deferred export read the
+  updated clip configuration; Replay's shared overlay resolver applies widget
+  event visibility on the active frame.
+- Expert interactive Replay now rebuilds trace geometry during playback at the
+  renderer's normal geometry cadence and forces exact geometry at start and
+  pause. Dry run applies trace updates through its deterministic frame path,
+  while keeping its lower-cost geometry cadence between exact boundary frames.
   See
   [Replay timeline preparation implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md).
 
@@ -220,9 +229,9 @@ subject to the validation gates below.
 | PARTIAL / TODO | 1.0.0 | Validate Basic Replay Dry run visually on a real reference journey and confirm completion and cancellation cleanup in a WebGL browser | [Dry run issue #533](https://github.com/lgs1920/studio/issues/533) |
 | PARTIAL / TODO | 1.0.0 | Validate main-scene product MP4 export on fixed imagery, terrain, and 3D Tiles journeys, including recording with the browser window fully covered; prove camera parity, return-view restoration, and visual quality | [Replay quality validation](CORE-REPLAY-QUALITY-VALIDATION.md) |
 | IMPLEMENTED | 1.0.0 | Deliver linked Replay preparation as a compact controlled Timeline preview | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
-| PARTIAL / TODO | 1.0.0 follow-up | Connect remaining Timeline domain commands, Action Mode, clip double-click navigation, and persisted visibility/order changes | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
+| PARTIAL / TODO | 1.0.0 follow-up | Connect remaining Timeline domain commands, Action Mode, and clip double-click navigation | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
 | TODO | 1.1.0 | Replace separated clip controls with the normalized editable multi-track replay timeline | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
-| TODO | 1.1.0 | Persist timeline authoring and make Replay playback and export consume the edited domain model | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
+| TODO | 1.1.0 | Replace the preparation snapshot and existing clip adapter with a canonical persisted timeline domain model consumed by Replay playback and export | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
 | PARTIAL | Unplanned | Finish Basic/Expert settings ownership, effective-mode propagation, and consistent Basic defaults | [Replay user modes](#replay-user-modes) |
 | TODO | 1.1.0 | Drive POI animation and displayed fields from canonical replay time | [POI animation](../../todo/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md) |
 | TODO | 1.1.0 | Align clip altitude inputs and continuity across reordered sequences | [Clip altitude alignment](../../todo/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md) |

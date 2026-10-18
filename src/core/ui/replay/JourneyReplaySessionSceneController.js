@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -946,7 +946,6 @@ export const bindRenderer = (mode, ) => {
                     state.renderer.update({
                         ...detail,
                         forceGeometry: true,
-                        hideTrace: true,
                         syncCursorToTrace: true,
                         showTrace: isJourneyReplayTraceActive(),
                     })
@@ -1018,6 +1017,7 @@ export const bindRenderer = (mode, ) => {
                     state.renderer.update({
                         ...detail,
                         sampler: state.sampler,
+                        allowPlaybackGeometryUpdate: true,
                         syncCursorToTrace: true,
                         showTrace: isJourneyReplayTraceActive(),
                     })
@@ -1068,6 +1068,7 @@ export const bindRenderer = (mode, ) => {
                 try {
                     state.renderer.update({
                         ...detail,
+                        forceGeometry: true,
                         freezeDynamic: true,
                         showTrace: isJourneyReplayTraceActive(),
                         syncCursorToTrace: true,

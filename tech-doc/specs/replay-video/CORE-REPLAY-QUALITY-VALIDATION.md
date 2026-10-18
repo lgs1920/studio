@@ -3,7 +3,7 @@
 Status: validation contract for interactive Replay and deterministic Replay
 video export
 
-Date: 2026-10-15
+Date: 2026-10-18
 
 ## Purpose
 
@@ -43,6 +43,11 @@ narrow crop, and at least one high-resolution output profile.
 - The first exported frame resolves at the preparation range start, the final
   frame resolves at its end, and clips intersecting either boundary retain
   their source-local phase time.
+- Expert Timeline pre/post clip duration, enable, and removal edits reach the
+  Journey clip arrays consumed by interactive playback and deferred export.
+- Expert Timeline widget event ranges and visibility control the matching
+  widget on the corresponding interactive and export frames. Basic Replay has
+  no preparation Timeline.
 
 ### Camera
 
@@ -108,8 +113,12 @@ narrow crop, and at least one high-resolution output profile.
 
 ### Trace and marker
 
+- Expert Replay draws its trace on the first playback frame and progresses it
+  during playback; pause resolves exact trace geometry at the paused sample.
 - A non-zero export frame contains visible completed trace geometry.
 - Export rendering does not use interactive-playback wall-clock throttling.
+- Dry run draws the trace during its Replay phase even when pre-Replay clips
+  hide it, and its first, phase-boundary, and final trace geometry is exact.
 - The marker follows the same sample used by the trace.
 - Start and stop visibility rules do not leak into the replay phase.
 - The final captured frame contains the declared completed trace.

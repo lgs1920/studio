@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,7 @@ vi.mock('@Components/Toast', () => ({
 }))
 
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
-import {REPLAY_EVENT_UPDATE} from '@Core/ui/replay/JourneyReplayPlaybackController'
+import {REPLAY_EVENT_PAUSE, REPLAY_EVENT_START, REPLAY_EVENT_UPDATE} from '@Core/ui/replay/JourneyReplayPlaybackController'
 import {beginReplaySessionOwnership} from '@Core/ui/replay/ReplaySessionOwnership'
 import {
     abortPlaybackAfterListenerError, bindRenderer, captureCameraState, restoreCameraState, restorePlaybackScene, restorePlaybackSceneInternal,
@@ -112,6 +112,9 @@ describe('JourneyReplaySessionSceneController', () => {
         })
 
         expect(renderer.update).toHaveBeenCalledTimes(2)
+        expect(renderer.update).toHaveBeenNthCalledWith(1, expect.objectContaining({
+            allowPlaybackGeometryUpdate: true,
+        }))
         expect(call.updateCamera).toHaveBeenCalledTimes(1)
     })
 
@@ -148,6 +151,58 @@ describe('JourneyReplaySessionSceneController', () => {
         expect(call.updateCamera.mock.calls.flat()).toEqual(expect.arrayContaining([
             expect.objectContaining({logicalCamera: true}),
         ]))
+    })
+
+    it('shows the Expert trace on the first playback frame', () => {
+        const {listeners, mode, renderer, state, call} = makeMode()
+        Object.assign(call, {
+            removeToleranceZoneOverlay: vi.fn(),
+            setToleranceZoneOverlayVisible: vi.fn(),
+            updateToleranceZoneOverlay: vi.fn(),
+            hideJourneyToolbarVisibility: vi.fn(),
+            setContinuousRender: vi.fn(),
+            startReplayCameraAltitudeTracking: vi.fn(),
+            smoothedGuide: vi.fn(() => null),
+            syncNearbyPOIsForSample: vi.fn(),
+        })
+        state.deferStartCameraRecenter = true
+        globalThis.lgs = {
+            settings: {ui: {replay: {recordingSync: false, userMode: 'expert'}}},
+            stores: {replay: {active: true, recordingSync: false, userMode: 'expert'}},
+        }
+
+        bindRenderer(mode)
+        expect(listeners.has(REPLAY_EVENT_START)).toBe(true)
+        listeners.get(REPLAY_EVENT_START)?.({
+            progress: 0,
+            sample: {progress: 0},
+            sampler: {atProgress: vi.fn(() => ({progress: 0}))},
+        })
+
+        expect(call.abortPlaybackAfterListenerError).not.toHaveBeenCalled()
+        expect(renderer.update).toHaveBeenCalledWith(expect.objectContaining({
+            forceGeometry: true,
+            showTrace: true,
+            syncCursorToTrace: true,
+        }))
+        expect(renderer.update.mock.calls[0][0]).not.toHaveProperty('hideTrace', true)
+    })
+
+    it('forces an exact trace update when pausing playback', () => {
+        const {listeners, mode, renderer} = makeMode()
+        globalThis.lgs = {
+            settings: {ui: {replay: {recordingSync: false}}},
+            stores: {replay: {active: true, playing: false, paused: true, recordingSync: false}},
+        }
+
+        bindRenderer(mode)
+        listeners.get(REPLAY_EVENT_PAUSE)?.({progress: 0.5, sample: {progress: 0.5}})
+
+        expect(renderer.update).toHaveBeenCalledWith(expect.objectContaining({
+            forceGeometry: true,
+            freezeDynamic: true,
+            showTrace: true,
+        }))
     })
 
     it('restores the captured focus after journey focus completes', async () => {

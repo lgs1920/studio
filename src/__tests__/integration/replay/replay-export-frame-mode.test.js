@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -533,6 +533,8 @@ afterEach(() => {
             forceGeometry: false,
             allowPlaybackGeometryUpdate: true,
             syncCursorToTrace: true,
+            hideTrace: false,
+            showTrace: true,
         }))
 
         await mode.renderReplayExportFrame({
