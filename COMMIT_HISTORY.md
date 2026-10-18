@@ -3595,3 +3595,91 @@
 ## 2026-10-15 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/a7141b77f23f7da0ee2075e56303b37246430b27)
 
 - Recorded automatically from Git history.
+
+## 2026-10-15 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/9258a639a385ff32599d05f21bfe5db4621865b5)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-10-15 — [`fix(journey): keep focus and orbit available for hidden journeys`](https://github.com/lgs1920/studio/commit/cfc9f6d9684cae6bba15bfd5c825672042a11540)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`fix(replay): constrain preparation cone to crop zone`](https://github.com/lgs1920/studio/commit/77b27bd429d5545f4dd2df4ad7d29cfecc6e2147)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`fix(replay): preserve prepared zoom across crop framing`](https://github.com/lgs1920/studio/commit/bc477bb933e52b23d8e0779cfeb92716d19d7f51)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`fix(terrain): account for trace width in cliff alignment`](https://github.com/lgs1920/studio/commit/ad70006a79d345287a299bedc5d720ee1ff290a7)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`fix(replay): persist per-journey departure position`](https://github.com/lgs1920/studio/commit/f965a8298806681dcdec39248ecdc6e49c6e8fbd)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`fix(replay): constrain and control camera guide`](https://github.com/lgs1920/studio/commit/25d900c1180ffb5e093d64e53e6e71aff01c23b5)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`fix(terrain): align traces to visible stroke width`](https://github.com/lgs1920/studio/commit/7b6d41a3a273838a9023bd97a2730a8bb78baa63)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`fix(journey): isolate other journey trace visibility`](https://github.com/lgs1920/studio/commit/f6111e2a6ecad7f2f8e8b20aca877478c1cdb7ee)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`fix(profile): guard chart resize lifecycle`](https://github.com/lgs1920/studio/commit/9c5ab5fd962cfa825ec4aead938863ca3d0df858)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`fix(replay): preserve full-turn focus rotation`](https://github.com/lgs1920/studio/commit/8d6093aa83195e522448c6521307f313897313ce)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`fix(replay): keep export abort controller unproxied`](https://github.com/lgs1920/studio/commit/70543501053a5a69fa7bec5306346fa06abdc6b7)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`docs(replay): document persisted departure position`](https://github.com/lgs1920/studio/commit/2e6be1d2f2136d8fc2eae4c188d249e63ff716a1)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`docs(replay): reorganize outstanding replay items`](https://github.com/lgs1920/studio/commit/78bf8eb5bcd969b2b201b129edcad38582cbdc1c)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`fix(replay): keep preparation cone inside crop`](https://github.com/lgs1920/studio/commit/b3b3a0c557d92526fec9977babe607676c26138d)
+
+- Recorded automatically from Git history.
+
+## 2026-10-15 — [`fix(replay): keep preparation cone visible while reframing`](https://github.com/lgs1920/studio/commit/d727bf8b2d0b3d6feaf4aeca34374485ac46eabd)
+
+- Recorded automatically from Git history.
+
+## 2026-10-17 — [`feat(replay): rename Simple Replay to Basic Replay`](https://github.com/lgs1920/studio/commit/b8e8f796d801bdc1e6b3e3b518e2581afcc0b7ed)
+
+- Recorded automatically from Git history.
+
+## 2026-10-17 — [`feat(ui): show camera height above ground`](https://github.com/lgs1920/studio/commit/c15b61aded99c4d20dc7548a34620d79d8b1e609)
+
+- Recorded automatically from Git history.
+
+## 2026-10-17 — [`fix(replay): stabilize preparation camera guide`](https://github.com/lgs1920/studio/commit/05183179242e1e675754348850447e56017f63d9)
+
+- Recorded automatically from Git history.
+
+## 2026-10-17 — [`refactor(cesium): remove track terrain alignment`](https://github.com/lgs1920/studio/commit/96c0f1e200b95be9b807793e137ee6a78648d727)
+
+- Recorded automatically from Git history.
+
+## 2026-10-17 — [`fix(journey): unlock selector as journeys load`](https://github.com/lgs1920/studio/commit/d384c9cc69275613923eaae2595bf3180554d9c4)
+
+- Recorded automatically from Git history.
+
+## 2026-10-18 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/1f147b196d869b95e77cef90db2ed4aeeace12ab)
+
+- Recorded automatically from Git history.
