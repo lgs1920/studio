@@ -38,7 +38,7 @@ import {VideoRecordingSettingsToolbar} from './toolbox/VideoRecordingSettingsToo
 import {
     buildReplayPreparationTimeline,
 } from '@Core/ui/replay/ReplayPreparationTimeline'
-import {resolveReplayVideoFramePhase} from '@Core/ui/replay/ReplayVideoTimeline'
+import {replayClipSignature, resolveReplayVideoFramePhase} from '@Core/ui/replay/ReplayVideoTimeline'
 import {REPLAY_CLIP_SLOT_PRE_REPLAY} from '@Core/ui/replay/JourneyReplayClips'
 import {
     groupWidgetEntries,
@@ -48,6 +48,7 @@ import {filterReplayVideoWidgetKeys, getReplayVideoWidgetTypes} from '@Core/ui/r
 import {
     isReplayTimelineSourceUnchanged,
     normalizeJourneyReplayVideoTimeline,
+    resolveReplayTimelineClips,
     resolveReplayTimelineWidgetIds,
     resolveReplayTimelineWidgetManifest,
     restoreReplayTimelineTracks,
@@ -66,7 +67,7 @@ const REPLAY_TIMELINE_EDIT_EVENTS = [
     'track-label-change',
     'add-clip',
     'remove-clip',
-    'clip-change',
+    'after-clip-change',
     'clip-visibility-change',
     'clip-enabled-change',
     'clip-extend',
@@ -526,11 +527,85 @@ const toDisplayTracks = rows => [...(rows ?? [])].reverse().map(row => ({
 }))
 
 /**
+ * Rebase persisted Timeline clip edits onto the Replay source projection.
+ *
+ * The Replay row is an editable view of pre- and post-Replay clips. Convert its
+ * edited event bounds back to clip durations, then regenerate only that row so
+ * the rest of the user's widget-track edits remain intact.
+ *
+ * @param {Object} options - Edited timeline and current source projection.
+ * @returns {{clips: Object, timeline: Object}|null} Updated clips and timeline state.
+ */
+const rebaseReplayTimelineClipEdits = ({
+    timelineState,
+    baseClips,
+    projection,
+    journeyTitle,
+    widgetOrder,
+} = {}) => {
+    if (!Array.isArray(timelineState?.tracks)) {
+        return null
+    }
+
+    const clips = resolveReplayTimelineClips({tracks: timelineState.tracks, clips: baseClips})
+    if (!clips || replayClipSignature(clips) === replayClipSignature(baseClips)) {
+        return null
+    }
+
+    const nextProjection = buildReplayPreparationTimeline({
+        replayDurationMillis: projection?.source?.replayDurationMillis ?? projection?.timeline?.replayDurationMillis ?? 0,
+        fps: projection?.fps ?? 30,
+        direction: projection?.direction ?? 1,
+        clips,
+        journeyTitle,
+        widgetOrder,
+    })
+    const nextReplayTrack = toDisplayTracks(nextProjection.tracks).find(track => track.id === 'replay')
+    const tracks = timelineState.tracks.map(track => (
+        track.id === 'replay' || track.kind === 'replay' ? nextReplayTrack : track
+    )).filter(Boolean)
+    if (!tracks.some(track => track.id === 'replay')) {
+        tracks.push(nextReplayTrack)
+    }
+
+    const previousDuration = Number(timelineState.timeline?.durationMillis)
+    const previousRangeEnd = Number(timelineState.timeline?.rangeEndMillis)
+    const nextDuration = nextProjection.durationMillis
+    const rangeStartMillis = Math.max(0, Math.min(nextDuration,
+        Number(timelineState.timeline?.rangeStartMillis) || 0))
+    const rangeEndMillis = Number.isFinite(previousRangeEnd)
+        ? previousRangeEnd === previousDuration
+            ? nextDuration
+            : Math.max(rangeStartMillis, Math.min(nextDuration, previousRangeEnd))
+        : nextDuration
+
+    return {
+        clips,
+        timeline: {
+            ...timelineState,
+            sourceSignature: nextProjection.signature,
+            source: {...nextProjection.source},
+            direction: nextProjection.direction,
+            fps: nextProjection.fps,
+            timeline: {
+                ...timelineState.timeline,
+                durationMillis: nextDuration,
+                rangeStartMillis,
+                rangeEndMillis,
+                currentTimeMillis: Math.max(rangeStartMillis, Math.min(rangeEndMillis,
+                    Number(timelineState.timeline?.currentTimeMillis) || 0)),
+            },
+            tracks,
+        },
+    }
+}
+
+/**
  * Replay Timeline preview component.
  *
  * Replay remains the owner of preparation state and playback. The Web
- * Component exposes the local timeline interactions and emits their public
- * events; application controllers can be connected incrementally.
+ * Component exposes timeline interactions; this adapter persists those edits
+ * and feeds Replay phase clip changes into the shared playback configuration.
  *
  * @param {Object} props - Preview properties.
  * @param {boolean} [props.keyboardZoomActive=false] - Enables selected-widget keyboard zoom.
@@ -723,6 +798,45 @@ export const ReplayTimelinePreview = forwardRef(({
         Array.isArray(preparationTracks) ? preparationTracks : baseTracks,
     ), [preparationTracks, baseTracks])
 
+    /**
+     * Apply Replay-row clip edits to the active Journey and runtime store.
+     *
+     * @param {Object|null} timelineState - Edited timeline snapshot.
+     * @returns {Object|null} Rebased timeline state when clip settings changed.
+     */
+    const applyReplayTimelineClipEdits = useCallback(timelineState => {
+        if (!linkedPreparation || replay.basicPreparationActive === true
+            || (projectionJourney.slug && timelineState?.journeySlug !== projectionJourney.slug)) {
+            return null
+        }
+
+        const rebased = rebaseReplayTimelineClipEdits({
+            timelineState,
+            baseClips: lgs.stores.replay.clips ?? projection.timeline?.clips,
+            projection,
+            journeyTitle: projectionJourney.title,
+            widgetOrder,
+        })
+        if (!rebased) {
+            return null
+        }
+
+        const nextTimelineState = {
+            ...rebased.timeline,
+            widgetManifest,
+        }
+        lgs.stores.replay.clips = rebased.clips
+        if (journey && projectionJourney.slug) {
+            journey.replay = {
+                ...(journey.replay ?? {}),
+                start: rebased.clips.start,
+                stop: rebased.clips.stop,
+            }
+        }
+        lgs.stores.replay.preparationTimeline = nextTimelineState
+        return nextTimelineState
+    }, [journey, linkedPreparation, projection, projectionJourney.slug, projectionJourney.title, replay.basicPreparationActive, widgetManifest, widgetOrder])
+
     useEffect(() => {
         if (!linkedPreparation || !globalThis.__?.widgets?.get || !globalThis.__?.ui?.widgetManager) {
             return
@@ -800,6 +914,19 @@ export const ReplayTimelinePreview = forwardRef(({
             persistJourneyReplayVideoTimeline(journey, nextTimeline)
         }
     }, [baseTracks, journey, linkedPreparation, projection.direction, projection.fps, projection.signature, projection.source, projectionJourney.slug, restoredTimelineState, timeline.durationMillis, timeline.rangeEndMillis, timeline.rangeStartMillis, widgetManifest])
+
+    useEffect(() => {
+        if (!linkedPreparation || replay.basicPreparationActive === true) {
+            return
+        }
+
+        const timelineState = effectivePreparationTimeline
+            ?? lgs.stores.replay.preparationTimeline
+        const nextTimelineState = applyReplayTimelineClipEdits(timelineState)
+        if (nextTimelineState && projectionJourney.slug) {
+            persistJourneyReplayVideoTimeline(journey, nextTimelineState)
+        }
+    }, [applyReplayTimelineClipEdits, effectivePreparationTimeline, journey, linkedPreparation, projectionJourney.slug, replay.basicPreparationActive])
 
     const sliderMinMillis = Number.isFinite(Number(timeline.rangeStartMillis))
         ? Number(timeline.rangeStartMillis)
@@ -922,7 +1049,7 @@ export const ReplayTimelinePreview = forwardRef(({
         const timeMillis = normalizeTimelineTime(value)
         const durationMillis = Number(timeline.durationMillis)
         const {progress} = resolveReplayPositionAtTime(projection.timeline, timeMillis)
-        const pendingPlayhead = {timeMillis}
+        const pendingPlayhead = {timeMillis, source: 'timeline-scrub'}
         _pendingPlayhead.current = pendingPlayhead
         persistTimelineView({currentTimeMillis: timeMillis}, {persistJourneyPlayhead: settled})
         publishReplayTimelineTime({replay: lgs.stores.replay, timeMillis})
@@ -968,11 +1095,14 @@ export const ReplayTimelinePreview = forwardRef(({
             ? eventTimeMillis
             : _timeline.current?.currentTimeMillis)
         const isAtTimelineEnd = requestedTimeMillis >= sliderMaxMillis
-        const timeMillis = isAtTimelineEnd ? sliderMinMillis : requestedTimeMillis
-        const {progress, skipStartClips} = resolveReplayPositionAtTime(projection.timeline, timeMillis)
+        const {progress, skipStartClips} = resolveReplayPositionAtTime(projection.timeline, requestedTimeMillis)
+        const requestedPhase = resolveReplayVideoFramePhase(projection.timeline, requestedTimeMillis)
+        if (requestedPhase?.kind !== REPLAY_CLIP_SLOT_PRE_REPLAY) {
+            _pendingPlayhead.current = {timeMillis: requestedTimeMillis, source: 'timeline-play'}
+        }
 
-        persistTimelineView({currentTimeMillis: timeMillis})
-        publishReplayTimelineTime({replay: lgs.stores.replay, timeMillis})
+        persistTimelineView({currentTimeMillis: requestedTimeMillis})
+        publishReplayTimelineTime({replay: lgs.stores.replay, timeMillis: requestedTimeMillis})
         lgs.stores.replay.toolbarVisible = true
         if (lgs.stores.replay.paused === true && !isAtTimelineEnd) {
             return replayMode?.resume?.()
@@ -982,7 +1112,7 @@ export const ReplayTimelinePreview = forwardRef(({
             progress,
             ...(skipStartClips ? {skipStartClips: true} : {}),
         })
-    }, [normalizeTimelineTime, persistTimelineView, projection.timeline, sliderMaxMillis, sliderMinMillis])
+    }, [normalizeTimelineTime, persistTimelineView, projection.timeline, sliderMaxMillis])
 
     /**
      * Pause the canonical interactive Replay clock.
@@ -1118,6 +1248,10 @@ export const ReplayTimelinePreview = forwardRef(({
         if (!linkedPreparation || !element || getReplayTimelineDebugStage() !== 'full') return undefined
 
         const persistTimelineEdit = event => {
+            if (event?.type === 'lgs1920-timeline-after-clip-change'
+                && event.detail?.committed === false) {
+                return
+            }
             const localTimeMillis = Number(element.currentTimeMillis)
             if (Number.isFinite(localTimeMillis)) {
                 _preservedPlayheadTimeMillis.current = localTimeMillis
@@ -1127,8 +1261,9 @@ export const ReplayTimelinePreview = forwardRef(({
                 widgetManifest,
             })
             if (editState) {
-                lgs.stores.replay.preparationTimeline = editState
-                persistJourneyReplayVideoTimeline(journey, editState)
+                const rebasedEditState = applyReplayTimelineClipEdits(editState) ?? editState
+                lgs.stores.replay.preparationTimeline = rebasedEditState
+                persistJourneyReplayVideoTimeline(journey, rebasedEditState)
             }
         }
         const eventNames = REPLAY_TIMELINE_EDIT_EVENTS.map(name => `lgs1920-timeline-${name}`)
@@ -1137,7 +1272,7 @@ export const ReplayTimelinePreview = forwardRef(({
         return () => {
             eventNames.forEach(name => element.removeEventListener(name, persistTimelineEdit))
         }
-    }, [journey, linkedPreparation, projection, projectionJourney.slug, widgetManifest])
+    }, [applyReplayTimelineClipEdits, journey, linkedPreparation, projection, projectionJourney.slug, widgetManifest])
 
     useEffect(() => {
         const element = _timeline.current
@@ -1234,19 +1369,44 @@ export const ReplayTimelinePreview = forwardRef(({
             }
         }
 
-        syncPlayback()
         const replayStore = lgs.stores.replay
+        const captureReplayTimelinePlayhead = () => {
+            const timelineTime = replayStore.timeline?.currentTimeMillis
+            const timeMillis = timelineTime === null || timelineTime === undefined || timelineTime === ''
+                ? NaN
+                : Number(timelineTime)
+            const pendingPlayhead = _pendingPlayhead.current
+            if (Number.isFinite(timeMillis)
+                && (!pendingPlayhead || pendingPlayhead.source === 'replay-store')) {
+                _pendingPlayhead.current = {timeMillis, source: 'replay-store'}
+            }
+        }
+        let unsubscribeTimelinePlayhead = null
+        const bindReplayTimelinePlayhead = timelineState => {
+            unsubscribeTimelinePlayhead?.()
+            unsubscribeTimelinePlayhead = timelineState && typeof timelineState === 'object'
+                ? subscribeKey(timelineState, 'currentTimeMillis', () => {
+                    captureReplayTimelinePlayhead()
+                    schedulePlaybackSync()
+                })
+                : null
+        }
         const unsubscribers = [
-            subscribeKey(replayStore, 'timeline', schedulePlaybackSync),
+            subscribeKey(replayStore, 'timeline', () => {
+                bindReplayTimelinePlayhead(replayStore.timeline)
+                captureReplayTimelinePlayhead()
+                schedulePlaybackSync()
+            }),
             subscribeKey(replayStore, 'dynamicFrameState', schedulePlaybackSync),
             subscribeKey(replayStore, 'resolvedFrameState', schedulePlaybackSync),
             subscribeKey(replayStore, 'playing', schedulePlaybackSync),
         ]
-        if (replayStore.timeline && typeof replayStore.timeline === 'object') {
-            unsubscribers.push(subscribeKey(replayStore.timeline, 'currentTimeMillis', schedulePlaybackSync))
-        }
+        bindReplayTimelinePlayhead(replayStore.timeline)
+        captureReplayTimelinePlayhead()
+        syncPlayback()
         return () => {
             unsubscribers.forEach(unsubscribe => unsubscribe())
+            unsubscribeTimelinePlayhead?.()
             if (scheduledFrameId !== null) {
                 if (scheduledWithAnimationFrame) {
                     globalThis.cancelAnimationFrame?.(scheduledFrameId)

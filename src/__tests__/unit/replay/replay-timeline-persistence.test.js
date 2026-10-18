@@ -17,6 +17,7 @@
 import {Journey} from '@Core/Journey'
 import {
     normalizeJourneyReplayVideoTimeline,
+    resolveReplayTimelineClips,
     resolveReplayTimelineWidgetIds,
     resolveReplayTimelineWidgetManifest,
     restoreReplayTimelineTracks,
@@ -132,5 +133,56 @@ describe('Replay timeline persistence', () => {
             'text-widget#title',
             'date-widget#date',
         ])
+    })
+
+    it('converts edited Replay phase events back to ordered clip durations', () => {
+        const clips = {
+            catalog: {
+                intro: {id: 'intro', slots: ['pre-replay'], defaults: {duration: 2}},
+                outro: {id: 'outro', slots: ['post-replay'], defaults: {duration: 1}},
+            },
+            start: [{id: 'intro-instance', clipId: 'intro', slot: 'pre-replay', enabled: true, params: {duration: 2}}],
+            stop: [{id: 'outro-instance', clipId: 'outro', slot: 'post-replay', enabled: true, params: {duration: 1}}],
+        }
+        const tracks = [{
+            id: 'replay',
+            kind: 'replay',
+            clips: [
+                {
+                    id: 'post-replay-outro-instance',
+                    kind: 'post-replay',
+                    start: 8,
+                    end: 9.5,
+                    enabled: false,
+                    metadata: {clip: clips.stop[0]},
+                },
+                {
+                    id: 'pre-replay-intro-instance',
+                    kind: 'pre-replay',
+                    start: 0,
+                    end: 3.25,
+                    metadata: {clip: clips.start[0]},
+                },
+            ],
+        }]
+
+        expect(resolveReplayTimelineClips({tracks, clips})).toEqual({
+            catalog: clips.catalog,
+            start: [{...clips.start[0], params: {duration: 3.25}}],
+            stop: [{...clips.stop[0], enabled: false, params: {duration: 1.5}}],
+        })
+    })
+
+    it('returns empty clip slots when all configured phase events have been removed', () => {
+        const clips = {
+            catalog: {intro: {id: 'intro', slots: ['pre-replay'], defaults: {duration: 2}}},
+            start: [{id: 'intro-instance', clipId: 'intro', slot: 'pre-replay', params: {duration: 2}}],
+            stop: [],
+        }
+
+        expect(resolveReplayTimelineClips({
+            clips,
+            tracks: [{id: 'replay', kind: 'replay', clips: [{id: 'replay', kind: 'replay', start: 0, end: 4}]}],
+        })).toEqual({catalog: clips.catalog, start: [], stop: []})
     })
 })

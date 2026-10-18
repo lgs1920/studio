@@ -315,19 +315,60 @@ describe('ReplayTimelinePreview', () => {
         expect(globalThis.lgs.stores.ui.video.exporting).toBe(false)
     })
 
-    it('restarts from the timeline start when play is requested at the end', () => {
-        globalThis.lgs.settings.ui.replay.timeline = {currentTimeMillis: 4_000}
+    it('keeps the playhead at the stop phase when play is requested at the timeline end', () => {
+        globalThis.lgs.stores.replay.clips = {
+            catalog: {
+                intro: {id: 'intro', slots: ['start'], defaults: {duration: 2}},
+                outro: {id: 'outro', slots: ['stop'], defaults: {duration: 1}},
+            },
+            start: [{clipId: 'intro'}],
+            stop: [{clipId: 'outro'}],
+        }
+        globalThis.lgs.settings.ui.replay.timeline = {currentTimeMillis: 7_000}
         globalThis.lgs.stores.replay.paused = true
         const {container} = render(<ReplayTimelinePreview/>)
         const timelineElement = container.querySelector('lgs1920-timeline')
 
         timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-play', {
-            detail: {timeMillis: 4_000, source: 'timeline-play'},
+            detail: {timeMillis: 7_000, source: 'timeline-play'},
         }))
 
-        expect(globalThis.__.ui.replay.start).toHaveBeenCalledWith({progress: 0})
+        expect(globalThis.__.ui.replay.start).toHaveBeenCalledWith({progress: 1, skipStartClips: true})
         expect(globalThis.__.ui.replay.resume).not.toHaveBeenCalled()
-        expect(globalThis.lgs.stores.replay.timeline.currentTimeMillis).toBe(0)
+        expect(globalThis.lgs.stores.replay.timeline.currentTimeMillis).toBe(7_000)
+    })
+
+    it('keeps an absolute seek inside the post-Replay stop phase when Replay republishes its phase time', async () => {
+        globalThis.lgs.stores.replay.clips = {
+            catalog: {
+                intro: {id: 'intro', slots: ['start'], defaults: {duration: 2}},
+                outro: {id: 'outro', slots: ['stop'], defaults: {duration: 1}},
+            },
+            start: [{clipId: 'intro'}],
+            stop: [{clipId: 'outro'}],
+        }
+        globalThis.lgs.stores.replay.clipSequenceActive = true
+        globalThis.__.ui.replay.seek = vi.fn(() => {
+            globalThis.lgs.stores.replay.timeline.currentTimeMillis = 6_000
+            globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 6_000}
+            return Promise.resolve()
+        })
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-seek', {
+            detail: {timeMillis: 6_500, settled: true, source: 'go-to-end'},
+        }))
+
+        await waitFor(() => expect(globalThis.__.ui.replay.seek).toHaveBeenCalledWith(1, expect.objectContaining({
+            settled: true,
+            source: 'timeline-scrub',
+        })))
+        await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(6_500))
+        expect(globalThis.lgs.stores.replay.timeline.currentTimeMillis).toBe(6_500)
+
+        globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 6_000, updatedAt: 2}
+        await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(6_500))
     })
 
     it('starts at the Replay phase without replaying preceding start clips', () => {
@@ -468,6 +509,51 @@ describe('ReplayTimelinePreview', () => {
             .find(track => track.id === 'dynamic-stats-widget').visible).toBe(false))
     })
 
+    it('feeds edited Replay clip durations into playback while preserving widget events', async () => {
+        const clips = {
+            catalog: {
+                intro: {id: 'intro', slots: ['pre-replay'], defaults: {duration: 2}},
+                outro: {id: 'outro', slots: ['post-replay'], defaults: {duration: 1}},
+            },
+            start: [{id: 'intro-instance', clipId: 'intro', slot: 'pre-replay', enabled: true, params: {duration: 2}}],
+            stop: [{id: 'outro-instance', clipId: 'outro', slot: 'post-replay', enabled: true, params: {duration: 1}}],
+        }
+        const journey = setCurrentJourney({start: clips.start, stop: clips.stop})
+        lgs.stores.replay.clips = clips
+
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+        await waitFor(() => expect(lgs.stores.replay.preparationTimeline?.tracks).toHaveLength(3))
+
+        const tracks = JSON.parse(JSON.stringify(timelineElement.tracks))
+        tracks.find(track => track.id === 'dynamic-stats-widget').visible = false
+        tracks.find(track => track.id === 'replay').clips
+            .find(clip => clip.kind === 'pre-replay').end = 3.5
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-clip-change', {
+            bubbles: true,
+            detail: {tracks},
+        }))
+
+        await waitFor(() => expect(lgs.stores.replay.clips.start[0].params.duration).toBe(3.5))
+        expect(lgs.stores.replay.clips.stop[0].params.duration).toBe(1)
+        expect(lgs.stores.replay.preparationTimeline.timeline.durationMillis).toBe(8_500)
+        expect(lgs.stores.replay.preparationTimeline.tracks
+            .find(track => track.id === 'dynamic-stats-widget').visible).toBe(false)
+        expect(lgs.stores.replay.preparationTimeline.tracks
+            .find(track => track.id === 'replay').clips
+            .find(clip => clip.kind === 'pre-replay').end).toBe(3.5)
+        await waitFor(() => expect(journey.replay.videoTimeline.tracks
+            .find(track => track.id === 'dynamic-stats-widget').visible).toBe(false))
+        await waitFor(() => {
+            expect(journey.replay.start[0].params.duration).toBe(3.5)
+            expect(journey.replay.videoTimeline.timeline.durationMillis).toBe(8_500)
+            expect(journey.replay.videoTimeline.source.clipSignature)
+                .toBe(lgs.stores.replay.preparationTimeline.source.clipSignature)
+            expect(timelineElement.tracks.find(track => track.id === 'replay').clips
+                .find(clip => clip.kind === 'pre-replay').end).toBe(3.5)
+        })
+    })
+
     it('persists and restores edited widget rows on their Journey', async () => {
         const journey = setCurrentJourney()
         const firstRender = render(<ReplayTimelinePreview/>)
@@ -561,6 +647,35 @@ describe('ReplayTimelinePreview', () => {
         }))
         globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 1_000}
 
+        await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
+
+        globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 2_500}
+        await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
+    })
+
+    it('keeps the requested playhead while Replay starts from an older published frame', async () => {
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-play', {
+            bubbles: true,
+            detail: {timeMillis: 2_500},
+        }))
+        globalThis.lgs.stores.replay.playing = true
+
+        await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
+        expect(globalThis.__.ui.replay.start).toHaveBeenCalledWith({progress: 0.625})
+
+        globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 2_500}
+        await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
+    })
+
+    it('keeps a seek-button playhead while the published Replay frame is stale', async () => {
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+        globalThis.lgs.stores.replay.playing = true
+
+        globalThis.lgs.stores.replay.timeline = {currentTimeMillis: 2_500}
         await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
 
         globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 2_500}
@@ -706,7 +821,7 @@ describe('ReplayTimelinePreview', () => {
         widgetTrack.clips[0].end = widgetTrack.clips[0].end - 0.25
 
         timelineElement.currentTimeMillis = 2_500
-        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-change', {
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-clip-change', {
             bubbles: true,
             detail: {
                 tracks: editedTracks,
@@ -1023,6 +1138,66 @@ describe('ReplayTimelinePreview', () => {
 
         globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 2_000}
         await waitFor(() => expect(timelineElement.tracks.find(track => track.id === 'text-widget#one').clips[0].end).toBe(2))
+    })
+
+    it('persists a widget clip resize before a Replay projection refresh', async () => {
+        const clips = {
+            catalog: {
+                intro: {id: 'intro', slots: ['pre-replay'], defaults: {duration: 2}},
+                outro: {id: 'outro', slots: ['post-replay'], defaults: {duration: 1}},
+            },
+            start: [{id: 'intro-instance', clipId: 'intro', slot: 'pre-replay', enabled: true, params: {duration: 2}}],
+            stop: [{id: 'outro-instance', clipId: 'outro', slot: 'post-replay', enabled: true, params: {duration: 1}}],
+        }
+        const journey = setCurrentJourney({start: clips.start, stop: clips.stop})
+        globalThis.lgs.stores.replay.clips = clips
+        globalThis.lgs.settings.widgets['text-widget'] = {
+            name: 'Text',
+            icon: 'font',
+        }
+
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+        const sourceTracks = JSON.parse(JSON.stringify(timelineElement.tracks))
+        const editedTracks = sourceTracks.map(track => track.id === 'dynamic-stats-widget'
+            ? {
+                ...track,
+                clips: track.clips.map(clip => ({...clip, start: clip.start + 0.25, end: clip.end - 0.25})),
+            }
+            : track)
+        const editedClip = editedTracks.find(track => track.id === 'dynamic-stats-widget').clips[0]
+        timelineElement.tracks = editedTracks
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-clip-change', {
+            bubbles: true,
+            detail: {
+                tracks: editedTracks,
+                committed: true,
+                durationMillis: timelineElement.timeline.durationMillis,
+                rangeStartMillis: 0,
+                rangeEndMillis: timelineElement.timeline.durationMillis,
+            },
+        }))
+
+        await waitFor(() => {
+            const savedClip = lgs.stores.replay.preparationTimeline.tracks
+                .find(track => track.id === 'dynamic-stats-widget').clips[0]
+            expect(savedClip).toMatchObject({start: editedClip.start, end: editedClip.end})
+            expect(journey.replay.videoTimeline.tracks
+                .find(track => track.id === 'dynamic-stats-widget').clips[0])
+                .toMatchObject({start: editedClip.start, end: editedClip.end})
+        })
+
+        globalThis.lgs.stores.ui.widget.list.set('text-widget#new', {
+            widgetsBoard: 'video-crop-zone',
+            zIndex: 4000,
+        })
+
+        await waitFor(() => {
+            const timelineClip = timelineElement.tracks
+                .find(track => track.id === 'dynamic-stats-widget').clips[0]
+            expect(timelineClip).toMatchObject({start: editedClip.start, end: editedClip.end})
+            expect(timelineElement.tracks.some(track => track.id === 'text-widget#new')).toBe(true)
+        })
     })
 
     it('keeps a newly created track at its rendered position when a clip edit refreshes the projection', async () => {

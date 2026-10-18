@@ -16,6 +16,8 @@
 
 const REPLAY_VIDEO_TIMELINE_VERSION = 1
 const REPLAY_TRACK_ID = 'replay'
+const REPLAY_CLIP_SLOT_PRE_REPLAY = 'pre-replay'
+const REPLAY_CLIP_SLOT_POST_REPLAY = 'post-replay'
 
 /**
  * Read a finite number without treating null and empty values as zero.
@@ -30,6 +32,21 @@ const finiteNumber = value => {
 
     const number = Number(value)
     return Number.isFinite(number) ? number : null
+}
+
+/**
+ * Return a detached serializable copy of a Replay clip configuration.
+ *
+ * @param {Object|null} clips - Candidate Replay clip configuration.
+ * @returns {Object} Detached configuration or an empty object when cloning fails.
+ */
+const cloneReplayClips = clips => {
+    try {
+        return JSON.parse(JSON.stringify(clips ?? {}))
+    }
+    catch {
+        return {}
+    }
 }
 
 /**
@@ -98,6 +115,72 @@ export const resolveReplayTimelineWidgetManifest = (widgetOrder = [], previousId
     }
 
     return uniqueStrings(ids)
+}
+
+/**
+ * Convert edited Replay phase events back into the clip configuration consumed
+ * by interactive playback and deferred video export.
+ *
+ * Timeline clip bounds use seconds, while Replay clip instances store duration
+ * in `params.duration`. The timeline row remains the source of ordering and
+ * duration edits; widget rows are deliberately ignored here.
+ *
+ * @param {Object} options - Replay timeline and source clip configuration.
+ * @param {Array} options.tracks - Public timeline track state.
+ * @param {Object|null} options.clips - Current normalized Replay clips.
+ * @returns {Object|null} Updated clip configuration, or null when no Replay row exists.
+ */
+export const resolveReplayTimelineClips = ({tracks, clips} = {}) => {
+    const replayTrack = (Array.isArray(tracks) ? tracks : []).find(track => (
+        track?.id === REPLAY_TRACK_ID || track?.kind === REPLAY_TRACK_ID
+    ))
+    if (!replayTrack || !Array.isArray(replayTrack.clips)) {
+        return null
+    }
+
+    const source = cloneReplayClips(clips)
+    const sourceCatalog = source.catalog ?? source.definitions ?? {}
+    const hasConfiguredClips = (source.start?.length ?? 0) > 0 || (source.stop?.length ?? 0) > 0
+    const phaseEvents = replayTrack.clips.filter(clip => (
+        clip?.kind === REPLAY_CLIP_SLOT_PRE_REPLAY || clip?.kind === REPLAY_CLIP_SLOT_POST_REPLAY
+    ))
+    if (phaseEvents.length === 0 && !hasConfiguredClips) {
+        return null
+    }
+
+    const resolveSlot = slot => replayTrack.clips
+        .map((event, index) => ({event, index}))
+        .filter(({event}) => event?.kind === slot)
+        .sort((left, right) => {
+            const leftStart = finiteNumber(left.event.start) ?? left.index
+            const rightStart = finiteNumber(right.event.start) ?? right.index
+            return leftStart - rightStart || left.index - right.index
+        })
+        .map(({event}) => {
+            const instance = event?.metadata?.clip ?? event?.clip
+            const start = finiteNumber(event?.start)
+            const end = finiteNumber(event?.end)
+            if (!instance || typeof instance !== 'object' || start === null || end === null) {
+                return null
+            }
+
+            return {
+                ...instance,
+                slot,
+                enabled: instance.enabled !== false && event.enabled !== false,
+                params: {
+                    ...(instance.params ?? {}),
+                    duration: Math.max(0, end - start),
+                },
+            }
+        })
+        .filter(Boolean)
+
+    return {
+        catalog: sourceCatalog,
+        start: resolveSlot(REPLAY_CLIP_SLOT_PRE_REPLAY),
+        stop: resolveSlot(REPLAY_CLIP_SLOT_POST_REPLAY),
+    }
 }
 
 /**

@@ -11,33 +11,36 @@ implemented in Studio. It records the runtime flow, the
 normalized data projection, the user interface, the editor integrations, and
 the tests that protect the behavior.
 
-The delivered feature is a controlled preparation projection with editable
-widget rows and per-Journey timeline state. The sibling `@lgs1920/timeline`
-package already provides the generic multi-track editing surface. The
-remaining Studio integration work is documented in
+The delivered feature is a controlled Expert Replay preparation projection
+with editable widget rows, per-Journey timeline state, and an adapter for
+pre-Replay and post-Replay clip duration edits. Basic Replay has no Timeline.
+The sibling `@lgs1920/timeline` package provides the generic multi-track
+editing surface. The remaining Studio integration work is documented in
 [`CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md`](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md).
-It defines the canonical domain model and the path for connecting it to
-interactive playback and deterministic export.
+It defines the future canonical domain model and its full authoring workflow.
 
 This document is also the current record of the former 1.0.0 Replay Timeline
 preview scope. In linked video preparation, the timeline provides a
-non-recording preparation surface before any video capture. Basic and Expert
-use the same Replay session and timeline projection; user mode controls the
-available preparation features. The canonical Replay
-clock remains the authority for the playhead, scrubbing, playback, and
-visibility projection. Replay preparation is the only video creation flow;
-Basic and Expert both export from this Replay state.
+non-recording preparation surface before any video capture. Expert Replay uses
+the Timeline; Basic Replay does not. The canonical Replay clock remains the
+authority for the playhead, scrubbing, playback, and visibility projection.
+Replay preparation is the only video creation flow; Basic and Expert both
+export from this Replay state.
 
 The preparation surface does not encode a video. It stays outside the captured
 video board, while the surrounding Replay editor keeps ownership of settings,
 export, and cleanup. Each Journey stores a lightweight preparation snapshot in
 `journey.replay.videoTimeline`, including widget row membership, order,
-visibility, and playhead. Widget configuration and screen placement remain
-global. The snapshot restores Studio's preparation editor state; it does not
-replace the existing Replay clip configuration with a canonical domain model
-for all playback and export operations. The Timeline package remains a
-controlled, domain-neutral editor and owns neither the Replay clock nor
-persistence.
+visibility, event ranges, Replay phase clips, and playhead. The React adapter
+routes Replay-row duration edits into that Journey's existing `replay.start`
+and `replay.stop` clip instances. Interactive Expert playback and deferred
+export therefore consume the same updated clip configuration. Widget event
+ranges and track visibility are resolved by Replay's overlay authority during
+linked playback and export. Widget configuration and screen placement remain
+global. This adapter keeps the existing Replay clip configuration as the
+runtime authority; it does not introduce the future canonical timeline domain
+model. The Timeline package remains a controlled, domain-neutral editor and
+owns neither the Replay clock nor persistence.
 
 ## Runtime flow
 
@@ -186,6 +189,11 @@ the public `timeline`, `tracks`, `currentTimeMillis`, `playing`, and null
 `currentTimeMillis` path. It sets `interactive: true` and keeps a dedicated
 blank-area drag handle for the widget host.
 
+Committed clip edits are persisted from `after-clip-change`, after the drag
+transaction has finished. Playback synchronization holds a requested Replay
+timeline time while the published frame catches up, so an older frame cannot
+move the visible playhead backward during a seek or playback start.
+
 The displayed timeline surface uses an LGS-style horizontal rail and a vertical
 rail dedicated to the tracks viewport; the time ruler is excluded from vertical
 scrolling. The title column has a matching vertical rail, and both vertical
@@ -301,13 +309,16 @@ timeline-specific video flag is initialized in
 
 ## Clip editing and drawer navigation
 
-Pre-Replay and post-Replay clips remain authored by the existing
+Pre-Replay and post-Replay clips remain defined by the existing
 [`JourneyReplayClipsTab.jsx`](../../../src/components/JourneyReplay/JourneyReplayClipsTab.jsx#L553-L718).
-The Journey snapshot retains the projected timeline rows needed to restore its
-preparation state, but the existing Replay clip configuration remains the
-source for authored pre-Replay and post-Replay clips. The preview resolves
-journey clip instances first, then transient Replay clip state, while the
-settings catalog supplies definitions and icons.
+The Replay row permits resizing its pre-Replay and post-Replay clip actions.
+The React adapter converts each edited event's seconds-based bounds into
+`params.duration`, preserves the configured catalog entry, updates the owning
+Journey's clip instances, and rebuilds the projection while retaining widget
+row edits. Interactive Replay startup and deferred export then read those
+updated Journey clip instances. The Journey's timeline snapshot also retains
+the event ranges so the editor can restore them. The settings catalog remains
+the source for clip definitions and icons.
 
 Clip double-clicks have no default editing action. Web Component integrations
 listen for `lgs1920-timeline-dblclick`; the React adapter exposes the same
@@ -351,8 +362,8 @@ Web Awesome and FontAwesome remain the application UI and icon authorities.
 | --- | --- |
 | Projection phases, durations, signatures, visibility intervals, track order, fixed rows | [`replay-preparation-timeline.test.js`](../../../src/__tests__/unit/replay/replay-preparation-timeline.test.js) |
 | Layout constants, row selectors, legend transform | [`replay-timeline-utils.test.js`](../../../src/__tests__/ui/components/replay-timeline-utils.test.js) |
-| Controlled projection rendering, per-Journey edit restoration, widget registration, playhead, ordering, transport, and cleanup | [`replay-timeline-preview.test.jsx`](../../../src/__tests__/ui/components/replay-timeline-preview.test.jsx) |
-| Journey timeline snapshot normalization, deserialization, manifest, and track restoration | [`replay-timeline-persistence.test.js`](../../../src/__tests__/unit/replay/replay-timeline-persistence.test.js) |
+| Controlled projection rendering, per-Journey event restoration, Replay clip duration handoff, widget registration, playhead, ordering, transport, and cleanup | [`replay-timeline-preview.test.jsx`](../../../src/__tests__/ui/components/replay-timeline-preview.test.jsx) |
+| Journey timeline snapshot normalization, phase-event conversion, deserialization, manifest, and track restoration | [`replay-timeline-persistence.test.js`](../../../src/__tests__/unit/replay/replay-timeline-persistence.test.js) |
 | Manifest-aware widget visibility and concrete widget-instance resolution | [`replay-stats-widget-visibility.test.js`](../../../src/__tests__/ui/replay/replay-stats-widget-visibility.test.js) |
 | CSS integration, compact layout parts, drag-area geometry, and interaction selectors | [`replay-timeline-preview.test.jsx`](../../../src/__tests__/ui/components/replay-timeline-preview.test.jsx) |
 | Web Component rendering, interactions, drag lifecycle, and event suppression | [`LGS1920Timeline.test.js`](../../../../timeline/test/LGS1920Timeline.test.js) |
@@ -385,6 +396,8 @@ Delivered:
 - linked Replay preparation without starting video capture;
 - generic controlled editing surface provided by `@lgs1920/timeline` 1.4.1;
 - per-Journey widget row order, membership, visibility, and playhead persistence;
+- Replay pre/post clip duration edits applied to the owning Journey's existing clip configuration;
+- widget event visibility and Replay phase clip events consumed by linked playback/export;
 - Replay registration of timeline widgets before their first visible frame;
 - normalized multi-track projection;
 - canonical Replay phase and frame-time reuse;
@@ -396,9 +409,9 @@ Delivered:
 
 Future or not delivered by this implementation:
 
-- replacing the preparation snapshot with a canonical Studio timeline domain
-  model consumed consistently by interactive playback and export;
-- independent editable item timing as a domain command;
+- replacing the preparation snapshot and existing clip arrays with a canonical
+  Studio timeline domain model;
+- independent editable item timing and track commands in that domain model;
 - transitions, waits, media tracks, or POI tracks;
 - migrating the existing pre-Replay/post-Replay clip configuration into that
   canonical model;
