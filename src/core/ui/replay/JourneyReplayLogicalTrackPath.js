@@ -8,11 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
+import { getTerrainAlignedTrackContent } from '@Utils/cesium/trackTerrainAlignment'
 
 /**
  * Renderer-independent track-path preparation for replay.
@@ -134,7 +136,7 @@ const smoothCoordinateSegment = (coordinates, step) => {
     return result
 }
 
-const rawGeometry = track => track?.content?.geometry
+const rawGeometry = track => getTerrainAlignedTrackContent(track)?.geometry
 
 const geometrySegments = geometry => {
     if (geometry?.type === LINE_STRING && Array.isArray(geometry.coordinates)) {
@@ -166,7 +168,7 @@ export const logicalCoordinateSegmentsFromTrack = (track, options = {}) => {
     }
 
     const cacheKey = smoothingKey(track, options)
-    const content = track?.content
+    const content = getTerrainAlignedTrackContent(track)
     let cache = content ? logicalTrackContentCache.get(content) : null
     if (!cache && content) {
         cache = new Map()
@@ -191,7 +193,7 @@ export const logicalCoordinateSegmentsFromTrack = (track, options = {}) => {
  * @returns {Object|null} Logical track content.
  */
 export const logicalTrackContent = (track, options = {}) => {
-    const content = track?.content
+    const content = getTerrainAlignedTrackContent(track)
     const geometry = rawGeometry(track)
     if (!content || !geometry) {
         return content ?? null

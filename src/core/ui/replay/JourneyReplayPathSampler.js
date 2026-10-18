@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {logicalCoordinateSegmentsFromTrack, logicalTrackPathFromJourney} from './JourneyReplayLogicalTrackPath'
+import {getTerrainAlignedTrackContent} from '@Utils/cesium/trackTerrainAlignment'
 import { JourneyReplayTurfPath } from './JourneyReplayTurfPath'
 import {smoothReplayCameraAnchorSample} from './JourneyReplayCameraAnchorSmoothing'
 import {REPLAY_CAMERA_HEADING_MAX_PATH_RATIO} from './JourneyReplayCameraMotionSmoothing'
@@ -1141,12 +1142,13 @@ export class JourneyReplayPathSampler {
     ]
 
     static rawCoordinateSegmentsFromTrack = (track) => {
-        const geometry = track?.content?.geometry
+        const content = getTerrainAlignedTrackContent(track)
+        const geometry = content?.geometry
         if (!geometry) {
             return []
         }
 
-        const cachedSegments = rawCoordinateSegmentsCache.get(track?.content)
+        const cachedSegments = rawCoordinateSegmentsCache.get(content)
         if (cachedSegments) {
             return cachedSegments
         }
@@ -1159,7 +1161,7 @@ export class JourneyReplayPathSampler {
             segments = geometry.coordinates.filter(Array.isArray)
         }
 
-        rawCoordinateSegmentsCache.set(track.content, segments)
+        rawCoordinateSegmentsCache.set(content, segments)
         return segments
     }
 
@@ -1168,15 +1170,16 @@ export class JourneyReplayPathSampler {
     }
 
     static timeSegmentsFromTrack = (track) => {
-        const cacheKey = track?.content
+        const content = getTerrainAlignedTrackContent(track)
+        const cacheKey = content
         const cachedSegments = timeSegmentsCache.get(cacheKey)
         if (cachedSegments) {
             return cachedSegments
         }
 
         const rawSegments = JourneyReplayPathSampler.rawCoordinateSegmentsFromTrack(track)
-        const geometryType = track?.content?.geometry?.type
-        const times = track?.content?.properties?.coordinateProperties?.times
+        const geometryType = content?.geometry?.type
+        const times = content?.properties?.coordinateProperties?.times
         let timeCursor = 0
 
         const segments = rawSegments.map((coordinates, index) => {

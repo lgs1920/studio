@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -305,13 +305,16 @@ export const configure = (mode, options = {}) => {
         const readiness = normalizeJourneyReplayReadiness(basicReplay
             ? {...replay.readiness, enabled: false, prewarmEnabled: false}
             : options.readiness ?? replay.readiness)
-        const samplerConfigKey = call.samplerConfigurationKey({
-            journey,
-            scope,
-            trackSlug,
-            includeHiddenTracks,
-            smoothing,
-        })
+        const samplerConfigKey = [
+            call.samplerConfigurationKey({
+                journey,
+                scope,
+                trackSlug,
+                includeHiddenTracks,
+                smoothing,
+            }),
+            journey.antiCliffCorrection === true ? 'terrain-aligned' : 'source-gpx',
+        ].join('|')
         const resolvedClips = resolveJourneyReplayRuntimeClips({
             clips:         options.clips,
             settingsClips: replay.clips,

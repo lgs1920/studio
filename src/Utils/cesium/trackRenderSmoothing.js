@@ -8,11 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-03
- * Last modified: 2026-09-20
+ * Last modified: 2026-10-18
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
+import { getTerrainAlignedTrackContent } from './trackTerrainAlignment'
 
 export const TRACK_RENDER_SMOOTHING_DEFAULT = Object.freeze({
     enabled: false,
@@ -219,7 +221,8 @@ export const trackRenderSmoothingKey = (track, options = {}) => {
 }
 
 export const cachePreparedTrackRenderContent = (track, renderContent, renderSmoothing) => {
-    const bucket = getWeakMapBucket(renderedTrackContentCache, track?.content)
+    const content = getTerrainAlignedTrackContent(track)
+    const bucket = getWeakMapBucket(renderedTrackContentCache, content)
     bucket?.set(`${trackRenderSmoothingKey(track, {renderSmoothing})}:full`, renderContent)
 }
 
@@ -238,7 +241,7 @@ export const smoothCoordinateSegment = (coordinates, step) => {
 }
 
 export const getTrackRenderContent = (track, options = {}) => {
-    const content = track?.content
+    const content = getTerrainAlignedTrackContent(track)
     const geometry = content?.geometry
     const forRender = options.forRender === true
     const smoothing = effectiveTrackRenderSmoothing(track, options)
