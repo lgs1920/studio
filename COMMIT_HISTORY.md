@@ -3683,3 +3683,39 @@
 ## 2026-10-18 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/1f147b196d869b95e77cef90db2ed4aeeace12ab)
 
 - Recorded automatically from Git history.
+
+## 2026-10-18 — [`docs(journey): specify GPX trace editor`](https://github.com/lgs1920/studio/commit/9f9bf2109455113d94b99a28ed08c4b50916f54d)
+
+- Recorded automatically from Git history.
+
+## 2026-10-18 — [`fix(replay): persist timeline widget state per journey`](https://github.com/lgs1920/studio/commit/3bb16940732faba541420a46cdd88689a2938b9c)
+
+- Recorded automatically from Git history.
+
+## 2026-10-18 — [`fix(replay): wire preparation timeline to playback`](https://github.com/lgs1920/studio/commit/59db9d18819fe0e11f2dd4930351da478e2f8f18)
+
+- Recorded automatically from Git history.
+
+## 2026-10-18 — [`fix(terrain): improve anti-cliff track alignment`](https://github.com/lgs1920/studio/commit/9d09111464083f7b2c4b1cc21563f5739e0aca1c)
+
+- Recorded automatically from Git history.
+
+## 2026-10-18 — [`chore(gitnexus): add project guidance and skills`](https://github.com/lgs1920/studio/commit/985d2a285e32823cce5893543ebaad3a30a7d221)
+
+- Recorded automatically from Git history.
+
+## 2026-10-18 — [`fix(replay): keep trace visible during playback`](https://github.com/lgs1920/studio/commit/27f4ae49dd87eb8ef3359eaf422ca807abaa3cf9)
+
+- Recorded automatically from Git history.
+
+## 2026-10-18 — [`fix(replay): use aligned track geometry in playback`](https://github.com/lgs1920/studio/commit/f76323a855f2c5b8d53d0b0e35692060612271f3)
+
+- Recorded automatically from Git history.
+
+## 2026-10-19 — [`fix(intro): time POI visibility with route animation`](https://github.com/lgs1920/studio/commit/0bb0a5274d77de65ac794024d53d7c76b627b66f)
+
+- Recorded automatically from Git history.
+
+## 2026-10-19 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/2b7ca53170e9ad82f3c3db9a3561dd09f5b3ce3b)
+
+- Recorded automatically from Git history.
