@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,7 +50,8 @@ const ROUTE_SHAPE_SQUEEZE = 0.09
 const ROUTE_SHAPE_CYCLE = 5_800
 const MAX_PIXEL_RATIO = 1.35
 const POI_PROGRESS = [0.25, 0.5, 0.75]
-const POI_REVEAL_LEAD = 0.08
+const POI_REVEAL_LEAD = 0.04
+const POI_DISPLAY_DURATION = 3_000
 const POI_PROJECTION_INTERVAL = 1000 / 30
 
 const GLOW_VERTEX_SHADER = `
@@ -331,6 +332,7 @@ let animationFrame = null
 let startedAt = null
 let routeEndFrameRendered = false
 let poiReached = POI_PROGRESS.map(() => false)
+const poiHideTimers = POI_PROGRESS.map(() => null)
 let viewportWidth = 0
 let viewportHeight = 0
 let lastPoiProjectionAt = -Infinity
@@ -338,6 +340,15 @@ const projectedPoiPosition = new THREE.Vector3()
 const requestFrame = (callback) => globalThis.requestAnimationFrame?.(callback)
     ?? globalThis.setTimeout(() => callback(globalThis.performance.now()), 16)
 const cancelFrame = (frame) => globalThis.cancelAnimationFrame?.(frame) ?? globalThis.clearTimeout(frame)
+
+const clearPoiHideTimers = () => {
+    POI_PROGRESS.forEach((_, index) => {
+        if (poiHideTimers[index] !== null) {
+            globalThis.clearTimeout(poiHideTimers[index])
+            poiHideTimers[index] = null
+        }
+    })
+}
 
 /**
  * Updates the camera, renderer, and route endpoints for a viewport resize.
@@ -369,7 +380,7 @@ const resize = (width, height, pixelRatio) => {
 
     if (sizeChanged && routeEdges) {
         // Reproject both endpoints after the camera and scene scale change.
-        rebuild(routeEdges)
+        rebuild(routeEdges, false)
     }
 }
 
@@ -411,7 +422,13 @@ const projectPois = (timestamp) => {
  * @param {{previousExitEdge?: string, entryEdge?: string, exitEdge?: string}} [edgeOptions] - Edge constraints for the replacement route.
  * @returns {void}
  */
-const rebuild = (edgeOptions = {}) => {
+const rebuild = (edgeOptions = {}, resetPois = true) => {
+    if (resetPois) {
+        clearPoiHideTimers()
+        poiReached = POI_PROGRESS.map(() => false)
+        POI_PROGRESS.forEach((_, index) => self.postMessage({type: 'poi', index, revealed: false}))
+    }
+
     sceneRoot.updateMatrixWorld(true)
     const nextRoute = createRoute(routeColor, glowColor, edgeOptions)
     if (route) {
@@ -424,8 +441,6 @@ const rebuild = (edgeOptions = {}) => {
     }
     route = nextRoute
     sceneRoot.add(route.group)
-    poiReached = POI_PROGRESS.map(() => false)
-    POI_PROGRESS.forEach((_, index) => self.postMessage({type: 'poi', index, revealed: false}))
 }
 
 const applyPalette = (nextRouteColor, nextGlowColor) => {
@@ -482,6 +497,10 @@ const render = (timestamp) => {
         if ((reducedMotion || progress >= Math.max(0, poiProgress - POI_REVEAL_LEAD)) && !poiReached[index]) {
             poiReached[index] = true
             self.postMessage({type: 'poi', index, revealed: true})
+            poiHideTimers[index] = globalThis.setTimeout(() => {
+                poiHideTimers[index] = null
+                self.postMessage({type: 'poi', index, revealed: false})
+            }, POI_DISPLAY_DURATION)
         }
     })
     route.neonMaterials.forEach(material => {
@@ -553,6 +572,7 @@ self.onmessage = ({data}) => {
         else schedule()
     }
     if (data.type === 'dispose') {
+        clearPoiHideTimers()
         if (animationFrame !== null) cancelFrame(animationFrame)
         route?.group.traverse(object => object.geometry?.dispose())
         renderer?.dispose()

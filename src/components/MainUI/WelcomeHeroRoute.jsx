@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,6 +28,8 @@ const ROUTE_POIS = [
 ]
 
 const ROUTE_DURATION = 13_000
+const POI_REVEAL_LEAD = 0.04
+const POI_DISPLAY_DURATION = 3_000
 const ROUTE_CYCLE_FADE_DURATION = 180
 const ROUTE_CYCLE_MIN_TRACE_OPACITY = 0.72
 const ROUTE_CYCLE_END_HOLD_DURATION = 50
@@ -284,7 +286,6 @@ const setupRouteWorker = (layer, canvas, onError) => {
     }, {threshold: 0.01})
     intersectionObserver.observe(layer)
     const paletteObserver = new MutationObserver(() => {
-        layer.querySelectorAll('[data-route-poi]').forEach(poi => poi.classList.remove('is-revealed'))
         worker.postMessage({type: 'palette', ...getPalette()})
     })
     paletteObserver.observe(document.documentElement, {attributes: true, attributeFilter: ['class', 'data-brand-color', 'data-season-theme']})
@@ -346,6 +347,33 @@ const setupRouteAnimation = (layer, canvas, modules) => {
     let isVisible = true
     const dimensions = {width: 0, height: 0}
     const worldPosition = new THREE.Vector3()
+    const poiReached = ROUTE_POIS.map(() => false)
+    const poiHideTimers = new Map()
+
+    const resetPoiVisibility = () => {
+        ROUTE_POIS.forEach(({index}) => {
+            const timer = poiHideTimers.get(index)
+            if (timer !== undefined) {
+                window.clearTimeout(timer)
+                poiHideTimers.delete(index)
+            }
+
+            layer.querySelectorAll('[data-route-poi-index]')[index]?.classList.remove('is-revealed')
+            poiReached[index] = false
+        })
+    }
+
+    const revealPoi = (index, element) => {
+        if (!element) {
+            return
+        }
+
+        element.classList.add('is-revealed')
+        poiHideTimers.set(index, window.setTimeout(() => {
+            element.classList.remove('is-revealed')
+            poiHideTimers.delete(index)
+        }, POI_DISPLAY_DURATION))
+    }
 
     const createGlowMaterial = (color, size) => new THREE.ShaderMaterial({
         blending: THREE.AdditiveBlending,
@@ -580,7 +608,11 @@ const setupRouteAnimation = (layer, canvas, modules) => {
      * @param {{previousExitEdge?: string, entryEdge?: string, exitEdge?: string}} [edgeOptions] - Edge constraints for the replacement route.
      * @returns {void}
      */
-    const rebuildRoute = (edgeOptions = {}) => {
+    const rebuildRoute = (edgeOptions = {}, resetPois = true) => {
+        if (resetPois) {
+            resetPoiVisibility()
+        }
+
         sceneRoot.updateMatrixWorld(true)
         const nextRouteState = createRouteState(edgeOptions)
         disposeRouteState()
@@ -621,7 +653,7 @@ const setupRouteAnimation = (layer, canvas, modules) => {
 
         if (sizeChanged && routeEdges) {
             // Reproject both endpoints after the camera and scene scale change.
-            rebuildRoute(routeEdges)
+            rebuildRoute(routeEdges, false)
             render(window.performance.now())
         }
     }
@@ -668,6 +700,14 @@ const setupRouteAnimation = (layer, canvas, modules) => {
         const cycleFade = Math.max(0, Math.min(1, elapsed / ROUTE_CYCLE_FADE_DURATION, (ROUTE_DURATION - elapsed) / ROUTE_CYCLE_FADE_DURATION))
         const cycleOpacity = reducedMotionQuery.matches ? 1 : cycleFade
         const traceOpacity = ROUTE_CYCLE_MIN_TRACE_OPACITY + (1 - ROUTE_CYCLE_MIN_TRACE_OPACITY) * cycleOpacity
+        routeState.poiItems.forEach(({element}, index) => {
+            const revealAt = Math.max(0, ROUTE_POIS[index].point - POI_REVEAL_LEAD)
+
+            if (!poiReached[index] && (reducedMotionQuery.matches || progress >= revealAt)) {
+                poiReached[index] = true
+                revealPoi(index, element)
+            }
+        })
         routeState.neonMaterials.forEach(material => {
             material.uniforms.uProgress.value = progress
             material.uniforms.uCycleOpacity.value = traceOpacity
@@ -792,6 +832,7 @@ const setupRouteAnimation = (layer, canvas, modules) => {
         paletteObserver.disconnect()
         document.removeEventListener('visibilitychange', restart)
         reducedMotionQuery.removeEventListener('change', restart)
+        resetPoiVisibility()
         disposeRouteState()
         renderer.dispose()
         renderer.forceContextLoss?.()

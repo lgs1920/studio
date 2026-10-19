@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,6 +28,7 @@ const routeFiles = [
     resolve('src/components/MainUI/WelcomeHeroRoute.worker.js'),
 ]
 const styleSource = readFileSync(resolve('src/components/MainUI/style.css'), 'utf8')
+const startupStyleSource = readFileSync(resolve('src/assets/css/startup-shell.css'), 'utf8')
 
 describe('welcome hero route edge fade', () => {
     it('fades the route line at both ends in every renderer', () => {
@@ -58,7 +59,10 @@ describe('welcome hero route edge fade', () => {
 
         expect(styleSource).toContain('.welcome-hero-route-canvas {\n    display: block;\n    opacity: .86;')
         expect(styleSource).toContain('@media (max-width: 720px) {\n    .welcome-hero-route-canvas {\n        opacity: .86;')
-        expect(styleSource).toContain(".welcome-hero-route[data-render-mode='fallback'] .welcome-hero-poi")
+        expect(styleSource).toContain('.welcome-hero-poi.is-revealed.is-positioned')
+        expect(styleSource).not.toContain(".welcome-hero-route[data-render-mode='fallback'] .welcome-hero-poi")
+        expect(startupStyleSource).toContain('& .welcome-hero-poi.is-revealed.is-positioned')
+        expect(startupStyleSource).not.toContain("& .welcome-hero-route[data-render-mode='fallback'] .welcome-hero-poi")
         expect(styleSource).not.toContain(".welcome-hero-route:not([data-render-mode='worker']) .welcome-hero-poi")
         expect(styleSource.match(/filter: sepia\(0\.2\) saturate\(0\.8\)/g)).toHaveLength(2)
     })
