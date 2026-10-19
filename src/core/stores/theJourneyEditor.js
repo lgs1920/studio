@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-08
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,7 @@ export const theJourneyEditor = {
     allPOIs: true,
     longTask: false,
     showPOIsFilter: false,
+    fixPathEditorOpen: false,
     tab: false,
 }
 
@@ -51,5 +52,6 @@ export const resetJourneyEditor = $editor => {
     $editor.allPOIs = true
     $editor.longTask = false
     $editor.showPOIsFilter = false
+    $editor.fixPathEditorOpen = false
     $editor.tab = false
 }

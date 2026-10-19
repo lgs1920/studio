@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-19
- * Last modified: 2026-10-18
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,19 +23,6 @@ import { proxy } from 'valtio'
 
 const trackDataMock = vi.hoisted(() => vi.fn())
 const elevationProfileMock = vi.hoisted(() => vi.fn())
-const terrainCheckMock = vi.hoisted(() => vi.fn(async (_track, {onProgress} = {}) => {
-    onProgress?.(100)
-    return {status: 'needs-correction', detectedPoints: 1}
-}))
-const terrainPrepareMock = vi.hoisted(() => vi.fn(async (_track, {onProgress} = {}) => {
-    onProgress?.(100)
-    return {changed: false, content: _track?.content}
-}))
-const terrainProgressMarkerMock = vi.hoisted(() => ({
-    clear: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-}))
 
 vi.mock('@Components/MainUI/LGSScrollbars', () => ({LGSScrollbars: ({children}) => <div>{children}</div>}))
 vi.mock('@Components/MainUI/MapPOI/MapPOIEditListActions', () => ({MapPOIEditListActions: () => null}))
@@ -84,16 +71,8 @@ vi.mock('@Editor/Utils', () => ({
     },
 }))
 vi.mock('@Utils/cesium/TrackUtils', () => ({TrackUtils: {
-    getTrackTerrainAlignmentWidthMeters: vi.fn(() => 2),
     updatePOIsVisibility: vi.fn(),
 }}))
-vi.mock('@Utils/cesium/trackTerrainAlignment', () => ({
-    checkTrackTerrainAlignment: terrainCheckMock,
-    prepareTerrainAlignedTrackContent: terrainPrepareMock,
-}))
-vi.mock('@Utils/cesium/trackTerrainProgressMarker', () => ({
-    createTrackTerrainAlignmentProgressMarker: terrainProgressMarkerMock.create,
-}))
 vi.mock('@Utils/cesium/elevationCoordinateUtils', () => ({
     applyElevationCoordinatesToFeature: vi.fn(),
     flattenFeatureGeometryCoordinates: vi.fn(() => []),
@@ -159,26 +138,9 @@ describe('JourneySettings focus control', () => {
     beforeEach(() => {
         trackDataMock.mockReset()
         elevationProfileMock.mockReset()
-        terrainCheckMock.mockReset()
-        terrainCheckMock.mockImplementation(async (_track, {onLocation, onProgress} = {}) => {
-            onLocation?.([0.01, 0.02, 800])
-            onProgress?.(100)
-            return {status: 'needs-correction', detectedPoints: 1}
-        })
-        terrainProgressMarkerMock.clear.mockReset()
-        terrainProgressMarkerMock.create.mockReset()
-        terrainProgressMarkerMock.update.mockReset()
-        terrainProgressMarkerMock.create.mockReturnValue({
-            clear:  terrainProgressMarkerMock.clear,
-            update: terrainProgressMarkerMock.update,
-        })
-        terrainPrepareMock.mockReset()
-        terrainPrepareMock.mockImplementation(async (track, {onProgress} = {}) => {
-            onProgress?.(100)
-            return {changed: false, content: track?.content}
-        })
         const journey = {
-            antiCliffCorrection: false,
+            fixPathEnabled: false,
+            fixPathCorrectionData: null,
             activity:       'hiking',
             description:    '',
             elevationServer: 'none',
@@ -278,235 +240,58 @@ describe('JourneySettings focus control', () => {
         }))
         expect(screen.getByText('Style', {exact: true})).toBeTruthy()
         expect(screen.getByText('Details', {exact: true})).toBeTruthy()
-        expect(screen.getByRole('checkbox', {name: /Anti-cliff correction/}).checked).toBe(false)
-        expect(screen.getByRole('checkbox', {name: /Anti-cliff correction/}).parentElement.dataset.widthAuto).toBe('true')
+        expect(screen.getByRole('checkbox', {name: /Apply path corrections/}).checked).toBe(false)
+        expect(screen.getByRole('checkbox', {name: /Apply path corrections/}).disabled).toBe(true)
+        expect(screen.getByRole('button', {name: /Fix Path/})).toBeTruthy()
+        expect(container.querySelector('.lgs--journey-fix-path-setting')).toBeTruthy()
         expect(container.querySelector('.lgs--journey-activity-select')).toBeTruthy()
         expect(container.querySelector('.lgs--journey-details-card')).toBeTruthy()
         expect(container.querySelector('.lgs--journey-edit-details .lgs--journey-details-card')).toBeNull()
     })
 
-    it('persists anti-cliff activation and redraws the Journey after correction', async () => {
-        const redraw = vi.fn(async () => {})
-        const track = {content: {geometry: {coordinates: [[0, 0], [1, 1]], type: 'LineString'}}}
-        track.slug = 'track-1'
-        globalThis.lgs.settings.layers = {terrain: 'terrain-a'}
-        const persist = vi.fn(async () => {})
-        const updated = {draw: redraw, persistToDatabase: persist, tracks: new Map([['track-1', track]])}
-        Utils.updateJourney.mockResolvedValue(updated)
+    it('opens the interactive editor from the Fix Path action', () => {
         render(<JourneySettings/>)
 
-        const toggle = screen.getByRole('checkbox', {name: /Anti-cliff correction/})
-        expect(toggle.checked).toBe(false)
-        fireEvent.click(toggle)
+        fireEvent.click(screen.getByRole('button', {name: /Fix Path/}))
 
-        await waitFor(() => expect(Utils.updateJourney).toHaveBeenCalledWith(
-            UPDATE_JOURNEY_SILENTLY,
-            {focus: false},
-        ))
-        await waitFor(() => expect(redraw).toHaveBeenCalledWith({
-            action:           DRAWING_FROM_UI,
-            mode:             NO_FOCUS,
-        }))
-        expect(terrainPrepareMock).toHaveBeenCalledWith(track, expect.objectContaining({
-            traceWidthMeters: 2,
-            onProgress:       expect.any(Function),
-        }))
-        expect(terrainCheckMock).toHaveBeenCalledWith(track, expect.objectContaining({
-            traceWidthMeters: 2,
-            onProgress:       expect.any(Function),
-        }))
-        expect(screen.queryByRole('progressbar')).toBeNull()
-        expect(globalThis.lgs.stores.journeyEditor.journey.antiCliffCorrection).toBe(true)
-        expect(updated.antiCliffCorrectionData).toEqual({terrainId: 'terrain-a', tracks: {'track-1': []}})
-        expect(persist).toHaveBeenCalledOnce()
+        expect(globalThis.lgs.stores.journeyEditor.fixPathEditorOpen).toBe(true)
     })
 
-    it('shows correction progress without a visible percentage and clears it afterwards', async () => {
-        let finishSaving
-        let finishCorrection
-        const track = {content: {geometry: {coordinates: [[0, 0], [1, 1]], type: 'LineString'}}}
-        const redraw = vi.fn(async () => {})
-        const updated = {draw: redraw, tracks: new Map([['track-1', track]])}
-        Utils.updateJourney.mockImplementation(() => new Promise(resolve => {
-            finishSaving = () => resolve(updated)
-        }))
-        terrainPrepareMock.mockImplementation(async (_track, {onProgress} = {}) => {
-            onProgress?.(37)
-            await new Promise(resolve => {
-                finishCorrection = resolve
-            })
-            return {changed: true}
-        })
-
-        render(<JourneySettings/>)
-        const toggle = screen.getByRole('checkbox', {name: /Anti-cliff correction/})
-        fireEvent.click(toggle)
-
-        const progress = await screen.findByRole('progressbar', {name: /Anti-cliff check and correction progress/})
-        expect(toggle.parentElement.dataset.widthAuto).toBe('false')
-        expect(progress.closest('.lgs--journey-antcliff-setting').classList.contains('is-processing')).toBe(true)
-        const reset = screen.getByRole('button', {name: 'Reset anti-cliff correction'})
-        expect(progress.parentElement.nextElementSibling).toBe(reset)
-        expect(reset.parentElement.lastElementChild).toBe(reset)
-        expect(progress).toBeTruthy()
-        expect(progress.getAttribute('aria-label')).not.toContain('%')
-        await waitFor(() => expect(Utils.updateJourney).toHaveBeenCalled())
-        expect(Number(progress.getAttribute('aria-valuenow'))).toBe(0)
-        expect(toggle.disabled).toBe(true)
-        finishSaving()
-        await waitFor(() => expect(Number(progress.getAttribute('aria-valuenow'))).toBe(56))
-        expect(screen.queryByText('56%', {exact: true})).toBeNull()
-        expect(terrainProgressMarkerMock.create).toHaveBeenCalled()
-        expect(terrainProgressMarkerMock.update).toHaveBeenCalledWith([0.01, 0.02, 800])
-        expect(screen.getByRole('checkbox', {name: /Anti-cliff correction/}).disabled).toBe(false)
-        finishCorrection()
-        await waitFor(() => expect(screen.queryByRole('progressbar')).toBeNull())
-        expect(terrainProgressMarkerMock.clear).toHaveBeenCalledOnce()
-        expect(redraw).toHaveBeenCalledWith(expect.objectContaining({action: DRAWING_FROM_UI, mode: NO_FOCUS}))
-    })
-
-    it('keeps the reset button at the row end without progress and clears saved corrections', async () => {
-        const savedCorrectionData = {terrainId: 'terrain-a', tracks: {'track-1': [{coordinateIndex: 1}]}}
+    it('persists the global correction switch and redraws the Journey', async () => {
         const redraw = vi.fn(async () => {})
         const updated = {draw: redraw, tracks: new Map()}
         const journey = globalThis.lgs.stores.journeyEditor.journey
-        journey.antiCliffCorrection = true
-        journey.antiCliffCorrectionData = savedCorrectionData
+        journey.fixPathCorrectionData = {revision: 1, tracks: {'track-1': [{id: 'correction-a'}]}}
         Utils.updateJourney.mockResolvedValue(updated)
         render(<JourneySettings/>)
 
-        const row = document.querySelector('.lgs--journey-antcliff-setting')
-        const reset = screen.getByRole('button', {name: 'Reset anti-cliff correction'})
-        expect(screen.queryByRole('progressbar')).toBeNull()
-        expect(row.lastElementChild).toBe(reset)
+        const toggle = screen.getByRole('checkbox', {name: /Apply path corrections/})
+        expect(toggle.checked).toBe(false)
+        expect(toggle.disabled).toBe(false)
+        fireEvent.click(toggle)
 
-        fireEvent.click(reset)
-
+        await waitFor(() => expect(Utils.updateJourney).toHaveBeenCalledWith(UPDATE_JOURNEY_SILENTLY, {focus: false}))
         await waitFor(() => expect(redraw).toHaveBeenCalledWith({
             action: DRAWING_FROM_UI,
-            mode:   NO_FOCUS,
+            mode: NO_FOCUS,
         }))
-        expect(Utils.updateJourney).toHaveBeenCalledWith(UPDATE_JOURNEY_SILENTLY, {focus: false})
-        expect(screen.getByRole('checkbox', {name: /Anti-cliff correction/}).checked).toBe(false)
-        expect(journey.antiCliffCorrection).toBe(false)
-        expect(journey.antiCliffCorrectionData).toBeNull()
-        expect(row.lastElementChild).toBe(reset)
+        expect(journey.fixPathEnabled).toBe(true)
+        expect(globalThis.lgs.theJourney.fixPathEnabled).toBe(true)
     })
 
-    it('cancels an active correction when reset is clicked and prevents stale corrected redraws', async () => {
-        let finishCorrection
-        const track = {content: {geometry: {coordinates: [[0, 0], [1, 1]], type: 'LineString'}}, slug: 'track-1'}
-        const alignedDraw = vi.fn(async () => {})
-        const rawDraw = vi.fn(async () => {})
-        const alignedJourney = {draw: alignedDraw, tracks: new Map([['track-1', track]])}
-        const rawJourney = {draw: rawDraw, tracks: new Map([['track-1', track]])}
-        Utils.updateJourney.mockResolvedValueOnce(alignedJourney).mockResolvedValueOnce(rawJourney)
-        terrainPrepareMock.mockImplementation(async (_track, {onProgress} = {}) => {
-            onProgress?.(37)
-            await new Promise(resolve => {
-                finishCorrection = resolve
-            })
-            return {changed: true}
-        })
-        globalThis.lgs.settings.layers = {terrain: 'terrain-a'}
-        globalThis.lgs.stores.journeyEditor.journey.tracks.set('track-1', track)
+    it('restores the previous correction switch when persistence fails', async () => {
+        const journey = globalThis.lgs.stores.journeyEditor.journey
+        journey.fixPathCorrectionData = {revision: 1, tracks: {'track-1': [{id: 'correction-a'}]}}
+        Utils.updateJourney.mockRejectedValue(new Error('database unavailable'))
         render(<JourneySettings/>)
 
-        fireEvent.click(screen.getByRole('checkbox', {name: /Anti-cliff correction/}))
-        await screen.findByRole('progressbar', {name: /Anti-cliff check and correction progress/})
-        await waitFor(() => expect(terrainPrepareMock).toHaveBeenCalled())
-        fireEvent.click(screen.getByRole('button', {name: 'Reset anti-cliff correction'}))
-
-        await waitFor(() => expect(rawDraw).toHaveBeenCalledWith({
-            action: DRAWING_FROM_UI,
-            mode:   NO_FOCUS,
-        }))
-        expect(globalThis.lgs.stores.journeyEditor.journey.antiCliffCorrection).toBe(false)
-        expect(globalThis.lgs.stores.journeyEditor.journey.antiCliffCorrectionData).toBeNull()
-        expect(screen.queryByRole('progressbar')).toBeNull()
-        finishCorrection()
-        await waitFor(() => expect(alignedDraw).not.toHaveBeenCalled())
-        expect(terrainProgressMarkerMock.clear).toHaveBeenCalled()
-    })
-
-    it('allows disabling correction while its progress is running and skips the stale aligned redraw', async () => {
-        let finishCorrection
-        const track = {content: {geometry: {coordinates: [[0, 0], [1, 1]], type: 'LineString'}}}
-        const alignedDraw = vi.fn(async () => {})
-        const rawDraw = vi.fn(async () => {})
-        const alignedJourney = {draw: alignedDraw, tracks: new Map([['track-1', track]])}
-        const rawJourney = {draw: rawDraw, tracks: new Map([['track-1', track]])}
-        Utils.updateJourney
-            .mockResolvedValueOnce(alignedJourney)
-            .mockResolvedValueOnce(rawJourney)
-        terrainPrepareMock.mockImplementation(async (_track, {onProgress} = {}) => {
-            onProgress?.(37)
-            await new Promise(resolve => {
-                finishCorrection = resolve
-            })
-            return {changed: true}
-        })
-
-        render(<JourneySettings/>)
-        const toggle = screen.getByRole('checkbox', {name: /Anti-cliff correction/})
-        fireEvent.click(toggle)
-        const progress = await screen.findByRole('progressbar', {name: /Anti-cliff check and correction progress/})
-        await waitFor(() => expect(Number(progress.getAttribute('aria-valuenow'))).toBe(56))
-        expect(screen.getByRole('checkbox', {name: /Anti-cliff correction/}).disabled).toBe(false)
-
-        fireEvent.click(screen.getByRole('checkbox', {name: /Anti-cliff correction/}))
-        await waitFor(() => expect(rawDraw).toHaveBeenCalledWith(expect.objectContaining({action: DRAWING_FROM_UI, mode: NO_FOCUS})))
-        expect(terrainProgressMarkerMock.clear).toHaveBeenCalled()
-        finishCorrection()
-        await waitFor(() => expect(screen.queryByRole('progressbar')).toBeNull())
-
-        expect(alignedDraw).not.toHaveBeenCalled()
-        expect(globalThis.lgs.stores.journeyEditor.journey.antiCliffCorrection).toBe(false)
-    })
-
-    it('always shows the switch and skips correction work when the on-demand check is clean', async () => {
-        const redraw = vi.fn(async () => {})
-        const track = {content: {geometry: {coordinates: [[0, 0], [1, 1]], type: 'LineString'}}}
-        const updated = {draw: redraw, tracks: new Map([['track-1', track]])}
-        terrainCheckMock.mockResolvedValue({status: 'clean', detectedPoints: 0})
-        Utils.updateJourney.mockResolvedValue(updated)
-        render(<JourneySettings/>)
-
-        const toggle = screen.getByRole('checkbox', {name: /Anti-cliff correction/})
+        const toggle = screen.getByRole('checkbox', {name: /Apply path corrections/})
         fireEvent.click(toggle)
 
-        await waitFor(() => expect(redraw).toHaveBeenCalledWith(expect.objectContaining({action: DRAWING_FROM_UI, mode: NO_FOCUS})))
-        expect(terrainCheckMock).toHaveBeenCalledWith(track, expect.objectContaining({onProgress: expect.any(Function)}))
-        expect(terrainPrepareMock).not.toHaveBeenCalled()
-    })
-
-    it('preserves saved corrections and the enabled switch while terrain identity is unavailable', async () => {
-        const savedCorrectionData = {terrainId: 'terrain-a', tracks: {'track-1': []}}
-        const track = {content: {geometry: {coordinates: [[0, 0], [1, 1]], type: 'LineString'}}}
-        const persist = vi.fn(async () => {})
-        const redraw = vi.fn(async () => {})
-        const updated = {
-            antiCliffCorrection: true,
-            antiCliffCorrectionData: savedCorrectionData,
-            draw: redraw,
-            persistToDatabase: persist,
-            tracks: new Map([['track-1', track]]),
-        }
-        globalThis.lgs.settings.layers = {terrain: null}
-        globalThis.lgs.stores.journeyEditor.journey.antiCliffCorrectionData = savedCorrectionData
-        terrainCheckMock.mockResolvedValue({status: 'unavailable', detectedPoints: 0})
-        Utils.updateJourney.mockResolvedValue(updated)
-        render(<JourneySettings/>)
-
-        const toggle = screen.getByRole('checkbox', {name: /Anti-cliff correction/})
-        fireEvent.click(toggle)
-
-        await waitFor(() => expect(redraw).toHaveBeenCalled())
-        expect(globalThis.lgs.stores.journeyEditor.journey.antiCliffCorrection).toBe(true)
-        expect(globalThis.lgs.stores.journeyEditor.journey.antiCliffCorrectionData).toEqual(savedCorrectionData)
-        expect(updated.antiCliffCorrectionData).toBe(savedCorrectionData)
-        expect(terrainPrepareMock).not.toHaveBeenCalled()
-        expect(persist).not.toHaveBeenCalled()
+        await waitFor(() => expect(Utils.updateJourney).toHaveBeenCalledWith(UPDATE_JOURNEY_SILENTLY, {focus: false}))
+        await waitFor(() => expect(toggle.checked).toBe(false))
+        expect(journey.fixPathEnabled).toBe(false)
+        expect(globalThis.lgs.theJourney.fixPathEnabled).toBe(false)
     })
 
     it('stops the running orbit and focuses the journey without relaunching rotation', async () => {

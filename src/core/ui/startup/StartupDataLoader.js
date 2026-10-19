@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -429,7 +429,7 @@ export class StartupDataLoader {
         try {
             await this.#waitForActiveJourney()
             if (!this.#client) {
-                const journeys = TrackUtils.readRemainingFromDB()
+                const journeys = await TrackUtils.readRemainingFromDB()
                 lgs.stores.main.journeysReady = true
                 return journeys
             }
@@ -462,7 +462,7 @@ export class StartupDataLoader {
         }
         catch (error) {
             console.warn('[StartupDataLoader] Remaining journey worker load failed, using the legacy loader:', error)
-            const journeys = TrackUtils.readRemainingFromDB()
+            const journeys = await TrackUtils.readRemainingFromDB()
             lgs.stores.main.journeysReady = true
             return journeys
         }

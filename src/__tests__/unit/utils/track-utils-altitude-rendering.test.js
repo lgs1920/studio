@@ -8,17 +8,16 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-08
- * Last modified: 2026-10-18
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Cartographic, ClassificationType, GeoJsonDataSource, GeoJsonPrimitive, HeightReference } from 'cesium'
+import { ClassificationType, GeoJsonPrimitive, HeightReference } from 'cesium'
 import { TrackUtils } from '@Utils/cesium/TrackUtils'
 import { TerrainUtils } from '@Utils/cesium/TerrainUtils'
-import { prepareTerrainAlignedTrackContent } from '@Utils/cesium/trackTerrainAlignment'
 
 describe('TrackUtils track terrain rendering', () => {
     const previousLgs = globalThis.lgs
@@ -67,7 +66,6 @@ describe('TrackUtils track terrain rendering', () => {
 
         globalThis.lgs = {
             settings: {layers: {terrain: 'terrain-a'}},
-            theJourney: {antiCliffCorrection: true, slug: 'journey-track-gpx-altitude-entities'},
             viewer: {
                 terrainProvider: {availability: {}},
                 dataSources: {
@@ -117,203 +115,6 @@ describe('TrackUtils track terrain rendering', () => {
             expect.objectContaining({clampToGround: true}),
         )
         expect(TerrainUtils.sampleTerrainHeights).not.toHaveBeenCalled()
-    })
-
-    it('draws a distinct diagnostic overlay with altitude errors for terrain mismatches that cannot be aligned', async () => {
-        const entitiesById = new Map()
-        const source = {name: 'track-terrain-alignment-diagnostic'}
-        source.entities = {
-            get values() {
-                return Array.from(entitiesById.values())
-            },
-            getById: entityId => entitiesById.get(entityId),
-            add: entity => {
-                entitiesById.set(entity.id, entity)
-                return entity
-            },
-            remove: entity => entitiesById.delete(entity.id),
-            removeAll: () => entitiesById.clear(),
-        }
-        source.load = vi.fn(async () => {
-            source.entities.removeAll()
-            source.entities.add({id: 'track-line', polyline: {positions: ['original']}})
-        })
-        globalThis.lgs = {
-            viewer: {
-                terrainProvider: {},
-                dataSources: {
-                    contains:  candidate => candidate === source,
-                    getByName: name => name === source.name ? [source] : [],
-                },
-                scene: {
-                    requestRender: vi.fn(),
-                },
-            },
-        }
-
-        vi.spyOn(TerrainUtils, 'sampleTerrainHeights').mockImplementation(async positions => positions.map(position => ({
-            ...position,
-            height: 100,
-        })))
-        vi.spyOn(TrackUtils, 'createTrackMaterial').mockReturnValue({})
-        vi.spyOn(TrackUtils, 'installTrackWidthUpdater').mockImplementation(() => {})
-
-        const track = {
-            parent: 'journey-track-terrain-alignment-diagnostic',
-            slug:    source.name,
-            title:   'Unresolved terrain track',
-            visible: true,
-            content: {
-                type:       'Feature',
-                properties: {},
-                geometry:   {
-                    type:        'LineString',
-                    coordinates: [[0, 0, 200], [0, 0.00005, 200], [0, 0.0001, 200]],
-                },
-            },
-        }
-        globalThis.lgs.settings = {layers: {terrain: 'terrain-a'}}
-        globalThis.lgs.theJourney = {antiCliffCorrection: true, slug: track.parent}
-        await prepareTerrainAlignedTrackContent(track)
-        await TrackUtils.drawOnce(track)
-
-        const diagnostics = source.entities.values.filter(entity => entity.id.includes('#lgs-track-terrain-diagnostic#'))
-        expect(diagnostics).toHaveLength(1)
-        expect(diagnostics.every(entity => entity.point?.color?.green > 0.8)).toBe(true)
-        expect(diagnostics.every(entity => !entity.polyline)).toBe(true)
-        expect(diagnostics[0].description).toContain('3 consecutive track point(s)')
-        expect(diagnostics[0].description).toContain('no-matching-terrain')
-        expect(diagnostics[0].description).toContain('maximum terrain/GPX border error: 100.0 m')
-    })
-
-    it('renders corrected XY coordinates and recalculates metrics from the aligned geometry', async () => {
-        const entitiesById = new Map()
-        const source = {name: 'track-terrain-aligned-render'}
-        source.entities = {
-            get values() {
-                return Array.from(entitiesById.values())
-            },
-            getById: entityId => entitiesById.get(entityId),
-            add: entity => {
-                entitiesById.set(entity.id, entity)
-                return entity
-            },
-            remove: entity => entitiesById.delete(entity.id),
-            removeAll: () => entitiesById.clear(),
-        }
-        source.load = vi.fn(async content => {
-            source.entities.removeAll()
-            source.entities.add({id: 'track-line', polyline: {positions: content.geometry.coordinates}})
-        })
-        globalThis.lgs = {
-            settings: {layers: {terrain: 'terrain-a'}},
-            theJourney: {antiCliffCorrection: true, slug: 'journey-track-terrain-aligned-render'},
-            viewer: {
-                terrainProvider: {},
-                dataSources: {
-                    contains:  candidate => candidate === source,
-                    getByName: name => name === source.name ? [source] : [],
-                },
-                scene: {requestRender: vi.fn()},
-            },
-        }
-        vi.spyOn(TerrainUtils, 'sampleTerrainHeights').mockImplementation(async positions => positions.map(position => ({
-            ...position,
-            height: position.latitude < 0 ? 100 : 200,
-        })))
-        vi.spyOn(TrackUtils, 'createTrackMaterial').mockReturnValue({})
-        vi.spyOn(TrackUtils, 'installTrackWidthUpdater').mockImplementation(() => {})
-
-        const coordinates = [[0, 0, 200], [0.001, 0, 200], [0.002, 0, 200]]
-        const track = {
-            parent:  'journey-track-terrain-aligned-render',
-            slug:    source.name,
-            title:   'Terrain-aligned track',
-            visible: true,
-            content: {
-                type:       'Feature',
-                properties: {},
-                geometry:   {type: 'LineString', coordinates},
-            },
-            calculateMetrics: vi.fn(),
-        }
-
-        await prepareTerrainAlignedTrackContent(track)
-        await TrackUtils.drawOnce(track)
-
-        const loadedCoordinates = source.load.mock.calls[0][0].geometry.coordinates
-        expect(loadedCoordinates[1][1]).toBeGreaterThan(0)
-        expect(track.calculateMetrics).toHaveBeenCalledWith({content: expect.objectContaining({geometry: {type: 'LineString', coordinates: loadedCoordinates}})})
-        expect(track.content.geometry.coordinates).toEqual(coordinates)
-    })
-
-    it('loads a complete multi-point cliff correction into real Cesium polyline positions', async () => {
-        const earthRadius = 6378137
-        const source = new GeoJsonDataSource('track-real-cesium-cliff')
-        globalThis.lgs = {
-            settings: {layers: {terrain: 'terrain-a'}},
-            theJourney: {antiCliffCorrection: true, slug: 'journey-real-cesium-cliff'},
-            viewer: {
-                terrainProvider: {},
-                dataSources: {
-                    contains: candidate => candidate === source,
-                    getByName: name => name === 'track-real-cesium-cliff' ? [source] : [],
-                },
-                scene: {requestRender: vi.fn()},
-            },
-        }
-        vi.spyOn(TerrainUtils, 'sampleTerrainHeights').mockImplementation(async positions => positions.map(position => {
-            const east = position.longitude * earthRadius
-            const north = position.latitude * earthRadius
-            return {
-                ...position,
-                height: north < 50 || north > 79 || east >= 12 ? 200 : 200 - Math.min(40, (north - 45) * 8 / 5.5),
-            }
-        }))
-        vi.spyOn(TrackUtils, 'installTrackWidthUpdater').mockImplementation(() => {})
-        const coordinates = Array.from({length: 33}, (_, index) => [0, index * 0.00005, 200])
-        const track = {
-            parent: 'journey-real-cesium-cliff',
-            slug:   'track-real-cesium-cliff',
-            visible: true,
-            renderStyle: {widthUnit: 'meters', meterWidth: 2},
-            content: {type: 'Feature', properties: {}, geometry: {type: 'LineString', coordinates}},
-        }
-
-        await prepareTerrainAlignedTrackContent(track)
-        await TrackUtils.drawOnce(track)
-
-        const aligned = source.__lgsTrackAlignedContent.geometry.coordinates
-        const basePolyline = source.entities.values.find(entity => entity.polyline && !entity.id.includes('#lgs-track-style#'))
-        const positions = basePolyline.polyline.positions.getValue()
-        expect(positions).toHaveLength(coordinates.length)
-        for (let index = 9; index <= 14; index += 1) {
-            const rendered = Cartographic.fromCartesian(positions[index])
-            expect(rendered.longitude * earthRadius).toBeGreaterThan(13)
-            expect(rendered.longitude * 180 / Math.PI).toBeCloseTo(aligned[index][0], 10)
-        }
-        expect(basePolyline.polyline.clampToGround.getValue()).toBe(true)
-        expect(source.entities.values.some(entity => entity.id.includes('#lgs-track-terrain-diagnostic#'))).toBe(false)
-        expect(source.__lgsTrackTerrainAlignmentSummary.statistics.detectedPoints).toBe(6)
-        expect(track.content.geometry.coordinates).toEqual(coordinates)
-    })
-
-    it('includes the longitudinal break and vertical reference in unresolved map diagnostics', () => {
-        const source = new GeoJsonDataSource('track-cliff-description')
-
-        TrackUtils.updateTerrainAlignmentDiagnostics(source, {slug: source.name}, [{
-            segmentIndex: 0,
-            coordinateIndex: 1,
-            coordinate: [0, 0, 200],
-            reason: 'correction-rejected-for-continuity',
-            borderErrorsMeters: [-45, -50],
-            terrainBreakMeters: 139,
-            heightReferenceOffsetMeters: 51.9,
-        }])
-
-        const description = source.entities.values[0].description.getValue()
-        expect(description).toContain('maximum longitudinal residual break: 139.0 m')
-        expect(description).toContain('vertical comparison offset: 51.9 m')
     })
 
     it('clamps tracks without recorded elevations to terrain', async () => {
@@ -417,6 +218,5 @@ describe('TrackUtils track terrain rendering', () => {
         )
         expect(scene.primitives.add).toHaveBeenCalledWith(primitive)
         expect(terrainSample).not.toHaveBeenCalled()
-        expect(source.__lgsTrackTerrainAlignmentEnabled).toBe(false)
     })
 })

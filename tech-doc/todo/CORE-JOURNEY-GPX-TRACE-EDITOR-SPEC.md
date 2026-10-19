@@ -75,9 +75,9 @@ creating a second route format:
 - The GPX exporter walks each track segment and emits each point's coordinate,
   optional elevation, and supported time. It does not imply lossless handling
   of every possible vendor extension.
-- Track and Journey metrics are derived from track content. Rendering and
-  terrain alignment can also use derived content; that display representation
-  must not silently overwrite the source GPX coordinates.
+- Track and Journey metrics are derived from track content. Rendering,
+  smoothing, and saved Fix Path corrections can also use derived content; those
+  representations must not silently overwrite the source GPX coordinates.
 
 Relevant implementation references are [Journey](../../src/core/Journey.js),
 [Track](../../src/core/Track.js), [GPX import/export utilities](../../src/Utils/JourneyGpxUtils.js),
@@ -299,8 +299,9 @@ surviving endpoints.
 ### 7.1 Source and rendered geometry
 
 The draft edits the source geometry of the chosen Track. Render smoothing,
-terrain alignment, simplification, and display-only offsets may be used to show
-the route, but they must be kept separate from the edited source coordinates.
+saved Fix Path corrections, simplification, and display-only offsets may be
+used to show the route, but they must be kept separate from the edited source
+coordinates.
 The editor should indicate when the displayed line is transformed relative to
 the raw GPX points.
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-25
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,6 +32,7 @@ export const JourneyToolbarWidget = ({id}) => {
 
     const $journeyEditor = lgs.stores.main.components.journeyEditor
     const journeyEditor = useSnapshot($journeyEditor)
+    const fixPathEditor = useSnapshot(lgs.stores.journeyEditor)
 
     const $journeyToolbar = lgs.settings.ui.journeyToolbar
     const journeyToolbar = useSnapshot($journeyToolbar)
@@ -70,8 +71,12 @@ export const JourneyToolbarWidget = ({id}) => {
     }, [])
 
     return (
-        <Widget isVisible={journeyEditor.list.length > 0 && journeyToolbar.show && !journeyToolbarTemporarilyHidden && !captureActive}
-                config={config}>
+            <Widget isVisible={journeyEditor.list.length > 0
+                             && journeyToolbar.show
+                             && !journeyToolbarTemporarilyHidden
+                             && !fixPathEditor.fixPathEditorOpen
+                             && !captureActive}
+                    config={config}>
             <JourneyToolbar/>
         </Widget>
     )

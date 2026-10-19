@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-17
- * Last modified: 2026-10-18
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import { CURRENT_TRACK, DRAWING_FROM_UI, FOCUS_ON_FEATURE }                   fr
 import { MapElement }                                                         from '@Core/MapElement'
 import { normalizeTrackRenderSmoothing }                                      from '@Utils/cesium/trackRenderSmoothing'
 import { normalizeTrackRenderStyle }                                          from '@Utils/cesium/trackRenderStyle'
-import { getTerrainAlignedTrackContent }                                     from '@Utils/cesium/trackTerrainAlignment'
+import { getCorrectedTrackContent }                                           from '@Utils/cesium/fixPathCorrections'
 import { FEATURE, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, TrackUtils } from '@Utils/cesium/TrackUtils'
 import { Mobility }                                                           from '@Utils/Mobility'
 import { decodeHTMLEntities }                                                 from '@Utils/TextUtils'
@@ -386,7 +386,7 @@ export class Track extends MapElement {
      *         ie [[segment][[segment]]] event if it is a line string
      *
      */
-    aggregateDataForMetrics = (content = getTerrainAlignedTrackContent(this)) => {
+    aggregateDataForMetrics = (content = getCorrectedTrackContent(this)) => {
         const aggregateData = []
         // Only for Feature Collections that are Line or multi line string typ
         const type = content?.geometry?.type
@@ -576,7 +576,7 @@ export class Track extends MapElement {
      * @param {object} [options.content] - GeoJSON geometry used for calculations.
      * @returns {void} Metrics are stored on this track.
      */
-    calculateMetrics = ({content = getTerrainAlignedTrackContent(this)} = {}) => {
+    calculateMetrics = ({content = getCorrectedTrackContent(this)} = {}) => {
 
         let featureMetrics = []
         const aggregates = this.aggregateDataForMetrics(content)

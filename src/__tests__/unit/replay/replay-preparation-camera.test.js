@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-26
- * Last modified: 2026-10-18
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,7 +35,6 @@ describe('replay preparation camera', () => {
         }
         const journey = {
             slug: 'selected-journey',
-            antiCliffCorrection: false,
             replay: {basic: {camera: {...settings.camera, pitch: -65}}},
         }
         const staleJourney = {
@@ -47,7 +46,7 @@ describe('replay preparation camera', () => {
         const mode = {
             [JOURNEY_REPLAY_INTERNAL_STATE]: {
                 sampler,
-                samplerConfigKey: 'same-sampler|source-gpx',
+                samplerConfigKey: 'same-sampler|0:0',
                 controller: {configure: configureController},
             },
             [JOURNEY_REPLAY_INTERNAL_CALL]: {
@@ -75,12 +74,13 @@ describe('replay preparation camera', () => {
         expect(configureController).toHaveBeenCalledWith(expect.objectContaining({sampler}))
     })
 
-    it('rebuilds the Replay sampler when anti-cliff correction is toggled for a Journey', () => {
+    it('rebuilds the Replay sampler when saved Fix Path corrections change', () => {
         const settings = defaultJourneyReplaySettings()
         settings.userMode = 'basic'
         const journey = {
             slug: 'selected-journey',
-            antiCliffCorrection: false,
+            fixPathEnabled: false,
+            fixPathCorrectionData: {revision: 0, tracks: {}},
             tracks: new Map(),
             replay: {basic: {camera: {...settings.camera}}},
         }
@@ -107,12 +107,13 @@ describe('replay preparation camera', () => {
         }
 
         const sourceSampler = configure(mode)
-        expect(state.samplerConfigKey).toBe('same-sampler|source-gpx')
+        expect(state.samplerConfigKey).toBe('same-sampler|0:0')
 
-        journey.antiCliffCorrection = true
+        journey.fixPathEnabled = true
+        journey.fixPathCorrectionData = {revision: 1, tracks: {}}
 
         const correctedSampler = configure(mode)
-        expect(state.samplerConfigKey).toBe('same-sampler|terrain-aligned')
+        expect(state.samplerConfigKey).toBe('same-sampler|1:1')
         expect(correctedSampler).not.toBe(sourceSampler)
     })
 
@@ -139,30 +140,6 @@ describe('replay preparation camera', () => {
         expect(call.configure).not.toHaveBeenCalled()
         expect(call.captureCameraState).not.toHaveBeenCalled()
         expect(renderer.clear).not.toHaveBeenCalled()
-    })
-
-    it('waits for enabled anti-cliff correction before starting Replay playback', async () => {
-        const journey = {antiCliffCorrection: true, tracks: new Map()}
-        const state = {
-            sampler: {stale: true},
-            samplerConfigKey: 'source-path',
-            replayTerrainAlignmentPreparedJourney: null,
-        }
-        const started = {started: true}
-        const call = {start: vi.fn(() => started)}
-        const mode = {
-            [JOURNEY_REPLAY_INTERNAL_STATE]: state,
-            [JOURNEY_REPLAY_INTERNAL_CALL]: call,
-        }
-        const playback = start(mode, {journey, progress: 0.4})
-
-        expect(call.start).not.toHaveBeenCalled()
-
-        await expect(playback).resolves.toBe(started)
-        expect(call.start).toHaveBeenCalledWith({journey, progress: 0.4})
-        expect(state.sampler).toBeNull()
-        expect(state.samplerConfigKey).toBeNull()
-        expect(state.replayTerrainAlignmentPreparedJourney).toBeNull()
     })
 
     it('skips pre-Replay clips when timeline playback starts inside the Replay phase', () => {

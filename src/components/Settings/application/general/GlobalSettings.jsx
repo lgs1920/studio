@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-18
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { CameraSettings }      from '@Components/Settings/application/general/CameraSettings'
 import { TileCacheSettings } from './TileCacheSettings'
 import { JourneyStatisticsSettings } from '@Components/Settings/application/general/JourneyStatisticsSettings'
+import { FixPathSettings } from '@Components/Settings/application/general/FixPathSettings'
 import { UnitsSystemSettings } from '@Components/Settings/application/general/UnitsSystemSettings'
 import { WaDetails } from '@awesome.me/webawesome/dist/react'
 import { memo, useRef } from 'react'
@@ -50,6 +51,10 @@ export const GlobalSettings = memo(() => {
                        className="lgs--details-hoverable"
             >
                 <JourneyStatisticsSettings/>
+            </WaDetails>
+
+            <WaDetails id="journey-fix-path-settings-details" small name="global-settings" className="lgs--details-hoverable">
+                <FixPathSettings/>
             </WaDetails>
 
             <WaDetails id="tile-cache-settings-details" small name="global-settings" className="lgs--details-hoverable">

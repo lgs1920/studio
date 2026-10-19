@@ -1,0 +1,542 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: FixPathEditor.css
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-10-19
+ * Last modified: 2026-10-19
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+.fix-path-overlay {
+    position: absolute;
+    z-index: var(--lgs-tools-ui-zindex);
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.fix-path-selecting-area {
+    cursor: crosshair;
+}
+
+.fix-path-markers {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.fix-path-preview-line {
+    fill: none;
+    stroke: #ff3d91;
+    stroke-width: 4px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 7 5;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+}
+
+.fix-path-source-points {
+    fill: #ffffff;
+    stroke: #19212b;
+    stroke-width: 1.5px;
+    vector-effect: non-scaling-stroke;
+    cursor: grab;
+    pointer-events: fill;
+}
+
+.fix-path-source-points.is-selected {
+    fill: #ffe082;
+    stroke: #ff6d00;
+    stroke-width: 2px;
+}
+
+.fix-path-markers.is-selecting-area .fix-path-source-points,
+.fix-path-markers.is-selecting-area .fix-path-control-point,
+.fix-path-markers.is-selecting-area .fix-path-control-point-hitbox {
+    pointer-events: none;
+}
+
+.fix-path-selection-rectangle {
+    fill: rgb(25 33 43 / 12%);
+    stroke: #ff6d00;
+    stroke-width: 2px;
+    stroke-dasharray: 7 5;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+}
+
+.fix-path-control-point {
+    cursor: grab;
+    pointer-events: all;
+}
+
+.fix-path-control-point-hitbox {
+    fill: transparent;
+    stroke: transparent;
+    pointer-events: all;
+}
+
+.fix-path-control-point-visual {
+    fill: #ff3d91;
+    stroke: #ffffff;
+    stroke-width: 2px;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+}
+
+.fix-path-control-point.is-inactive .fix-path-control-point-visual {
+    fill: #9299a3;
+    stroke: #d9dde2;
+}
+
+.fix-path-control-point.is-selected .fix-path-control-point-visual {
+    fill: #ffb300;
+    stroke: #101820;
+    stroke-width: 3.5px;
+    filter: drop-shadow(0 0 2px #ffffff) drop-shadow(0 0 4px #101820);
+}
+
+.fix-path-pending-point {
+    fill: #ffe082;
+    stroke: #ff6d00;
+    stroke-width: 2px;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+}
+
+.fix-path-source-point:active,
+.fix-path-control-point:active {
+    cursor: grabbing;
+}
+
+.fix-path-scan-progress {
+    width: 100%;
+    accent-color: var(--wa-color-brand-fill-normal);
+}
+
+.fix-path-area-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lgs-gutter-xs);
+}
+
+.fix-path-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: min(390px, calc(100vw - 2 * var(--lgs-gutter)));
+    max-height: calc(100vh - 2 * var(--lgs-gutter));
+    padding: var(--lgs-gutter);
+    overflow: hidden;
+    gap: var(--lgs-gutter-s);
+    pointer-events: auto;
+}
+
+.fix-path-panel-header,
+.fix-path-panel-footer {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    gap: var(--lgs-gutter-s);
+}
+
+.fix-path-panel-header {
+    cursor: move;
+}
+
+.fix-path-panel-header h2 {
+    flex: 0 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin: 0;
+    text-align: left;
+    font-size: var(--wa-font-size-m);
+    gap: var(--lgs-gutter-xs);
+}
+
+.fix-path-panel-header .fix-path-correction-selection-hint {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: 0 0 0 auto;
+    color: var(--wa-color-text-quiet);
+    font-size: var(--wa-font-size-2xs);
+    text-align: right;
+}
+
+.fix-path-correction-selection-bracket:first-child {
+    padding-right: var(--lgs-gutter-xxs);
+}
+
+.fix-path-correction-selection-bracket:last-child {
+    padding-left: var(--lgs-gutter-xxs);
+}
+
+.fix-path-panel-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-left: 0;
+    flex: 0 0 auto;
+}
+
+.lgs-context-menu li.fix-path-context-menu-item {
+    font-size: var(--wa-font-size-s);
+}
+
+.lgs-context-menu li.fix-path-context-menu-item wa-icon {
+    font-size: var(--wa-font-size-s);
+}
+
+.fix-path-panel-header p,
+.fix-path-status,
+.fix-path-corrections-list > p {
+    margin: 0;
+    color: var(--wa-color-text-quiet);
+    font-size: var(--wa-font-size-s);
+}
+
+.fix-path-corrections-scroll-area {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+}
+
+.fix-path-correction-points-scroll-area {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    font-size: var(--wa-font-size-s);
+    /* Keep the row and input control boxes on the same height token. */
+    --fix-path-correction-row-height: var(--wa-form-control-height);
+    /* Reserve enough scroll space for eight rows, their gaps, and list padding. */
+    --fix-path-correction-list-max-height: calc(
+        var(--fix-path-correction-row-height) + var(--fix-path-correction-row-height)
+        + var(--fix-path-correction-row-height) + var(--fix-path-correction-row-height)
+        + var(--fix-path-correction-row-height) + var(--fix-path-correction-row-height)
+        + var(--fix-path-correction-row-height) + var(--fix-path-correction-row-height)
+        + var(--fix-path-correction-gap) + var(--fix-path-correction-gap)
+        + var(--fix-path-correction-gap) + var(--fix-path-correction-gap)
+        + var(--fix-path-correction-gap) + var(--fix-path-correction-gap)
+        + var(--fix-path-correction-gap)
+        + var(--lgs-gutter-xxs) + var(--lgs-gutter-xxs) + 4px
+    );
+    max-height: min(var(--fix-path-correction-list-max-height), max(0px, calc(100vh - 13rem)));
+    min-height: 0;
+}
+
+.fix-path-correction-points-scroll-area > .lgs-scrollbars-container {
+    width: 100%;
+    min-width: 0;
+    height: auto !important;
+    max-height: inherit;
+}
+
+.fix-path-correction-points-scroll-area .lgs-scrollbars .view {
+    padding-bottom: 0;
+}
+
+.fix-path-corrections-list {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    gap: var(--lgs-gutter-s);
+}
+
+.fix-path-correction-points-list {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: calc(var(--lgs-gutter-xxs) + 2px) var(--lgs-gutter-xxs);
+    gap: var(--fix-path-correction-gap);
+}
+
+.fix-path-correction-section {
+    /* Share the same spacing between columns, rows, and section content. */
+    --fix-path-correction-gap: calc(var(--lgs-gutter-xs) + 2px);
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    gap: var(--fix-path-correction-gap);
+    padding: var(--lgs-gutter-s);
+    border: 1px solid var(--wa-color-neutral-border-normal);
+    border-radius: var(--wa-border-radius-s);
+}
+
+.fix-path-coordinate-header,
+.fix-path-correction-point-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    gap: var(--fix-path-correction-gap);
+    font-size: var(--wa-font-size-s);
+}
+
+.fix-path-coordinate-header > span:nth-child(-n + 3),
+.fix-path-correction-point-row > wa-input:nth-child(-n + 3) {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.fix-path-coordinate-header > span:nth-child(3),
+.fix-path-correction-point-row > wa-input:nth-child(3) {
+    flex-grow: 0.8;
+}
+
+.fix-path-coordinate-header > span:last-child,
+.fix-path-correction-point-row > .fix-path-correction-point-actions {
+    flex: 0 0 calc(var(--wa-form-control-height) + var(--wa-form-control-height));
+}
+
+.fix-path-coordinate-header {
+    box-sizing: border-box;
+    margin: 0;
+    color: var(--wa-color-text-quiet);
+    font-weight: var(--wa-font-weight-bold);
+}
+
+.fix-path-coordinate-header > span:nth-child(-n + 3) {
+    text-align: center;
+}
+
+.fix-path-coordinate-header > span {
+    font-size: var(--wa-font-size-xs);
+}
+
+.fix-path-correction-point-row {
+    align-items: stretch;
+    box-sizing: border-box;
+    flex: 0 0 var(--fix-path-correction-row-height);
+    height: var(--fix-path-correction-row-height);
+    min-height: var(--fix-path-correction-row-height);
+    padding: 0;
+    border: 0;
+    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
+    cursor: pointer;
+    outline: 0 solid transparent;
+    transition: outline-color 120ms ease;
+}
+
+.fix-path-correction-point-row:hover:not(.is-selected) > wa-input:nth-child(-n + 3) {
+    --wa-form-control-value-color: var(--lgs-card-on-map-hover-color);
+}
+
+.fix-path-correction-point-row wa-input::part(base) {
+    box-sizing: border-box;
+    height: var(--fix-path-correction-row-height);
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.fix-path-correction-point-row:hover:not(.is-selected) > wa-input:nth-child(-n + 3)::part(base) {
+    background-color: var(--lgs-card-on-map-hover-bg-color);
+    border-color: var(--lgs-card-on-map-hover-outline-color);
+    color: var(--lgs-card-on-map-hover-color);
+}
+
+.fix-path-correction-point-row.is-selected {
+    background: transparent;
+}
+
+.fix-path-correction-point-row.is-selected > wa-input:nth-child(-n + 3)::part(base) {
+    background-color: var(--lgs-card-on-map-hover-bg-color);
+    border-color: var(--lgs-card-on-map-selected-border-color);
+    color: var(--lgs-card-on-map-hover-color);
+}
+
+.fix-path-correction-point-row.is-selected > wa-input:nth-child(-n + 3) {
+    --wa-form-control-value-color: var(--lgs-card-on-map-hover-color);
+}
+
+.fix-path-correction-point-row.is-fixed > wa-input:nth-child(-n + 3) {
+    --wa-form-control-value-color: var(--wa-color-text-normal);
+}
+
+.fix-path-correction-point-row.is-removed {
+    opacity: 0.55;
+}
+
+.fix-path-correction-point-row:focus-visible > wa-input:nth-child(-n + 3)::part(base) {
+    outline: 2px solid var(--wa-color-brand-border-normal);
+    outline-offset: 1px;
+}
+
+.fix-path-correction-point-row wa-input {
+    min-width: 0;
+    height: var(--fix-path-correction-row-height);
+    pointer-events: auto;
+}
+
+.fix-path-correction-point-row > .fix-path-correction-point-actions {
+    height: var(--fix-path-correction-row-height);
+}
+
+.fix-path-correction-point-row > wa-input:nth-child(-n + 3)::part(input) {
+    text-align: center;
+}
+
+.fix-path-correction-point-row wa-button {
+    pointer-events: auto;
+    font-size: var(--wa-font-size-s);
+}
+
+.fix-path-correction-point-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0;
+}
+
+.fix-path-panel-footer {
+    padding-top: var(--lgs-gutter-s);
+    border-top: 1px solid var(--wa-color-neutral-border-subtle);
+}
+
+.fix-path-panel-footer-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+    margin-left: auto;
+}
+
+.fix-path-help-popup {
+    max-width: min(22rem, calc(100vw - 2 * var(--lgs-gutter)));
+}
+
+.fix-path-help-popup::part(popup) {
+    box-sizing: border-box;
+    width: min(22rem, calc(100vw - 2 * var(--lgs-gutter)));
+    max-height: max(0px, calc(100vh - 2 * var(--lgs-gutter)));
+    padding: var(--lgs-gutter-s);
+    overflow: hidden;
+    color: var(--lgs-text-on-color);
+    border: 1px solid var(--lgs-card-on-map-border-color);
+    border-radius: var(--lgs-on-map-border-radius, var(--lgs-border-radius-s));
+    background-color: var(--lgs-card-on-map-bg-color);
+    background-image: var(--lgs-card-on-map-bg-image);
+    background-blend-mode: var(--lgs-card-on-map-bg-blend-mode);
+    box-shadow: var(--wa-shadow-l);
+    backdrop-filter: blur(var(--lgs-blur));
+}
+
+.fix-path-help-scroll-area {
+    max-height: max(0px, calc(100vh - 2 * var(--lgs-gutter) - 2 * var(--lgs-gutter-s)));
+}
+
+.fix-path-help-scroll-area > .lgs-scrollbars-container {
+    height: auto !important;
+    max-height: inherit;
+}
+
+.fix-path-help-scroll-area .lgs-scrollbars .view {
+    padding-bottom: 0;
+}
+
+.fix-path-help-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.fix-path-help-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+
+    & h3,
+    & p {
+        margin: 0;
+    }
+}
+
+.fix-path-help-section h3 {
+    font-size: var(--wa-font-size-m);
+}
+
+.fix-path-help-section p {
+    color: var(--lgs-text-color-secondary);
+    font-size: var(--wa-font-size-s);
+    line-height: var(--wa-line-height-normal);
+}
+
+.fix-path-help-content .lgs--shortcut-key,
+.fix-path-correction-selection-hint .lgs--shortcut-key {
+    font: inherit;
+    font-size: var(--lgs-font-size-s);
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--lgs-gutter-xs) / 2);
+    box-sizing: border-box;
+    min-width: 1.65rem;
+    min-height: 1.65rem;
+    padding: 0 var(--lgs-gutter-xs);
+    color: var(--wa-color-brand-on-loud, var(--wa-color-brand-on));
+    border: 1px solid var(--wa-color-brand-border-loud, var(--wa-color-brand));
+    border-radius: 4px;
+    background: var(--wa-color-brand-fill-loud, var(--wa-color-brand));
+    vertical-align: middle;
+}
+
+.fix-path-correction-selection-hint .lgs--shortcut-key {
+    font-size: inherit;
+    min-width: 0;
+    min-height: 1em;
+    padding: 0 0.3em;
+}
+
+.fix-path-context-menu {
+    position: fixed;
+    z-index: 12002;
+    min-width: 120px;
+    padding: 3px;
+    background: var(--wa-color-surface-default);
+    border: 1px solid var(--wa-color-neutral-border-normal);
+    border-radius: var(--wa-border-radius-s);
+    box-shadow: var(--wa-shadow-medium);
+    pointer-events: auto;
+}
+
+.fix-path-context-menu button {
+    width: 100%;
+    padding: var(--lgs-gutter-xs) var(--lgs-gutter-s);
+    color: var(--wa-color-text-normal);
+    text-align: left;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+}
+
+.fix-path-context-menu button:hover {
+    background: var(--wa-color-surface-raised);
+}
+
+@media (max-width: 640px) {
+    .fix-path-panel {
+        width: min(390px, calc(100vw - 2 * var(--lgs-gutter)));
+    }
+}

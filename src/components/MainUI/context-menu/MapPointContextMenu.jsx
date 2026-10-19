@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-27
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,7 @@ import { MapPOI }                                                               
 import { getOrbitSettings, setOrbitStoreSettings }                                 from '@Core/OrbitSettings'
 import { ELEVATION_UNITS, UnitUtils }                                              from '@Utils/UnitUtils'
 import { UIToast }                                                                 from '@Utils/UIToast'
+import { useProxyValue }                                                            from '@Utils/ValtioUtils'
 import { WaButton, WaDivider, WaIcon }                                             from '@awesome.me/webawesome/dist/react'
 import { useCallback, useMemo }                                                    from 'react'
 import { useSnapshot }                                                             from 'valtio'
@@ -47,9 +48,18 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
         () => getManageableWidgets(SCENE_WIDGETS_BOARD, widget.list).length > 0,
         [widget.list],
     )
+    const canFixPath = useProxyValue(
+        lgs.stores.journeyEditor,
+        editor => (editor?.journey?.tracks?.size ?? 0) > 0,
+        false,
+    )
     const canResizeVideo = video.editing === true && video.preRecording !== true
 
     const hideMenu = useCallback(() => __.ui.contextMenu.hide(), [])
+    const openFixPathEditor = useCallback(() => {
+        lgs.stores.journeyEditor.fixPathEditorOpen = true
+        hideMenu()
+    }, [hideMenu])
     const openEditDrawer = useCallback(async (poiId) => {
         if (!poiId) {
             return
@@ -286,18 +296,26 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
                          )}
                     </>
                 )}
-                {canManageSceneWidgets && (
+                {(canManageSceneWidgets || canFixPath) && (
                     <>
                         <li className="widget-no-hover">
                             <WaDivider/>
                         </li>
-                        <li onClick={() => {
-                            openWidgetManagementDrawer()
-                            hideMenu()
-                        }}>
-                            <WaIcon name="layer" variant="regular"/>
-                            <span>{'Manage widgets'}</span>
-                        </li>
+                        {canManageSceneWidgets && (
+                            <li onClick={() => {
+                                openWidgetManagementDrawer()
+                                hideMenu()
+                            }}>
+                                <WaIcon name="layer" variant="regular"/>
+                                <span>{'Manage widgets'}</span>
+                            </li>
+                        )}
+                        {canFixPath && (
+                            <li className="fix-path-context-menu-item" onClick={openFixPathEditor}>
+                                <WaIcon name="draw-polygon" variant="regular"/>
+                                <span>{'Fix Path'}</span>
+                            </li>
+                        )}
                     </>
                 )}
                 {canResizeVideo && (

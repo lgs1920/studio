@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -62,6 +62,7 @@ import { SupportUIButton }   from './SupportUIButton'
 import { useProxyValue }                from '@Utils/ValtioUtils'
 import { WidgetManagementDrawer } from './widgets/management/WidgetManagementDrawer'
 import { WidgetEditorPanel } from './widgets/editor/WidgetEditorPanel'
+import { FixPathEditor } from './FixPathEditor'
 
 import './style.css'
 
@@ -233,6 +234,7 @@ export const MainUI = memo(() => {
             <MapPointContextMenuTrigger/>
             <JourneyReplayCameraAngleGuide/>
             <MapPOIMonitor/>
+            {!isJourneyReplayUiHidden && !videoCaptureActive && !video.editing && <FixPathEditor/>}
             {!isJourneyReplayUiHidden && (
                 <>
                     <div id="lgs-main-ui" onKeyDown={handleKeyDown}>

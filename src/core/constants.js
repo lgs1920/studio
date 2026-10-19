@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-18
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -484,6 +484,7 @@ export const COMPASS_WIDGET       = 'compass-widget',
              LOGO_WIDGET          = 'logo-widget',
              CAMERA_INFORMATION_WIDGET = 'camera-information-widget',
              JOURNEY_TOOLBAR_WIDGET = 'journey-toolbar-widget',
+             FIX_PATH_EDITOR_WIDGET = 'fix-path-editor-widget',
              PROFILE_WIDGET       = 'profile-widget',
              TEXT_WIDGET          = 'text-widget',
              JOURNEY_STATS_WIDGET = 'journey-stats-widget',

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-11
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,6 +36,7 @@ vi.mock('@awesome.me/webawesome/dist/components/icon/library.js', () => ({
 }))
 
 import { LGS1920_ICON_LIBRARY, registerIconLibraryFromKits } from '@Utils/useWebAwesomeKits'
+import { registerLGS1920IconLibrary } from '@Utils/LGS1920IconLibrary'
 
 const testKits = [
     {family: 'classic', icons: kitIcons},
@@ -69,6 +70,18 @@ describe('useWebAwesomeKits', () => {
         const source = options.resolver('picture-in-picture-out', 'classic', 'regular')
 
         expect(source).toMatch(/^data:image\/svg\+xml,/)
+    })
+
+    it('bundles the regular question icon independently of the remote Kit', () => {
+        registerLGS1920IconLibrary()
+
+        const [, options] = mocks.registerIconLibrary.mock.calls.find(
+            ([libraryName]) => libraryName === 'default',
+        )
+        const source = options.resolver('question', 'classic', 'regular')
+
+        expect(source).toMatch(/^data:image\/svg\+xml,/)
+        expect(decodeURIComponent(source.slice('data:image/svg+xml,'.length))).toContain('<svg')
     })
 
     it('resolves icons from the kit duotone exports', () => {

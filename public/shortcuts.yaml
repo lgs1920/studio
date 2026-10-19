@@ -84,6 +84,12 @@
   keys:
     - Alt+Shift+G
   scope: App
+- action: Open Fix Path
+  description: Opens the Fix Path editor for the current Journey when it has tracks.
+  id: fix-path-show
+  keys:
+    - F
+  scope: App
 
 ## Video
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import {describe, expect, it, vi} from 'vitest'
 
 const mocks = vi.hoisted(() => ({
         draw:               vi.fn(),
+        readCurrentFromDB:  vi.fn(),
         setProfileVisibility: vi.fn(),
         updateTrackVisibility: vi.fn(),
 }))
@@ -71,7 +72,7 @@ vi.mock('@Core/Track', () => ({
 vi.mock('@Utils/cesium/TrackUtils', () => ({
     TrackUtils: {
         draw:                  mocks.draw,
-        readCurrentFromDB:     vi.fn(),
+        readCurrentFromDB:     mocks.readCurrentFromDB,
         readRemainingFromDB:   vi.fn(),
         setProfileVisibility:  mocks.setProfileVisibility,
         updateTrackVisibility: mocks.updateTrackVisibility,
@@ -81,6 +82,127 @@ vi.mock('@Utils/cesium/TrackUtils', () => ({
 const {StartupDataLoader} = await import('@Core/ui/startup/StartupDataLoader')
 
 describe('startup data loader', () => {
+    it('loads a Journey with saved Fix Path corrections before its first track draw', async () => {
+        const sources = new Map()
+        const previousLgs = globalThis.lgs
+        const previousNamespace = globalThis.__
+        const previousScheduler = globalThis.scheduler
+
+        globalThis.lgs = {
+            journeys:          new Map(),
+            markJourneyLoaded: vi.fn(),
+            saveJourneyInContext: journey => globalThis.lgs.journeys.set(journey.slug, journey),
+            scene:             {requestRender: vi.fn()},
+            settings:          {journey: {}, layers: {terrain: 'terrain-a'}},
+            stores:            {main: {readyForTheShow: false}},
+            viewer:            {
+                dataSources: {
+                    add:       async source => sources.set(source.name, source),
+                    getByName: name => [sources.get(name)].filter(Boolean),
+                },
+            },
+        }
+        globalThis.__ = {ui: {poiManager: {list: new Map()}}}
+        vi.stubGlobal('requestIdleCallback', callback => {
+            callback()
+            return 1
+        })
+        globalThis.scheduler = {yield: async () => {}}
+        mocks.draw.mockResolvedValue(undefined)
+
+        const client = {
+            request: vi.fn(async (_request, consume) => {
+                await consume({data: {
+                    fixPathEnabled: true,
+                    fixPathCorrectionData: {
+                        revision: 2,
+                        tracks: {'track-a': []},
+                    },
+                    slug: 'journey-a',
+                }, type: 'journey'})
+                await consume({
+                    data: {geometryType: 'LineString', slug: 'track-a', title: 'Track A'},
+                    key:  'track-a',
+                    type: 'track',
+                })
+                await consume({geometry: {coordinates: [[1, 1], [2, 2]], type: 'LineString'}, type: 'geometry'})
+                await consume({key: 'track-a', type: 'track-end'})
+                await consume({items: [], type: 'pois'})
+                await consume({type: 'primary-ready'})
+                return true
+            }),
+        }
+
+        try {
+            const loader = new StartupDataLoader('studio-db', client)
+
+            const loadedJourney = await loader.loadJourney('journey-a', {current: true, currentTrackKey: 'track-a'})
+            expect(loadedJourney).toMatchObject({
+                fixPathEnabled: true,
+                fixPathCorrectionData: {revision: 2, tracks: {'track-a': []}},
+                slug: 'journey-a',
+            })
+            await vi.waitFor(() => expect(mocks.draw).toHaveBeenCalledOnce())
+
+            expect(mocks.draw).toHaveBeenCalledWith(expect.objectContaining({slug: 'track-a'}), expect.objectContaining({
+                action:           3,
+                forcedToHide:     false,
+                renderMode:       'primitive',
+            }))
+        }
+        finally {
+            globalThis.lgs = previousLgs
+            globalThis.__ = previousNamespace
+            globalThis.scheduler = previousScheduler
+            vi.unstubAllGlobals()
+            mocks.draw.mockReset()
+            mocks.readCurrentFromDB.mockReset()
+            mocks.setProfileVisibility.mockReset()
+            mocks.updateTrackVisibility.mockReset()
+        }
+    })
+
+    it('retains the saved Fix Path state when the legacy loader reads the current Journey', async () => {
+        const previousLgs = globalThis.lgs
+        const previousNamespace = globalThis.__
+        const previousScheduler = globalThis.scheduler
+        const track = {parent: 'journey-a', slug: 'track-a'}
+        const journey = {
+            fixPathEnabled: true,
+            fixPathCorrectionData: {revision: 1, tracks: {'track-a': []}},
+            slug: 'journey-a',
+            tracks: new Map([['track-a', track]]),
+        }
+        mocks.readCurrentFromDB.mockResolvedValue(journey)
+        globalThis.lgs = {
+            db: {lgs1920: {get: vi.fn(async () => null)}},
+            theTrack: track,
+        }
+        globalThis.__ = {ui: {poiManager: {list: new Map()}}}
+        globalThis.scheduler = {yield: async () => {}}
+        vi.stubGlobal('requestIdleCallback', callback => {
+            callback()
+            return 1
+        })
+
+        try {
+            const loader = new StartupDataLoader('studio-db', null)
+
+            await expect(loader.loadCurrentJourney()).resolves.toBe(journey)
+            expect(mocks.readCurrentFromDB).toHaveBeenCalledWith()
+            expect(journey.fixPathEnabled).toBe(true)
+            expect(journey.fixPathCorrectionData.revision).toBe(1)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+            globalThis.__ = previousNamespace
+            globalThis.scheduler = previousScheduler
+            vi.unstubAllGlobals()
+            mocks.draw.mockReset()
+            mocks.readCurrentFromDB.mockReset()
+        }
+    })
+
     it('renders secondary tracks even when hide other journeys keeps them hidden', async () => {
         const sources = new Map()
         const database = 'studio-db'

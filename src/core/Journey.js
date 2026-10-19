@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-08
- * Last modified: 2026-10-18
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,7 @@ import {
 import { MapPOI }                        from '@Core/MapPOI'
 import { gpx, kml }                      from '@tmcw/togeojson'
 import { getGeom }                       from '@turf/invariant'
-import { normalizeAntiCliffCorrectionData } from '@Utils/cesium/antiCliffCorrections'
+import { normalizeFixPathCorrectionData } from '@Utils/cesium/fixPathCorrections'
 import { defaultTrackRenderSmoothing, normalizeTrackRenderSmoothing } from '@Utils/cesium/trackRenderSmoothing'
 
 import {
@@ -42,7 +42,6 @@ import {normalizeJourneyReplayVideoTimeline} from './ui/replay/ReplayTimelinePer
 import { Track }              from './Track'
 
 const START_STOP_TOO_CLOSE_DISTANCE = 100
-
 
 export class Journey extends MapElement {
 
@@ -78,13 +77,13 @@ export class Journey extends MapElement {
     hasTime = false
 
     tracksLoaded = false
-    antiCliffCorrection = false
-    antiCliffCorrectionData = null
+    fixPathEnabled = false
+    fixPathCorrectionData = null
 
     constructor(title, type, options = {}) {
         super(CURRENT_JOURNEY)
-        this.antiCliffCorrection = options.antiCliffCorrection === true
-        this.antiCliffCorrectionData = normalizeAntiCliffCorrectionData(options.antiCliffCorrectionData)
+        this.fixPathEnabled = options.fixPathEnabled === true
+        this.fixPathCorrectionData = normalizeFixPathCorrectionData(options.fixPathCorrectionData)
 
 
         if (title) {
@@ -184,6 +183,8 @@ export class Journey extends MapElement {
             this.prepareDrawing().then(async () => {
                 await this.getPOIsFromGeoJson()
                 await this.persistToDatabase()
+            }).catch(error => {
+                console.error(`[Journey] Initialization failed for ${this.slug}:`, error)
             })
         }
         catch (error) {
@@ -303,8 +304,10 @@ export class Journey extends MapElement {
     static deserialize = (props) => {
         props.instance = new Journey()
         let instance = super.deserialize(props)
-        instance.antiCliffCorrection = instance.antiCliffCorrection === true
-        instance.antiCliffCorrectionData = normalizeAntiCliffCorrectionData(instance.antiCliffCorrectionData)
+        instance.fixPathEnabled = instance.fixPathEnabled === true
+        instance.fixPathCorrectionData = normalizeFixPathCorrectionData(instance.fixPathCorrectionData)
+        delete instance.antiCliffCorrection
+        delete instance.antiCliffCorrectionData
         delete instance.antiCliffCorrectionAvailable
         instance.activity ??= Journey.defaultActivity()
         instance.activitySettings = Journey.activityProfile(instance.activity, instance.activitySettings)
@@ -339,8 +342,11 @@ export class Journey extends MapElement {
 
     static unproxify = (object) => {
         const persistedJourney = {...object}
+        delete persistedJourney.antiCliffCorrection
+        delete persistedJourney.antiCliffCorrectionData
         delete persistedJourney.antiCliffCorrectionAvailable
-        persistedJourney.antiCliffCorrectionData = normalizeAntiCliffCorrectionData(persistedJourney.antiCliffCorrectionData)
+        persistedJourney.fixPathEnabled = persistedJourney.fixPathEnabled === true
+        persistedJourney.fixPathCorrectionData = normalizeFixPathCorrectionData(persistedJourney.fixPathCorrectionData)
         return super.serialize({...persistedJourney, ...{__class: Journey}})
     }
 

@@ -179,7 +179,7 @@ They are provided for convenience and to avoid confusion with the `addEventListe
 ### App Shortcuts
 
 Application shortcuts are declared in `public/shortcuts.yaml`.
-For example, `Alt+W` opens the widget management drawer for the active board.
+For example, `Alt+W` opens the widget management drawer for the active board, and `F` opens Fix Path when the current Journey has tracks.
 
 ## Contributing
 

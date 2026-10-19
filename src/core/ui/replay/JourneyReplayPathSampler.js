@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-18
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {logicalCoordinateSegmentsFromTrack, logicalTrackPathFromJourney} from './JourneyReplayLogicalTrackPath'
-import {getTerrainAlignedTrackContent} from '@Utils/cesium/trackTerrainAlignment'
+import {getCorrectedTrackContent} from '@Utils/cesium/fixPathCorrections'
 import { JourneyReplayTurfPath } from './JourneyReplayTurfPath'
 import {smoothReplayCameraAnchorSample} from './JourneyReplayCameraAnchorSmoothing'
 import {REPLAY_CAMERA_HEADING_MAX_PATH_RATIO} from './JourneyReplayCameraMotionSmoothing'
@@ -1142,7 +1142,7 @@ export class JourneyReplayPathSampler {
     ]
 
     static rawCoordinateSegmentsFromTrack = (track) => {
-        const content = getTerrainAlignedTrackContent(track)
+        const content = getCorrectedTrackContent(track)
         const geometry = content?.geometry
         if (!geometry) {
             return []
@@ -1170,7 +1170,7 @@ export class JourneyReplayPathSampler {
     }
 
     static timeSegmentsFromTrack = (track) => {
-        const content = getTerrainAlignedTrackContent(track)
+        const content = getCorrectedTrackContent(track)
         const cacheKey = content
         const cachedSegments = timeSegmentsCache.get(cacheKey)
         if (cachedSegments) {

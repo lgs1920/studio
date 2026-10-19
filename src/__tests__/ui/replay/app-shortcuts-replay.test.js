@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,12 @@ const SHORTCUTS_YAML = `
   id: journey-toolbar-show
   keys:
     - Alt+Shift+J
+  scope: App
+- action: Open Fix Path
+  description: Opens the Fix Path editor for the current Journey when it has tracks.
+  id: fix-path-show
+  keys:
+    - F
   scope: App
 - action: Toggle orbit
   description: Starts or stops map orbit around the current target.
@@ -108,6 +114,11 @@ describe('app replay shortcuts', () => {
                             active: false,
                         }),
                     }),
+                    widget: proxy({current: null}),
+                }),
+                journeyEditor: proxy({
+                    journey: proxy({tracks: new Map([['track-a', {}]])}),
+                    fixPathEditorOpen: false,
                 }),
             },
         }
@@ -163,6 +174,45 @@ describe('app replay shortcuts', () => {
         expect(globalThis.lgs.settings.ui.journeyToolbar.show).toBe(true)
         expect(globalThis.lgs.settings.ui.journeyToolbar.usage).toBe(true)
         expect(event.preventDefault).toHaveBeenCalled()
+    })
+
+    it('opens Fix Path with F and leaves editable fields alone', async () => {
+        const {ShortcutManager} = await import('@Core/events/ShortcutManager')
+        const {installAppShortcuts} = await import('@Core/events/appShortcuts')
+        const shortcutManager = new ShortcutManager()
+        const removers = installAppShortcuts(shortcutManager)
+
+        try {
+            const event = new KeyboardEvent('keydown', {
+                bubbles: true,
+                cancelable: true,
+                code: 'KeyF',
+                key: 'f',
+            })
+            window.dispatchEvent(event)
+
+            expect(globalThis.lgs.stores.journeyEditor.fixPathEditorOpen).toBe(true)
+            expect(event.defaultPrevented).toBe(true)
+
+            globalThis.lgs.stores.journeyEditor.fixPathEditorOpen = false
+            const input = document.createElement('input')
+            document.body.append(input)
+            const inputEvent = new KeyboardEvent('keydown', {
+                bubbles: true,
+                cancelable: true,
+                code: 'KeyF',
+                key: 'f',
+            })
+            input.dispatchEvent(inputEvent)
+
+            expect(globalThis.lgs.stores.journeyEditor.fixPathEditorOpen).toBe(false)
+            expect(inputEvent.defaultPrevented).toBe(false)
+            input.remove()
+        }
+        finally {
+            removers.forEach(remove => remove())
+            shortcutManager.destroy()
+        }
     })
 
     it('refuses to relaunch orbit outside Passive replay mode', async () => {

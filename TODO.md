@@ -1,5 +1,13 @@
-# Implementation requests for Codex:
+# Implementation requirements: Fix Path Widget
 
+## Point list and layout
+
+- Add enough bottom padding to keep the last point row fully visible.
+- Show every route point in a section, including points whose coordinates were not modified. A section contains all selected points, not only modified points.
+- Add a toolbar below the widget with Undo and Redo on the right, Remove on the left when all points are selected, and section navigation in the center.
+- Clarify the intended behavior for modified points; the original note did not specify it.
+
+## Existing requests
 
 le focus de fin de replay ne se fait pas sur le controide => a verifier
 

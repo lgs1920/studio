@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -306,6 +306,21 @@ const openJourneyImporter = () => {
     const mainUI = lgs.stores.ui.mainUI
     mainUI.callForActions.active = false
     mainUI.journeyLoader.visible = true
+    return true
+}
+
+/**
+ * Open Fix Path when the current Journey contains editable tracks.
+ *
+ * @returns {boolean} Whether Fix Path was opened.
+ */
+const openFixPathEditor = () => {
+    const journeyEditor = lgs.stores?.journeyEditor
+    if (!journeyEditor?.journey?.tracks?.size) {
+        return false
+    }
+
+    journeyEditor.fixPathEditorOpen = true
     return true
 }
 
@@ -785,6 +800,16 @@ const installWidgetKeyboardShortcuts = () => {
     }
 
     const listener = event => {
+        const composedPath = event.composedPath?.() ?? []
+        if ((event.key === 'ArrowUp'
+            || event.key === 'ArrowDown'
+            || event.key === 'PageUp'
+            || event.key === 'PageDown')
+            && (event.target?.closest?.('.fix-path-correction-points-list')
+                || composedPath.some(target => target?.matches?.('.fix-path-correction-points-list')))) {
+            return
+        }
+
         const action = isTimelineKeyboardZoomTarget(event)
             ? null
             : replayCameraKeyboardAction(event) ?? widgetKeyboardShortcutAction(event)
@@ -817,6 +842,7 @@ const SHORTCUT_ACTIONS = {
     'journey-toolbar-show': toggleJourneyToolbar,
     'journey-hide-others-toggle': toggleHideOtherJourneys,
     'profile-settings-show': openUserProfileSettings,
+    'fix-path-show':        openFixPathEditor,
     'replay-management-show': openJourneyReplayManagement,
     'widget-management-show': openWidgetManagement,
     'video-recording':      openJourneyReplayManagement,

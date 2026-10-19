@@ -134,6 +134,7 @@ samples:
 journey:
   thickness: 2            # Initial track thickness (pixels)
   hideOtherJourneys: false # Keep only the current journey visible in scenes
+  fixPathMaxSegmentMeters: 500 # Maximum route length of one manual path correction
   renderSmoothing:
     enabled: true         # Smooth track rendering without modifying source coordinates
     step: 1               # Chaikin smoothing passes

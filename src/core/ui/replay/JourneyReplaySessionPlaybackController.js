@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-18
+ * Last modified: 2026-10-19
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ import {
     BASIC_REPLAY_TRACE_FOCUS_INSTANCE_ID,
 } from './JourneyReplayBasicFocus'
 import {getBasicReplaySettings} from './ReplayModeSettings'
+import {fixPathRevisionKey} from '@Utils/cesium/fixPathCorrections'
 
 
 /**
@@ -313,7 +314,7 @@ export const configure = (mode, options = {}) => {
                 includeHiddenTracks,
                 smoothing,
             }),
-            journey.antiCliffCorrection === true ? 'terrain-aligned' : 'source-gpx',
+            fixPathRevisionKey(journey),
         ].join('|')
         const resolvedClips = resolveJourneyReplayRuntimeClips({
             clips:         options.clips,
