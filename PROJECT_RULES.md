@@ -36,8 +36,10 @@ This is the canonical source for the project's AI-agent and development rules.
 - **UI colors:** Whenever a frontend UI color is requested or introduced, use the corresponding color from the Web Awesome palette or design tokens. Do not invent arbitrary color values outside that palette.
 - **Web Awesome first:** Prefer Web Awesome components and their React wrappers whenever a suitable component exists.
 - **Icons:** Use `wa-icon` and its React wrapper directly. Public icon names must use the Font Awesome `iconName` in kebab case, never JavaScript export names such as `faCameraSliders` or internal prefixes such as `fak` and `fakd`. Omit `family` for the default `classic` family and provide it for other families. Keep the generic resolver in `src/Utils/useWebAwesomeKits.js` and pass kit imports into it from the application bootstrap.
+- **Component-owned CSS classes:** When adapting a visual pattern from another component, reuse its behavior or styling approach but define classes owned by the current component. Never attach a domain-specific class such as `poi-duotone-icon` to unrelated UI to inherit its styling. Share a class only when it has an explicit domain-neutral contract.
 - **Native component events:** Use the native events and APIs of Web Awesome components whenever they provide the required behavior.
 - **Custom behavior:** Prefer native Web Awesome APIs. Use minimal custom handling when necessary to implement the requested behavior and the native API is insufficient.
+- **Cesium pointer ownership:** Selection tools may consume only the active modifier-key gesture they own. Clear pointer state on `pointerup` and `pointercancel`, and keep standard Cesium navigation enabled after selection; selection state alone must not disable camera-controller actions.
 - **CSS:** Use nested syntax with `&` selector. Every CSS custom property must have an English comment explaining its purpose.
 - **Backend:** Runtime must be **Bun**. Server framework must be **Elysia**.
 - **Vite:** Never run `bun run dev` manually. `vite build` is allowed.
