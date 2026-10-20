@@ -14,33 +14,25 @@ When the user explicitly requests the usual Windows browser, connect to that bro
 
 ## Normal workflow
 
-Call `chrome-devtools list_pages` directly. The daemon starts implicitly and is reused by subsequent commands.
-Do not run `start`, `status`, or `stop` before every use. An `about:blank` page confirms connectivity but does not
-prove that Studio is loaded or that an existing application profile has been restored.
+Before the first browser interaction in each Studio validation task, apply
+[Reliable Studio Browser Tests](../lgs-1920-studio-browser-webgl/SKILL.md) and run its WebGL preflight:
+
+```bash
+bun skills/lgs-1920-studio-browser-webgl/scripts/browser.mjs ensure
+bun skills/lgs-1920-studio-browser-webgl/scripts/browser.mjs list_pages
+```
+
+Use that wrapper for subsequent CLI commands to preserve the WSL runtime-directory fallback when needed.
+It reuses a running daemon. Do not unconditionally restart or stop the browser before every action. An
+`about:blank` page confirms connectivity but does not prove that WebGL, Studio, or the intended profile works.
 
 Use `chrome-devtools <command> --help` for the installed command signature. Page-scoped commands may require
 the page ID as their first positional argument. Prefer `take_snapshot` for inspecting the page.
 
-The CLI defaults to a headless browser and, unless `userDataDir` is supplied, an isolated profile. Use a persistent
-profile for Studio work so IndexedDB data and service-worker caches survive daemon restarts. Cesium requires
-WebGL; launch Chrome with SwiftShader enabled because the default headless GPU configuration may disable WebGL:
-
-```bash
-chrome-devtools start \
-  --userDataDir "$HOME/.cache/chrome-devtools-mcp-cli/chrome-profile" \
-  --chromeArg=--enable-webgl \
-  --chromeArg=--ignore-gpu-blocklist \
-  --chromeArg=--use-gl=angle \
-  --chromeArg=--use-angle=swiftshader-webgl \
-  --chromeArg=--enable-unsafe-swiftshader
-chrome-devtools list_pages
-```
-
-Use these flags only for the local diagnostic browser; they do not configure the production application.
-The startup command restarts the daemon and closes its active pages. Reuse the same profile when restarting so
-local application data is retained, and check `chrome-devtools list_pages` after startup. Confirm WebGL with a
-small `canvas.getContext('webgl2')` or `canvas.getContext('webgl')` probe before diagnosing Cesium initialization.
-Do not start the Studio development server from this workflow.
+The CLI defaults to a headless browser and, unless `userDataDir` is supplied, an isolated profile. The WebGL skill
+owns the persistent-profile launch command, graphics flags, headless environment, render probe, and bounded repair
+procedure. Keep those details there rather than starting a second browser with default settings. They configure
+only the local diagnostic browser. Do not start the Studio development server from this workflow.
 
 ## Connection failures
 
@@ -48,9 +40,8 @@ Diagnose the reported error before changing configuration:
 
 - For a missing executable, check `command -v google-chrome` and `google-chrome --version`.
 - For an unexpected browser or failed attachment, inspect `chrome-devtools status` and its daemon arguments.
-- For a Cesium `Error constructing CesiumWidget` WebGL failure, restart with the persistent profile and SwiftShader
-  flags above, then confirm a WebGL context before retrying Studio.
-- For a stale daemon, restart with the intended browser/profile configuration and verify with `list_pages`.
+- For a Cesium `Error constructing CesiumWidget` WebGL failure or a stalled daemon, apply the WebGL skill's
+  diagnostic and repair procedure, then verify actual rendering before retrying Studio. Preserve the active profile.
 - For a Windows browser attachment, use its reachable debugging endpoint with `--browserUrl`. Verify access
   from WSL first. Do not assume Windows localhost is reachable from WSL or that `--autoConnect` supports Edge.
 

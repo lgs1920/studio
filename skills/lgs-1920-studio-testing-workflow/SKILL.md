@@ -7,6 +7,11 @@ description: Create, repair, and run reliable LGS1920 tests with Vitest, React T
 
 Use this skill whenever a feature or bug fix changes behavior. Read neighboring tests and the affected implementation before writing assertions.
 
+Before any real-browser test, visual check, or screenshot, apply
+[Reliable Studio Browser Tests](../lgs-1920-studio-browser-webgl/SKILL.md). Require its WebGL 2 render preflight
+before loading Studio. A separate Playwright or Vitest browser must pass the same check in its own browser
+process with the verified launch configuration. DOM-only unit and jsdom tests do not need this preflight.
+
 Workflow:
 
 1. Reproduce the behavior with the smallest realistic test.
