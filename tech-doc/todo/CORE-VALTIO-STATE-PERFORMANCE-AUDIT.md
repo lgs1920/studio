@@ -24,7 +24,7 @@ The audit covers:
 - Replay, Main UI, Journey Editor, widget, statistics, and settings consumers;
 - imperative `snapshot()` and `subscribe()` calls;
 - the installed Valtio 2.3.2 implementation;
-- the existing GitNexus store and component relationships.
+- the relationships between stores and components.
 
 The source inventory found approximately 326 `useSnapshot` calls in `src`,
 with repeated snapshots of the `main`, `ui`, `replay`, editor, widget, metrics,
