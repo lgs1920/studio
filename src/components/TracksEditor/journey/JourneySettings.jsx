@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-17
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -89,6 +89,7 @@ import {
     ElevationProfile,
 }                                     from '../../MainUI/ElevationProfile'
 import { JourneyData }                from './JourneyData'
+import { FixPathEditorButton }         from '../../MainUI/FixPathEditorButton'
 
 const PANELS = {
     DATA: 'tab-data',
@@ -440,12 +441,6 @@ export const JourneySettings = () => {
                 text:    'The Journey could not be updated with the selected correction state.',
                 errors:  error,
             })
-        }
-    }
-
-    const openFixPathEditor = () => {
-        if (journey) {
-            journeyEditorStore().fixPathEditorOpen = true
         }
     }
 
@@ -802,17 +797,13 @@ export const JourneySettings = () => {
                                             </WaSelect>
                                         </div>
                                         <div className="lgs--journey-fix-path-setting">
-                                            <WaButton
+                                            <FixPathEditorButton
+                                                id="journey-settings-fix-path-open"
                                                 className="lgs--journey-fix-path-open"
+                                                journey={journey}
                                                 size="s"
                                                 appearance="outlined"
-                                                variant="brand"
-                                                disabled={!journey}
-                                                onClick={openFixPathEditor}
-                                            >
-                                                <WaIcon size="s" name="draw-polygon" variant="regular"/>
-                                                {'Fix Path'}
-                                            </WaButton>
+                                            />
                                             <WaSwitch
                                                 size="xs"
                                                 label-at-start

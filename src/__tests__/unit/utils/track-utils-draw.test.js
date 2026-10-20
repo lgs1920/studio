@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-09-20
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { DRAWING_FROM_UI } from '@Core/constants'
 import { TrackUtils } from '@Utils/cesium/TrackUtils'
 
 describe('TrackUtils draw scheduling', () => {
@@ -62,5 +63,65 @@ describe('TrackUtils draw scheduling', () => {
         expect(calls).toHaveLength(2)
         expect(calls[0].options).toEqual({action: 'first'})
         expect(calls[1].options).toEqual({action: 'latest'})
+    })
+
+    it('uses a temporary display override for map geometry without changing Journey content', async () => {
+        const source = {
+            name: 'track-display-override',
+            entities: {
+                values: [],
+            },
+            load: vi.fn(async () => {}),
+            show: true,
+        }
+        const originalContent = {
+            type:       'Feature',
+            properties: {},
+            geometry:   {
+                type:        'LineString',
+                coordinates: [[0, 0, 10], [0.001, 0, 10]],
+            },
+        }
+        const displayContent = {
+            ...originalContent,
+            geometry: {
+                ...originalContent.geometry,
+                coordinates: [[0, 0, 10], [0.001, 0.002, 10]],
+            },
+        }
+        const track = {
+            content: originalContent,
+            parent:  'journey-display-override',
+            slug:    source.name,
+            title:   'Temporary display override test',
+            visible: true,
+        }
+
+        globalThis.lgs = {
+            getJourneyBySlug: () => null,
+            viewer: {
+                dataSources: {
+                    contains:  candidate => candidate === source,
+                    getByName: name => name === source.name ? [source] : [],
+                },
+                scene: {
+                    requestRender: vi.fn(),
+                },
+            },
+        }
+        vi.spyOn(TrackUtils, 'applyTrackRenderStyle').mockImplementation(() => {})
+
+        TrackUtils.setDisplayContentOverride(track, displayContent)
+        try {
+            await TrackUtils.drawOnce(track, {action: DRAWING_FROM_UI})
+        }
+        finally {
+            TrackUtils.setDisplayContentOverride(track, null)
+        }
+
+        expect(source.load).toHaveBeenCalledOnce()
+        expect(source.load.mock.calls[0][0].geometry.coordinates).toEqual(displayContent.geometry.coordinates)
+        expect(track.content).toEqual(originalContent)
+        expect(source.__lgsTrackPathContent.geometry.coordinates).toEqual(displayContent.geometry.coordinates)
     })
 })

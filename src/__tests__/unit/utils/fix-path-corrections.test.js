@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -151,9 +151,22 @@ describe('Fix Path correction data', () => {
         const content = makeFeature()
         const first = makeCorrection(content, {startIndex: 0, endIndex: 2})
         const second = makeCorrection(content, {startIndex: 2, endIndex: 4})
-        const valid = normalizeFixPathCorrectionData({revision: 4, tracks: {'track-a': [first]}})
+        const valid = normalizeFixPathCorrectionData({
+            revision: 4,
+            tracks: {'track-a': [first]},
+            currentSection: {trackSlug: 'track-a', correctionId: first.id},
+        })
 
-        expect(valid).toMatchObject({revision: 4, tracks: {'track-a': [first]}})
+        expect(valid).toMatchObject({
+            revision: 4,
+            tracks: {'track-a': [first]},
+            currentSection: {trackSlug: 'track-a', correctionId: first.id},
+        })
+        expect(normalizeFixPathCorrectionData({
+            revision: 4,
+            tracks: {'track-a': [first]},
+            currentSection: {trackSlug: 'track-a', correctionId: 'missing-section'},
+        })).not.toHaveProperty('currentSection')
         expect(normalizeFixPathCorrectionData({revision: 1, tracks: {'track-a': [first, second]}})).toBeNull()
         expect(normalizeFixPathCorrectionData({revision: 1, tracks: {'track-a': [{...first, controlPoints: []}]}})).toBeNull()
     })
@@ -220,7 +233,7 @@ describe('Fix Path correction data', () => {
         ])
     })
 
-    it('drops a section when all of its points are removed', () => {
+    it('keeps a section when all its points are marked removed so they can be restored', () => {
         const content = makeFeature()
         const correction = makeCorrection(content, {
             controlPoints: [{
@@ -234,7 +247,11 @@ describe('Fix Path correction data', () => {
 
         const normalized = normalizeFixPathCorrectionData({revision: 1, tracks: {'track-a': [correction]}})
 
-        expect(normalized.tracks['track-a']).toEqual([])
+        expect(normalized.tracks['track-a']).toHaveLength(1)
+        expect(normalized.tracks['track-a'][0].controlPoints[0]).toMatchObject({
+            id: 'removed-control',
+            removed: true,
+        })
     })
 
     it('does not use removed points as curve anchors and supports a one-point section', () => {

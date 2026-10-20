@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -74,6 +74,7 @@ const TRACK_PRIMITIVE_MIN_POINTS = 4096
 const isTrackStyleEntity = entity => `${entity?.id ?? ''}`.includes(TRACK_STYLE_ENTITY_MARKER)
 const isTrackLocatorMarkerEntity = entity => `${entity?.id ?? ''}`.includes(TRACK_LOCATOR_MARKER_ENTITY_MARKER)
 const trackReferencePointCache = new WeakMap()
+const trackDisplayContentOverrides = new WeakMap()
 const trackDrawStates = new WeakMap()
 const trackDataSourceCache = new Map()
 const activeTrackWidthSources = new Set()
@@ -1281,6 +1282,16 @@ export class TrackUtils {
         return state.promise
     }
 
+    /** Set a temporary map-render content override for a track without changing its Journey data. */
+    static setDisplayContentOverride = (track, content) => {
+        if (!track || typeof track !== 'object') return
+        if (content && typeof content === 'object') {
+            trackDisplayContentOverrides.set(track, content)
+            return
+        }
+        trackDisplayContentOverrides.delete(track)
+    }
+
     static drawOnce = async (track, {
         action = DRAWING_FROM_UI,
         forcedToHide = false,
@@ -1297,7 +1308,7 @@ export class TrackUtils {
             case REFRESH_DRAWING:
             case DRAWING_FROM_UI: {
                 const smoothingKey = trackRenderSmoothingKey(track)
-                const pathContent = getCorrectedTrackContent(track)
+                const pathContent = trackDisplayContentOverrides.get(track) ?? getCorrectedTrackContent(track)
                 const journey = lgs.getJourneyBySlug?.(track.parent)
                 const pathRevision = fixPathRevisionKey(journey)
                 const geometryKey = `${geometrySignature(track)}:${pathRevision}`

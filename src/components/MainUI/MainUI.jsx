@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -63,6 +63,7 @@ import { useProxyValue }                from '@Utils/ValtioUtils'
 import { WidgetManagementDrawer } from './widgets/management/WidgetManagementDrawer'
 import { WidgetEditorPanel } from './widgets/editor/WidgetEditorPanel'
 import { FixPathEditor } from './FixPathEditor'
+import { FixPathEditorButton } from './FixPathEditorButton'
 
 import './style.css'
 
@@ -245,6 +246,16 @@ export const MainUI = memo(() => {
                                     <LayersButton tooltip={tooltipDir}/>
                                     <POIEditButton tooltip={tooltipDir}/>
                                     <EditorPanelButton tooltip={tooltipDir}/>
+                                    <FixPathEditorButton
+                                        id="launch-fix-path-editor"
+                                        className="square-button"
+                                        journey={lgs.stores.main.theJourney}
+                                        hideWhenUnavailable
+                                        tooltipPlacement={tooltipDir}
+                                        size="m"
+                                        appearance="filled"
+                                        showLabel={false}
+                                    />
                                     {/* <ProfileButton tooltip={tooltipDir}/> */}
                                     <InformationButton tooltip={tooltipDir}/>
                                     <SupportUIButton tooltip={tooltipDir}/>

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,6 +42,18 @@ export const getMaxFixPathSegmentMeters = (settingValue = globalThis.lgs?.settin
         return DEFAULT_FIX_PATH_SEGMENT_METERS
     }
     return Math.min(5000, Math.max(50, configured))
+}
+
+/**
+ * Normalize the identity of the section currently open in the Fix Path editor.
+ *
+ * @param {*} value - Persisted active-section identity.
+ * @returns {{trackSlug: string, correctionId: string}|null} Valid identity or null.
+ */
+export const normalizeFixPathActiveSection = value => {
+    const trackSlug = typeof value?.trackSlug === 'string' ? value.trackSlug.trim() : ''
+    const correctionId = typeof value?.correctionId === 'string' ? value.correctionId.trim() : ''
+    return trackSlug && correctionId ? {trackSlug, correctionId} : null
 }
 
 const normalizeCoordinate = coordinate => {
@@ -128,6 +140,7 @@ const normalizeFixPathCorrection = correction => {
             ...(sourceIndex === undefined ? {} : {sourceIndex}),
             fixed: typeof rawPoint.fixed === 'boolean' ? rawPoint.fixed : true,
             removed: rawPoint.removed === true,
+            ...(rawPoint.erased === true ? {erased: true} : {}),
         })
     }
     controlPoints.sort((first, second) => first.progress - second.progress
@@ -141,7 +154,7 @@ const normalizeFixPathCorrection = correction => {
  * Normalize persisted path edits without changing their source coordinates.
  *
  * @param {*} value - Stored Journey path correction data.
- * @returns {{revision: number, tracks: object}|null} Normalized data or null.
+ * @returns {{revision: number, tracks: object, currentSection?: {trackSlug: string, correctionId: string}}|null} Normalized data or null.
  */
 export const normalizeFixPathCorrectionData = value => {
     if (!value || typeof value !== 'object' || !value.tracks || typeof value.tracks !== 'object' || Array.isArray(value.tracks)) {
@@ -157,9 +170,7 @@ export const normalizeFixPathCorrectionData = value => {
         if (normalizedCorrections.some(correction => !correction)) {
             return null
         }
-        const corrections = normalizedCorrections.filter(correction => (
-            correction.controlPoints.some(point => point.removed !== true)
-        ))
+        const corrections = normalizedCorrections
         corrections.sort((first, second) => first.segmentIndex - second.segmentIndex || first.startIndex - second.startIndex)
         if (corrections.some((correction, index) => {
             const previous = corrections[index - 1]
@@ -172,9 +183,14 @@ export const normalizeFixPathCorrectionData = value => {
         tracks[trackSlug] = corrections
     }
 
+    const currentSection = normalizeFixPathActiveSection(value.currentSection)
+    const activeSectionExists = currentSection
+        && tracks[currentSection.trackSlug]?.some(correction => correction.id === currentSection.correctionId)
+
     return {
         revision: Number.isInteger(Number(value.revision)) && Number(value.revision) >= 0 ? Number(value.revision) : 0,
         tracks,
+        ...(activeSectionExists ? {currentSection} : {}),
     }
 }
 

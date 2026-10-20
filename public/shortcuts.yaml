@@ -90,6 +90,25 @@
   keys:
     - F
   scope: App
+- action: Reset Fix Path point
+  description: Restores a correction point from any field in its row.
+  id: fix-path-point-reset
+  keys:
+    - Mod+R
+  scope: Fix Path point row
+- action: Mark Fix Path point removed
+  description: Marks a correction point as removed from any field in its row; the row remains available for reset.
+  id: fix-path-point-remove
+  keys:
+    - Delete
+  scope: Fix Path point row
+- action: Select multiple Fix Path points
+  description: Shift+Click on a correction marker adds or removes it from the selection. Shift+Drag from a correction marker selects controls in that section; Shift+Drag elsewhere adds visible Journey points to the active section.
+  id: fix-path-point-multiselect
+  keys:
+    - Shift+Click
+    - Shift+Drag
+  scope: Fix Path map
 
 ## Video
 

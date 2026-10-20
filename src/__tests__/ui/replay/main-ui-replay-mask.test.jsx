@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -98,6 +98,9 @@ vi.mock('@Editor/groups/JourneyGroupsDrawer', () => ({
 }))
 vi.mock('@Components/JourneyReplay/JourneyReplayButton', () => ({
     JourneyReplayButton: () => <div data-testid="replay-launch-button"/>,
+}))
+vi.mock('@Components/MainUI/FixPathEditorButton', () => ({
+    FixPathEditorButton: ({journey}) => journey ? <button data-testid="fix-path-launch-button">Fix Path</button> : null,
 }))
 vi.mock('@Components/JourneyReplay/JourneyReplayDrawer', () => ({
     JourneyReplayDrawer: () => <div data-testid="replay-drawer"/>,
@@ -336,5 +339,27 @@ describe('MainUI replay mask', () => {
 
         expect(screen.queryByTestId('text-button')).toBeNull()
         expect(document.querySelector('#lgs-main-ui')).not.toBeNull()
+    })
+
+    it('places Fix Path directly below the Journey button', () => {
+        lgs.stores.replay.mainUiHidden = false
+        render(<MainUI/>)
+
+        const fixPathButton = screen.getByTestId('fix-path-launch-button')
+        const actions = fixPathButton.parentElement
+        expect(actions.id).toBe('primary-buttons-bar')
+        const journeyButtonIndex = Array.from(actions.children).findIndex(
+            element => element.dataset.testid === 'editor-panel-button',
+        )
+        expect(Array.from(actions.children).indexOf(fixPathButton)).toBe(journeyButtonIndex + 1)
+    })
+
+    it('hides Fix Path when there is no active Journey', () => {
+        lgs.stores.replay.mainUiHidden = false
+        lgs.stores.main.theJourney = null
+
+        render(<MainUI/>)
+
+        expect(screen.queryByTestId('fix-path-launch-button')).toBeNull()
     })
 })

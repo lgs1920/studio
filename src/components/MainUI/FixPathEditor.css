@@ -36,17 +36,6 @@
     pointer-events: none;
 }
 
-.fix-path-preview-line {
-    fill: none;
-    stroke: #ff3d91;
-    stroke-width: 4px;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-dasharray: 7 5;
-    vector-effect: non-scaling-stroke;
-    pointer-events: none;
-}
-
 .fix-path-source-points {
     fill: #ffffff;
     stroke: #19212b;
@@ -62,9 +51,7 @@
     stroke-width: 2px;
 }
 
-.fix-path-markers.is-selecting-area .fix-path-source-points,
-.fix-path-markers.is-selecting-area .fix-path-control-point,
-.fix-path-markers.is-selecting-area .fix-path-control-point-hitbox {
+.fix-path-markers.is-selecting-area .fix-path-source-points {
     pointer-events: none;
 }
 
@@ -79,7 +66,24 @@
 
 .fix-path-control-point {
     cursor: grab;
+    outline: none;
     pointer-events: all;
+}
+
+.fix-path-control-point:focus {
+    outline: none;
+}
+
+.fix-path-control-point.is-inactive {
+    cursor: pointer;
+}
+
+.fix-path-markers.is-erasing .fix-path-control-point.is-inactive {
+    cursor: not-allowed;
+}
+
+.fix-path-markers.is-erasing .fix-path-control-point:not(.is-inactive) {
+    cursor: crosshair;
 }
 
 .fix-path-control-point-hitbox {
@@ -89,23 +93,35 @@
 }
 
 .fix-path-control-point-visual {
-    fill: #ff3d91;
-    stroke: #ffffff;
+    fill: #ffffff;
+    stroke: #19212b;
     stroke-width: 2px;
     vector-effect: non-scaling-stroke;
     pointer-events: none;
 }
 
-.fix-path-control-point.is-inactive .fix-path-control-point-visual {
-    fill: #9299a3;
-    stroke: #d9dde2;
+.fix-path-control-point.is-unmodified:not(.is-inactive) .fix-path-control-point-visual {
+    fill: #2680ff;
+    stroke: #000000;
+    stroke-width: 2px;
 }
 
-.fix-path-control-point.is-selected .fix-path-control-point-visual {
-    fill: #ffb300;
-    stroke: #101820;
-    stroke-width: 3.5px;
-    filter: drop-shadow(0 0 2px #ffffff) drop-shadow(0 0 4px #101820);
+.fix-path-control-point.is-moved:not(.is-inactive) .fix-path-control-point-visual {
+    fill: #ff3d91;
+    stroke: #ffffff;
+    stroke-width: 2px;
+}
+
+.fix-path-control-point.is-selected:not(.is-inactive) .fix-path-control-point-visual {
+    fill: #7fff00;
+    stroke: #000000;
+    stroke-width: 2px;
+}
+
+.fix-path-control-point.is-inactive .fix-path-control-point-visual {
+    fill: #9299a3;
+    stroke: #ffffff;
+    stroke-width: 2px;
 }
 
 .fix-path-pending-point {
@@ -136,7 +152,7 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    width: min(390px, calc(100vw - 2 * var(--lgs-gutter)));
+    width: min(480px, calc(100vw - 2 * var(--lgs-gutter)));
     max-height: calc(100vh - 2 * var(--lgs-gutter));
     padding: var(--lgs-gutter);
     overflow: hidden;
@@ -144,17 +160,18 @@
     pointer-events: auto;
 }
 
-.fix-path-panel-header,
-.fix-path-panel-footer {
+.fix-path-panel.is-resized {
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.fix-path-panel-header {
     box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: flex-start;
     width: 100%;
     gap: var(--lgs-gutter-s);
-}
-
-.fix-path-panel-header {
     cursor: move;
 }
 
@@ -168,6 +185,10 @@
     text-align: left;
     font-size: var(--wa-font-size-m);
     gap: var(--lgs-gutter-xs);
+}
+
+.fix-path-panel-header h2 > wa-icon {
+    color: var(--wa-color-brand);
 }
 
 .fix-path-panel-header .fix-path-correction-selection-hint {
@@ -195,6 +216,56 @@
     flex: 0 0 auto;
 }
 
+.fix-path-main-toolbar {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    width: 100%;
+    min-height: var(--wa-form-control-height);
+    padding-block: var(--lgs-gutter-xxs);
+    border-block: 1px solid var(--wa-color-neutral-border-subtle);
+    gap: var(--lgs-gutter-xs);
+}
+
+.fix-path-toolbar-group {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: 0;
+}
+
+.fix-path-toolbar-history {
+    justify-content: flex-start;
+}
+
+.fix-path-toolbar-navigation {
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.fix-path-toolbar-edit-actions {
+    justify-content: flex-end;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.fix-path-section-position {
+    min-width: 4.5ch;
+    color: var(--wa-color-text-quiet);
+    font-size: var(--wa-font-size-xs);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.fix-path-correction-visibility {
+    display: flex;
+    align-items: center;
+}
+
+.fix-path-correction-visibility > wa-button {
+    flex: 0 0 auto;
+}
+
 .lgs-context-menu li.fix-path-context-menu-item {
     font-size: var(--wa-font-size-s);
 }
@@ -218,6 +289,12 @@
     min-height: 0;
 }
 
+.fix-path-panel.is-resized .fix-path-corrections-scroll-area {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
 .fix-path-correction-points-scroll-area {
     box-sizing: border-box;
     width: 100%;
@@ -236,9 +313,21 @@
         + var(--fix-path-correction-gap) + var(--fix-path-correction-gap)
         + var(--fix-path-correction-gap)
         + var(--lgs-gutter-xxs) + var(--lgs-gutter-xxs) + 4px
+        + var(--lgs-gutter-s)
     );
     max-height: min(var(--fix-path-correction-list-max-height), max(0px, calc(100vh - 13rem)));
     min-height: 0;
+}
+
+.fix-path-panel.is-resized .fix-path-corrections-list,
+.fix-path-panel.is-resized .fix-path-correction-section,
+.fix-path-panel.is-resized .fix-path-correction-points-scroll-area {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.fix-path-panel.is-resized .fix-path-correction-points-scroll-area {
+    max-height: none;
 }
 
 .fix-path-correction-points-scroll-area > .lgs-scrollbars-container {
@@ -248,8 +337,13 @@
     max-height: inherit;
 }
 
+.fix-path-panel.is-resized .fix-path-correction-points-scroll-area > .lgs-scrollbars-container {
+    height: 100% !important;
+    max-height: none;
+}
+
 .fix-path-correction-points-scroll-area .lgs-scrollbars .view {
-    padding-bottom: 0;
+    padding-bottom: var(--lgs-gutter-s);
 }
 
 .fix-path-corrections-list {
@@ -274,6 +368,12 @@
 .fix-path-correction-section {
     /* Share the same spacing between columns, rows, and section content. */
     --fix-path-correction-gap: var(--lgs-gutter-xs);
+    /* Keep the status glyph centered inside its original marker slot. */
+    --fix-path-correction-status-icon-slot: calc(var(--wa-font-size-l) + var(--lgs-gutter-xxs));
+    /* Add breathing room between the status glyph and the coordinate fields. */
+    --fix-path-correction-status-gap: var(--lgs-gutter-s);
+    /* Reserve the marker slot plus the additional gap before the row fields. */
+    --fix-path-correction-status-gutter: calc(var(--fix-path-correction-status-icon-slot) + var(--fix-path-correction-status-gap));
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -297,14 +397,21 @@
 }
 
 .fix-path-coordinate-header > span:nth-child(-n + 3),
-.fix-path-correction-point-row > wa-input:nth-child(-n + 3) {
+.fix-path-correction-point-row > .fix-path-correction-point-coordinate {
     flex: 1 1 0;
     min-width: 0;
 }
 
+.fix-path-coordinate-header > span:nth-child(-n + 2),
+.fix-path-correction-point-row > .fix-path-correction-point-coordinate:not(.fix-path-correction-point-altitude) {
+    flex: 0.9 1 12ch;
+    min-width: 12ch;
+}
+
 .fix-path-coordinate-header > span:nth-child(3),
-.fix-path-correction-point-row > wa-input:nth-child(3) {
-    flex-grow: 0.8;
+.fix-path-correction-point-row > .fix-path-correction-point-altitude {
+    flex: 1.4 1 10ch;
+    min-width: 10ch;
 }
 
 .fix-path-coordinate-header > span:last-child,
@@ -315,6 +422,7 @@
 .fix-path-coordinate-header {
     box-sizing: border-box;
     margin: 0;
+    padding-left: var(--fix-path-correction-status-gutter);
     color: var(--wa-color-text-quiet);
     font-weight: var(--wa-font-weight-bold);
 }
@@ -328,12 +436,13 @@
 }
 
 .fix-path-correction-point-row {
+    position: relative;
     align-items: stretch;
     box-sizing: border-box;
     flex: 0 0 var(--fix-path-correction-row-height);
     height: var(--fix-path-correction-row-height);
     min-height: var(--fix-path-correction-row-height);
-    padding: 0;
+    padding: 0 0 0 var(--fix-path-correction-status-gutter);
     border: 0;
     border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
     cursor: pointer;
@@ -341,11 +450,11 @@
     transition: outline-color 120ms ease;
 }
 
-.fix-path-correction-point-row:hover:not(.is-selected) > wa-input:nth-child(-n + 3) {
+.fix-path-correction-point-row:hover:not(.is-selected) > .fix-path-correction-point-coordinate {
     --wa-form-control-value-color: var(--lgs-card-on-map-hover-color);
 }
 
-.fix-path-correction-point-row wa-input::part(base) {
+.fix-path-correction-point-row .fix-path-correction-point-coordinate::part(base) {
     box-sizing: border-box;
     /* Resolve against the row, independently of the input's theme font size. */
     height: 100%;
@@ -353,7 +462,7 @@
     transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
-.fix-path-correction-point-row:hover:not(.is-selected) > wa-input:nth-child(-n + 3)::part(base) {
+.fix-path-correction-point-row:hover:not(.is-selected) > .fix-path-correction-point-coordinate::part(base) {
     background-color: var(--lgs-card-on-map-hover-bg-color);
     border-color: var(--lgs-card-on-map-hover-outline-color);
     color: var(--lgs-card-on-map-hover-color);
@@ -363,17 +472,17 @@
     background: transparent;
 }
 
-.fix-path-correction-point-row.is-selected > wa-input:nth-child(-n + 3)::part(base) {
+.fix-path-correction-point-row.is-selected > .fix-path-correction-point-coordinate::part(base) {
     background-color: var(--lgs-card-on-map-hover-bg-color);
     border-color: var(--lgs-card-on-map-selected-border-color);
     color: var(--lgs-card-on-map-hover-color);
 }
 
-.fix-path-correction-point-row.is-selected > wa-input:nth-child(-n + 3) {
+.fix-path-correction-point-row.is-selected > .fix-path-correction-point-coordinate {
     --wa-form-control-value-color: var(--lgs-card-on-map-hover-color);
 }
 
-.fix-path-correction-point-row.is-fixed > wa-input:nth-child(-n + 3) {
+.fix-path-correction-point-row.is-fixed > .fix-path-correction-point-coordinate {
     --wa-form-control-value-color: var(--wa-color-text-normal);
 }
 
@@ -381,14 +490,64 @@
     opacity: 0.55;
 }
 
-.fix-path-correction-point-row:focus-visible > wa-input:nth-child(-n + 3)::part(base) {
+/* Regular duotone glyphs provide a separate border and interior fill. */
+.fix-path-correction-point-status-indicator {
+    /* Keep the border layer fully visible instead of using duotone transparency. */
+    --primary-opacity: 1;
+    /* Keep the interior layer fully visible to match the map markers. */
+    --secondary-opacity: 1;
+
+    &.is-unmodified:not(.is-selected) {
+        /* The primary layer draws the unchanged point's border. */
+        --primary-color: #000000;
+        /* The secondary layer fills the unchanged point. */
+        --secondary-color: #2680ff;
+    }
+
+    &.is-moved:not(.is-selected) {
+        /* The primary layer draws the moved point's border. */
+        --primary-color: #ffffff;
+        /* The secondary layer fills the moved point. */
+        --secondary-color: #ff3d91;
+    }
+
+    &.is-selected {
+        /* The primary layer draws the selected point's border. */
+        --primary-color: #000000;
+        /* The secondary layer fills the selected point. */
+        --secondary-color: #7fff00;
+    }
+
+    &.is-removed {
+        /* The primary layer uses the danger border token. */
+        --primary-color: var(--wa-color-danger-border-normal);
+        /* The secondary layer uses the danger fill token. */
+        --secondary-color: var(--wa-color-danger-fill-normal);
+    }
+}
+
+.fix-path-correction-point-row wa-icon.fix-path-correction-point-status-indicator {
+    position: absolute;
+    z-index: 5;
+    top: 50%;
+    left: calc(var(--fix-path-correction-status-icon-slot) / 2);
+    width: 1rem;
+    height: 1rem;
+    font-size: 1rem;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.fix-path-correction-point-row:focus-visible > .fix-path-correction-point-coordinate::part(base) {
     outline: 2px solid var(--wa-color-brand-border-normal);
     outline-offset: 1px;
 }
 
-.fix-path-correction-point-row wa-input {
+.fix-path-correction-point-row .fix-path-correction-point-coordinate {
     min-width: 0;
     height: 100%;
+    /* Reduce internal padding so long coordinates remain readable in compact layouts. */
+    --wa-form-control-padding-inline: var(--lgs-gutter-xxs);
     pointer-events: auto;
 }
 
@@ -396,7 +555,7 @@
     height: var(--fix-path-correction-row-height);
 }
 
-.fix-path-correction-point-row > wa-input:nth-child(-n + 3)::part(input) {
+.fix-path-correction-point-row > .fix-path-correction-point-coordinate::part(input) {
     height: 100%;
     min-height: 0;
     text-align: center;
@@ -414,20 +573,30 @@
     gap: 0;
 }
 
-.fix-path-panel-footer {
-    padding-top: var(--lgs-gutter-s);
-    border-top: 1px solid var(--wa-color-neutral-border-subtle);
-}
-
-.fix-path-panel-footer-actions {
-    display: flex;
-    align-items: center;
-    gap: var(--lgs-gutter-xs);
-    margin-left: auto;
-}
-
 .fix-path-help-popup {
     max-width: min(22rem, calc(100vw - 2 * var(--lgs-gutter)));
+}
+
+@media (max-width: 520px) {
+    .fix-path-main-toolbar {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "history actions"
+            "navigation navigation";
+        row-gap: var(--lgs-gutter-xxs);
+    }
+
+    .fix-path-toolbar-history {
+        grid-area: history;
+    }
+
+    .fix-path-toolbar-navigation {
+        grid-area: navigation;
+    }
+
+    .fix-path-toolbar-edit-actions {
+        grid-area: actions;
+    }
 }
 
 .fix-path-help-popup::part(popup) {
@@ -514,33 +683,11 @@
 }
 
 .fix-path-context-menu {
-    position: fixed;
-    z-index: 12002;
-    min-width: 120px;
-    padding: 3px;
-    background: var(--wa-color-surface-default);
-    border: 1px solid var(--wa-color-neutral-border-normal);
-    border-radius: var(--wa-border-radius-s);
-    box-shadow: var(--wa-shadow-medium);
-    pointer-events: auto;
-}
-
-.fix-path-context-menu button {
-    width: 100%;
-    padding: var(--lgs-gutter-xs) var(--lgs-gutter-s);
-    color: var(--wa-color-text-normal);
-    text-align: left;
-    background: transparent;
-    border: 0;
-    cursor: pointer;
-}
-
-.fix-path-context-menu button:hover {
-    background: var(--wa-color-surface-raised);
+    min-width: 150px;
 }
 
 @media (max-width: 640px) {
     .fix-path-panel {
-        width: min(390px, calc(100vw - 2 * var(--lgs-gutter)));
+        width: min(480px, calc(100vw - 2 * var(--lgs-gutter)));
     }
 }

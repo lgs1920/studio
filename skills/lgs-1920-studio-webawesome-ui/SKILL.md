@@ -40,6 +40,11 @@ generic resolver in `src/Utils/useWebAwesomeKits.js` once at application initial
 the requested family and variant, keeps the first matching definition from the ordered kit list,
 and delegates missing icons to Web Awesome's default resolver.
 
+Keep CSS class names owned by their component. When adapting an icon pattern from another
+component, reuse the rendering or styling technique but define a component-scoped class; do not
+attach an unrelated domain class such as `poi-duotone-icon` to inherit its styling. Share a class
+only when it has an explicit domain-neutral contract.
+
 See [the icon system specification](../../tech-doc/specs/ui-widgets/CORE-UI-ICONS-SPEC.md)
 for the complete contract and extension rules.
 

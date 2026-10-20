@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@ import {
 import {
     buildDraggedPointCorrections,
     buildFixPathSection,
+    removeFixPathControlPointsFromSection,
     translateFixPathControlPoints,
 } from '@Utils/cesium/fixPathCorrectionEditing'
 
@@ -103,6 +104,43 @@ describe('Fix Path correction editing', () => {
             .toMatchObject({sourceIndex: 4, fixed: false, removed: false})
         expect(result.correction.controlPoints.find(point => point.id === 'control-a').fixed).toBe(true)
         expect(result.correction.controlPoints.find(point => point.id === 'control-b').fixed).toBe(true)
+    })
+
+    it('keeps erased source points hidden when the surrounding sections are extended again', () => {
+        const content = makeFeature()
+        globalThis.lgs = {settings: {journey: {fixPathMaxSegmentMeters: 500}}}
+        const initial = buildFixPathSection(content, [], 0, 0, 8).correction
+        const erased = removeFixPathControlPointsFromSection(
+            content,
+            initial,
+            new Set(['fix-point-0-3', 'fix-point-0-4']),
+        )
+
+        expect(erased).toHaveLength(2)
+        expect(erased.every(section => section.controlPoints
+            .filter(point => point.erased === true)
+            .map(point => point.sourceIndex)
+            .sort((first, second) => first - second)
+            .join(',') === '3,4')).toBe(true)
+
+        const extended = buildFixPathSection(content, erased, 0, 0, 6)
+        const erasedPoints = extended.correction.controlPoints.filter(point => point.erased === true)
+
+        expect(extended.error).toBeUndefined()
+        expect(erasedPoints.map(point => point.sourceIndex)).toEqual([3, 4])
+        expect(erasedPoints.every(point => point.removed === true)).toBe(true)
+        expect(extended.correction.controlPoints.filter(point => point.erased !== true)
+            .map(point => point.sourceIndex)).not.toContain(3)
+        expect(extended.correction.controlPoints.filter(point => point.erased !== true)
+            .map(point => point.sourceIndex)).not.toContain(4)
+
+        const persisted = normalizeFixPathCorrectionData({
+            revision: 1,
+            tracks: {'track-a': extended.corrections},
+        })
+        expect(persisted.tracks['track-a'][0].controlPoints
+            .filter(point => point.erased === true)
+            .map(point => point.sourceIndex)).toEqual([3, 4])
     })
 
     it('merges sections whose source vertices are directly adjacent', () => {

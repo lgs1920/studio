@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,6 +55,7 @@ describe('Journey Fix Path settings', () => {
                     ],
                 }],
             },
+            currentSection: {trackSlug: 'track-a', correctionId: 'correction-a'},
         }
         const journey = new Journey('Journey enabled', 'gpx', {
             allowRename: false,

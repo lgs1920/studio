@@ -408,6 +408,13 @@ handler.setInputAction(() => {
 }, ScreenSpaceEventType.LEFT_UP);
 ```
 
+### Pointer Gesture Ownership in Studio
+
+Modifier-key selection tools may capture and suppress only the active gesture they own. Always
+clear gesture state on `pointerup` and `pointercancel`, allowing the platform to release pointer
+capture. Keep ordinary Cesium navigation available after selection; selected state alone must not
+disable camera-controller actions such as rotation, tilt, look, or translation.
+
 ## Performance Tips
 
 1. **Prefer `pickAsync` over `pick` on MOUSE_MOVE** -- synchronous pick stalls the GPU pipeline; `pickAsync` yields to the GPU and resolves next frame (WebGL2, v1.136+).

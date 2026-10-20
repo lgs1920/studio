@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,9 @@
 import {FIX_PATH_EDITOR_WIDGET, LGS_TOOLBAR, SCENE_WIDGETS_BOARD, WIDGET_LAYER_START} from '@Core/constants'
 import {
     applyFixPathCorrections,
+    getFixPathSourceFingerprint,
     getFixPathSegmentDistanceMeters,
+    getMaxFixPathSegmentMeters,
     mergeAdjacentFixPathCorrections,
 } from '@Utils/cesium/fixPathCorrections'
 import {Cartesian2, Cartesian3, Cartographic} from 'cesium'
@@ -151,7 +153,121 @@ export const cloneCorrectionList = (corrections, content = null) => {
             || first.id.localeCompare(second.id)),
     }
     }) : []
-    return content ? mergeAdjacentFixPathCorrections(content, normalized) : normalized
+    if (!content) return normalized
+
+    const merged = mergeAdjacentFixPathCorrections(content, normalized)
+    const claimedContextIndexes = new Set()
+    return merged.map(correction => {
+        const segment = getGeometrySegments(content.geometry)[correction.segmentIndex]
+        const currentFingerprint = getFixPathSourceFingerprint(
+            content,
+            correction.segmentIndex,
+            correction.startIndex,
+            correction.endIndex,
+        )
+        if (!Array.isArray(segment) || correction.sourceFingerprint !== currentFingerprint) {
+            return correction
+        }
+
+        const existingSourcePoints = new Map(correction.controlPoints
+            .filter(point => Number.isInteger(point.sourceIndex))
+            .map(point => [point.sourceIndex, point]))
+        let startIndex = correction.startIndex
+        let endIndex = correction.endIndex
+        const maxSectionMeters = getMaxFixPathSegmentMeters()
+        const contextKey = index => correction.segmentIndex + ':' + index
+        const mayInclude = (nextStart, nextEnd, addedIndex) => {
+            const distance = getFixPathSegmentDistanceMeters(content, correction.segmentIndex, nextStart, nextEnd)
+            return !claimedContextIndexes.has(contextKey(addedIndex))
+                && !merged.some(other => other !== correction
+                    && other.segmentIndex === correction.segmentIndex
+                    && addedIndex >= other.startIndex
+                    && addedIndex <= other.endIndex)
+                && Number.isFinite(distance)
+                && distance <= maxSectionMeters
+        }
+
+        const firstPoint = existingSourcePoints.get(startIndex)
+        if (firstPoint?.fixed === true && firstPoint.removed !== true && startIndex > 0
+            && mayInclude(startIndex - 1, endIndex, startIndex - 1)) {
+            startIndex -= 1
+            claimedContextIndexes.add(contextKey(startIndex))
+        }
+        const lastPoint = existingSourcePoints.get(endIndex)
+        if (lastPoint?.fixed === true && lastPoint.removed !== true && endIndex < segment.length - 1
+            && mayInclude(startIndex, endIndex + 1, endIndex + 1)) {
+            endIndex += 1
+            claimedContextIndexes.add(contextKey(endIndex))
+        }
+        if (startIndex === correction.startIndex && endIndex === correction.endIndex) {
+            return correction
+        }
+
+        const previousDistance = getFixPathSegmentDistanceMeters(
+            content,
+            correction.segmentIndex,
+            correction.startIndex,
+            correction.endIndex,
+        )
+        const expandedDistance = getFixPathSegmentDistanceMeters(content, correction.segmentIndex, startIndex, endIndex)
+        const distanceBeforePreviousStart = startIndex < correction.startIndex
+            ? getFixPathSegmentDistanceMeters(content, correction.segmentIndex, startIndex, correction.startIndex)
+            : 0
+        const progressForManualPoint = point => {
+            const oldProgress = Math.min(1, Math.max(0, Number(point.progress) || 0))
+            if (Number.isFinite(previousDistance) && previousDistance > 0
+                && Number.isFinite(expandedDistance) && expandedDistance > 0) {
+                return Math.min(0.999999, Math.max(0.000001,
+                    (distanceBeforePreviousStart + oldProgress * previousDistance) / expandedDistance))
+            }
+            const oldSpan = correction.endIndex - correction.startIndex
+            const newSpan = endIndex - startIndex
+            return newSpan > 0
+                ? Math.min(0.999999, Math.max(0.000001,
+                    (correction.startIndex - startIndex + oldProgress * oldSpan) / newSpan))
+                : 0.5
+        }
+
+        const controlPoints = []
+        for (let index = startIndex; index <= endIndex; index += 1) {
+            const distance = getFixPathSegmentDistanceMeters(content, correction.segmentIndex, startIndex, index)
+            const progress = index === startIndex
+                ? 0
+                : index === endIndex
+                    ? 1
+                    : Number.isFinite(expandedDistance) && expandedDistance > 0
+                        ? distance / expandedDistance
+                        : (index - startIndex) / Math.max(1, endIndex - startIndex)
+            const existing = existingSourcePoints.get(index)
+            const sourceCoordinate = [...segment[index]]
+            if (sourceCoordinate.length >= 3 && Number.isFinite(Number(sourceCoordinate[2]))) {
+                sourceCoordinate[2] = Math.round(Number(sourceCoordinate[2]))
+            }
+            controlPoints.push({
+                ...existing,
+                id: existing?.id ?? 'fix-point-' + correction.segmentIndex + '-' + index,
+                sourceIndex: index,
+                progress,
+                coordinate: existing?.coordinate ?? sourceCoordinate,
+                fixed: existing?.fixed ?? false,
+                removed: existing?.removed === true,
+            })
+        }
+        const sourceIndexes = new Set(controlPoints.map(point => point.sourceIndex))
+        const manualPoints = correction.controlPoints
+            .filter(point => !Number.isInteger(point.sourceIndex) || !sourceIndexes.has(point.sourceIndex))
+            .map(point => ({...point, progress: progressForManualPoint(point)}))
+
+        return {
+            ...correction,
+            startIndex,
+            endIndex,
+            sourceFingerprint: getFixPathSourceFingerprint(content, correction.segmentIndex, startIndex, endIndex),
+            controlPoints: [...controlPoints, ...manualPoints].sort((first, second) => first.progress - second.progress
+                || (first.sourceIndex ?? Number.MAX_SAFE_INTEGER) - (second.sourceIndex ?? Number.MAX_SAFE_INTEGER)
+                || first.id.localeCompare(second.id)),
+        }
+    })
 }
 
 /**
@@ -178,17 +294,25 @@ export const getControlPointCoordinate = (content, correction, point, correctedC
     const sourceIndex = Number.isInteger(point.sourceIndex)
         ? point.sourceIndex
         : sourcePoint ? Number(sourcePoint[2]) : Number.NaN
+    let coordinate = [...point.coordinate]
     if (point.fixed === false && Number.isInteger(sourceIndex)) {
-        const correctedSegment = getGeometrySegments(correctedContent?.geometry)[correction.segmentIndex]
-        if (correctedSegment?.[sourceIndex]) {
-            const correctedCoordinate = [...correctedSegment[sourceIndex]]
-            if (Number.isFinite(Number(correctedCoordinate[2]))) {
-                correctedCoordinate[2] = Math.round(Number(correctedCoordinate[2]))
+        const sourceSegment = getGeometrySegments(content?.geometry)[correction.segmentIndex]
+        const sourceCoordinate = sourceSegment?.[sourceIndex]
+        if (sourceCoordinate) {
+            // Unmodified control points stay at their GPX coordinates, even when the corrected preview bends the route.
+            coordinate = [...sourceCoordinate]
+            if ((coordinate[2] === null || coordinate[2] === undefined)
+                && point.coordinate?.[2] !== null && point.coordinate?.[2] !== undefined) {
+                coordinate[2] = point.coordinate[2]
             }
-            return correctedCoordinate
+        }
+        else {
+            const correctedSegment = getGeometrySegments(correctedContent?.geometry)[correction.segmentIndex]
+            if (correctedSegment?.[sourceIndex]) {
+                coordinate = [...correctedSegment[sourceIndex]]
+            }
         }
     }
-    const coordinate = [...point.coordinate]
     const rawHeight = coordinate[2]
     const hasHeight = rawHeight !== null && rawHeight !== undefined
         && !(typeof rawHeight === 'string' && rawHeight.trim() === '')
@@ -414,13 +538,23 @@ export const projectCoordinate = (scene, overlayRect, canvasRect, canvas, coordi
  * @param {object} correctionsByTrack - Draft corrections grouped by track slug.
  * @param {object} selection - Current section selection state.
  * @param {object|null} activeCorrection - Active section identity.
+ * @param {Set<string>} hiddenCorrectionKeys - Correction identities hidden from the editing overlay.
  * @returns {object} Projected SVG geometry.
  */
-export const projectEditOverlay = (viewer, overlay, selectedSourcePoints, tracks, correctionsByTrack, selection, activeCorrection) => {
+export const projectEditOverlay = (
+    viewer,
+    overlay,
+    selectedSourcePoints,
+    tracks,
+    correctionsByTrack,
+    selection,
+    activeCorrection,
+    hiddenCorrectionKeys = new Set(),
+) => {
     const scene = viewer?.scene
     const canvas = viewer?.canvas
     if (!scene || !canvas || !overlay) {
-        return {width: 0, height: 0, sourcePoints: [], controlPoints: [], pendingControlPoints: [], previewLines: []}
+        return {width: 0, height: 0, sourcePoints: [], controlPoints: [], pendingControlPoints: []}
     }
     const overlayRect = overlay.getBoundingClientRect()
     const canvasRect = canvas.getBoundingClientRect()
@@ -438,15 +572,17 @@ export const projectEditOverlay = (viewer, overlay, selectedSourcePoints, tracks
     const correctedSourcePoints = new Set()
     const removedSourcePoints = new Set()
     Object.entries(correctionsByTrack).forEach(([trackSlug, corrections]) => {
-        corrections.forEach(correction => correction.controlPoints.forEach(controlPoint => {
-            const sourceIndex = Number.isInteger(controlPoint.sourceIndex)
-                ? controlPoint.sourceIndex
-                : Number(/^fix-point-(\d+)-(\d+)$/.exec(controlPoint.id)?.[2])
-            if (!Number.isInteger(sourceIndex)) return
-            const sourceKey = trackSlug + ':' + correction.segmentIndex + ':' + sourceIndex
-            correctedSourcePoints.add(sourceKey)
-            if (controlPoint.removed === true) removedSourcePoints.add(sourceKey)
-        }))
+        corrections.forEach(correction => {
+            correction.controlPoints.forEach(controlPoint => {
+                const sourceIndex = Number.isInteger(controlPoint.sourceIndex)
+                    ? controlPoint.sourceIndex
+                    : Number(/^fix-point-(\d+)-(\d+)$/.exec(controlPoint.id)?.[2])
+                if (!Number.isInteger(sourceIndex)) return
+                const sourceKey = trackSlug + ':' + correction.segmentIndex + ':' + sourceIndex
+                correctedSourcePoints.add(sourceKey)
+                if (controlPoint.removed === true) removedSourcePoints.add(sourceKey)
+            })
+        })
     })
     const sourcePoints = selectedSourcePoints.flatMap(point => {
         const sourceKey = point.trackSlug + ':' + point.segmentIndex + ':' + point.index
@@ -464,7 +600,6 @@ export const projectEditOverlay = (viewer, overlay, selectedSourcePoints, tracks
     })
 
     const controlPoints = []
-    const previewLines = []
     Object.entries(correctionsByTrack).forEach(([trackSlug, corrections]) => {
         const track = trackBySlug.get(trackSlug)
         const content = track?.content
@@ -472,7 +607,9 @@ export const projectEditOverlay = (viewer, overlay, selectedSourcePoints, tracks
             return
         }
         corrections.forEach(correction => {
+            if (hiddenCorrectionKeys.has(trackSlug + ':' + correction.id)) return
             const preview = applyFixPathCorrections(content, [correction]).content
+            const active = correction.id === activeCorrection?.id && trackSlug === activeCorrection?.trackSlug
             correction.controlPoints.forEach(point => {
                 if (point.removed === true) return
                 const coordinate = getControlPointCoordinate(content, correction, point, preview)
@@ -491,32 +628,13 @@ export const projectEditOverlay = (viewer, overlay, selectedSourcePoints, tracks
                             ? point.sourceIndex
                             : Number(/^fix-point-(\d+)-(\d+)$/.exec(point.id)?.[2]),
                         fixed: point.fixed !== false,
-                        active: correction.id === activeCorrection?.id && trackSlug === activeCorrection?.trackSlug,
+                        active,
                         x: screen.x,
                         y: screen.y,
                     })
                 }
             })
 
-            const segment = getGeometrySegments(preview?.geometry)[correction.segmentIndex]
-            const points = segment?.slice(correction.startIndex, correction.endIndex + 1) ?? []
-            let visibleLine = []
-            points.forEach(coordinate => {
-                const screen = toLocal(coordinate)
-                if (screen && isWorldPositionVisible(
-                    scene,
-                    scene.camera,
-                    new Cartesian2(screen.canvasX, screen.canvasY),
-                    screen.worldPosition,
-                )) {
-                    visibleLine.push(screen)
-                }
-                else {
-                    if (visibleLine.length > 1) previewLines.push(visibleLine)
-                    visibleLine = []
-                }
-            })
-            if (visibleLine.length > 1) previewLines.push(visibleLine)
         })
     })
 
@@ -549,11 +667,7 @@ export const projectEditOverlay = (viewer, overlay, selectedSourcePoints, tracks
             }
         })
     }
-    if (pendingControlPoints.length > 1) {
-        previewLines.push(pendingControlPoints)
-    }
-
-    return {width, height, sourcePoints, controlPoints, pendingControlPoints, previewLines}
+    return {width, height, sourcePoints, controlPoints, pendingControlPoints}
 }
 
 /**

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-11
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -93,6 +93,22 @@ describe('useWebAwesomeKits', () => {
         const source = options.resolver('cave-in-mountains', 'duotone', 'regular')
 
         expect(source).toMatch(/^data:image\/svg\+xml,/)
+    })
+
+    it.each(['circle', 'diamond'])('bundles both visible layers of the regular duotone %s', name => {
+        registerLGS1920IconLibrary()
+
+        const [, options] = mocks.registerIconLibrary.mock.calls.find(
+            ([libraryName]) => libraryName === 'default',
+        )
+        const source = options.resolver(name, 'duotone', 'regular')
+        expect(source).toMatch(/^data:image\/svg\+xml,/)
+        const svg = decodeURIComponent(source.slice('data:image/svg+xml,'.length))
+        expect(svg).toContain('data-prefix="fadr"')
+        const paths = [...svg.matchAll(/<path\b[^>]*\bd="([^"]*)"/g)]
+        expect(paths).toHaveLength(2)
+        expect(paths.every(path => path[1].length > 0)).toBe(true)
+        expect(mocks.defaultResolver).not.toHaveBeenCalled()
     })
 
     it('uses the first matching definition from an ordered kit list', () => {

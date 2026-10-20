@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,10 +30,12 @@ export const FIX_PATH_WIDGET_CONFIG = {
     margin: 12,
     opacity: 1,
     persist: false,
-    resizable: false,
+    max: {height: 10000},
+    ratio: {aspectRatio: 1, locked: false},
+    resizable: true,
     rotatable: false,
     scalable: false,
-    showControlBox: false,
+    showControlBox: true,
     snappable: false,
     stopPropagation: true,
     top: '0px',

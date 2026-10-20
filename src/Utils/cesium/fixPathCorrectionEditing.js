@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -100,6 +100,159 @@ const sourceIndexOf = point => {
     if (Number.isInteger(point?.sourceIndex)) return point.sourceIndex
     const match = /^fix-point-(\d+)-(\d+)$/.exec(point?.id ?? '')
     return match ? Number(match[2]) : null
+}
+
+/**
+ * Remove selected correction-point membership and split remaining source points at gaps.
+ * @param {object} content - Source track feature.
+ * @param {object} correction - Correction section to update.
+ * @param {Set<string>} removedPointIds - Selected control-point identifiers.
+ * @returns {Array<object>} Remaining contiguous correction sections.
+ */
+export const removeFixPathControlPointsFromSection = (content, correction, removedPointIds) => {
+    const segment = getLineSegments(content?.geometry)[correction?.segmentIndex]
+    if (!Array.isArray(segment) || !(removedPointIds instanceof Set)) {
+        return []
+    }
+
+    const retainedSourcePoints = (correction.controlPoints ?? [])
+        .filter(point => !removedPointIds.has(point.id))
+        .map(point => ({point, sourceIndex: sourceIndexOf(point)}))
+        .filter(({sourceIndex}) => Number.isInteger(sourceIndex)
+            && sourceIndex >= correction.startIndex
+            && sourceIndex <= correction.endIndex)
+        .sort((first, second) => first.sourceIndex - second.sourceIndex)
+
+    const erasedSourcePoints = (correction.controlPoints ?? [])
+        .filter(point => removedPointIds.has(point.id))
+        .map(point => ({point, sourceIndex: sourceIndexOf(point)}))
+        .filter(({sourceIndex}) => Number.isInteger(sourceIndex)
+            && sourceIndex >= correction.startIndex
+            && sourceIndex <= correction.endIndex)
+        .map(({point, sourceIndex}) => ({
+            ...point,
+            id: 'fix-point-' + correction.segmentIndex + '-' + sourceIndex,
+            sourceIndex,
+            fixed: false,
+            removed: true,
+            erased: true,
+        }))
+
+    const groups = []
+    retainedSourcePoints.forEach(entry => {
+        const group = groups.at(-1)
+        if (!group || entry.sourceIndex !== group.at(-1).sourceIndex + 1) {
+            groups.push([entry])
+            return
+        }
+        group.push(entry)
+    })
+    const manualPoints = (correction.controlPoints ?? []).filter(point => (
+        !removedPointIds.has(point.id) && sourceIndexOf(point) === null
+    ))
+    const sortControlPoints = points => points.sort((first, second) => first.progress - second.progress
+        || (first.sourceIndex ?? Number.MAX_SAFE_INTEGER) - (second.sourceIndex ?? Number.MAX_SAFE_INTEGER)
+        || first.id.localeCompare(second.id))
+    const pointProgressForSection = (sourceIndex, startIndex, endIndex) => startIndex === endIndex
+        ? 0.5
+        : Math.min(1, Math.max(0, (sourceIndex - startIndex) / (endIndex - startIndex)))
+
+    if (groups.length === 0) {
+        if (erasedSourcePoints.length === 0 && manualPoints.length === 0) {
+            return []
+        }
+        return [{
+            ...correction,
+            controlPoints: sortControlPoints([
+                ...manualPoints,
+                ...erasedSourcePoints.map(point => ({
+                    ...point,
+                    progress: pointProgressForSection(point.sourceIndex, correction.startIndex, correction.endIndex),
+                })),
+            ]),
+        }]
+    }
+
+    const cumulativeDistances = [0]
+    for (let index = correction.startIndex + 1; index <= correction.endIndex; index += 1) {
+        cumulativeDistances.push(cumulativeDistances.at(-1)
+            + getFixPathSegmentDistanceMeters(content, correction.segmentIndex, index - 1, index))
+    }
+    const oldDistance = cumulativeDistances.at(-1)
+    const distanceAtIndex = index => cumulativeDistances[index - correction.startIndex] ?? Number.POSITIVE_INFINITY
+    const sourcePositionAtProgress = progress => {
+        const targetDistance = Number(progress) * oldDistance
+        if (!Number.isFinite(targetDistance) || !Number.isFinite(oldDistance) || oldDistance <= 0) {
+            return correction.startIndex + Number(progress) * (correction.endIndex - correction.startIndex)
+        }
+
+        let low = 0
+        let high = cumulativeDistances.length - 1
+        while (low < high) {
+            const middle = Math.floor((low + high) / 2)
+            if (cumulativeDistances[middle] < targetDistance) low = middle + 1
+            else high = middle
+        }
+        if (low === 0) return correction.startIndex
+        const distanceBefore = cumulativeDistances[low - 1]
+        const edgeDistance = cumulativeDistances[low] - distanceBefore
+        const edgeProgress = edgeDistance > 0 ? (targetDistance - distanceBefore) / edgeDistance : 0
+        return correction.startIndex + low - 1 + Math.min(1, Math.max(0, edgeProgress))
+    }
+
+    return groups.flatMap((group, groupIndex) => {
+        const startIndex = group[0].sourceIndex
+        const endIndex = group.at(-1).sourceIndex
+        const sourceFingerprint = getFixPathSourceFingerprint(
+            content,
+            correction.segmentIndex,
+            startIndex,
+            endIndex,
+        )
+        if (!sourceFingerprint) {
+            return []
+        }
+
+        const sectionDistance = distanceAtIndex(endIndex) - distanceAtIndex(startIndex)
+        const progressForIndex = index => {
+            if (startIndex === endIndex) return 0.5
+            const distance = distanceAtIndex(index) - distanceAtIndex(startIndex)
+            return Number.isFinite(sectionDistance) && sectionDistance > 0
+                ? Math.min(1, Math.max(0, distance / sectionDistance))
+                : (index - startIndex) / (endIndex - startIndex)
+        }
+        const points = group.map(({point, sourceIndex}) => ({...point, sourceIndex, progress: progressForIndex(sourceIndex)}))
+        manualPoints.forEach(point => {
+            const sourcePosition = sourcePositionAtProgress(point.progress)
+            if (sourcePosition < startIndex || sourcePosition > endIndex) {
+                return
+            }
+            const localIndex = Math.floor(sourcePosition)
+            const fractionalDistance = sourcePosition - localIndex
+            const wholeDistance = distanceAtIndex(localIndex) - distanceAtIndex(startIndex)
+            const partialDistance = localIndex < endIndex
+                ? fractionalDistance * (distanceAtIndex(localIndex + 1) - distanceAtIndex(localIndex))
+                : 0
+            const progress = Number.isFinite(sectionDistance) && sectionDistance > 0
+                ? (wholeDistance + partialDistance) / sectionDistance
+                : (sourcePosition - startIndex) / Math.max(1, endIndex - startIndex)
+            points.push({...point, progress: Math.min(0.999999, Math.max(0.000001, progress))})
+        })
+
+        const erasedPointsForGroup = erasedSourcePoints.map(point => ({
+            ...point,
+            progress: pointProgressForSection(point.sourceIndex, startIndex, endIndex),
+        }))
+
+        return [{
+            ...correction,
+            id: groupIndex === 0 ? correction.id : makeId(),
+            startIndex,
+            endIndex,
+            sourceFingerprint,
+            controlPoints: sortControlPoints([...points, ...erasedPointsForGroup]),
+        }]
+    })
 }
 
 const remapManualProgress = (content, segmentIndex, correction, point, startIndex, endIndex) => {
