@@ -231,7 +231,7 @@ export const FixPathEditorPanel = ({
 
             <div className="fix-path-toolbar-group fix-path-toolbar-edit-actions">
                 <WaTooltip for="fix-path-correction-visibility" placement="top">
-                    {currentCorrectionVisible ? 'Hide corrections' : 'Show corrections'}
+                    {currentCorrectionVisible ? 'Hide section fixes' : 'Show section fixes'}
                 </WaTooltip>
                 <ToggleStateIcon
                     id="fix-path-correction-visibility"
@@ -241,7 +241,7 @@ export const FixPathEditorPanel = ({
                     buttonVariant="neutral"
                     iconVariant="regular"
                     initial={currentCorrectionVisible}
-                    aria-label={currentCorrectionVisible ? 'Hide corrections' : 'Show corrections'}
+                    aria-label={currentCorrectionVisible ? 'Hide section fixes' : 'Show section fixes'}
                     aria-pressed={currentCorrectionVisible}
                     disabled={saving || !displayedCorrection}
                     onChange={onCorrectionVisibilityChange}

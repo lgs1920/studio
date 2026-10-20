@@ -347,7 +347,7 @@ describe('FixPathEditor map input ownership', () => {
         await waitFor(() => expect(journey.persistToDatabase).toHaveBeenCalled())
         journey.fixPathEnabled = true
         const savedCorrectionData = JSON.parse(JSON.stringify(journey.fixPathCorrectionData))
-        fireEvent.click(screen.getByRole('button', {name: 'Hide corrections'}))
+        fireEvent.click(screen.getByRole('button', {name: 'Hide section fixes'}))
         await waitFor(() => expect(document.querySelectorAll('.fix-path-control-point[data-correction-id="section-a"]')).toHaveLength(0))
         expect(document.querySelectorAll('.fix-path-control-point[data-correction-id="section-b"]')).toHaveLength(3)
         expect(setDisplayContentOverride).toHaveBeenLastCalledWith(
@@ -362,7 +362,7 @@ describe('FixPathEditor map input ownership', () => {
         expect(journey.fixPathCorrectionData).toEqual(savedCorrectionData)
         expect(getCorrectedTrackContent(journey.tracks.get('track-a')).geometry.coordinates)
             .toEqual(applyFixPathCorrections(journey.tracks.get('track-a').content, initialCorrectionSections).content.geometry.coordinates)
-        fireEvent.click(screen.getByRole('button', {name: 'Show corrections'}))
+        fireEvent.click(screen.getByRole('button', {name: 'Show section fixes'}))
         await waitFor(() => expect(document.querySelectorAll('.fix-path-control-point')).toHaveLength(6))
         expect(setDisplayContentOverride).toHaveBeenLastCalledWith(
             journey.tracks.get('track-a'),
