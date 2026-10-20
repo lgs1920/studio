@@ -2364,3 +2364,7 @@
 ## 2026-10-20 — [`docs: clarify component styling and Cesium gestures`](https://github.com/lgs1920/studio/commit/370f209f492147225d094156912c745b40344fdb)
 
 - Recorded automatically from Git history.
+
+## 2026-10-20 — [`Merge pull request #544 from lgs1920/docs/project-rules-ui-cesium-pointer-ownership`](https://github.com/lgs1920/studio/commit/e7ffbb24bea973182bf195efa66834d0271d75b3)
+
+- docs: clarify component styling and Cesium gestures
