@@ -17,15 +17,12 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
     applyFixPathCorrections,
-    DEFAULT_FIX_PATH_SEGMENT_METERS,
     getCorrectedTrackContent,
     getFixPathSegmentDistanceMeters,
     getFixPathSourceFingerprint,
-    getMaxFixPathSegmentMeters,
     mergeAdjacentFixPathCorrections,
     normalizeFixPathCorrectionData,
 } from '@Utils/cesium/fixPathCorrections'
-import { isSettingPathExcluded } from '@Core/settings/settingsExclusions'
 
 const makeFeature = (coordinates = [
     [0, 0, 10],
@@ -55,15 +52,6 @@ describe('Fix Path correction data', () => {
         globalThis.lgs = previousLgs
     })
 
-    it('uses the configurable 500 m default and bounds the setting', () => {
-        expect(DEFAULT_FIX_PATH_SEGMENT_METERS).toBe(500)
-        expect(getMaxFixPathSegmentMeters(undefined)).toBe(500)
-        expect(getMaxFixPathSegmentMeters(1250)).toBe(1250)
-        expect(getMaxFixPathSegmentMeters(10)).toBe(50)
-        expect(getMaxFixPathSegmentMeters(10000)).toBe(5000)
-        expect(isSettingPathExcluded('journey.fixPathMaxSegmentMeters')).toBe(true)
-    })
-
     it('measures the source route length across every point in a section', () => {
         const content = makeFeature()
         const length = getFixPathSegmentDistanceMeters(content, 0, 0, 4)
@@ -75,7 +63,6 @@ describe('Fix Path correction data', () => {
 
     it('applies a smooth local correction without mutating source geometry or vertical values', () => {
         const content = makeFeature()
-        globalThis.lgs = {settings: {journey: {fixPathMaxSegmentMeters: 500}}}
         const correction = makeCorrection(content)
 
         const result = applyFixPathCorrections(content, [correction])
@@ -96,7 +83,6 @@ describe('Fix Path correction data', () => {
         const correction = makeCorrection(content, {
             controlPoints: [{id: 'control-high', progress: 0.5, coordinate: [0.002, 0.001, 210]}],
         })
-        globalThis.lgs = {settings: {journey: {fixPathMaxSegmentMeters: 500}}}
 
         const result = applyFixPathCorrections(content, [correction])
 
@@ -123,7 +109,7 @@ describe('Fix Path correction data', () => {
         }).tracks['track-a'][0].controlPoints[0].coordinate).toEqual([0.002, 0.001])
     })
 
-    it('skips stale or over-limit sections and applies them when the user raises the limit', () => {
+    it('applies a saved section longer than the previous limit and still skips stale sections', () => {
         const content = makeFeature([
             [0, 0, 0],
             [0.0015, 0, 1],
@@ -132,15 +118,11 @@ describe('Fix Path correction data', () => {
             [0.006, 0, 4],
         ])
         const correction = makeCorrection(content)
-        globalThis.lgs = {settings: {journey: {fixPathMaxSegmentMeters: 500}}}
-
-        const tooLong = applyFixPathCorrections(content, [correction])
-        expect(tooLong.changed).toBe(false)
-        expect(tooLong.skippedCorrectionIds).toEqual(['correction-1'])
-
-        globalThis.lgs.settings.journey.fixPathMaxSegmentMeters = 750
+        globalThis.lgs = {settings: {journey: {fixPathMaxSegmentMeters: 50}}}
+        expect(getFixPathSegmentDistanceMeters(content, 0, 0, 4)).toBeGreaterThan(500)
         const accepted = applyFixPathCorrections(content, [correction])
         expect(accepted.changed).toBe(true)
+        expect(accepted.skippedCorrectionIds).toEqual([])
 
         const stale = applyFixPathCorrections(makeFeature(), [correction])
         expect(stale.changed).toBe(false)

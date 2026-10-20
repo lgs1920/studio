@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -223,6 +223,18 @@ describe('SettingsSection', () => {
             expect.objectContaining({hideOtherJourneys: true}),
             SETTINGS_STORE,
         )
+    })
+
+    it('removes the retired Fix Path section length preference during settings sync', () => {
+        const section = new SettingsSection('journey')
+        const storedJourney = {
+            ...JSON.parse(JSON.stringify(lgs.configuration.journey)),
+            fixPathMaxSegmentMeters: 500,
+        }
+
+        const migrated = section.update(storedJourney, lgs.configuration.journey)
+
+        expect(migrated).not.toHaveProperty('fixPathMaxSegmentMeters')
     })
 
     it('keeps user replay settings while adding new default keys', () => {

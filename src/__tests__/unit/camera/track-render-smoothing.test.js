@@ -161,7 +161,7 @@ describe('track render smoothing', () => {
         vi.stubGlobal('lgs', {
             getJourneyBySlug: vi.fn(() => journey),
             theJourneyEditorProxy: {journey},
-            settings: {journey: {fixPathMaxSegmentMeters: 500}},
+            settings: {journey: {}},
         })
 
         const renderContent = getTrackRenderContent(track)

@@ -15,7 +15,6 @@
  ******************************************************************************/
 
 const EARTH_RADIUS_METERS = 6371008.8
-export const DEFAULT_FIX_PATH_SEGMENT_METERS = 500
 
 const fixPathContentCache = new WeakMap()
 
@@ -30,19 +29,6 @@ const coordinateIsValid = coordinate => Array.isArray(coordinate)
     && numericValue(coordinate[1])
     && Math.abs(Number(coordinate[0])) <= 180
     && Math.abs(Number(coordinate[1])) <= 90
-
-/**
- * Read and bound the user's maximum correction section length.
- *
- * @returns {number} Maximum allowed source route length in metres.
- */
-export const getMaxFixPathSegmentMeters = (settingValue = globalThis.lgs?.settings?.journey?.fixPathMaxSegmentMeters) => {
-    const configured = Number(settingValue)
-    if (!Number.isFinite(configured) || configured <= 0) {
-        return DEFAULT_FIX_PATH_SEGMENT_METERS
-    }
-    return Math.min(5000, Math.max(50, configured))
-}
 
 /**
  * Normalize the identity of the section currently open in the Fix Path editor.
@@ -437,7 +423,7 @@ const applyCorrection = (sourceSegment, destinationSegment, correction, originCo
         correction.startIndex,
         correction.endIndex,
     )
-    if (!Number.isFinite(distance) || distance > getMaxFixPathSegmentMeters()) {
+    if (!Number.isFinite(distance)) {
         return false
     }
 
@@ -583,8 +569,12 @@ export const applyFixPathCorrections = (content, corrections = []) => {
             || correction.startIndex < 0
             || correction.endIndex >= sourceSegment.length
             || !correction.controlPoints?.length
-            || getFixPathSegmentDistanceMeters(content, correction.segmentIndex, correction.startIndex, correction.endIndex)
-                > getMaxFixPathSegmentMeters()) {
+            || !Number.isFinite(getFixPathSegmentDistanceMeters(
+                content,
+                correction.segmentIndex,
+                correction.startIndex,
+                correction.endIndex,
+            ))) {
             skippedCorrectionIds.push(correction.id)
             continue
         }

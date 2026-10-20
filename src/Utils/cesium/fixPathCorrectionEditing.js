@@ -17,7 +17,6 @@
 import {
     getFixPathSegmentDistanceMeters,
     getFixPathSourceFingerprint,
-    getMaxFixPathSegmentMeters,
 } from '@Utils/cesium/fixPathCorrections'
 
 const getLineSegments = geometry => {
@@ -344,11 +343,8 @@ export const buildFixPathSection = (content, corrections, segmentIndex, startInd
     }
 
     const distance = getFixPathSegmentDistanceMeters(content, segmentIndex, mergedStart, mergedEnd)
-    if (!Number.isFinite(distance) || distance > getMaxFixPathSegmentMeters()) {
-        return {
-            corrections,
-            error: 'This edit spans ' + Math.round(distance) + ' m. Increase the Fix Path limit in application settings or use a denser nearby section.',
-        }
+    if (!Number.isFinite(distance)) {
+        return {corrections, error: 'The selected route section is no longer available.'}
     }
 
     const sourceFingerprint = getFixPathSourceFingerprint(content, segmentIndex, mergedStart, mergedEnd)

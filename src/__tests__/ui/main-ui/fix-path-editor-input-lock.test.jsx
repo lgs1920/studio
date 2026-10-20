@@ -228,7 +228,7 @@ describe('FixPathEditor map input ownership', () => {
             },
             theJourneyEditorProxy: proxy({journey, track: null}),
             settings: {
-                journey: proxy({fixPathMaxSegmentMeters: 500}),
+                journey: proxy({}),
                 unitSystem,
             },
             viewer: {

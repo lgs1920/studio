@@ -19,9 +19,7 @@ import { Widget } from '@Components/MainUI/widgets/Widget'
 import { Utils } from '@Editor/Utils'
 import {
     applyFixPathCorrections,
-    getFixPathSegmentDistanceMeters,
     getFixPathSourceFingerprint,
-    getMaxFixPathSegmentMeters,
     normalizeFixPathActiveSection,
     normalizeFixPathCorrectionData,
 } from '@Utils/cesium/fixPathCorrections'
@@ -56,7 +54,6 @@ import {
 import {
     cloneCorrectionList,
     correctionAtPoint,
-    coordinateDistanceMeters,
     findClosestProjectedControlPoint,
     getControlPointCoordinate,
     getGeometrySegments,
@@ -173,9 +170,7 @@ export const FixPathEditor = () => {
     const _activeSection = useRef(null)
     const _heightInputSnapshot = useRef(null)
     const _displayContentOverrides = useRef(new Map())
-    const journeySettings = useOptionalSnapshot(lgs.settings.journey)
     const unitSystemSnapshot = useOptionalSnapshot(lgs.settings.unitSystem)
-    const maxSegmentMeters = getMaxFixPathSegmentMeters(journeySettings.fixPathMaxSegmentMeters)
     const unitSystem = Number(unitSystemSnapshot.current ?? INTERNATIONAL)
     const heightUnit = ELEVATION_UNITS[unitSystem] ?? ELEVATION_UNITS[INTERNATIONAL]
     const fixPathWidgetCallbacks = useMemo(() => ({
@@ -824,20 +819,6 @@ export const FixPathEditor = () => {
             return
         }
         const trackContent = trackBySlug.get(point.trackSlug)?.content
-        const distance = getFixPathSegmentDistanceMeters(
-            trackContent,
-            point.segmentIndex,
-            selection.startPoint.index,
-            point.index,
-        )
-        if (distance > maxSegmentMeters) {
-            setPanelFeedback({
-                type: 'warning',
-                caption: 'Fix Path section is too long',
-                text: 'This route section is ' + Math.round(distance) + ' m. Split it into shorter sections or increase the limit in application settings.',
-            })
-            return
-        }
         const corrections = draftCorrectionsRef.current[point.trackSlug] ?? []
         const bridgesCorrection = corrections.some(correction => correction.segmentIndex === point.segmentIndex
             && correction.startIndex <= point.index
@@ -873,7 +854,7 @@ export const FixPathEditor = () => {
             [point.trackSlug]: result.corrections,
         }, true, {historySection})
         setSelection({phase: 'choose-start', startPoint: null, controlPoints: []})
-    }, [commitDraftCorrections, maxSegmentMeters, selection, setPersistedActiveCorrection, trackBySlug])
+    }, [commitDraftCorrections, selection, setPersistedActiveCorrection, trackBySlug])
 
     const addControlPoint = useCallback((event, clientX, clientY) => {
         if (validationInProgressRef.current) return
@@ -888,21 +869,10 @@ export const FixPathEditor = () => {
             return
         }
         setPanelFeedback(null)
-        const startTrack = trackBySlug.get(selection.startPoint.trackSlug)
-        const segment = getGeometrySegments(startTrack?.content?.geometry)[selection.startPoint.segmentIndex]
-        const start = segment?.[selection.startPoint.index]
-        if (!start || coordinateDistanceMeters(start, coordinate) > maxSegmentMeters) {
-            setPanelFeedback({
-                type: 'warning',
-                caption: 'Fix Path section is too long',
-                text: 'Keep correction points within ' + maxSegmentMeters + ' m of the starting track point.',
-            })
-            return
-        }
         const controlPoints = [...(selection.controlPoints ?? []), {id: makeId(), coordinate}]
             .map((point, index, points) => ({...point, progress: (index + 1) / (points.length + 1)}))
         setSelection({...selection, controlPoints})
-    }, [maxSegmentMeters, pointAtScreenPosition, selection, trackBySlug])
+    }, [pointAtScreenPosition, selection])
 
     /** Project the Journey and retain visible source points inside a screen polygon. */
     const scanSelectedPolygon = useCallback(async (polygon, sourceScope = {}) => {
@@ -2223,20 +2193,6 @@ export const FixPathEditor = () => {
                 const trackContent = trackBySlug.get(trackSlug)?.content
                 if (!trackContent) continue
                 for (const correction of corrections) {
-                    const distance = getFixPathSegmentDistanceMeters(
-                        trackContent,
-                        correction.segmentIndex,
-                        correction.startIndex,
-                        correction.endIndex,
-                    )
-                    if (distance > maxSegmentMeters) {
-                        setPanelFeedback({
-                            type: 'warning',
-                            caption: 'Fix Path section exceeds the configured limit',
-                            text: 'One section is ' + Math.round(distance) + ' m. Split it into sections shorter than ' + maxSegmentMeters + ' m.',
-                        })
-                        return false
-                    }
                     if (correction.sourceFingerprint !== getFixPathSourceFingerprint(
                         trackContent,
                         correction.segmentIndex,
@@ -2340,7 +2296,7 @@ export const FixPathEditor = () => {
             validationInProgressRef.current = false
             setSaving(false)
         }
-    }, [journey, journeySlug, maxSegmentMeters, trackBySlug])
+    }, [journey, journeySlug, trackBySlug])
 
     useEffect(() => {
         persistDraftCorrectionsRef.current = persistDraftCorrections

@@ -99,7 +99,7 @@ describe('FixPathEditorPanel feedback callouts', () => {
 
     it.each([
         {
-            feedback: {type: 'warning', caption: 'Section too long', text: 'Split this correction into shorter sections.'},
+            feedback: {type: 'warning', caption: 'Route section unavailable', text: 'Choose valid points on the same Journey segment.'},
             variant: 'warning',
             icon: 'triangle-exclamation',
             role: 'status',

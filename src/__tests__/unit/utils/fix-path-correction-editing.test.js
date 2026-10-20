@@ -17,6 +17,7 @@
 import {afterEach, describe, expect, it} from 'vitest'
 import {
     applyFixPathCorrections,
+    getFixPathSegmentDistanceMeters,
     getFixPathSourceFingerprint,
     normalizeFixPathCorrectionData,
 } from '@Utils/cesium/fixPathCorrections'
@@ -53,9 +54,29 @@ describe('Fix Path correction editing', () => {
         globalThis.lgs = previousLgs
     })
 
+    it('creates and applies a section longer than the previous 500 m limit', () => {
+        globalThis.lgs = {settings: {journey: {fixPathMaxSegmentMeters: 50}}}
+        const content = makeFeature()
+        content.geometry.coordinates = [0, 0.0015, 0.003, 0.0045, 0.006]
+            .map((longitude, index) => [longitude, 0, index * 10])
+        const addedPoints = [{id: 'manual-long-section', progress: 0.5, coordinate: [0.003, 0.002, 40]}]
+
+        const result = buildFixPathSection(content, [], 0, 0, 4, addedPoints)
+
+        expect(getFixPathSegmentDistanceMeters(content, 0, 0, 4)).toBeGreaterThan(500)
+        expect(result.error).toBeUndefined()
+        expect(result.correction).toMatchObject({startIndex: 0, endIndex: 4})
+        expect(result.correction.controlPoints).toEqual(expect.arrayContaining([
+            expect.objectContaining({id: 'manual-long-section', fixed: true}),
+        ]))
+        expect(applyFixPathCorrections(content, result.corrections)).toMatchObject({
+            changed: true,
+            skippedCorrectionIds: [],
+        })
+    })
+
     it('merges nearby corrections when a moved route point would overlap them', () => {
         const content = makeFeature()
-        globalThis.lgs = {settings: {journey: {fixPathMaxSegmentMeters: 500}}}
         const corrections = [
             makeCorrection(content, 'section-a', 0, 3, 'control-a', [0.000075, 0.0002, 20.4]),
             makeCorrection(content, 'section-b', 5, 8, 'control-b', [0.000325, 0.0002, 60.6]),
@@ -88,7 +109,6 @@ describe('Fix Path correction editing', () => {
 
     it('retains every source point and merges two sections bridged by the selected points', () => {
         const content = makeFeature()
-        globalThis.lgs = {settings: {journey: {fixPathMaxSegmentMeters: 500}}}
         const corrections = [
             makeCorrection(content, 'section-a', 0, 2, 'control-a', [0.00005, 0.0002, 20]),
             makeCorrection(content, 'section-b', 6, 8, 'control-b', [0.00035, 0.0002, 70]),
@@ -109,7 +129,6 @@ describe('Fix Path correction editing', () => {
 
     it('keeps erased source points hidden when the surrounding sections are extended again', () => {
         const content = makeFeature()
-        globalThis.lgs = {settings: {journey: {fixPathMaxSegmentMeters: 500}}}
         const initial = buildFixPathSection(content, [], 0, 0, 8).correction
         const erased = removeFixPathControlPointsFromSection(
             content,
@@ -165,7 +184,6 @@ describe('Fix Path correction editing', () => {
 
     it('merges sections whose source vertices are directly adjacent', () => {
         const content = makeFeature()
-        globalThis.lgs = {settings: {journey: {fixPathMaxSegmentMeters: 500}}}
         const first = makeCorrection(content, 'section-a', 0, 3, 'control-a', [0.000075, 0.0002, 20])
 
         const result = buildFixPathSection(content, [first], 0, 4, 8, [{
@@ -187,7 +205,6 @@ describe('Fix Path correction editing', () => {
 
     it('allows source endpoints to be moved and stores them as fixed points', () => {
         const content = makeFeature()
-        globalThis.lgs = {settings: {journey: {fixPathMaxSegmentMeters: 500}}}
         const correction = makeCorrection(content, 'section', 0, 4, 'control', [0.002, 0.001, 30])
         correction.controlPoints.push(...[0, 4].map(index => ({
             id: 'fix-point-0-' + index,

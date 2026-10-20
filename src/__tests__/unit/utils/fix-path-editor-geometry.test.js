@@ -14,25 +14,18 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {afterEach, describe, expect, it} from 'vitest'
+import {describe, expect, it} from 'vitest'
 import {cloneCorrectionList, getControlPointCoordinate} from '@Components/MainUI/FixPathEditorGeometry'
-import {getFixPathSourceFingerprint} from '@Utils/cesium/fixPathCorrections'
+import {getFixPathSegmentDistanceMeters, getFixPathSourceFingerprint} from '@Utils/cesium/fixPathCorrections'
 
 describe('Fix Path editor geometry', () => {
-    const previousLgs = globalThis.lgs
-
-    afterEach(() => {
-        globalThis.lgs = previousLgs
-    })
-
     it('restores one source-point neighbor around a persisted edit at each section edge', () => {
-        globalThis.lgs = {settings: {journey: {fixPathMaxSegmentMeters: 500}}}
         const content = {
             type: 'Feature',
             properties: {},
             geometry: {
                 type: 'LineString',
-                coordinates: Array.from({length: 5}, (_, index) => [index * 0.00001, 0, index * 10]),
+                coordinates: Array.from({length: 5}, (_, index) => [index * 0.01, 0, index * 10]),
             },
         }
         const savedCorrection = {
@@ -52,6 +45,7 @@ describe('Fix Path editor geometry', () => {
 
         const [restored] = cloneCorrectionList([savedCorrection], content)
 
+        expect(getFixPathSegmentDistanceMeters(content, 0, 1, 3)).toBeGreaterThan(500)
         expect(restored.startIndex).toBe(1)
         expect(restored.endIndex).toBe(3)
         expect(restored.controlPoints.map(point => point.sourceIndex)).toEqual([1, 2, 3])

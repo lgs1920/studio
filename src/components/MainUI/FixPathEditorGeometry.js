@@ -19,7 +19,6 @@ import {
     applyFixPathCorrections,
     getFixPathSourceFingerprint,
     getFixPathSegmentDistanceMeters,
-    getMaxFixPathSegmentMeters,
     mergeAdjacentFixPathCorrections,
 } from '@Utils/cesium/fixPathCorrections'
 import {Cartesian2, Cartesian3, Cartographic} from 'cesium'
@@ -174,7 +173,6 @@ export const cloneCorrectionList = (corrections, content = null) => {
             .map(point => [point.sourceIndex, point]))
         let startIndex = correction.startIndex
         let endIndex = correction.endIndex
-        const maxSectionMeters = getMaxFixPathSegmentMeters()
         const contextKey = index => correction.segmentIndex + ':' + index
         const mayInclude = (nextStart, nextEnd, addedIndex) => {
             const distance = getFixPathSegmentDistanceMeters(content, correction.segmentIndex, nextStart, nextEnd)
@@ -184,7 +182,6 @@ export const cloneCorrectionList = (corrections, content = null) => {
                     && addedIndex >= other.startIndex
                     && addedIndex <= other.endIndex)
                 && Number.isFinite(distance)
-                && distance <= maxSectionMeters
         }
 
         const firstPoint = existingSourcePoints.get(startIndex)
