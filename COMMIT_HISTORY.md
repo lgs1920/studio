@@ -2360,3 +2360,7 @@
 ## 2026-09-13 — [`fix(deployment): remove duplicate environment configuration keys`](https://github.com/lgs1920/studio/commit/1a6eaee0ac95595514a902154085d2932e5c7cc0)
 
 - Recorded automatically from Git history.
+
+## 2026-10-20 — [`docs: clarify component styling and Cesium gestures`](https://github.com/lgs1920/studio/commit/370f209f492147225d094156912c745b40344fdb)
+
+- Recorded automatically from Git history.
