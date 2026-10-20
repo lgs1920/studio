@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-29
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -257,5 +257,20 @@ describe('non-distorting widget resize', () => {
 
         expect(target.style.left).toBe('0px')
         expect(target.style.width).toBe('400px')
+
+        config.dimensions = {width: 200, height: 100}
+        config.bounds = {left: -100, top: -100, right: 500, bottom: 500}
+        Object.assign(target.style, {left: '10px', top: '20px', width: '', height: ''})
+        target.getBoundingClientRect = vi.fn(() => ({width: 200, height: 100}))
+        resizable.onResizeStart({target, direction: [0, -1]})
+        resizable.onResize({
+            width: 200,
+            height: 160,
+            direction: [0, -1],
+            drag: {beforeDist: [0, -60]},
+        }, {widget: {current: target}, child: {current: null}}, vi.fn())
+
+        expect(target.style.top).toBe('-40px')
+        expect(target.style.height).toBe('160px')
     })
 })

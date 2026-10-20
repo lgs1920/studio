@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -202,6 +202,38 @@ describe('Widget snap behavior', () => {
         document.body.innerHTML = ''
         globalThis.lgs = undefined
         globalThis.__ = undefined
+    })
+
+    it('limits visible resize handles to the directions requested by the widget', async () => {
+        installGlobals()
+        __.ui.widgetManager.manageControlBox = vi.fn((_moveable, setControlBox) => {
+            setControlBox({
+                renderDirections: ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'],
+                zoom: 1,
+                opacity: 1,
+            })
+        })
+
+        const view = render(
+            <Widget
+                isVisible
+                config={{
+                    id: 'fix-path-editor-widget',
+                    group: 'test-widgets',
+                    resizable: true,
+                    showControlBox: true,
+                    type: LGS_TOOLBAR,
+                }}
+                resizeDirections={['n', 's']}
+            >
+                <div>{'content'}</div>
+            </Widget>,
+        )
+
+        fireEvent.mouseEnter(view.container.querySelector('.lgs-widget'))
+
+        await waitFor(() => expect(latestMoveableProps().renderDirections).toEqual(['n', 's']))
+        expect(latestMoveableProps().edge).toEqual(['n', 's'])
     })
 
     it('disables snap for non visual widgets even when grid snap is enabled', async () => {

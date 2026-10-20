@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-10-12
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -60,6 +60,38 @@ const resolveDirectionalResizeBounds = ({config, direction, left, top, width, he
     }
 
     return result
+}
+
+/**
+ * Resolve the widget's current logical dimension before applying a resize event.
+ *
+ * @param {HTMLElement} target - Widget element being resized.
+ * @param {Object} config - Runtime widget configuration.
+ * @param {'width'|'height'} dimension - Dimension to resolve.
+ * @param {DOMRect} renderedBounds - Current rendered bounds of the widget.
+ * @param {number} fallback - Requested dimension used when no current size is available.
+ * @returns {number} Current logical dimension.
+ */
+const resolveCurrentDimension = (target, config, dimension, renderedBounds, fallback) => {
+    const inlineDimension = __.app.parsePx(target.style[dimension] || '0')
+    if (inlineDimension > 0) {
+        return inlineDimension
+    }
+
+    const configuredDimension = Number(config.dimensions?.[dimension])
+    if (Number.isFinite(configuredDimension) && configuredDimension > 0) {
+        return configuredDimension
+    }
+
+    const scaleAxis = dimension === 'width' ? 'x' : 'y'
+    const configuredScale = Number(config.scale?.[scaleAxis])
+    const scale = Number.isFinite(configuredScale) && configuredScale > 0 ? configuredScale : 1
+    const renderedDimension = Number(renderedBounds?.[dimension]) / scale
+    if (Number.isFinite(renderedDimension) && renderedDimension > 0) {
+        return renderedDimension
+    }
+
+    return fallback
 }
 
 export class WidgetResizable {
@@ -166,12 +198,13 @@ export class WidgetResizable {
         const requestedHeight = Math.round(event.height)
         const baseLeft = __.app.parsePx(target.style.left || '0')
         const baseTop = __.app.parsePx(target.style.top || '0')
+        const renderedBounds = config.isCropper ? null : target.getBoundingClientRect()
         const currentWidth = config.isCropper
             ? config.cropDimensions?.width || requestedWidth
-            : __.app.parsePx(target.style.width || '0') || requestedWidth
+            : resolveCurrentDimension(target, config, 'width', renderedBounds, requestedWidth)
         const currentHeight = config.isCropper
             ? config.cropDimensions?.height || requestedHeight
-            : __.app.parsePx(target.style.height || '0') || requestedHeight
+            : resolveCurrentDimension(target, config, 'height', renderedBounds, requestedHeight)
         const directionalBounds = resolveDirectionalResizeBounds({
             config,
             direction,

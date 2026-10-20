@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -388,6 +388,7 @@ export const Widget = props => {
  * @param {Object} props.config                     - Complete widget configuration object
  * @param {boolean} [props.config.contextMenuEnabled=true] - Whether this widget can open its context menu
  * @param {React.RefObject} [props.childRef]        - Optional forwarded ref to inner content
+ * @param {string[]} [props.resizeDirections]       - Optional subset of resize handles to expose
  * @param {number|string|null} [props.expandRequestKey=null] - Changes request host-managed expansion
  * @param {number} [props.selectionRequestKey=0]    - Changes request cropper selection
  * @returns {JSX.Element|null}
@@ -400,6 +401,7 @@ const WidgetHost = ({
     children,
     config,
     childRef,
+    resizeDirections,
     expandRequestKey = null,
     selectionRequestKey = 0,
 }) => {
@@ -625,6 +627,12 @@ const WidgetHost = ({
     const canRotate = canInteract && !effectiveCollapsed && (config?.rotatable ?? false)
     const forceControlBox = config?.forceControlBox === true && !effectiveLocked
     const showMoveableControls = (isSelected || forceControlBox) && (!config.isCropper || canResize)
+    const availableResizeDirections = config.isCropper && showMoveableControls
+        ? CROP_RESIZE_DIRECTIONS
+        : controlBox.renderDirections
+    const visibleResizeDirections = resizeDirections
+        ? availableResizeDirections.filter(direction => resizeDirections.includes(direction))
+        : availableResizeDirections
 
     // Snapping logic
     const snapSettings = useMemo(() => {
@@ -2003,7 +2011,7 @@ const WidgetHost = ({
                 dragTarget={config.handle ? resolveDragTarget : _widget}
                 draggable={canDrag}
                 edgeDraggable={true}
-                edge={['w', 'e', 's', 'n']}
+                edge={resizeDirections ?? ['w', 'e', 's', 'n']}
                 onDrag={handleDrag}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
@@ -2046,7 +2054,7 @@ const WidgetHost = ({
                 snapDirections={canSnapWidget ? {top: true, right: true, bottom: true, left: true, center: canSnapCenter, middle: canSnapCenter} : false}
                 elementSnapDirections={canSnapWidget ? {top: true, left: true, bottom: true, right: true, center: canSnapCenter, middle: canSnapCenter} : false}
                 maxSnapElementGuidelineDistance={canSnapWidget ? 10 : 0}
-                renderDirections={config.isCropper && showMoveableControls ? CROP_RESIZE_DIRECTIONS : controlBox.renderDirections}
+                renderDirections={visibleResizeDirections}
                 zoom={config.isCropper && showMoveableControls ? 1 : controlBox.zoom}
                 onRender={(event) => !config.isCropper && (event.target.style.cssText += event.cssText)}
                 useMutationObserver={false}
