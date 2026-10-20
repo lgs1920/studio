@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-03
- * Last modified: 2026-09-20
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,8 +19,9 @@ import {
     getTrackRenderContent, MAX_RENDER_POINTS, normalizeTrackRenderSmoothing, resolveTrackRenderSmoothing,
     trackRenderSmoothingKey,
 }                                                from '@Utils/cesium/trackRenderSmoothing'
+import {getFixPathSourceFingerprint} from '@Utils/cesium/fixPathCorrections'
 
-const makeTrack = (renderSmoothing = undefined) => ({
+const makeTrack = renderSmoothing => ({
     parent: 'journey#gpx',
     slug:   'track#journey#gpx#main',
     renderSmoothing,
@@ -125,6 +126,99 @@ describe('track render smoothing', () => {
         expect(trackRenderSmoothingKey(track, {
             renderSmoothing: {enabled: true, step: 2},
         })).toBe('1:2')
+    })
+
+    it('keeps moved Fix Path source vertices exact through render smoothing', () => {
+        const track = makeTrack({enabled: true, step: 1})
+        const sourceCoordinates = [
+            [6, 45, 100],
+            [6.00005, 45.00002, 110],
+            [6.0001, 45, 120],
+            [6.00015, 45.00002, 130],
+            [6.0002, 45, 140],
+        ]
+        track.content.geometry.coordinates = sourceCoordinates
+        const movedCoordinate = [6.0001, 45.00001, 125]
+        const correction = {
+            id: 'section-a',
+            segmentIndex: 0,
+            startIndex: 0,
+            endIndex: sourceCoordinates.length - 1,
+            sourceFingerprint: getFixPathSourceFingerprint(track.content, 0, 0, sourceCoordinates.length - 1),
+            controlPoints: [
+                {id: 'fix-point-0-0', sourceIndex: 0, progress: 0, coordinate: sourceCoordinates[0], fixed: false},
+                {id: 'fix-point-0-2', sourceIndex: 2, progress: 0.5, coordinate: movedCoordinate, fixed: true},
+                {id: 'fix-point-0-4', sourceIndex: 4, progress: 1, coordinate: sourceCoordinates[4], fixed: false},
+            ],
+        }
+        const journey = {
+            slug: track.parent,
+            fixPathEnabled: true,
+            fixPathCorrectionData: {tracks: {[track.slug]: [correction]}},
+            renderSmoothing: {enabled: true, step: 1},
+            tracks: new Map([[track.slug, track]]),
+        }
+        vi.stubGlobal('lgs', {
+            getJourneyBySlug: vi.fn(() => journey),
+            theJourneyEditorProxy: {journey},
+            settings: {journey: {fixPathMaxSegmentMeters: 500}},
+        })
+
+        const renderContent = getTrackRenderContent(track)
+
+        expect(renderContent.geometry.coordinates).toContainEqual(movedCoordinate)
+        expect(renderContent.geometry.coordinates.length).toBeGreaterThan(sourceCoordinates.length)
+    })
+
+    it('retains moved Fix Path vertices when capped render geometry is sampled', () => {
+        const track = makeTrack()
+        const coordinates = Array.from({length: MAX_RENDER_POINTS * 4}, (_, index) => [
+            6 + (index * 0.0001),
+            45 + (index * 0.0001),
+            100 + index,
+        ])
+        const anchorIndex = 7777
+        track.content.geometry.coordinates = coordinates
+        const movedCoordinate = [...coordinates[anchorIndex]]
+        movedCoordinate[2] += 0.5
+        const previewCoordinates = coordinates.slice()
+        previewCoordinates[anchorIndex] = movedCoordinate
+        const journey = {
+            slug: track.parent,
+            fixPathEnabled: true,
+            fixPathCorrectionData: {
+                tracks: {
+                    [track.slug]: [{
+                        segmentIndex: 0,
+                        startIndex: 0,
+                        endIndex: coordinates.length - 1,
+                        controlPoints: [{
+                            id: 'fix-point-0-' + anchorIndex,
+                            sourceIndex: anchorIndex,
+                            coordinate: movedCoordinate,
+                            fixed: true,
+                            removed: false,
+                        }],
+                    }],
+                },
+            },
+            tracks: new Map([[track.slug, track]]),
+        }
+        vi.stubGlobal('lgs', {
+            getJourneyBySlug: vi.fn(() => journey),
+            theJourneyEditorProxy: {journey},
+        })
+
+        const renderContent = getTrackRenderContent(track, {
+            forRender: true,
+            content: {
+                ...track.content,
+                geometry: {...track.content.geometry, coordinates: previewCoordinates},
+            },
+        })
+
+        expect(renderContent.geometry.coordinates).toHaveLength(MAX_RENDER_POINTS)
+        expect(renderContent.geometry.coordinates).toContainEqual(movedCoordinate)
     })
 
     it('uses journey settings for a single-track journey and track settings for multi-track journeys', () => {

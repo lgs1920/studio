@@ -26,6 +26,8 @@ import '@Components/MainUI/FixPathEditor.css'
 
 let rendered
 let originalViewport
+const updateControlCoordinatePart = vi.fn()
+const persistCurrentDraftCorrections = vi.fn()
 const originalDefaultLibrary = getIconLibrary('default')
 const originalApplicationLibrary = getIconLibrary('lgs1920')
 
@@ -42,6 +44,8 @@ afterAll(() => {
 
 beforeEach(() => {
     originalViewport = {width: window.innerWidth, height: window.innerHeight}
+    updateControlCoordinatePart.mockClear()
+    persistCurrentDraftCorrections.mockClear()
 })
 
 afterEach(async () => {
@@ -76,12 +80,15 @@ const renderPointList = async theme => {
                 displayedTrack={{content: {geometry: {type: 'LineString', coordinates: [[2.3, 48.8, 100], [2.4, 48.9, 110]]}}}}
                 orderedCorrections={[correction]}
                 projected={{sourcePoints: []}}
+                saving={false}
                 selectedControlPoints={[
                     {trackSlug: 'layout-track', correctionId: 'layout-section', controlPointId: 'point-1'},
                     {trackSlug: 'layout-track', correctionId: 'layout-section', controlPointId: 'point-2'},
                 ]}
                 selection={{phase: 'choose-start'}}
                 handleFixPathShortcut={vi.fn()}
+                updateControlCoordinatePart={updateControlCoordinatePart}
+                persistCurrentDraftCorrections={persistCurrentDraftCorrections}
             />
         </div>,
     )
@@ -129,6 +136,40 @@ it.each([
     const viewport = panel.querySelector('.fix-path-correction-points-scroll-area .view').getBoundingClientRect()
     expect(fields[7][0].bottom).toBeLessThanOrEqual(viewport.bottom)
     expect(fields[8][0].bottom).toBeGreaterThan(viewport.bottom)
+})
+
+it('shows working decrement and increment steppers on both sides of each height field', async () => {
+    const panel = await renderPointList('wa-light')
+    const heightInput = panel.querySelector('wa-number-input[aria-label="Height (m)"]')
+    const decrementStepper = heightInput.shadowRoot.querySelector('[part~="stepper-decrement"]')
+    const incrementStepper = heightInput.shadowRoot.querySelector('[part~="stepper-increment"]')
+    const numericInput = heightInput.shadowRoot.querySelector('[part~="input"]')
+
+    expect(decrementStepper).not.toBeNull()
+    expect(incrementStepper).not.toBeNull()
+    expect(decrementStepper.disabled).toBe(false)
+    expect(incrementStepper.disabled).toBe(false)
+    expect(decrementStepper.getBoundingClientRect().width).toBeGreaterThan(0)
+    expect(incrementStepper.getBoundingClientRect().width).toBeGreaterThan(0)
+    expect(decrementStepper.getBoundingClientRect().right).toBeLessThanOrEqual(numericInput.getBoundingClientRect().left + 0.1)
+    expect(incrementStepper.getBoundingClientRect().left).toBeGreaterThanOrEqual(numericInput.getBoundingClientRect().right - 0.1)
+
+    for (const [stepper, expectedHeight, expectedCallCount] of [
+        [incrementStepper, '4301', 1],
+        [decrementStepper, '4300', 2],
+    ]) {
+        stepper.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true, cancelable: true, pointerType: 'mouse'}))
+        stepper.dispatchEvent(new PointerEvent('pointerup', {bubbles: true, cancelable: true, pointerType: 'mouse'}))
+        await expect.poll(() => updateControlCoordinatePart.mock.calls.length).toBe(expectedCallCount)
+        expect(updateControlCoordinatePart).toHaveBeenLastCalledWith(
+            'layout-track',
+            'layout-section',
+            'point-0',
+            2,
+            expectedHeight,
+        )
+    }
+    expect(persistCurrentDraftCorrections).toHaveBeenCalledTimes(2)
 })
 
 it('keeps correction markers clickable and mirrors point colors with duotone status indicators', async () => {

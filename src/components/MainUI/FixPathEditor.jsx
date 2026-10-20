@@ -29,15 +29,14 @@ import {
     buildDraggedPointCorrections,
     buildFixPathSection,
     removeFixPathControlPointsFromSection,
+    restoreRemovedFixPathSourcePoints,
     translateFixPathControlPoints,
 } from '@Utils/cesium/fixPathCorrectionEditing'
 import {
-    buildSourcePointSvgPath,
-    findClosestSourcePoint,
-    isScreenPointInsideArea,
+    appendScreenSelectionVertex,
+    isScreenPointInsidePolygon,
     normalizeScreenSelectionArea,
 } from '@Utils/cesium/fixPathScreenSelection'
-import {UIToast} from '@Utils/UIToast'
 import {ELEVATION_UNITS, INTERNATIONAL, UnitUtils} from '@Utils/UnitUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import { WaIcon } from '@awesome.me/webawesome/dist/react'
@@ -46,7 +45,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { createPortal } from 'react-dom'
 import {useOptionalSnapshot, useProxyValue} from '@Utils/ValtioUtils'
 import {FixPathEditorHelp} from './FixPathEditorHelp'
-import {FixPathEditorPanel} from './FixPathEditorPanel'
+import {FixPathCallout, FixPathEditorPanel} from './FixPathEditorPanel'
 import {
     EMPTY_CORRECTION_TRACKS,
     FIX_PATH_WIDGET_CONFIG,
@@ -81,6 +80,18 @@ const closeFixPathEditor = () => {
 
 const MAX_HISTORY_ENTRIES = 100
 const FIX_PATH_CONTROL_MARKER_RADIUS = 7
+
+/** Resolve the selection mode and shape modifier from a pointer event. */
+const selectionGestureModifier = event => {
+    if (event.metaKey) return null
+    if (event.ctrlKey && (event.shiftKey || event.altKey)) return 'ctrl'
+    if (event.shiftKey) return 'shift'
+    if (event.altKey) return 'alt'
+    return null
+}
+
+/** Return whether a selection modifier requests a freehand lasso. */
+const isLassoModifier = modifier => modifier === 'shift' || modifier === 'alt'
 
 /** Interactive, draft-only path correction editor for all tracks in the current Journey. */
 export const FixPathEditor = () => {
@@ -128,7 +139,6 @@ export const FixPathEditor = () => {
     const [selection, setSelection] = useState({phase: 'choose-start', startPoint: null, controlPoints: []})
     const [activeCorrection, setActiveCorrection] = useState(null)
     const [selectedControlPoints, setSelectedControlPoints] = useState([])
-    const [selectedSourcePoints, setSelectedSourcePoints] = useState([])
     const [projected, setProjected] = useState({width: 0, height: 0, sourcePoints: [], controlPoints: [], pendingControlPoints: []})
     const [areaMode, setAreaMode] = useState(true)
     const [areaDrag, setAreaDrag] = useState(null)
@@ -138,6 +148,7 @@ export const FixPathEditor = () => {
     const [dragPreview, setDragPreview] = useState(null)
     const [contextMenu, setContextMenu] = useState(null)
     const [saving, setSaving] = useState(false)
+    const [panelFeedback, setPanelFeedback] = useState(null)
     const [eraseMode, setEraseMode] = useState(false)
     const [hiddenCorrectionKeys, setHiddenCorrectionKeys] = useState(() => new Set())
     const [historyAvailability, setHistoryAvailability] = useState({canUndo: false, canRedo: false})
@@ -150,6 +161,7 @@ export const FixPathEditor = () => {
     const mapOverlayRef = useRef(null)
     const scanGenerationRef = useRef(0)
     const dragRef = useRef(null)
+    const lassoDraftRef = useRef(null)
     const activeSectionWriteRef = useRef(Promise.resolve())
     const selectionAnchorRef = useRef(null)
     const suppressControlClickRef = useRef(false)
@@ -169,6 +181,12 @@ export const FixPathEditor = () => {
     const fixPathWidgetCallbacks = useMemo(() => ({
         current: {onResizeStart: () => setWidgetResized(true)},
     }), [])
+
+    /** Clear the active area-selection preview. */
+    const clearSelectionLasso = useCallback(() => {
+        lassoDraftRef.current = null
+        setAreaDrag(null)
+    }, [])
 
     useEffect(() => {
         if (!contextMenu) return undefined
@@ -542,7 +560,6 @@ export const FixPathEditor = () => {
         setActiveCorrection(restoredActiveSection)
         setSelectedControlPoints([])
         selectionAnchorRef.current = null
-        setSelectedSourcePoints([])
         setAreaMode(true)
         setAreaDrag(null)
         setScanProgress(null)
@@ -612,6 +629,7 @@ export const FixPathEditor = () => {
         dragRef.current = null
         preserveDraftAfterValidationRef.current = false
         setHelpOpen(false)
+        setPanelFeedback(null)
         closeFixPathEditor()
         setContextMenu(null)
         setDragPreview(null)
@@ -713,7 +731,7 @@ export const FixPathEditor = () => {
             setProjected(projectEditOverlay(
                 viewer,
                 overlay,
-                selectedSourcePoints,
+                [],
                 availableTracks,
                 displayCorrectionsByTrack,
                 selection,
@@ -724,7 +742,7 @@ export const FixPathEditor = () => {
         const removePostRender = scene.postRender?.addEventListener?.(update)
         update()
         return () => removePostRender?.()
-    }, [open, availableTracks, selectedSourcePoints, displayCorrectionsByTrack, selection, displayedCorrection, hiddenCorrectionKeys])
+    }, [open, availableTracks, displayCorrectionsByTrack, selection, displayedCorrection, hiddenCorrectionKeys])
 
     const pointAtScreenPosition = useCallback((clientX, clientY) => {
         const canvas = lgs.viewer?.canvas
@@ -767,6 +785,7 @@ export const FixPathEditor = () => {
 
     const startCorrection = useCallback((point, extendExisting = false) => {
         if (validationInProgressRef.current) return
+        setPanelFeedback(null)
         if (selection.phase === 'choose-start') {
             const existingCorrection = correctionAtPoint(
                 draftCorrectionsRef.current[point.trackSlug] ?? [],
@@ -797,7 +816,8 @@ export const FixPathEditor = () => {
         if (point.trackSlug !== selection.startPoint.trackSlug
             || point.segmentIndex !== selection.startPoint.segmentIndex
             || point.index <= selection.startPoint.index) {
-            UIToast.warning({
+            setPanelFeedback({
+                type: 'warning',
                 caption: 'Choose a nearby attachment point',
                 text: 'A correction section must end later on the same track segment.',
             })
@@ -811,7 +831,8 @@ export const FixPathEditor = () => {
             point.index,
         )
         if (distance > maxSegmentMeters) {
-            UIToast.warning({
+            setPanelFeedback({
+                type: 'warning',
                 caption: 'Fix Path section is too long',
                 text: 'This route section is ' + Math.round(distance) + ' m. Split it into shorter sections or increase the limit in application settings.',
             })
@@ -822,7 +843,8 @@ export const FixPathEditor = () => {
             && correction.startIndex <= point.index
             && correction.endIndex >= selection.startPoint.index)
         if (!(selection.controlPoints?.length > 0) && !bridgesCorrection) {
-            UIToast.warning({
+            setPanelFeedback({
+                type: 'warning',
                 caption: 'Add a correction point first',
                 text: 'Click along the corrected route, then choose its nearby attachment point.',
             })
@@ -837,7 +859,8 @@ export const FixPathEditor = () => {
             selection.controlPoints,
         )
         if (result.error || !result.correction) {
-            UIToast.warning({
+            setPanelFeedback({
+                type: 'warning',
                 caption: 'Fix Path section could not be created',
                 text: result.error ?? 'Choose valid points on the same Journey segment.',
             })
@@ -864,11 +887,13 @@ export const FixPathEditor = () => {
         if (!coordinate) {
             return
         }
+        setPanelFeedback(null)
         const startTrack = trackBySlug.get(selection.startPoint.trackSlug)
         const segment = getGeometrySegments(startTrack?.content?.geometry)[selection.startPoint.segmentIndex]
         const start = segment?.[selection.startPoint.index]
         if (!start || coordinateDistanceMeters(start, coordinate) > maxSegmentMeters) {
-            UIToast.warning({
+            setPanelFeedback({
+                type: 'warning',
                 caption: 'Fix Path section is too long',
                 text: 'Keep correction points within ' + maxSegmentMeters + ' m of the starting track point.',
             })
@@ -879,7 +904,8 @@ export const FixPathEditor = () => {
         setSelection({...selection, controlPoints})
     }, [maxSegmentMeters, pointAtScreenPosition, selection, trackBySlug])
 
-    const scanSelectedArea = useCallback(async area => {
+    /** Project the Journey and retain visible source points inside a screen polygon. */
+    const scanSelectedPolygon = useCallback(async (polygon, sourceScope = {}) => {
         const viewer = lgs.viewer
         const scene = viewer?.scene
         const canvas = viewer?.canvas
@@ -888,16 +914,21 @@ export const FixPathEditor = () => {
             return []
         }
         const generation = ++scanGenerationRef.current
-        const routeSegments = availableTracks.flatMap(track => getGeometrySegments(track.content?.geometry)
-            .map((coordinates, segmentIndex) => ({trackSlug: track.slug, segmentIndex, coordinates})))
+        setPanelFeedback(null)
+        const routeSegments = availableTracks
+            .filter(track => !sourceScope.trackSlug || track.slug === sourceScope.trackSlug)
+            .flatMap(track => getGeometrySegments(track.content?.geometry)
+                .map((coordinates, segmentIndex) => ({trackSlug: track.slug, segmentIndex, coordinates})))
+            .filter(segment => !Number.isInteger(sourceScope.segmentIndex)
+                || segment.segmentIndex === sourceScope.segmentIndex)
         const total = routeSegments.reduce((sum, segment) => sum + segment.coordinates.length, 0)
         const overlayRect = overlay.getBoundingClientRect()
         const canvasRect = canvas.getBoundingClientRect()
         const candidates = []
         let processed = 0
         setAreaMode(false)
-        setAreaDrag(null)
         setSelection({phase: 'choose-start', startPoint: null, controlPoints: []})
+        clearSelectionLasso()
         setScanProgress({phase: 'project', value: 0, processed: 0, total})
 
         for (const segment of routeSegments) {
@@ -905,7 +936,7 @@ export const FixPathEditor = () => {
                 const coordinate = segment.coordinates[index]
                 const worldPosition = worldPositionForCoordinate(scene, coordinate)
                 const screen = projectCoordinate(scene, overlayRect, canvasRect, canvas, coordinate, worldPosition)
-                if (screen && isScreenPointInsideArea({x: screen.x, y: screen.y}, area)) {
+                if (screen && isScreenPointInsidePolygon({x: screen.x, y: screen.y}, polygon)) {
                     candidates.push({
                         trackSlug: segment.trackSlug,
                         segmentIndex: segment.segmentIndex,
@@ -972,37 +1003,51 @@ export const FixPathEditor = () => {
         if (scanGenerationRef.current !== generation) {
             return
         }
-        setSelectedSourcePoints(visiblePoints)
         setScanProgress(null)
         if (visiblePoints.length === 0) {
-            UIToast.info({
+            setPanelFeedback({
+                type: 'warning',
                 caption: 'No Journey points in this area',
                 text: 'Select a larger screen area that contains one or more visible route points.',
             })
         }
         return visiblePoints
-    }, [availableTracks])
+    }, [availableTracks, clearSelectionLasso])
 
     /** Add scanned source vertices to the active section and merge any bridged sections. */
     const extendCorrectionWithSourcePoints = useCallback((sourcePoints, correction = displayedCorrection) => {
-        if (validationInProgressRef.current || !correction || sourcePoints.length === 0) return false
+        if (validationInProgressRef.current || !correction || sourcePoints.length === 0) {
+            return false
+        }
+        setPanelFeedback(null)
         const trackContent = trackBySlug.get(correction.trackSlug)?.content
         const corrections = draftCorrectionsRef.current[correction.trackSlug] ?? []
         const currentCorrection = corrections.find(item => item.id === correction.id)
-        if (!trackContent || !currentCorrection) return false
+        if (!trackContent || !currentCorrection) {
+            return false
+        }
 
         const selectedIndexes = new Set(sourcePoints
             .filter(point => point.trackSlug === correction.trackSlug
                 && point.segmentIndex === correction.segmentIndex
                 && Number.isInteger(point.index))
             .map(point => point.index))
-        if (selectedIndexes.size === 0) return false
+        if (selectedIndexes.size === 0) {
+            return false
+        }
 
-        const startIndex = Math.min(currentCorrection.startIndex, ...selectedIndexes)
-        const endIndex = Math.max(currentCorrection.endIndex, ...selectedIndexes)
-        if (startIndex === currentCorrection.startIndex && endIndex === currentCorrection.endIndex) {
+        let startIndex = currentCorrection.startIndex
+        let endIndex = currentCorrection.endIndex
+        selectedIndexes.forEach(index => {
+            startIndex = Math.min(startIndex, index)
+            endIndex = Math.max(endIndex, index)
+        })
+        const selectedRemovedPoint = currentCorrection.controlPoints.some(point => (
+            point.removed === true && selectedIndexes.has(point.sourceIndex)
+        ))
+        if (startIndex === currentCorrection.startIndex && endIndex === currentCorrection.endIndex
+            && !selectedRemovedPoint) {
             setSelectedControlPoints([])
-            setSelectedSourcePoints([])
             selectionAnchorRef.current = null
             return false
         }
@@ -1015,131 +1060,166 @@ export const FixPathEditor = () => {
             endIndex,
         )
         if (result.error || !result.correction) {
-            UIToast.warning({
+            setPanelFeedback({
+                type: 'warning',
                 caption: 'Could not add points to this section',
                 text: result.error ?? 'Select visible points on the same Journey segment as the current section.',
             })
             return false
         }
 
+        const restoredCorrections = restoreRemovedFixPathSourcePoints(
+            result.corrections,
+            currentCorrection.segmentIndex,
+            selectedIndexes,
+        )
         const nextDraft = {
             ...draftCorrectionsRef.current,
-            [correction.trackSlug]: result.corrections,
+            [correction.trackSlug]: restoredCorrections,
         }
         const previousSection = _activeSection.current
         setPersistedActiveCorrection({trackSlug: correction.trackSlug, correctionId: result.correction.id}, false)
         commitDraftCorrections(nextDraft, true, {historySection: previousSection})
         setSelectedControlPoints([])
-        setSelectedSourcePoints([])
         selectionAnchorRef.current = null
         setSelection({phase: 'choose-start', startPoint: null, controlPoints: []})
         setAreaMode(false)
         return true
     }, [commitDraftCorrections, displayedCorrection, setPersistedActiveCorrection, trackBySlug])
 
-    /**
-     * Start a screen-area selection from a Shift-primary mouse or pen drag.
-     * @param {PointerEvent} event - Cesium canvas pointer event.
-     */
-    const handleAreaPointerDown = useCallback(event => {
-        if (!areaMode || scanProgress || event.button !== 0 || !event.shiftKey || event.pointerType === 'touch') {
-            return
+    /** Create or merge correction sections from selected Journey points when none is active. */
+    const createCorrectionSectionsFromSourcePoints = useCallback(sourcePoints => {
+        if (validationInProgressRef.current || sourcePoints.length === 0) {
+            return false
         }
-        event.preventDefault()
-        event.stopPropagation()
-        event.stopImmediatePropagation?.()
-        if (Number.isInteger(event.pointerId)) {
-            event.currentTarget.setPointerCapture?.(event.pointerId)
-        }
-        const rect = mapOverlayRef.current?.getBoundingClientRect()
-        if (!rect) {
-            return
-        }
-        const start = {x: event.clientX - rect.left, y: event.clientY - rect.top}
-        dragRef.current = {
-            kind: 'area',
-            start,
-            current: start,
-            suppressControlClick: event.currentTarget?.classList?.contains('fix-path-control-point') === true,
-        }
-        setAreaDrag({start, current: start})
-    }, [areaMode, scanProgress])
+        setPanelFeedback(null)
 
-    /**
-     * Update the active screen-area selection.
-     * @param {PointerEvent} event - Cesium canvas pointer event.
-     */
-    const handleAreaPointerMove = useCallback(event => {
-        if (dragRef.current?.kind !== 'area') {
-            return
-        }
-        event.preventDefault()
-        event.stopPropagation()
-        event.stopImmediatePropagation?.()
-        const rect = mapOverlayRef.current?.getBoundingClientRect()
-        if (!rect) {
-            return
-        }
-        const current = {x: event.clientX - rect.left, y: event.clientY - rect.top}
-        dragRef.current = {...dragRef.current, current}
-        setAreaDrag({start: dragRef.current.start, current})
-    }, [])
-
-    /**
-     * Finish the active screen-area selection and scan its Journey points.
-     * @param {PointerEvent} event - Cesium canvas pointer event.
-     */
-    const handleAreaPointerUp = useCallback(event => {
-        if (dragRef.current?.kind !== 'area') {
-            return
-        }
-        event.preventDefault()
-        event.stopPropagation()
-        event.stopImmediatePropagation?.()
-        const drag = dragRef.current
-        dragRef.current = null
-        if (drag.suppressControlClick) {
-            suppressControlClickRef.current = true
-            setTimeout(() => { suppressControlClickRef.current = false }, 0)
-        }
-        const rect = mapOverlayRef.current?.getBoundingClientRect()
-        if (!rect) {
-            setAreaDrag(null)
-            return
-        }
-        const end = {x: event.clientX - rect.left, y: event.clientY - rect.top}
-        const area = normalizeScreenSelectionArea(drag.start, end)
-        setAreaDrag(null)
-        const sectionToExtend = orderedCorrections.find(correction => (
-            correction.trackSlug === _activeSection.current?.trackSlug
-            && correction.id === _activeSection.current?.correctionId
-        )) ?? displayedCorrection
-        const selectionArea = area.width < 4 || area.height < 4
-            ? normalizeScreenSelectionArea({x: drag.start.x - 10, y: drag.start.y - 10}, {x: drag.start.x + 10, y: drag.start.y + 10})
-            : area
-        void scanSelectedArea(selectionArea).then(sourcePoints => {
-            if (sectionToExtend && sourcePoints?.length > 0) {
-                extendCorrectionWithSourcePoints(sourcePoints, sectionToExtend)
+        const selectedBySegment = new Map()
+        sourcePoints.forEach(point => {
+            if (!trackBySlug.has(point.trackSlug) || !Number.isInteger(point.segmentIndex)
+                || !Number.isInteger(point.index)) return
+            const key = point.trackSlug + ':' + point.segmentIndex
+            const selected = selectedBySegment.get(key) ?? {
+                trackSlug: point.trackSlug,
+                segmentIndex: point.segmentIndex,
+                indexes: new Set(),
             }
+            selected.indexes.add(point.index)
+            selectedBySegment.set(key, selected)
         })
-    }, [displayedCorrection, extendCorrectionWithSourcePoints, orderedCorrections, scanSelectedArea])
 
-    /**
-     * Discard a screen-area selection interrupted by pointer cancellation.
-     * @param {PointerEvent} event - Cesium canvas pointer event.
-     */
-    const handleAreaPointerCancel = useCallback(event => {
-        if (dragRef.current?.kind !== 'area') {
-            return
+        const previousSection = _activeSection.current
+        const previousDraft = draftCorrectionsRef.current
+        const nextDraft = {...previousDraft}
+        let activeSection = null
+        const errors = []
+        selectedBySegment.forEach(({trackSlug, segmentIndex, indexes}) => {
+            const trackContent = trackBySlug.get(trackSlug)?.content
+            if (!trackContent || indexes.size === 0) return
+            let startIndex = Number.MAX_SAFE_INTEGER
+            let endIndex = Number.MIN_SAFE_INTEGER
+            indexes.forEach(index => {
+                startIndex = Math.min(startIndex, index)
+                endIndex = Math.max(endIndex, index)
+            })
+            const corrections = nextDraft[trackSlug] ?? []
+            const result = buildFixPathSection(
+                trackContent,
+                corrections,
+                segmentIndex,
+                startIndex,
+                endIndex,
+            )
+            if (result.error || !result.correction) {
+                errors.push(result.error ?? 'The selected Journey points could not form a correction section.')
+                return
+            }
+            nextDraft[trackSlug] = restoreRemovedFixPathSourcePoints(
+                result.corrections,
+                segmentIndex,
+                indexes,
+            )
+            activeSection ??= {trackSlug, correctionId: result.correction.id}
+        })
+
+        if (!activeSection) {
+            if (errors.length > 0) {
+                setPanelFeedback({
+                    type: 'warning',
+                    caption: 'Could not create a correction section',
+                    text: errors[0],
+                })
+            }
+            return false
         }
-        event.preventDefault()
-        event.stopPropagation()
-        event.stopImmediatePropagation?.()
-        dragRef.current = null
-        setAreaDrag(null)
-    }, [])
 
-    /** Start Shift selection for map markers or source points, or an Alt control-area selection. */
+        setPersistedActiveCorrection(activeSection, false)
+        if (JSON.stringify(nextDraft) !== JSON.stringify(previousDraft)) {
+            commitDraftCorrections(nextDraft, true, {historySection: previousSection})
+        }
+        setSelectedControlPoints([])
+        selectionAnchorRef.current = null
+        setSelection({phase: 'choose-start', startPoint: null, controlPoints: []})
+        setAreaMode(false)
+        if (errors.length > 0) {
+            setPanelFeedback({
+                type: 'warning',
+                caption: 'Some selected Journey points were skipped',
+                text: errors[0],
+            })
+        }
+        return true
+    }, [commitDraftCorrections, setPersistedActiveCorrection, trackBySlug])
+
+    /** Complete a source-point or correction-point rectangle or lasso selection. */
+    const finishSelectionLasso = useCallback((draft, polygon) => {
+        if (polygon.length < 3) {
+            clearSelectionLasso()
+            return false
+        }
+
+        clearSelectionLasso()
+        if (draft.kind === 'source') {
+            const sectionToExtend = orderedCorrections.find(correction => (
+                correction.trackSlug === draft.trackSlug && correction.id === draft.correctionId
+            ))
+            void scanSelectedPolygon(polygon, sectionToExtend
+                ? {trackSlug: sectionToExtend.trackSlug, segmentIndex: sectionToExtend.segmentIndex}
+                : {}
+            ).then(sourcePoints => {
+                if (!Array.isArray(sourcePoints) || sourcePoints.length === 0) return
+                if (sectionToExtend) extendCorrectionWithSourcePoints(sourcePoints, sectionToExtend)
+                else createCorrectionSectionsFromSourcePoints(sourcePoints)
+            })
+            return true
+        }
+
+        const sameSection = point => point.trackSlug === draft.trackSlug
+            && point.correctionId === draft.correctionId
+        const enclosedPoints = projected.controlPoints
+            .filter(point => sameSection(point) && isScreenPointInsidePolygon(point, polygon))
+            .map(point => ({
+                trackSlug: point.trackSlug,
+                correctionId: point.correctionId,
+                controlPointId: point.controlPointId,
+            }))
+        if (enclosedPoints.length === 0) return true
+
+        const currentSelection = selectedControlPoints.filter(sameSection)
+        const nextSelection = [...new Map([...currentSelection, ...enclosedPoints]
+            .map(point => [point.controlPointId, point])).values()]
+        setSelectedControlPoints(nextSelection)
+        const anchor = selectionAnchorRef.current
+        selectionAnchorRef.current = anchor && sameSection(anchor)
+            && nextSelection.some(point => point.controlPointId === anchor.controlPointId)
+            ? anchor
+            : nextSelection[0]
+        setPersistedActiveCorrection({trackSlug: draft.trackSlug, correctionId: draft.correctionId})
+        setAreaMode(false)
+        return true
+    }, [clearSelectionLasso, createCorrectionSectionsFromSourcePoints, extendCorrectionWithSourcePoints, orderedCorrections, projected.controlPoints, scanSelectedPolygon, selectedControlPoints, setPersistedActiveCorrection])
+
+    /** Start a route-point or correction-point selection using its configured rectangle or lasso gesture. */
     const handleControlSelectionPointerDown = useCallback(event => {
         const marker = event.target?.closest?.('.fix-path-control-point')
         const markerPoint = marker
@@ -1147,32 +1227,43 @@ export const FixPathEditor = () => {
                 && point.correctionId === marker.dataset.correctionId
                 && point.controlPointId === marker.dataset.controlPointId)
             : null
-        const shiftSectionSelection = event.shiftKey && Boolean(displayedCorrection) && !marker
-        const shiftControlSelection = event.shiftKey && Boolean(marker)
-        const altSelection = event.altKey && !event.shiftKey
+        const modifier = selectionGestureModifier(event)
+        const lasso = isLassoModifier(modifier)
+        const sourceSelection = modifier === 'shift' || modifier === 'ctrl'
+        const previousLasso = lassoDraftRef.current
+        const continuesLasso = lasso && previousLasso?.modifier === modifier
+        const selectSourcePoints = continuesLasso
+            ? previousLasso.kind === 'source'
+            : sourceSelection && !marker
         if (scanProgress || selection.phase === 'add-points'
-            || event.button !== 0 || (!shiftSectionSelection && !shiftControlSelection && !altSelection)
+            || event.button !== 0 || !modifier
             || event.pointerType === 'touch'
             || event.target?.closest?.('.fix-path-panel, .fix-path-context-menu')) {
             return
         }
 
+        const mode = continuesLasso ? previousLasso.kind : selectSourcePoints ? 'source' : 'control'
         const rect = mapOverlayRef.current?.getBoundingClientRect()
         if (!rect) return
         const start = {x: event.clientX - rect.left, y: event.clientY - rect.top}
         const pointAtStart = markerPoint ?? findClosestProjectedControlPoint(projected.controlPoints, start)
         const lockedSection = selectedControlPoints[0] ?? selectionAnchorRef.current
-        if ((altSelection || shiftControlSelection) && lockedSection && pointAtStart && (
+        if (mode === 'control' && lockedSection && pointAtStart && (
             pointAtStart.trackSlug !== lockedSection.trackSlug
             || pointAtStart.correctionId !== lockedSection.correctionId
         )) {
             return
         }
-        const section = shiftSectionSelection
-            ? displayedCorrection
+        const section = continuesLasso
+            ? {trackSlug: previousLasso.trackSlug, correctionId: previousLasso.correctionId}
+            : mode === 'source'
+                ? orderedCorrections.find(correction => (
+                    correction.trackSlug === _activeSection.current?.trackSlug
+                    && correction.id === _activeSection.current?.correctionId
+                )) ?? displayedCorrection
             : lockedSection ?? pointAtStart ?? activeCorrection ?? displayedCorrection
-        const correctionId = section?.correctionId ?? section?.id
-        if (!section?.trackSlug || !correctionId) return
+        const correctionId = section?.correctionId ?? section?.id ?? null
+        if (mode === 'control' && (!section?.trackSlug || !correctionId)) return
 
         event.preventDefault()
         event.stopPropagation()
@@ -1183,32 +1274,48 @@ export const FixPathEditor = () => {
         catch {
             // Keep the selection gesture alive if the browser invalidates capture.
         }
+        if (previousLasso && !continuesLasso) clearSelectionLasso()
+        const points = appendScreenSelectionVertex(continuesLasso ? previousLasso.points : [], start)
         dragRef.current = {
-            kind: shiftSectionSelection ? 'section-area' : 'control-area',
+            kind: mode === 'source' ? 'section-area' : 'control-area',
+            mode,
+            shape: lasso ? 'lasso' : 'rectangle',
             start,
             current: start,
-            trackSlug: section.trackSlug,
+            points,
+            moved: false,
+            trackSlug: section?.trackSlug ?? null,
             correctionId,
-            modifier: event.shiftKey ? 'shift' : 'alt',
+            modifier,
             markerControlPointId: markerPoint?.controlPointId,
+            previousLasso: continuesLasso ? previousLasso : null,
         }
-        setAreaDrag({start, current: start})
-    }, [activeCorrection, displayedCorrection, projected.controlPoints, scanProgress, selectedControlPoints, selection.phase])
+        setAreaDrag(lasso
+            ? {shape: 'lasso', kind: mode, modifier, points}
+            : {shape: 'rectangle', start, current: start})
+    }, [activeCorrection, clearSelectionLasso, displayedCorrection, orderedCorrections, projected.controlPoints, scanProgress, selectedControlPoints, selection.phase])
 
-    /** Update a control selection rectangle while keeping Cesium gestures suspended. */
+    /** Track rectangle bounds or freehand lasso vertices while suspending Cesium gestures. */
     const handleControlSelectionPointerMove = useCallback(event => {
-        if (dragRef.current?.kind !== 'control-area' && dragRef.current?.kind !== 'section-area') return
+        const drag = dragRef.current
+        if (drag?.kind !== 'control-area' && drag?.kind !== 'section-area') return
         event.preventDefault()
         event.stopPropagation()
         event.stopImmediatePropagation?.()
         const rect = mapOverlayRef.current?.getBoundingClientRect()
         if (!rect) return
         const current = {x: event.clientX - rect.left, y: event.clientY - rect.top}
-        dragRef.current = {...dragRef.current, current}
-        setAreaDrag({start: dragRef.current.start, current})
+        const moved = drag.moved || Math.hypot(current.x - drag.start.x, current.y - drag.start.y) >= 4
+        const points = drag.shape === 'lasso' && moved
+            ? appendScreenSelectionVertex(drag.points, current, 4)
+            : drag.points
+        dragRef.current = {...drag, current, moved, points}
+        setAreaDrag(drag.shape === 'lasso'
+            ? {shape: 'lasso', kind: drag.mode, modifier: drag.modifier, points}
+            : {shape: 'rectangle', start: drag.start, current})
     }, [])
 
-    /** Add Shift-selected Journey vertices to the active section or toggle Shift-clicked controls. */
+    /** Finish a rectangle or freehand lasso on pointer release. */
     const handleControlSelectionPointerUp = useCallback(event => {
         const drag = dragRef.current
         if (drag?.kind !== 'control-area' && drag?.kind !== 'section-area') return
@@ -1216,42 +1323,24 @@ export const FixPathEditor = () => {
         event.stopPropagation()
         event.stopImmediatePropagation?.()
         dragRef.current = null
-        setAreaDrag(null)
-
         const rect = mapOverlayRef.current?.getBoundingClientRect()
-        if (!rect) return
-        const end = {x: event.clientX - rect.left, y: event.clientY - rect.top}
-        if (drag.kind === 'section-area') {
-            const area = normalizeScreenSelectionArea(drag.start, end)
-            const selectionArea = area.width < 4 || area.height < 4
-                ? normalizeScreenSelectionArea(
-                    {x: drag.start.x - 10, y: drag.start.y - 10},
-                    {x: drag.start.x + 10, y: drag.start.y + 10},
-                )
-                : area
-            const sectionToExtend = orderedCorrections.find(correction => (
-                correction.trackSlug === drag.trackSlug && correction.id === drag.correctionId
-            ))
-            void scanSelectedArea(selectionArea).then(sourcePoints => {
-                if (sectionToExtend && sourcePoints?.length > 0) {
-                    extendCorrectionWithSourcePoints(sourcePoints, sectionToExtend)
-                }
-            })
+        if (!rect) {
+            clearSelectionLasso()
             return
         }
-        const sectionControlPoints = projected.controlPoints.filter(point => (
-            point.trackSlug === drag.trackSlug && point.correctionId === drag.correctionId
-        ))
-        const sameSection = point => point.trackSlug === drag.trackSlug && point.correctionId === drag.correctionId
-        const currentSelection = selectedControlPoints.filter(sameSection)
-        const distance = Math.hypot(end.x - drag.start.x, end.y - drag.start.y)
-
-        if (distance < 4) {
-            if (drag.modifier !== 'shift') return
-            const point = drag.markerControlPointId
-                ? sectionControlPoints.find(item => item.controlPointId === drag.markerControlPointId)
-                : findClosestProjectedControlPoint(sectionControlPoints, end)
-            if (!point) return
+        const end = {x: event.clientX - rect.left, y: event.clientY - rect.top}
+        const moved = drag.moved || Math.hypot(end.x - drag.start.x, end.y - drag.start.y) >= 4
+        if (!moved && drag.mode === 'control' && drag.modifier === 'shift' && drag.markerControlPointId) {
+            const sameSection = point => point.trackSlug === drag.trackSlug
+                && point.correctionId === drag.correctionId
+            const currentSelection = selectedControlPoints.filter(sameSection)
+            const point = projected.controlPoints.find(item => (
+                item.controlPointId === drag.markerControlPointId && sameSection(item)
+            ))
+            if (!point) {
+                clearSelectionLasso()
+                return
+            }
             const target = {
                 trackSlug: point.trackSlug,
                 correctionId: point.correctionId,
@@ -1271,41 +1360,99 @@ export const FixPathEditor = () => {
                     : nextSelection[0]
             setPersistedActiveCorrection({trackSlug: drag.trackSlug, correctionId: drag.correctionId})
             if (nextSelection.length > 0) setAreaMode(false)
+            clearSelectionLasso()
             return
         }
 
-        const area = normalizeScreenSelectionArea(drag.start, end)
-        if (area.width < 4 || area.height < 4) return
-        const enclosedPoints = sectionControlPoints
-            .filter(point => isScreenPointInsideArea(point, area))
-            .map(point => ({
-                trackSlug: point.trackSlug,
-                correctionId: point.correctionId,
-                controlPointId: point.controlPointId,
-            }))
-        if (enclosedPoints.length === 0) return
-        const selectedById = new Map([...currentSelection, ...enclosedPoints]
-            .map(point => [point.controlPointId, point]))
-        const nextSelection = [...selectedById.values()]
-        setSelectedControlPoints(nextSelection)
-        const anchor = selectionAnchorRef.current
-        selectionAnchorRef.current = anchor && sameSection(anchor)
-            && nextSelection.some(point => point.controlPointId === anchor.controlPointId)
-            ? anchor
-            : nextSelection[0]
-        setPersistedActiveCorrection({trackSlug: drag.trackSlug, correctionId: drag.correctionId})
-        setAreaMode(false)
-    }, [extendCorrectionWithSourcePoints, orderedCorrections, projected.controlPoints, scanSelectedArea, selectedControlPoints, setPersistedActiveCorrection])
+        if (!moved && drag.mode === 'control' && drag.modifier === 'alt'
+            && drag.markerControlPointId && !drag.previousLasso) {
+            clearSelectionLasso()
+            return
+        }
 
-    /** Clear a control-point selection rectangle cancelled by the browser. */
+        if (!moved && drag.shape === 'lasso') {
+            const points = appendScreenSelectionVertex(drag.points, end)
+            const draft = {
+                kind: drag.mode,
+                modifier: drag.modifier,
+                trackSlug: drag.trackSlug,
+                correctionId: drag.correctionId,
+                points,
+            }
+            lassoDraftRef.current = draft
+            setAreaDrag({shape: 'lasso', kind: drag.mode, modifier: drag.modifier, points})
+            return
+        }
+
+        let polygon
+        if (drag.shape === 'lasso') {
+            const points = moved ? appendScreenSelectionVertex(drag.points, end, 4) : drag.points
+            polygon = points.length >= 3 ? points : []
+        }
+        else {
+            const area = normalizeScreenSelectionArea(drag.start, end)
+            const selectionArea = area.width < 4 || area.height < 4
+                ? normalizeScreenSelectionArea(
+                    {x: drag.start.x - 10, y: drag.start.y - 10},
+                    {x: drag.start.x + 10, y: drag.start.y + 10},
+                )
+                : area
+            polygon = [
+                {x: selectionArea.left, y: selectionArea.top},
+                {x: selectionArea.right, y: selectionArea.top},
+                {x: selectionArea.right, y: selectionArea.bottom},
+                {x: selectionArea.left, y: selectionArea.bottom},
+            ]
+        }
+        finishSelectionLasso({...drag, kind: drag.mode}, polygon)
+    }, [clearSelectionLasso, finishSelectionLasso, projected.controlPoints, selectedControlPoints, setPersistedActiveCorrection])
+
+    /** Discard an area selection interrupted by pointer cancellation. */
     const handleControlSelectionPointerCancel = useCallback(event => {
-        if (dragRef.current?.kind !== 'control-area' && dragRef.current?.kind !== 'section-area') return
+        const drag = dragRef.current
+        if (drag?.kind !== 'control-area' && drag?.kind !== 'section-area') return
         event.preventDefault()
         event.stopPropagation()
         event.stopImmediatePropagation?.()
         dragRef.current = null
-        setAreaDrag(null)
+        clearSelectionLasso()
+    }, [clearSelectionLasso])
+
+    /** Keep polygon-vertex clicks from triggering map or marker actions before the lasso closes. */
+    const handleSelectionClickCapture = useCallback(event => {
+        const draft = lassoDraftRef.current
+        if (!draft || selectionGestureModifier(event) !== draft.modifier
+            || event.target?.closest?.('.fix-path-panel, .fix-path-context-menu')) return
+        event.preventDefault()
+        event.stopPropagation()
+        event.stopImmediatePropagation?.()
     }, [])
+
+    /** Close a click-vertex lasso with a double-click. */
+    const handleSelectionDoubleClickCapture = useCallback(event => {
+        const draft = lassoDraftRef.current
+        if (!draft || selectionGestureModifier(event) !== draft.modifier
+            || event.target?.closest?.('.fix-path-panel, .fix-path-context-menu')) return
+        event.preventDefault()
+        event.stopPropagation()
+        event.stopImmediatePropagation?.()
+        const rect = mapOverlayRef.current?.getBoundingClientRect()
+        if (!rect) {
+            clearSelectionLasso()
+            return
+        }
+        const position = {x: event.clientX - rect.left, y: event.clientY - rect.top}
+        finishSelectionLasso(draft, appendScreenSelectionVertex(draft.points, position))
+    }, [clearSelectionLasso, finishSelectionLasso])
+
+    /** Cancel an unfinished click-vertex lasso with Escape. */
+    const handleSelectionLassoKeyDown = useCallback(event => {
+        if (event.key !== 'Escape' || !lassoDraftRef.current) return
+        event.preventDefault()
+        event.stopPropagation()
+        event.stopImmediatePropagation?.()
+        clearSelectionLasso()
+    }, [clearSelectionLasso])
 
     /**
      * Add a correction control point from a map click during section editing.
@@ -1337,14 +1484,13 @@ export const FixPathEditor = () => {
         container.addEventListener('pointermove', handleControlSelectionPointerMove, true)
         container.addEventListener('pointerup', handleControlSelectionPointerUp, true)
         container.addEventListener('pointercancel', handleControlSelectionPointerCancel, true)
+        container.addEventListener('click', handleSelectionClickCapture, true)
+        container.addEventListener('dblclick', handleSelectionDoubleClickCapture, true)
+        document.addEventListener('keydown', handleSelectionLassoKeyDown, true)
 
         const selectingArea = areaMode && !scanProgress
         if (selectingArea) {
             canvas.classList.add('fix-path-selecting-area')
-            canvas.addEventListener('pointerdown', handleAreaPointerDown, true)
-            canvas.addEventListener('pointermove', handleAreaPointerMove, true)
-            canvas.addEventListener('pointerup', handleAreaPointerUp, true)
-            canvas.addEventListener('pointercancel', handleAreaPointerCancel, true)
         }
         if (selection.phase === 'add-points') {
             canvas.addEventListener('click', handleMapClick, true)
@@ -1356,10 +1502,9 @@ export const FixPathEditor = () => {
             container.removeEventListener('pointermove', handleControlSelectionPointerMove, true)
             container.removeEventListener('pointerup', handleControlSelectionPointerUp, true)
             container.removeEventListener('pointercancel', handleControlSelectionPointerCancel, true)
-            canvas.removeEventListener('pointerdown', handleAreaPointerDown, true)
-            canvas.removeEventListener('pointermove', handleAreaPointerMove, true)
-            canvas.removeEventListener('pointerup', handleAreaPointerUp, true)
-            canvas.removeEventListener('pointercancel', handleAreaPointerCancel, true)
+            container.removeEventListener('click', handleSelectionClickCapture, true)
+            container.removeEventListener('dblclick', handleSelectionDoubleClickCapture, true)
+            document.removeEventListener('keydown', handleSelectionLassoKeyDown, true)
             canvas.removeEventListener('click', handleMapClick, true)
         }
     }, [
@@ -1367,14 +1512,13 @@ export const FixPathEditor = () => {
         areaMode,
         scanProgress,
         selection.phase,
-        handleAreaPointerDown,
-        handleAreaPointerMove,
-        handleAreaPointerUp,
-        handleAreaPointerCancel,
         handleControlSelectionPointerDown,
         handleControlSelectionPointerMove,
         handleControlSelectionPointerUp,
         handleControlSelectionPointerCancel,
+        handleSelectionClickCapture,
+        handleSelectionDoubleClickCapture,
+        handleSelectionLassoKeyDown,
         handleMapClick,
     ])
 
@@ -1416,7 +1560,8 @@ export const FixPathEditor = () => {
     }
 
     const handlePointDragMove = event => {
-        if (validationInProgressRef.current || !dragRef.current || dragRef.current.kind === 'area') {
+        if (validationInProgressRef.current || !dragRef.current
+            || ['area', 'control-area', 'section-area'].includes(dragRef.current.kind)) {
             return
         }
         event.preventDefault()
@@ -1444,10 +1589,15 @@ export const FixPathEditor = () => {
         setDragPreview(dragRef.current)
     }
 
-    const showDragError = message => UIToast.warning({caption: 'Fix Path point not moved', text: message})
+    const showDragError = message => setPanelFeedback({
+        type: 'warning',
+        caption: 'Fix Path point not moved',
+        text: message,
+    })
 
     const handlePointDragEnd = event => {
-        if (validationInProgressRef.current || !dragRef.current || dragRef.current.kind === 'area') {
+        if (validationInProgressRef.current || !dragRef.current
+            || ['area', 'control-area', 'section-area'].includes(dragRef.current.kind)) {
             return
         }
         event.preventDefault()
@@ -1461,6 +1611,7 @@ export const FixPathEditor = () => {
         if (!drag.coordinate) {
             return
         }
+        setPanelFeedback(null)
         if (drag.kind === 'control') {
             commitDraftCorrections(updateControlPointCoordinates(
                 draftCorrectionsRef.current,
@@ -1485,39 +1636,6 @@ export const FixPathEditor = () => {
             return
         }
         commitDraftCorrections({...draftCorrectionsRef.current, [drag.trackSlug]: result.corrections})
-    }
-
-    const handleSourcePointerDown = event => {
-        const rect = mapOverlayRef.current?.getBoundingClientRect()
-        if (!rect) {
-            return
-        }
-        const point = findClosestSourcePoint(
-            projected.sourcePoints,
-            {x: event.clientX - rect.left, y: event.clientY - rect.top},
-            10,
-        )
-        if (!point) {
-            return
-        }
-        handlePointDragStart(event, {
-            kind: 'source',
-            trackSlug: point.trackSlug,
-            segmentIndex: point.segmentIndex,
-            index: point.index,
-        })
-    }
-
-    const handleSourcePointerUp = event => {
-        const drag = dragRef.current
-        if (drag?.kind !== 'source') {
-            handlePointDragEnd(event)
-            return
-        }
-        handlePointDragEnd(event)
-        if (!drag.moved) {
-            startCorrection(drag)
-        }
     }
 
     const resolveControlPointSelection = (event, target) => {
@@ -1595,6 +1713,7 @@ export const FixPathEditor = () => {
             ? {selectedControlPoints: [target], anchor: target}
             : resolveControlPointSelection(event, target)
         if (result.ignored) return
+        clearSelectionLasso()
         selectionAnchorRef.current = result.anchor
         setSelectedControlPoints(result.selectedControlPoints)
         setPersistedActiveCorrection({trackSlug, correctionId})
@@ -1731,10 +1850,6 @@ export const FixPathEditor = () => {
 
     const handleControlPointPointerDown = (event, renderedPoint) => {
         if (validationInProgressRef.current) return
-        if (areaMode && event.shiftKey && event.button === 0) {
-            handleAreaPointerDown(event)
-            if (dragRef.current?.kind === 'area') return
-        }
         const point = controlPointForEvent(event, renderedPoint)
         if (eraseMode && point.active && event.button === 0) {
             event.preventDefault()
@@ -1899,6 +2014,7 @@ export const FixPathEditor = () => {
         if (!correction) return
         lastCenteredSectionRef.current = null
         recenterCorrectionSection(correction)
+        clearSelectionLasso()
         setPersistedActiveCorrection({trackSlug: correction.trackSlug, correctionId: correction.id})
         setSelectedControlPoints([])
         selectionAnchorRef.current = null
@@ -2099,6 +2215,7 @@ export const FixPathEditor = () => {
     /** Validate, persist, and redraw the latest complete correction draft. */
     const persistDraftCorrections = useCallback(async correctionsByTrack => {
         if (!journey || validationInProgressRef.current) return false
+        setPanelFeedback(null)
         validationInProgressRef.current = true
         setSaving(true)
         try {
@@ -2113,7 +2230,8 @@ export const FixPathEditor = () => {
                         correction.endIndex,
                     )
                     if (distance > maxSegmentMeters) {
-                        UIToast.warning({
+                        setPanelFeedback({
+                            type: 'warning',
                             caption: 'Fix Path section exceeds the configured limit',
                             text: 'One section is ' + Math.round(distance) + ' m. Split it into sections shorter than ' + maxSegmentMeters + ' m.',
                         })
@@ -2125,13 +2243,21 @@ export const FixPathEditor = () => {
                         correction.startIndex,
                         correction.endIndex,
                     )) {
-                        UIToast.warning({caption: 'Track changed', text: 'This correction no longer matches the current source points. Recreate the affected section.'})
+                        setPanelFeedback({
+                            type: 'warning',
+                            caption: 'Track changed',
+                            text: 'This correction no longer matches the current source points. Recreate the affected section.',
+                        })
                         return false
                     }
                 }
                 const applied = applyFixPathCorrections(trackContent, corrections)
                 if (applied.skippedCorrectionIds.length > 0) {
-                    UIToast.warning({caption: 'Correction could not be applied', text: 'Check the section endpoints and source track before editing further.'})
+                    setPanelFeedback({
+                        type: 'warning',
+                        caption: 'Correction could not be applied',
+                        text: 'Check the section endpoints and source track before editing further.',
+                    })
                     return false
                 }
             }
@@ -2152,7 +2278,11 @@ export const FixPathEditor = () => {
                 currentSection: currentData.currentSection,
             })
             if (!nextData) {
-                UIToast.warning({caption: 'Corrections are not valid', text: 'Resolve overlapping or incomplete sections before editing further.'})
+                setPanelFeedback({
+                    type: 'warning',
+                    caption: 'Corrections are not valid',
+                    text: 'Resolve overlapping or incomplete sections before editing further.',
+                })
                 return false
             }
 
@@ -2183,10 +2313,10 @@ export const FixPathEditor = () => {
                     contextualJourney.fixPathEnabled = previousEnabled
                 }
                 console.error('[FixPathEditor] Could not persist path corrections:', error)
-                UIToast.error({
+                setPanelFeedback({
+                    type: 'error',
                     caption: 'Fix Path update failed',
                     text: 'The corrections could not be saved and applied to this Journey.',
-                    errors: error,
                 })
                 return false
             }
@@ -2196,10 +2326,10 @@ export const FixPathEditor = () => {
             }
             catch (error) {
                 console.error('[FixPathEditor] Could not redraw path corrections:', error)
-                UIToast.error({
+                setPanelFeedback({
+                    type: 'error',
                     caption: 'Path corrections saved, but the Journey could not be refreshed',
                     text: 'The corrections were saved. Refresh the Journey to update its map display.',
-                    errors: error,
                 })
                 return false
             }
@@ -2225,16 +2355,19 @@ export const FixPathEditor = () => {
         return null
     }
 
-    const areaRectangle = areaDrag
+    const areaRectangle = areaDrag?.shape === 'rectangle'
         ? normalizeScreenSelectionArea(areaDrag.start, areaDrag.current)
         : null
-    const sourcePath = buildSourcePointSvgPath(projected.sourcePoints, 8)
-    const selectedPath = buildSourcePointSvgPath(projected.sourcePoints.filter(point => (
-        selection.startPoint?.trackSlug === point.trackSlug
-        && selection.startPoint?.segmentIndex === point.segmentIndex
-        && selection.startPoint?.index === point.index
-    )), 8)
-
+    const lassoPoints = areaDrag?.shape === 'lasso'
+        ? areaDrag.points.map(point => point.x + ',' + point.y).join(' ')
+        : ''
+    const lassoTargetLabel = areaDrag?.kind === 'source' ? 'Journey points' : 'correction points'
+    const lassoGestureLabel = areaDrag?.modifier === 'shift'
+        ? 'Shift'
+        : areaDrag?.modifier === 'ctrl-shift' ? 'Ctrl/Cmd+Shift' : 'Alt'
+    const lassoGuideText = areaDrag?.shape === 'lasso'
+        ? lassoGestureLabel + ': drag around ' + lassoTargetLabel + ' and release, or click vertices and double-click to select. Press Escape to cancel.'
+        : null
     const content = (
         <>
         <div
@@ -2249,6 +2382,16 @@ export const FixPathEditor = () => {
                 }
             }}
         >
+            {lassoGuideText && (
+                <FixPathCallout
+                    className="fix-path-selection-guide"
+                    type="info"
+                    icon="draw-polygon"
+                    appearance="filled-outlined"
+                >
+                    {lassoGuideText}
+                </FixPathCallout>
+            )}
             <svg className={'fix-path-markers' + (areaMode ? ' is-selecting-area' : '') + (eraseMode ? ' is-erasing' : '')} width={projected.width} height={projected.height} aria-label="Journey correction points">
                 {areaRectangle && (
                     <rect
@@ -2257,31 +2400,14 @@ export const FixPathEditor = () => {
                         y={areaRectangle.top}
                         width={areaRectangle.width}
                         height={areaRectangle.height}
-                    />
-                )}
-                {sourcePath && (
-                    <path
-                        className="fix-path-source-points"
-                        d={sourcePath}
-                        role="button"
-                        tabIndex="0"
-                        aria-label={projected.sourcePoints.length + ' Journey points in selected area'}
-                        onPointerDown={handleSourcePointerDown}
-                        onPointerMove={handlePointDragMove}
-                        onPointerUp={handleSourcePointerUp}
-                        onPointerCancel={handleSourcePointerUp}
-                    />
-                )}
-                {selectedPath && (
-                    <path
-                        className="fix-path-source-points is-selected"
-                        d={selectedPath}
                         aria-hidden="true"
-                        onPointerDown={handleSourcePointerDown}
-                        onPointerMove={handlePointDragMove}
-                        onPointerUp={handleSourcePointerUp}
-                        onPointerCancel={handleSourcePointerUp}
                     />
+                )}
+                {lassoPoints && areaDrag.points.length >= 3 && (
+                    <polygon className="fix-path-selection-lasso" points={lassoPoints} aria-hidden="true"/>
+                )}
+                {lassoPoints && areaDrag.points.length === 2 && (
+                    <polyline className="fix-path-selection-lasso" points={lassoPoints} aria-hidden="true"/>
                 )}
                 {projected.controlPoints.map(point => {
                     const selected = selectedControlPoints.some(item => item.trackSlug === point.trackSlug
@@ -2308,15 +2434,9 @@ export const FixPathEditor = () => {
                                 ? 'Correction point in current section, drag to move or right-click to remove'
                                 : 'Correction point in another section, click to activate or right-click for options'}
                             onPointerDown={event => handleControlPointPointerDown(event, point)}
-                            onPointerMove={event => dragRef.current?.kind === 'area'
-                                ? handleAreaPointerMove(event)
-                                : handlePointDragMove(event)}
-                            onPointerUp={event => dragRef.current?.kind === 'area'
-                                ? handleAreaPointerUp(event)
-                                : handlePointDragEnd(event)}
-                            onPointerCancel={event => dragRef.current?.kind === 'area'
-                                ? handleAreaPointerCancel(event)
-                                : handlePointDragEnd(event)}
+                            onPointerMove={handlePointDragMove}
+                            onPointerUp={handlePointDragEnd}
+                            onPointerCancel={handlePointDragEnd}
                             onClick={event => handleControlPointClick(event, point)}
                             onContextMenu={event => handleControlPointContextMenu(event, point)}
                             onKeyDown={event => handleControlPointKeyDown(event, point)}
@@ -2344,16 +2464,6 @@ export const FixPathEditor = () => {
                         </g>
                     )
                 })}
-                {projected.pendingControlPoints.map((point, index) => (
-                    <circle
-                        key={'pending-' + index}
-                        className="fix-path-pending-point"
-                        cx={point.x}
-                        cy={point.y}
-                        r="6"
-                        aria-hidden="true"
-                    />
-                ))}
             </svg>
         </div>
 
@@ -2373,6 +2483,7 @@ export const FixPathEditor = () => {
                 close,
                 focusJourney,
                 currentCorrectionVisible,
+                feedback: panelFeedback,
                 displayedCorrection,
                 displayedCorrectionPreview,
                 displayedTrack,
@@ -2382,7 +2493,6 @@ export const FixPathEditor = () => {
                 helpOpen,
                 heightUnit,
                 orderedCorrections,
-                projected,
                 eraseMode,
                 eraseSelectedControlPoints,
                 removeControlPoint,
@@ -2393,7 +2503,6 @@ export const FixPathEditor = () => {
                 selectedControlPoints,
                 selection,
                 setHelpOpen,
-                setEraseMode,
                 setSelection,
                 onCorrectionVisibilityChange,
                 undoCorrectionEdit,
@@ -2405,7 +2514,6 @@ export const FixPathEditor = () => {
             <FixPathEditorHelp
                 active={helpOpen}
                 onRequestClose={() => setHelpOpen(false)}
-                maxSegmentMeters={maxSegmentMeters}
             />
         </Widget>
 
@@ -2454,7 +2562,7 @@ export const FixPathEditor = () => {
                             )}
                             onKeyDown={handleContextMenuItemKeyDown}
                         >
-                            <WaIcon name="trash" variant="regular" aria-hidden="true"/>
+                            <WaIcon name="trash-can" variant="regular" aria-hidden="true"/>
                             {'Remove'}
                         </li>
                     )}

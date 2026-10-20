@@ -24,6 +24,7 @@ import {
     buildDraggedPointCorrections,
     buildFixPathSection,
     removeFixPathControlPointsFromSection,
+    restoreRemovedFixPathSourcePoints,
     translateFixPathControlPoints,
 } from '@Utils/cesium/fixPathCorrectionEditing'
 
@@ -141,6 +142,25 @@ describe('Fix Path correction editing', () => {
         expect(persisted.tracks['track-a'][0].controlPoints
             .filter(point => point.erased === true)
             .map(point => point.sourceIndex)).toEqual([3, 4])
+    })
+
+    it('restores only explicitly reselected erased source points as unmodified controls', () => {
+        const corrections = [{
+            id: 'section-a',
+            segmentIndex: 0,
+            startIndex: 2,
+            endIndex: 5,
+            controlPoints: [
+                {id: 'fix-point-0-3', sourceIndex: 3, fixed: false, removed: true, erased: true},
+                {id: 'fix-point-0-4', sourceIndex: 4, fixed: false, removed: true, erased: true},
+            ],
+        }]
+
+        const restored = restoreRemovedFixPathSourcePoints(corrections, 0, new Set([3]))
+
+        expect(restored[0].controlPoints[0]).toMatchObject({sourceIndex: 3, fixed: false, removed: false})
+        expect(restored[0].controlPoints[0].erased).toBeUndefined()
+        expect(restored[0].controlPoints[1]).toMatchObject({sourceIndex: 4, fixed: false, removed: true, erased: true})
     })
 
     it('merges sections whose source vertices are directly adjacent', () => {

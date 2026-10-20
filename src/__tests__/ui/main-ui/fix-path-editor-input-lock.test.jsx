@@ -50,6 +50,7 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
         <span aria-hidden={ariaHidden} className={className} style={style} data-family={family} data-variant={variant}>{name}</span>
     ),
     WaTooltip: ({children, for: target, placement}) => <wa-tooltip for={target} placement={placement}>{children}</wa-tooltip>,
+    WaCallout: ({children, ...props}) => <div {...props}>{children}</div>,
     WaInput: ({'aria-label': ariaLabel, label, value, onChange, type, step, readOnly, inputMode}) => (
         <input
             aria-label={ariaLabel ?? label}
@@ -212,6 +213,7 @@ describe('FixPathEditor map input ownership', () => {
             ['scene-profile-widget', {widgetsBoard: 'scene', zIndex: 17000}],
         ])
         const viewerContainer = document.createElement('div')
+        viewerContainer.append(canvas)
         document.body.append(viewerContainer)
         const fixPathWidgetRuntimeConfig = {dimensions: {width: 200, height: 200}}
         const updateFixPathWidgetRect = vi.fn()
@@ -377,19 +379,21 @@ describe('FixPathEditor map input ownership', () => {
             bubbles: true,
             cancelable: true,
             button: 0,
+            ctrlKey: true,
             shiftKey: true,
             clientX: 16,
             clientY: 50,
         })
-        expect(canvas.dispatchEvent(shiftAdd)).toBe(false)
-        canvas.dispatchEvent(new MouseEvent('pointerup', {
-            bubbles: true,
-            cancelable: true,
+        act(() => expect(canvas.dispatchEvent(shiftAdd)).toBe(false))
+        expect(shiftAdd.defaultPrevented).toBe(true)
+        expect(document.querySelector('.fix-path-selection-rectangle')).not.toBeNull()
+        fireEvent.pointerUp(canvas, {
             button: 0,
+            ctrlKey: true,
             shiftKey: true,
             clientX: 16,
             clientY: 50,
-        }))
+        })
         await waitFor(() => expect(document.querySelector(
             '.fix-path-correction-point-row[data-control-point-id="fix-point-0-2"]',
         )).not.toBeNull())
@@ -622,58 +626,110 @@ describe('FixPathEditor map input ownership', () => {
 
         const selectedMapPoint = document.querySelector('.fix-path-control-point.is-selected')
         const selectedMapPointId = selectedMapPoint.dataset.correctionId
+        const selectedControlPointId = selectedMapPoint.dataset.controlPointId
         const selectedMapPointHitbox = selectedMapPoint.querySelector('.fix-path-control-point-hitbox')
         const selectionX = Number(selectedMapPointHitbox.getAttribute('cx'))
         const selectionY = Number(selectedMapPointHitbox.getAttribute('cy'))
-        fireEvent.pointerDown(viewerContainer, {
+        fireEvent.pointerDown(selectedMapPoint, {
             pointerId: 17,
             button: 0,
             ctrlKey: true,
-            clientX: selectionX,
-            clientY: selectionY,
+            altKey: true,
+            clientX: selectionX - 2,
+            clientY: selectionY - 2,
         })
         fireEvent.pointerMove(viewerContainer, {
             pointerId: 17,
             button: 0,
             ctrlKey: true,
-            clientX: selectionX + 5,
-            clientY: selectionY + 5,
-        })
-        expect(document.querySelector('.fix-path-selection-rectangle')).toBeNull()
-        fireEvent.pointerUp(viewerContainer, {
-            pointerId: 17,
-            button: 0,
-            ctrlKey: true,
-            clientX: selectionX + 5,
-            clientY: selectionY + 5,
-        })
-        fireEvent.pointerDown(viewerContainer, {
-            pointerId: 18,
-            button: 0,
             altKey: true,
-            clientX: selectionX,
-            clientY: selectionY,
-        })
-        fireEvent.pointerMove(viewerContainer, {
-            pointerId: 18,
-            button: 0,
-            altKey: true,
-            clientX: selectionX + 5,
-            clientY: selectionY + 5,
+            clientX: selectionX + 2,
+            clientY: selectionY + 2,
         })
         expect(document.querySelector('.fix-path-selection-rectangle')).not.toBeNull()
+        expect(document.querySelector('.fix-path-selection-lasso')).toBeNull()
+        fireEvent.pointerUp(viewerContainer, {
+            pointerId: 17,
+            button: 0,
+            ctrlKey: true,
+            altKey: true,
+            clientX: selectionX + 2,
+            clientY: selectionY + 2,
+        })
+        const selectedPointSelector = '.fix-path-control-point[data-control-point-id="' + selectedControlPointId + '"]'
+        await waitFor(() => expect(document.querySelector(selectedPointSelector + '.is-selected')).not.toBeNull())
+        pointerClickProjectedPoint(document.querySelector(selectedPointSelector), {shiftKey: true})
+        await waitFor(() => expect(document.querySelectorAll('.fix-path-control-point.is-selected')).toHaveLength(0))
+        const controlLassoVertices = [
+            {x: selectionX - 3, y: selectionY - 3},
+            {x: selectionX + 6, y: selectionY - 3},
+            {x: selectionX + 2, y: selectionY + 6},
+        ]
+        controlLassoVertices.forEach(({x, y}, index) => {
+            const pointer = {
+                pointerId: 18,
+                button: 0,
+                altKey: true,
+                clientX: x,
+                clientY: y,
+            }
+            if (index === 0) fireEvent.pointerDown(viewerContainer, pointer)
+            else fireEvent.pointerMove(viewerContainer, pointer)
+        })
+        expect(document.querySelector('.fix-path-selection-lasso')).not.toBeNull()
+        expect(document.querySelector('.fix-path-selection-guide')?.textContent)
+            .toContain('Alt: drag around correction points and release, or click vertices and double-click to select')
         fireEvent.pointerUp(viewerContainer, {
             pointerId: 18,
             button: 0,
             altKey: true,
-            clientX: selectionX + 5,
-            clientY: selectionY + 5,
+            clientX: controlLassoVertices.at(-1).x,
+            clientY: controlLassoVertices.at(-1).y,
         })
-        await waitFor(() => {
-            const selectedPoints = [...document.querySelectorAll('.fix-path-control-point.is-selected')]
-            expect(selectedPoints.length).toBeGreaterThan(0)
-            expect(selectedPoints.every(point => point.dataset.correctionId === selectedMapPointId)).toBe(true)
+        await waitFor(() => expect(document.querySelector(selectedPointSelector + '.is-selected')).not.toBeNull())
+        expect(document.querySelector('.fix-path-control-point.is-selected')?.dataset.correctionId)
+            .toBe(selectedMapPointId)
+        pointerClickProjectedPoint(document.querySelector(selectedPointSelector), {shiftKey: true})
+        await waitFor(() => expect(document.querySelectorAll('.fix-path-control-point.is-selected')).toHaveLength(0))
+        const clickLassoVertices = [
+            {x: selectionX - 10, y: selectionY - 10},
+            {x: selectionX + 10, y: selectionY - 10},
+            {x: selectionX, y: selectionY + 10},
+        ]
+        clickLassoVertices.forEach(({x, y}, index) => {
+            const pointer = {
+                pointerId: 20 + index,
+                button: 0,
+                altKey: true,
+                clientX: x,
+                clientY: y,
+            }
+            fireEvent.pointerDown(viewerContainer, pointer)
+            fireEvent.pointerUp(viewerContainer, pointer)
+            fireEvent.click(viewerContainer, {altKey: true, clientX: x, clientY: y})
         })
+        expect(document.querySelector('.fix-path-selection-lasso')).not.toBeNull()
+        expect(document.querySelector('.fix-path-selection-guide')?.textContent)
+            .toContain('Alt: drag around correction points and release, or click vertices and double-click to select')
+        expect(document.querySelector('.fix-path-selection-lasso-vertex')).toBeNull()
+        fireEvent.doubleClick(viewerContainer, {
+            altKey: true,
+            clientX: clickLassoVertices.at(-1).x,
+            clientY: clickLassoVertices.at(-1).y,
+        })
+        await waitFor(() => expect(document.querySelector(selectedPointSelector + '.is-selected')).not.toBeNull())
+        const selectedPointIdsAfterClickLasso = [...document.querySelectorAll('.fix-path-control-point.is-selected')]
+            .map(point => point.dataset.controlPointId)
+        selectedPointIdsAfterClickLasso.forEach(controlPointId => {
+            const selectedMarker = document.querySelector(
+                '.fix-path-control-point[data-control-point-id="' + controlPointId + '"]',
+            )
+            if (selectedMarker) pointerClickProjectedPoint(selectedMarker, {shiftKey: true})
+        })
+        await waitFor(() => expect(document.querySelectorAll('.fix-path-control-point.is-selected')).toHaveLength(0))
+        expect(document.querySelector('.fix-path-selection-rectangle')).toBeNull()
+        expect(document.querySelector('.fix-path-selection-lasso')).toBeNull()
+        expect(document.querySelectorAll('.fix-path-control-point.is-selected')).toHaveLength(0)
         const standardMapGestureAfterAlt = new MouseEvent('pointerdown', {
             bubbles: true,
             cancelable: true,
@@ -681,6 +737,38 @@ describe('FixPathEditor map input ownership', () => {
         })
         expect(canvas.dispatchEvent(standardMapGestureAfterAlt)).toBe(true)
         expect(standardMapGestureAfterAlt.defaultPrevented).toBe(false)
+        const cmdShiftMapGesture = new MouseEvent('pointerdown', {
+            bubbles: true,
+            cancelable: true,
+            button: 0,
+            metaKey: true,
+            shiftKey: true,
+        })
+        expect(canvas.dispatchEvent(cmdShiftMapGesture)).toBe(true)
+        expect(cmdShiftMapGesture.defaultPrevented).toBe(false)
+        const cmdShiftMapMove = new MouseEvent('pointermove', {
+            bubbles: true,
+            cancelable: true,
+            metaKey: true,
+            shiftKey: true,
+            clientX: 60,
+            clientY: 60,
+        })
+        expect(canvas.dispatchEvent(cmdShiftMapMove)).toBe(true)
+        expect(cmdShiftMapMove.defaultPrevented).toBe(false)
+        const cmdShiftMapUp = new MouseEvent('pointerup', {
+            bubbles: true,
+            cancelable: true,
+            button: 0,
+            metaKey: true,
+            shiftKey: true,
+            clientX: 60,
+            clientY: 60,
+        })
+        expect(canvas.dispatchEvent(cmdShiftMapUp)).toBe(true)
+        expect(cmdShiftMapUp.defaultPrevented).toBe(false)
+        expect(document.querySelector('.fix-path-selection-rectangle')).toBeNull()
+        expect(document.querySelector('.fix-path-selection-lasso')).toBeNull()
 
         const tailSection = {
             id: 'tail-section',
@@ -694,6 +782,7 @@ describe('FixPathEditor map input ownership', () => {
                 progress: index === 8 ? 0.25 : 0.75,
                 coordinate: [-122.01 + index * 0.001, 37, 10],
                 fixed: false,
+                ...(index === 9 ? {removed: true, erased: true} : {}),
             })),
         }
         act(() => {
@@ -706,38 +795,58 @@ describe('FixPathEditor map input ownership', () => {
         await waitFor(() => expect([...document.querySelectorAll('.fix-path-correction-point-row')]
             .every(row => row.dataset.correctionId === 'tail-section')).toBe(true))
         const updateCallsBeforeTailShiftAdd = updateJourney.mock.calls.length
-        fireEvent.pointerDown(viewerContainer, {
-            pointerId: 8,
-            button: 0,
-            shiftKey: true,
-            clientX: 80,
-            clientY: 50,
+        const tailSourceLasso = [{x: 68, y: 45}, {x: 84, y: 45}, {x: 84, y: 55}, {x: 68, y: 55}]
+        tailSourceLasso.forEach(({x, y}, index) => {
+            const pointer = {
+                pointerId: 40,
+                button: 0,
+                shiftKey: true,
+                clientX: x,
+                clientY: y,
+            }
+            if (index === 0) fireEvent.pointerDown(viewerContainer, pointer)
+            else fireEvent.pointerMove(viewerContainer, pointer)
         })
+        expect(document.querySelector('.fix-path-selection-lasso')).not.toBeNull()
+        expect(document.querySelector('.fix-path-selection-guide')?.textContent)
+            .toContain('Shift: drag around Journey points and release, or click vertices and double-click to select')
         fireEvent.pointerUp(viewerContainer, {
-            pointerId: 8,
+            pointerId: 40,
             button: 0,
             shiftKey: true,
-            clientX: 80,
-            clientY: 50,
+            clientX: tailSourceLasso.at(-1).x,
+            clientY: tailSourceLasso.at(-1).y,
         })
+        await waitFor(() => expect(document.querySelector(
+            '.fix-path-correction-point-row[data-control-point-id="fix-point-0-9"]',
+        )).not.toBeNull())
         await waitFor(() => expect(document.querySelector(
             '.fix-path-correction-point-row[data-control-point-id="fix-point-0-10"]',
         )).not.toBeNull())
-        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(4))
+        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(3))
         await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeTailShiftAdd + 1))
         const tailAddedMarker = document.querySelector('.fix-path-control-point[data-control-point-id="fix-point-0-10"]')
         expect(tailAddedMarker?.classList.contains('is-unmodified')).toBe(true)
         expect(tailAddedMarker?.classList.contains('is-selected')).toBe(false)
+        const tailRestoredMarker = document.querySelector('.fix-path-control-point[data-control-point-id="fix-point-0-9"]')
+        expect(tailRestoredMarker?.classList.contains('is-unmodified')).toBe(true)
+        expect(tailRestoredMarker?.classList.contains('is-selected')).toBe(false)
+        const restoredTailPoint = journey.fixPathCorrectionData.tracks['track-a']
+            .find(correction => correction.id === 'tail-section')
+            .controlPoints.find(point => point.sourceIndex === 9)
+        expect(restoredTailPoint).toMatchObject({fixed: false, removed: false})
+        expect(restoredTailPoint.erased).toBeUndefined()
         expect(document.querySelector('.fix-path-source-points')).toBeNull()
         const updateCallsBeforeUndoAddition = updateJourney.mock.calls.length
         fireEvent.click(screen.getByRole('button', {name: 'Undo correction change'}))
-        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(2))
+        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(1))
+        expect(document.querySelector('.fix-path-control-point[data-control-point-id="fix-point-0-9"]')).toBeNull()
         expect(document.querySelector('.fix-path-control-point[data-control-point-id="fix-point-0-10"]')).toBeNull()
         expect(document.querySelector('.fix-path-source-points')).toBeNull()
         await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeUndoAddition + 1))
         const updateCallsBeforeRedoAddition = updateJourney.mock.calls.length
         fireEvent.click(screen.getByRole('button', {name: 'Redo correction change'}))
-        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(4))
+        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(3))
         await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeRedoAddition + 1))
         expect(editorStore.fixPathEditorOpen).toBe(true)
         expect(journey.fixPathEnabled).toBe(true)
@@ -836,7 +945,13 @@ describe('FixPathEditor map input ownership', () => {
         fireEvent.click(helpButton)
         expect(screen.getByRole('dialog', {name: 'Fix Path help'})).not.toBeNull()
         expect(document.querySelector('.fix-path-help-content')?.textContent)
-            .toContain('Shift-drag elsewhere on the Journey to add visible GPX source points to the active section')
+            .toContain('Shift-drag or Alt-drag draws a lasso; Ctrl+Shift-drag or Ctrl+Alt-drag draws a rectangle')
+        expect(document.querySelector('.fix-path-help-content')?.textContent)
+            .toContain('Shift and Ctrl gestures select Journey points when they start over the route')
+        expect(document.querySelector('.fix-path-help-content')?.textContent)
+            .toContain('Press Escape to cancel')
+        expect(document.querySelector('.fix-path-help-content')?.textContent)
+            .toContain('Alt gestures select correction points in the current section')
         expect(document.querySelector('.fix-path-help-content')?.textContent)
             .toContain('accepted corrections remain stored and continue to apply')
         expect(screen.getByRole('heading', {name: 'Point selection'})).not.toBeNull()
@@ -850,12 +965,7 @@ describe('FixPathEditor map input ownership', () => {
             .toBe('max(0px, calc(100vh - 2 * var(--lgs-gutter) - 2 * var(--lgs-gutter-s)))')
         expect(document.querySelectorAll('.fix-path-help-content kbd.lgs--shortcut-key').length).toBeGreaterThan(0)
         expect(document.querySelector('.fix-path-help-content kbd[aria-label="Arrow Up"]')?.textContent).toBe('↑')
-        const selectionHint = document.querySelector('.fix-path-correction-selection-hint')
-        expect(selectionHint?.textContent).toBe('[Shift + Click/drag to add points]')
-        expect(selectionHint?.parentElement?.classList.contains('fix-path-panel-header')).toBe(true)
-        expect(selectionHint?.previousElementSibling?.tagName).toBe('H2')
-        expect(selectionHint?.nextElementSibling?.classList.contains('fix-path-panel-header-actions')).toBe(true)
-        expect(selectionHint?.querySelector('kbd.lgs--shortcut-key')?.textContent).toBe('Shift')
+        expect(document.querySelector('.fix-path-correction-selection-hint')).toBeNull()
         expect(screen.getByText(/move focus between rows without changing the selected points/)).not.toBeNull()
         expect(document.querySelectorAll('.fix-path-correction-section')).toHaveLength(1)
         expect(screen.queryByText('Track A')).toBeNull()
@@ -1003,7 +1113,7 @@ describe('FixPathEditor map input ownership', () => {
         await waitFor(() => expect([...document.querySelectorAll('.fix-path-correction-point-row')]
             .every(row => row.dataset.correctionId === 'tail-section')).toBe(true))
         const activeSectionRows = [...document.querySelectorAll('.fix-path-correction-point-row')]
-        expect(activeSectionRows).toHaveLength(4)
+        expect(activeSectionRows).toHaveLength(3)
         fireEvent.keyDown(activeSectionRows[0], {key: 'a', ctrlKey: true})
         await waitFor(() => expect(document.querySelectorAll('.fix-path-control-point.is-selected'))
             .toHaveLength(activeSectionRows.length))
@@ -1027,7 +1137,7 @@ describe('FixPathEditor map input ownership', () => {
 
         const updateCallsBeforeUndo = updateJourney.mock.calls.length
         fireEvent.click(screen.getByRole('button', {name: 'Undo correction change'}))
-        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(4))
+        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(3))
         await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeUndo + 1))
         expect(journey.fixPathCorrectionData.tracks['track-a']).toHaveLength(3)
         expect(screen.getByRole('button', {name: 'Redo correction change'}).disabled).toBe(false)
@@ -1135,6 +1245,51 @@ describe('FixPathEditor map input ownership', () => {
             new Cartesian3(),
         )
         expect(Cartesian3.distance(camera.setView.mock.lastCall[0].destination, expectedDestination)).toBeLessThan(0.01)
+
+        act(() => {
+            journey.fixPathCorrectionData = {
+                revision: journey.fixPathCorrectionData.revision + 1,
+                tracks: {},
+            }
+        })
+        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(0))
+        const initialSectionLasso = [
+            {x: 6, y: 42},
+            {x: 26, y: 42},
+            {x: 26, y: 58},
+            {x: 6, y: 58},
+        ]
+        initialSectionLasso.forEach(({x, y}, index) => {
+            const pointer = {
+                pointerId: 50,
+                button: 0,
+                shiftKey: true,
+                clientX: x,
+                clientY: y,
+            }
+            if (index === 0) fireEvent.pointerDown(viewerContainer, pointer)
+            else fireEvent.pointerMove(viewerContainer, pointer)
+        })
+        fireEvent.pointerUp(viewerContainer, {
+            pointerId: 50,
+            button: 0,
+            shiftKey: true,
+            clientX: initialSectionLasso.at(-1).x,
+            clientY: initialSectionLasso.at(-1).y,
+        })
+        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(3))
+        const initialSectionMarkers = [...document.querySelectorAll('.fix-path-control-point')]
+        expect(initialSectionMarkers).toHaveLength(3)
+        expect(initialSectionMarkers.every(point => point.classList.contains('is-unmodified'))).toBe(true)
+        expect(initialSectionMarkers.every(point => !point.classList.contains('is-selected'))).toBe(true)
+        expect(document.querySelector('.fix-path-source-points')).toBeNull()
+        expect(document.querySelector('.fix-path-pending-point')).toBeNull()
+        expect(journey.fixPathCorrectionData.tracks['track-a'][0].startIndex).toBe(1)
+        expect(journey.fixPathCorrectionData.tracks['track-a'][0].endIndex).toBe(3)
+        expect(journey.fixPathCorrectionData.currentSection).toEqual({
+            trackSlug: 'track-a',
+            correctionId: journey.fixPathCorrectionData.tracks['track-a'][0].id,
+        })
         viewerContainer.remove()
     }, 20000)
 })

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-03
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -133,19 +133,104 @@ const sampleCoordinates = (coordinates, maxPoints) => {
 }
 
 /**
+ * Smooth each side of fixed Journey source points while retaining the points as exact vertices.
+ * @param {Array<Array<number>>} coordinates - Corrected source coordinates.
+ * @param {number} step - Number of Chaikin passes for each span.
+ * @param {Set<number>} anchorIndexes - Source indexes that must remain on the rendered path.
+ * @returns {{coordinates: Array<Array<number>>, anchorIndexes: Set<number>}} Smoothed coordinates and remapped anchors.
+ */
+const smoothCoordinateSegmentAtAnchors = (coordinates, step, anchorIndexes) => {
+    if (!Array.isArray(coordinates) || coordinates.length === 0) {
+        return {coordinates: [], anchorIndexes: new Set()}
+    }
+    const lastIndex = coordinates.length - 1
+    const anchors = new Set([...(anchorIndexes ?? [])].filter(index => (
+        Number.isInteger(index) && index >= 0 && index <= lastIndex
+    )))
+    if (anchors.size === 0) {
+        return {coordinates: smoothCoordinateSegment(coordinates, step), anchorIndexes: new Set()}
+    }
+    if (coordinates.length === 1) {
+        return {coordinates: coordinates.map(cloneCoordinate), anchorIndexes: new Set([0])}
+    }
+
+    const boundaries = [...new Set([0, lastIndex, ...anchors])].sort((first, second) => first - second)
+    const smoothedCoordinates = []
+    const smoothedAnchorIndexes = new Set()
+    for (let index = 0; index < boundaries.length - 1; index += 1) {
+        const startIndex = boundaries[index]
+        const stopIndex = boundaries[index + 1]
+        const smoothedSpan = smoothCoordinateSegment(coordinates.slice(startIndex, stopIndex + 1), step)
+        const outputStartIndex = smoothedCoordinates.length === 0 ? 0 : smoothedCoordinates.length - 1
+        smoothedCoordinates.push(...(smoothedCoordinates.length === 0 ? smoothedSpan : smoothedSpan.slice(1)))
+        if (anchors.has(startIndex)) smoothedAnchorIndexes.add(outputStartIndex)
+        if (anchors.has(stopIndex)) smoothedAnchorIndexes.add(smoothedCoordinates.length - 1)
+    }
+
+    return {coordinates: smoothedCoordinates, anchorIndexes: smoothedAnchorIndexes}
+}
+
+/**
+ * Keep required vertices while sampling long rendered geometries.
+ * @param {Array<Array<number>>} coordinates - Coordinates to sample.
+ * @param {number} maxPoints - Target maximum coordinate count.
+ * @param {Set<number>} preservedIndexes - Vertex indexes that must be retained.
+ * @returns {Array<Array<number>>} Sampled coordinates containing every required vertex.
+ */
+const sampleCoordinatesPreservingIndexes = (coordinates, maxPoints, preservedIndexes = new Set()) => {
+    if (!Array.isArray(coordinates) || coordinates.length <= maxPoints) {
+        return coordinates
+    }
+    if (preservedIndexes.size === 0) {
+        return sampleCoordinates(coordinates, maxPoints)
+    }
+
+    const lastIndex = coordinates.length - 1
+    const required = new Set([0, lastIndex, ...preservedIndexes].filter(index => (
+        Number.isInteger(index) && index >= 0 && index <= lastIndex
+    )))
+    const candidateCount = coordinates.length - required.size
+    const sampleCount = Math.max(0, Math.max(maxPoints, required.size) - required.size)
+    if (sampleCount > 0) {
+        let sampledCount = 0
+        let candidateIndex = 0
+        let nextCandidateIndex = sampleCount === 1
+            ? Math.floor((candidateCount - 1) / 2)
+            : 0
+        for (let index = 0; index < coordinates.length && sampledCount < sampleCount; index += 1) {
+            if (required.has(index)) continue
+            if (candidateIndex === nextCandidateIndex) {
+                required.add(index)
+                sampledCount += 1
+                if (sampledCount < sampleCount) {
+                    nextCandidateIndex = Math.round(sampledCount * (candidateCount - 1) / (sampleCount - 1))
+                }
+            }
+            candidateIndex += 1
+        }
+    }
+
+    return [...required].sort((first, second) => first - second).map(index => coordinates[index])
+}
+
+/**
  * Limit line geometry coordinates before they are submitted to Cesium.
  *
  * @param {object} geometry - GeoJSON line geometry.
  * @param {number} maxPoints - Maximum number of coordinates to retain.
  * @returns {object} The original or limited geometry.
  */
-const limitGeometryPoints = (geometry, maxPoints) => {
+const limitGeometryPoints = (geometry, maxPoints, preservedIndexesBySegment = new Map()) => {
     if (!geometry || !Array.isArray(geometry.coordinates)) {
         return geometry
     }
 
     if (geometry.type === LINE_STRING) {
-        const coordinates = sampleCoordinates(geometry.coordinates, maxPoints)
+        const coordinates = sampleCoordinatesPreservingIndexes(
+            geometry.coordinates,
+            maxPoints,
+            preservedIndexesBySegment.get(0),
+        )
         return coordinates === geometry.coordinates ? geometry : {...geometry, coordinates}
     }
 
@@ -158,15 +243,20 @@ const limitGeometryPoints = (geometry, maxPoints) => {
         return geometry
     }
 
-    const coordinates = geometry.coordinates.map(segment => {
-        const segmentLimit = Math.max(2, Math.floor((maxPoints * (segment?.length ?? 0)) / totalPoints))
-        return sampleCoordinates(segment, segmentLimit)
+    const coordinates = geometry.coordinates.map((segment, segmentIndex) => {
+        const preservedIndexes = preservedIndexesBySegment.get(segmentIndex) ?? new Set()
+        const segmentLimit = Math.max(
+            2,
+            preservedIndexes.size,
+            Math.floor((maxPoints * (segment?.length ?? 0)) / totalPoints),
+        )
+        return sampleCoordinatesPreservingIndexes(segment, segmentLimit, preservedIndexes)
     })
 
     return {...geometry, coordinates}
 }
 
-export const normalizeTrackRenderSmoothing = (value = undefined, fallback = TRACK_RENDER_SMOOTHING_DEFAULT) => {
+export const normalizeTrackRenderSmoothing = (value, fallback = TRACK_RENDER_SMOOTHING_DEFAULT) => {
     const fallbackSettings = {
         ...TRACK_RENDER_SMOOTHING_DEFAULT,
         ...(fallback ?? {}),
@@ -193,6 +283,96 @@ const getJourneyFromTrack = track => {
     return globalThis.lgs?.getJourneyBySlug?.(track?.parent)
 }
 
+/**
+ * Find fixed source vertices in the active Journey corrections.
+ * @param {object} track - Track whose corrected path is rendered.
+ * @returns {Map<number, Set<number>>} Fixed source indexes keyed by geometry segment.
+ */
+const getFixedSourceIndexesBySegment = (track, geometry, includeDraftCorrections = false) => {
+    const journey = track?.parent && typeof track.parent === 'object'
+        ? track.parent
+        : getJourneyFromTrack(track)
+    if (journey?.fixPathEnabled !== true && !includeDraftCorrections) return new Map()
+
+    const corrections = journey.fixPathCorrectionData?.tracks?.[track?.slug]
+    if (!Array.isArray(corrections)) return new Map()
+    const indexesBySegment = new Map()
+    corrections.forEach(correction => {
+        if (!Number.isInteger(correction.segmentIndex) || !Array.isArray(correction.controlPoints)) return
+        correction.controlPoints.forEach(point => {
+            if (point.fixed === false || point.removed === true) return
+            const match = /^fix-point-(\d+)-(\d+)$/.exec(point.id ?? '')
+            const sourceIndex = Number.isInteger(point.sourceIndex)
+                ? point.sourceIndex
+                : match && Number(match[1]) === correction.segmentIndex
+                    ? Number(match[2])
+                    : null
+            const sourceSegment = geometry?.type === LINE_STRING
+                ? geometry.coordinates
+                : geometry?.coordinates?.[correction.segmentIndex]
+            const renderedCoordinate = sourceSegment?.[sourceIndex]
+            const sourceGeometry = track?.content?.geometry
+            const sourceSegmentCoordinates = sourceGeometry?.type === LINE_STRING
+                ? sourceGeometry.coordinates
+                : sourceGeometry?.coordinates?.[correction.segmentIndex]
+            const originalCoordinate = sourceSegmentCoordinates?.[sourceIndex]
+            const pointCoordinate = point.coordinate
+            const matchingDimensions = Array.isArray(pointCoordinate)
+                ? Math.min(3, pointCoordinate.length)
+                : 0
+            if (!Number.isInteger(sourceIndex)
+                || sourceIndex < correction.startIndex
+                || sourceIndex > correction.endIndex
+                || !Array.isArray(renderedCoordinate)
+                || matchingDimensions < 2
+                || !pointCoordinate.slice(0, matchingDimensions).every((value, coordinateIndex) => (
+                    Number(value) === Number(renderedCoordinate[coordinateIndex])
+                ))
+                || !Array.isArray(originalCoordinate)
+                || !pointCoordinate.slice(0, matchingDimensions).some((value, coordinateIndex) => (
+                    Number(value) !== Number(originalCoordinate[coordinateIndex])
+                ))) return
+            const indexes = indexesBySegment.get(correction.segmentIndex) ?? new Set()
+            indexes.add(sourceIndex)
+            indexesBySegment.set(correction.segmentIndex, indexes)
+        })
+    })
+    return indexesBySegment
+}
+
+/**
+ * Create a stable cache suffix for fixed path vertices and their rendered coordinates.
+ * @param {object} geometry - Track geometry used by the renderer.
+ * @param {Map<number, Set<number>>} indexesBySegment - Preserved source indexes.
+ * @returns {string} Stable anchor signature for rendered geometry caching.
+ */
+const fixedAnchorCacheKey = (geometry, indexesBySegment) => [...indexesBySegment.entries()]
+    .map(([segmentIndex, indexes]) => {
+        const coordinates = geometry?.type === LINE_STRING
+            ? geometry.coordinates
+            : geometry?.coordinates?.[segmentIndex]
+        return segmentIndex + ':' + [...indexes]
+            .sort((first, second) => first - second)
+            .map(index => index + '=' + (coordinates?.[index] ?? []).join(','))
+            .join(';')
+    })
+    .join('|')
+
+/**
+ * Build the cache key for rendered track content.
+ * @param {object} track - Track whose render settings apply.
+ * @param {object} options - Effective smoothing options.
+ * @param {boolean} forRender - Whether point limits apply.
+ * @param {object} geometry - Geometry used by the rendering path.
+ * @param {Map<number, Set<number>>} indexesBySegment - Preserved source indexes.
+ * @returns {string} Cache key for rendered content.
+ */
+const getRenderedContentCacheKey = (track, options, forRender, geometry, indexesBySegment) => {
+    const baseKey = `${trackRenderSmoothingKey(track, options)}:${forRender ? 'render' : 'full'}`
+    const anchorKey = fixedAnchorCacheKey(geometry, indexesBySegment)
+    return anchorKey ? `${baseKey}:${anchorKey}` : baseKey
+}
+
 export const resolveTrackRenderSmoothing = track => {
     const defaults = defaultTrackRenderSmoothing()
     const journey = getJourneyFromTrack(track)
@@ -204,7 +384,7 @@ export const resolveTrackRenderSmoothing = track => {
     return normalizeTrackRenderSmoothing(source, defaults)
 }
 
-const effectiveTrackRenderSmoothing = (track, {forceRenderSmoothing = false, renderSmoothing = undefined} = {}) => {
+const effectiveTrackRenderSmoothing = (track, {forceRenderSmoothing = false, renderSmoothing} = {}) => {
     const smoothing = renderSmoothing === undefined
                       ? resolveTrackRenderSmoothing(track)
                       : normalizeTrackRenderSmoothing(renderSmoothing, resolveTrackRenderSmoothing(track))
@@ -223,7 +403,14 @@ export const trackRenderSmoothingKey = (track, options = {}) => {
 export const cachePreparedTrackRenderContent = (track, renderContent, renderSmoothing) => {
     const content = getCorrectedTrackContent(track)
     const bucket = getWeakMapBucket(renderedTrackContentCache, content)
-    bucket?.set(`${trackRenderSmoothingKey(track, {renderSmoothing})}:full`, renderContent)
+    const indexesBySegment = getFixedSourceIndexesBySegment(track, content?.geometry)
+    bucket?.set(getRenderedContentCacheKey(
+        track,
+        {renderSmoothing},
+        false,
+        content?.geometry,
+        indexesBySegment,
+    ), renderContent)
 }
 
 export const smoothCoordinateSegment = (coordinates, step) => {
@@ -250,23 +437,56 @@ export const getTrackRenderContent = (track, options = {}) => {
         return content
     }
 
-    const smoothingKey = `${trackRenderSmoothingKey(track, options)}:${forRender ? 'render' : 'full'}`
+    const fixedIndexesBySegment = getFixedSourceIndexesBySegment(
+        track,
+        geometry,
+        options.content !== undefined,
+    )
+    const smoothingKey = getRenderedContentCacheKey(
+        track,
+        options,
+        forRender,
+        geometry,
+        fixedIndexesBySegment,
+    )
     const cachedContent = getWeakMapBucket(renderedTrackContentCache, content)?.get(smoothingKey)
     if (cachedContent) {
         return cachedContent
     }
 
     let renderContent = content
+    let preservedIndexesBySegment = fixedIndexesBySegment
     if (smoothing.enabled) {
         renderContent = deepClone(content)
-        renderContent.geometry.coordinates = geometry.type === LINE_STRING
-                                             ? smoothCoordinateSegment(geometry.coordinates, smoothing.step)
-                                             : (geometry.coordinates ?? [])
-                                                 .map(segment => smoothCoordinateSegment(segment, smoothing.step))
+        if (geometry.type === LINE_STRING) {
+            const smoothed = smoothCoordinateSegmentAtAnchors(
+                geometry.coordinates,
+                smoothing.step,
+                fixedIndexesBySegment.get(0) ?? new Set(),
+            )
+            renderContent.geometry.coordinates = smoothed.coordinates
+            preservedIndexesBySegment = new Map([[0, smoothed.anchorIndexes]])
+        }
+        else {
+            preservedIndexesBySegment = new Map()
+            renderContent.geometry.coordinates = (geometry.coordinates ?? []).map((segment, segmentIndex) => {
+                const smoothed = smoothCoordinateSegmentAtAnchors(
+                    segment,
+                    smoothing.step,
+                    fixedIndexesBySegment.get(segmentIndex) ?? new Set(),
+                )
+                preservedIndexesBySegment.set(segmentIndex, smoothed.anchorIndexes)
+                return smoothed.coordinates
+            })
+        }
     }
 
     if (forRender) {
-        const limitedGeometry = limitGeometryPoints(renderContent.geometry, MAX_RENDER_POINTS)
+        const limitedGeometry = limitGeometryPoints(
+            renderContent.geometry,
+            MAX_RENDER_POINTS,
+            preservedIndexesBySegment,
+        )
         if (limitedGeometry !== renderContent.geometry) {
             renderContent = {...renderContent, geometry: limitedGeometry}
         }

@@ -103,6 +103,37 @@ const sourceIndexOf = point => {
 }
 
 /**
+ * Restore explicitly reselected source points that were previously erased from a section.
+ * @param {Array<object>} corrections - Current correction sections for one track.
+ * @param {number} segmentIndex - Source segment containing the selected points.
+ * @param {Set<number>} selectedSourceIndexes - Source point indexes enclosed by the selection.
+ * @returns {Array<object>} Sections with selected erased points restored as unmodified controls.
+ */
+export const restoreRemovedFixPathSourcePoints = (corrections, segmentIndex, selectedSourceIndexes) => {
+    if (!Array.isArray(corrections) || !(selectedSourceIndexes instanceof Set) || selectedSourceIndexes.size === 0) {
+        return corrections
+    }
+
+    return corrections.map(correction => {
+        if (correction.segmentIndex !== segmentIndex || !Array.isArray(correction.controlPoints)) {
+            return correction
+        }
+        let changed = false
+        const controlPoints = correction.controlPoints.map(point => {
+            const sourceIndex = sourceIndexOf(point)
+            if (!selectedSourceIndexes.has(sourceIndex) || point.removed !== true) {
+                return point
+            }
+
+            changed = true
+            const {erased: _erased, ...rest} = point
+            return {...rest, fixed: false, removed: false}
+        })
+        return changed ? {...correction, controlPoints} : correction
+    })
+}
+
+/**
  * Remove selected correction-point membership and split remaining source points at gaps.
  * @param {object} content - Source track feature.
  * @param {object} correction - Correction section to update.

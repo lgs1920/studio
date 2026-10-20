@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,9 +16,11 @@
 
 import { describe, expect, it } from 'vitest'
 import {
+    appendScreenSelectionVertex,
     buildSourcePointSvgPath,
     findClosestSourcePoint,
     isScreenPointInsideArea,
+    isScreenPointInsidePolygon,
     normalizeScreenSelectionArea,
 } from '@Utils/cesium/fixPathScreenSelection'
 
@@ -29,6 +31,34 @@ describe('Fix Path screen area selection', () => {
         expect(area).toEqual({left: 10, top: 20, right: 90, bottom: 80, width: 80, height: 60})
         expect(isScreenPointInsideArea({x: 10, y: 80}, area)).toBe(true)
         expect(isScreenPointInsideArea({x: 91, y: 80}, area)).toBe(false)
+    })
+
+    it('selects points inside a non-rectangular polygon, including its border', () => {
+        const polygon = [
+            {x: 0, y: 0},
+            {x: 40, y: 0},
+            {x: 40, y: 10},
+            {x: 10, y: 10},
+            {x: 10, y: 40},
+            {x: 0, y: 40},
+        ]
+
+        expect(isScreenPointInsidePolygon({x: 5, y: 30}, polygon)).toBe(true)
+        expect(isScreenPointInsidePolygon({x: 30, y: 5}, polygon)).toBe(true)
+        expect(isScreenPointInsidePolygon({x: 30, y: 30}, polygon)).toBe(false)
+        expect(isScreenPointInsidePolygon({x: 10, y: 25}, polygon)).toBe(true)
+        expect(isScreenPointInsidePolygon({x: 30, y: 30}, polygon.slice(0, 2))).toBe(false)
+    })
+
+    it('appends separated lasso vertices and ignores near-duplicates', () => {
+        const vertices = [{x: 10, y: 10}]
+
+        expect(appendScreenSelectionVertex(vertices, {x: 11, y: 11})).toBe(vertices)
+        expect(appendScreenSelectionVertex(vertices, {x: 20, y: 10})).toEqual([
+            {x: 10, y: 10},
+            {x: 20, y: 10},
+        ])
+        expect(appendScreenSelectionVertex(vertices, {x: NaN, y: 10})).toBe(vertices)
     })
 
     it('draws many source squares in one SVG path and resolves pointer hits', () => {

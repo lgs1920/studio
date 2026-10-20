@@ -14,13 +14,67 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {useLayoutEffect, useRef} from 'react'
+import {useLayoutEffect, useRef, useState} from 'react'
 import {LGSScrollbars} from '@Components/MainUI/LGSScrollbars'
 import {applyPOIDuotoneIconStyles} from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import {ToggleStateIcon} from '@Components/ToggleStateIcon'
 import {UnitUtils} from '@Utils/UnitUtils'
-import {WaButton, WaIcon, WaInput, WaNumberInput, WaTooltip} from '@awesome.me/webawesome/dist/react'
+import {WaButton, WaCallout, WaIcon, WaInput, WaNumberInput, WaTooltip} from '@awesome.me/webawesome/dist/react'
 import {getControlPointCoordinate} from './FixPathEditorGeometry'
+
+const FIX_PATH_CALLOUT_PRESENTATION = {
+    info: {variant: 'neutral', icon: 'circle-info', role: 'status', ariaLive: 'polite'},
+    progress: {variant: 'neutral', icon: 'arrows-rotate', role: 'status', ariaLive: 'polite'},
+    warning: {variant: 'warning', icon: 'triangle-exclamation', role: 'status', ariaLive: 'polite'},
+    error: {variant: 'danger', icon: 'circle-exclamation', role: 'alert', ariaLive: 'assertive'},
+}
+
+/** Render consistent small callouts for Fix Path feedback and progress messages. */
+export const FixPathCallout = ({
+    type = 'info',
+    icon,
+    appearance = 'outlined',
+    className,
+    closable = false,
+    dismissLabel = 'Dismiss message',
+    children,
+}) => {
+    const [closed, setClosed] = useState(false)
+    const presentation = FIX_PATH_CALLOUT_PRESENTATION[type] ?? FIX_PATH_CALLOUT_PRESENTATION.info
+
+    if (closed) {
+        return null
+    }
+
+    return (
+        <WaCallout
+            className={className}
+            size="s"
+            variant={presentation.variant}
+            appearance={appearance}
+            open
+            role={presentation.role}
+            aria-live={presentation.ariaLive}
+        >
+            <WaIcon slot="icon" name={icon ?? presentation.icon} variant="regular" aria-hidden="true"/>
+            <div className={'fix-path-callout-message' + (closable ? ' is-closable' : '')}>
+                <span>{children}</span>
+                {closable && (
+                    <WaButton
+                        className="fix-path-callout-close lgs-widget-no-drag"
+                        size="s"
+                        appearance="plain"
+                        variant="neutral"
+                        aria-label={dismissLabel}
+                        onClick={() => setClosed(true)}
+                    >
+                        <WaIcon name="xmark" variant="regular" aria-hidden="true"/>
+                    </WaButton>
+                )}
+            </div>
+        </WaCallout>
+    )
+}
 
 /** Render Fix Path controls and the active section's editable point list. */
 export const FixPathEditorPanel = ({
@@ -35,6 +89,7 @@ export const FixPathEditorPanel = ({
     displayedCorrection,
     displayedCorrectionPreview,
     displayedTrack,
+    feedback,
     eraseSelectedControlPoints,
     handleCorrectionPointListKeyDown,
     handleCorrectionPointRowKeyDown,
@@ -44,7 +99,6 @@ export const FixPathEditorPanel = ({
     orderedCorrections,
     eraseMode,
     onCorrectionVisibilityChange,
-    projected,
     persistCurrentDraftCorrections,
     removeControlPoint,
     resetControlPoint,
@@ -54,7 +108,6 @@ export const FixPathEditorPanel = ({
     selectedControlPoints,
     selection,
     setHelpOpen,
-    setEraseMode,
     setSelection,
     undoCorrectionEdit,
     redoCorrectionEdit,
@@ -81,6 +134,35 @@ export const FixPathEditorPanel = ({
         selectedRow?.scrollIntoView?.({block: 'nearest', inline: 'nearest', behavior: 'smooth'})
     }, [displayedCorrection?.id, displayedCorrection?.trackSlug, selectedControlPoints])
 
+    const visibleFeedback = feedback
+    const statusMessage = scanProgress
+        ? {
+            type: 'progress',
+            icon: scanProgress.phase === 'project' ? 'magnifying-glass' : 'eye',
+            text: scanProgress.phase === 'project'
+                ? 'Scanning Journey points: ' + scanProgress.value + '%'
+                : 'Checking terrain visibility: ' + scanProgress.value + '%',
+        }
+        : !areaMode
+            ? selection.phase === 'choose-start'
+                ? selectedControlPoints.length > 0
+                    ? {
+                        type: 'info',
+                        icon: 'circle-check',
+                        text: selectedControlPoints.length + (selectedControlPoints.length === 1
+                            ? ' correction point selected.'
+                            : ' correction points selected.'),
+                    }
+                    : {
+                        type: 'info',
+                        text: 'Shift or Alt draws a lasso; Ctrl+Shift or Ctrl+Alt draws a rectangle.',
+                    }
+                : {type: 'info', icon: 'draw-polygon', text: 'Adding points to correction.'}
+            : null
+
+    const canDismissSelectionInstruction = statusMessage?.text
+        === 'Shift or Alt draws a lasso; Ctrl+Shift or Ctrl+Alt draws a rectangle.'
+
     return (
     <aside
         className={'fix-path-panel lgs-card wa-theme-lgs1920-on-map' + (widgetResized ? ' is-resized' : '')}
@@ -89,12 +171,6 @@ export const FixPathEditorPanel = ({
     >
         <header className="fix-path-panel-header">
             <h2><WaIcon name="draw-polygon" variant="regular" aria-hidden="true"/>{'Fix Path'}</h2>
-            <p className="fix-path-correction-selection-hint">
-                <span className="fix-path-correction-selection-bracket">{'['}</span>
-                <kbd className="lgs--shortcut-key">{'Shift'}</kbd>
-                <span>{' + Click/drag to add points'}</span>
-                <span className="fix-path-correction-selection-bracket">{']'}</span>
-            </p>
             <div className="fix-path-panel-header-actions" aria-label="Actions">
                 <WaTooltip for="fix-path-focus-journey" placement="top">{'Focus Journey'}</WaTooltip>
                 <WaButton
@@ -262,23 +338,34 @@ export const FixPathEditorPanel = ({
             </div>
         </nav>
 
-        {(scanProgress || !areaMode) && (
-            <p className="fix-path-status" aria-live="polite">
-                {scanProgress
-                    ? scanProgress.phase === 'project'
-                        ? 'Scanning Journey points: ' + scanProgress.value + '%'
-                        : 'Checking terrain visibility: ' + scanProgress.value + '%'
-                    : selection.phase === 'choose-start'
-                        ? selectedControlPoints.length > 1
-                            ? selectedControlPoints.length + ' correction points selected.'
-                            : projected.sourcePoints.length > 0
-                                ? projected.sourcePoints.length + ' visible points selected.'
-                                : 'No points found. Close and reopen Fix Path to select another screen area.'
-                        : 'Adding points to correction.'}
-            </p>
+        {visibleFeedback && (
+            <FixPathCallout
+                className="fix-path-panel-callout fix-path-feedback"
+                type={visibleFeedback.type}
+                icon={visibleFeedback.type === 'warning' ? 'triangle-exclamation' : undefined}
+            >
+                <strong>{visibleFeedback.caption}</strong>{' '}{visibleFeedback.text}
+            </FixPathCallout>
         )}
 
-        {saving && <p className="fix-path-status" aria-live="polite">{'Validating and applying Journey changes…'}</p>}
+        {statusMessage && (
+            <FixPathCallout
+                key={statusMessage.text}
+                className="fix-path-panel-callout fix-path-status-callout"
+                type={statusMessage.type}
+                icon={statusMessage.icon}
+                closable={canDismissSelectionInstruction}
+                dismissLabel="Dismiss selection instruction"
+            >
+                {statusMessage.text}
+            </FixPathCallout>
+        )}
+
+        {saving && (
+            <FixPathCallout className="fix-path-panel-callout fix-path-status-callout" type="progress">
+                {'Validating and applying Journey changes…'}
+            </FixPathCallout>
+        )}
 
         {scanProgress && (
             <progress className="fix-path-scan-progress" max="100" value={scanProgress.value}>
@@ -303,7 +390,11 @@ export const FixPathEditorPanel = ({
 
         <div className="fix-path-corrections-scroll-area">
             <div className="fix-path-corrections-list" aria-label="Correction points">
-                {!displayedCorrection && <p>{'No correction points yet.'}</p>}
+                {!displayedCorrection && (
+                    <FixPathCallout className="fix-path-panel-callout fix-path-empty-state" type="info">
+                        {'No correction points yet.'}
+                    </FixPathCallout>
+                )}
                 {displayedCorrection && (
                     <section className="fix-path-correction-section" key={displayedCorrection.id}>
                         <div className="fix-path-coordinate-header" aria-hidden="true">
@@ -415,7 +506,6 @@ export const FixPathEditorPanel = ({
                                                     size="s"
                                                     aria-label={'Height (' + heightUnit + ')'}
                                                     disabled={removed || saving}
-                                                    withoutSteppers
                                                     step={1}
                                                     value={Number.isFinite(height) ? Math.round(UnitUtils.convert(height).to(heightUnit)) : 0}
                                                     onInput={event => updateControlCoordinatePart(displayedCorrection.trackSlug, displayedCorrection.id, point.id, 2, event.target.value)}
@@ -454,7 +544,7 @@ export const FixPathEditorPanel = ({
                                                     >
                                                         <WaIcon
                                                             className={removed ? 'fix-path-correction-point-deleted-indicator' : ''}
-                                                            name="trash"
+                                                            name="trash-can"
                                                             variant="regular"
                                                             aria-hidden="true"
                                                         />
