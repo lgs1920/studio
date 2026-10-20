@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -273,7 +273,7 @@
 
 .fix-path-correction-section {
     /* Share the same spacing between columns, rows, and section content. */
-    --fix-path-correction-gap: calc(var(--lgs-gutter-xs) + 2px);
+    --fix-path-correction-gap: var(--lgs-gutter-xs);
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -347,7 +347,9 @@
 
 .fix-path-correction-point-row wa-input::part(base) {
     box-sizing: border-box;
-    height: var(--fix-path-correction-row-height);
+    /* Resolve against the row, independently of the input's theme font size. */
+    height: 100%;
+    min-height: 0;
     transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
@@ -386,7 +388,7 @@
 
 .fix-path-correction-point-row wa-input {
     min-width: 0;
-    height: var(--fix-path-correction-row-height);
+    height: 100%;
     pointer-events: auto;
 }
 
@@ -395,6 +397,8 @@
 }
 
 .fix-path-correction-point-row > wa-input:nth-child(-n + 3)::part(input) {
+    height: 100%;
+    min-height: 0;
     text-align: center;
 }
 
