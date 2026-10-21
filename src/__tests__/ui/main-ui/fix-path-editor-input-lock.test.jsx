@@ -299,6 +299,15 @@ describe('FixPathEditor map input ownership', () => {
         const journeyCursor = document.querySelector('.fix-path-journey-cursor')
         expect(journeyCursor.classList.contains('is-visible')).toBe(true)
         expect(journeyCursor.textContent).toBe('circle-plus')
+        fireEvent.pointerMove(document.querySelector('.fix-path-control-point'), {
+            clientX: 50,
+            clientY: 50,
+            shiftKey: true,
+            pointerType: 'mouse',
+        })
+        expect(journeyCursor.textContent).toBe('lasso')
+        expect(journeyCursor.classList.contains('is-visible')).toBe(true)
+        expect(viewerContainer.classList.contains('fix-path-custom-cursor')).toBe(true)
         act(() => {
             fireEvent.keyDown(document, {key: 'Shift', shiftKey: true})
         })
@@ -689,6 +698,10 @@ describe('FixPathEditor map input ownership', () => {
             clientX: selectionX + 2,
             clientY: selectionY + 2,
         })
+        const journeyCursorDuringRectangle = document.querySelector('.fix-path-journey-cursor')
+        expect(journeyCursorDuringRectangle.textContent).toBe('square-dashed')
+        expect(journeyCursorDuringRectangle.classList.contains('is-visible')).toBe(true)
+        expect(viewerContainer.classList.contains('fix-path-custom-cursor')).toBe(true)
         expect(document.querySelector('.fix-path-selection-rectangle')).not.toBeNull()
         expect(document.querySelector('.fix-path-selection-lasso')).toBeNull()
         fireEvent.pointerUp(viewerContainer, {
@@ -719,6 +732,10 @@ describe('FixPathEditor map input ownership', () => {
             if (index === 0) fireEvent.pointerDown(viewerContainer, pointer)
             else fireEvent.pointerMove(viewerContainer, pointer)
         })
+        const journeyCursorDuringLasso = document.querySelector('.fix-path-journey-cursor')
+        expect(journeyCursorDuringLasso.textContent).toBe('lasso')
+        expect(journeyCursorDuringLasso.classList.contains('is-visible')).toBe(true)
+        expect(viewerContainer.classList.contains('fix-path-custom-cursor')).toBe(true)
         const renderedControlLasso = document.querySelector('.fix-path-selection-lasso')
         expect(renderedControlLasso).not.toBeNull()
         expect(renderedControlLasso.tagName.toLowerCase()).toBe('path')

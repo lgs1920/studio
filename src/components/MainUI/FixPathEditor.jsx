@@ -956,24 +956,38 @@ export const FixPathEditor = () => {
         const canvas = lgs.viewer?.canvas
         if (!canvas) return
         setJourneyCursorIcon(selectionCursorIcon(event))
-        if (event.target !== canvas || event.pointerType === 'touch') {
-            canvas.classList.remove('fix-path-journey-hover')
-            journeyCursorRef.current?.classList.remove('is-visible')
+        const container = lgs.viewer?.container
+        const drag = dragRef.current
+        const isAreaSelectionDrag = drag?.kind === 'control-area' || drag?.kind === 'section-area'
+        const isControlPointTarget = Boolean(event.target?.closest?.('.fix-path-control-point'))
+        const isModifiedControlPointTarget = isControlPointTarget && selectionGestureModifier(event)
+        const isClickLassoDraft = Boolean(lassoDraftRef.current && selectionGestureModifier(event))
+        const canShowCursor = event.target === canvas || isAreaSelectionDrag
+            || isModifiedControlPointTarget || isClickLassoDraft
+        const cursor = journeyCursorRef.current
+        /** Keep native cursor suppression synchronized with the overlay visibility. */
+        const setCursorVisible = isVisible => {
+            canvas.classList.toggle('fix-path-journey-hover', isVisible)
+            container?.classList.toggle('fix-path-custom-cursor', isVisible)
+            cursor?.classList.toggle('is-visible', isVisible)
+        }
+        if (!canShowCursor || event.pointerType === 'touch') {
+            setCursorVisible(false)
             return
         }
         const position = canvasPositionFromClient(event.clientX, event.clientY)
-        const isJourneyHovered = Boolean(position && pickedTrackAtPosition(position))
-        const cursor = journeyCursorRef.current
+        const pickedTrack = position ? pickedTrackAtPosition(position) : null
+        const isJourneyHovered = isAreaSelectionDrag || Boolean(isModifiedControlPointTarget)
+            || isClickLassoDraft || (event.target === canvas && Boolean(selectionGestureModifier(event)))
+            || Boolean(position && pickedTrack)
         const overlayRect = mapOverlayRef.current?.getBoundingClientRect()
         if (!isJourneyHovered || !cursor || !overlayRect) {
-            canvas.classList.remove('fix-path-journey-hover')
-            cursor?.classList.remove('is-visible')
+            setCursorVisible(false)
             return
         }
-        canvas.classList.add('fix-path-journey-hover')
+        setCursorVisible(true)
         cursor.style.left = `${event.clientX - overlayRect.left}px`
         cursor.style.top = `${event.clientY - overlayRect.top}px`
-        cursor.classList.add('is-visible')
     }, [canvasPositionFromClient, pickedTrackAtPosition])
 
     /** Refresh the custom map cursor when a selection modifier changes. */
@@ -983,7 +997,10 @@ export const FixPathEditor = () => {
 
     /** Hide the custom cursor and restore the native cursor when leaving Cesium's canvas. */
     const handleJourneyPointerLeave = useCallback(() => {
+        const drag = dragRef.current
+        if (drag?.kind === 'control-area' || drag?.kind === 'section-area') return
         lgs.viewer?.canvas?.classList.remove('fix-path-journey-hover')
+        lgs.viewer?.container?.classList.remove('fix-path-custom-cursor')
         journeyCursorRef.current?.classList.remove('is-visible')
         setJourneyCursorIcon('circle-plus')
     }, [])
@@ -1484,6 +1501,7 @@ export const FixPathEditor = () => {
         event.stopPropagation()
         event.stopImmediatePropagation?.()
         dragRef.current = null
+        handleJourneyPointerMove(event)
         const rect = mapOverlayRef.current?.getBoundingClientRect()
         if (!rect) {
             clearSelectionLasso()
@@ -1543,6 +1561,7 @@ export const FixPathEditor = () => {
             }
             lassoDraftRef.current = draft
             setAreaDrag({shape: 'lasso', kind: drag.mode, modifier: drag.modifier, points})
+            handleJourneyPointerMove(event)
             return
         }
 
@@ -1567,7 +1586,7 @@ export const FixPathEditor = () => {
             ]
         }
         finishSelectionLasso({...drag, kind: drag.mode}, polygon)
-    }, [clearSelectionLasso, finishSelectionLasso, projected.controlPoints, selectedControlPoints, setPersistedActiveCorrection])
+    }, [clearSelectionLasso, finishSelectionLasso, handleJourneyPointerMove, projected.controlPoints, selectedControlPoints, setPersistedActiveCorrection])
 
     /** Discard an area selection interrupted by pointer cancellation. */
     const handleControlSelectionPointerCancel = useCallback(event => {
@@ -1578,7 +1597,8 @@ export const FixPathEditor = () => {
         event.stopImmediatePropagation?.()
         dragRef.current = null
         clearSelectionLasso()
-    }, [clearSelectionLasso])
+        handleJourneyPointerMove(event)
+    }, [clearSelectionLasso, handleJourneyPointerMove])
 
     /** Keep polygon-vertex clicks from triggering map or marker actions before the lasso closes. */
     const handleSelectionClickCapture = useCallback(event => {
@@ -1649,6 +1669,7 @@ export const FixPathEditor = () => {
 
         return () => {
             canvas.classList.remove('fix-path-journey-hover')
+            container.classList.remove('fix-path-custom-cursor')
             cursorElement?.classList.remove('is-visible')
             container.removeEventListener('pointermove', handleJourneyPointerMove, true)
             canvas.removeEventListener('click', handleJourneyClick, true)

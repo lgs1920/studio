@@ -26,6 +26,12 @@
     cursor: none;
 }
 
+.fix-path-custom-cursor,
+.fix-path-custom-cursor canvas,
+.fix-path-custom-cursor .fix-path-control-point {
+    cursor: none;
+}
+
 .fix-path-journey-cursor {
     position: absolute;
     z-index: 3;
