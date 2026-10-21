@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -63,7 +63,7 @@ const hasComposedShortcut = keys => keys.some(key => key.includes('+'))
  *
  * @type {string[]}
  */
-const SHORTCUT_THEME_ORDER = ['General', 'Timeline', 'Clips', 'Camera', 'Widgets', 'Map']
+const SHORTCUT_THEME_ORDER = ['General', 'Timeline', 'Clips', 'Camera', 'Widgets', 'Map', 'Fix Path']
 const SHORTCUT_THEME_BY_SCOPE = {
     App:                      'General',
     'Replay mode':            'General',
@@ -79,9 +79,13 @@ const SHORTCUT_THEME_BY_SCOPE = {
     'Selected widget':        'Widgets',
     'Widget interaction':     'Widgets',
     'Map objects':             'Map',
+    'Fix Path point row':      'Fix Path',
+    'Fix Path map':            'Fix Path',
 }
 
-const shortcutThemeOf = shortcut => SHORTCUT_THEME_BY_SCOPE[shortcut.scope] ?? 'General'
+const shortcutThemeOf = shortcut => shortcut.id.startsWith('fix-path-')
+    ? 'Fix Path'
+    : SHORTCUT_THEME_BY_SCOPE[shortcut.scope] ?? 'General'
 
 const byTheme = SHORTCUTS.reduce((groups, shortcut) => {
     const theme = shortcutThemeOf(shortcut)

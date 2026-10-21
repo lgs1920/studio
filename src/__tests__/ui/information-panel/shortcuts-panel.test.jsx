@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-09
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,6 +46,20 @@ vi.mock('@Core/events/appShortcuts', () => ({
             keys:        ['Shift+ArrowLeft', 'Alt+ArrowLeft'],
             scope:       'Replay timeline clips',
         },
+        {
+            action:      'Open Fix Path',
+            description: 'Opens the Fix Path editor.',
+            id:          'fix-path-show',
+            keys:        ['F'],
+            scope:       'App',
+        },
+        {
+            action:      'Select Fix Path points',
+            description: 'Selects correction points on the map.',
+            id:          'fix-path-point-multiselect',
+            keys:        ['Shift+Drag'],
+            scope:       'Fix Path map',
+        },
     ],
 }))
 
@@ -82,7 +96,7 @@ describe('ShortcutsPanel', () => {
         render(<ShortcutsPanel/>)
 
         expect([...document.querySelectorAll('.lgs--shortcuts-section h3')].map(element => element.textContent))
-            .toEqual(['General', 'Timeline', 'Clips'])
+            .toEqual(['General', 'Timeline', 'Clips', 'Fix Path'])
 
         const simpleRow = screen.getByText('Simple alternatives').closest('.lgs--shortcuts-row')
         const composedRow = screen.getByText('Composed alternatives').closest('.lgs--shortcuts-row')
@@ -91,6 +105,17 @@ describe('ShortcutsPanel', () => {
         expect(simpleRow.querySelectorAll('.lgs--shortcut-alternative.is-separate-line')).toHaveLength(0)
         expect(within(composedRow).queryByText('|')).toBeNull()
         expect(composedRow.querySelectorAll('.lgs--shortcut-alternative.is-separate-line')).toHaveLength(2)
+    })
+
+    it('groups Fix Path gestures in their own section', () => {
+        render(<ShortcutsPanel/>)
+
+        const section = [...document.querySelectorAll('.lgs--shortcuts-section')]
+            .find(element => element.querySelector('h3')?.textContent === 'Fix Path')
+
+        expect(section).not.toBeUndefined()
+        expect(within(section).getByText('Open Fix Path')).not.toBeNull()
+        expect(within(section).getByText('Select Fix Path points')).not.toBeNull()
     })
 
     it('navigates to a section and closes the table of contents', () => {

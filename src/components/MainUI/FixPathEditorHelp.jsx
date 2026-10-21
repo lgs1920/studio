@@ -51,7 +51,7 @@ export const FixPathEditorHelp = ({active, onRequestClose}) => (
                     </section>
                     <section className="fix-path-help-section">
                         <h3>{'Keyboard'}</h3>
-                        <p>{'↑/↓ moves through the list; Page Up/Down jumps to either end. Ctrl+A selects the section. Backspace resets a point; Delete removes it; Ctrl/Cmd+R resets or restores it.'}</p>
+                        <p>{'↑/↓ moves through the list; Page Up/Down jumps to either end. Ctrl/Cmd+A selects the section. Backspace resets a point; Delete removes it; Ctrl/Cmd+R resets or restores it.'}</p>
                     </section>
                 </div>
             </LGSScrollbars>

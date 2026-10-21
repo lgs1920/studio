@@ -84,6 +84,9 @@
   keys:
     - Alt+Shift+G
   scope: App
+
+## Fix Path
+
 - action: Open Fix Path
   description: Opens the Fix Path editor for the current Journey when it has tracks.
   id: fix-path-show
@@ -103,7 +106,7 @@
     - Delete
   scope: Fix Path point row
 - action: Select multiple Fix Path points
-  description: Shift-click on a correction marker toggles it. Shift-drag or Alt-drag draws a lasso; Ctrl+Shift-drag or Ctrl+Alt-drag draws a rectangle. Shift and Ctrl+Shift gestures add Journey points or correction points depending on where they start; Alt and Ctrl+Alt gestures replace the selection of correction points in the current section, keeping it when the area is empty. Double-click closes a click-vertex lasso; Escape cancels. Cmd gestures are ignored so Cesium retains those events.
+  description: Shift-click toggles a correction point; Cmd-click selects only that point. Shift-drag or Alt-drag draws a lasso; Ctrl+Shift-drag or Ctrl+Alt-drag draws a rectangle. Shift gestures add route or correction points depending on where they start. Alt gestures replace the selection in the current section; empty areas keep the selection. Double-click closes a click-vertex lasso; Escape cancels.
   id: fix-path-point-multiselect
   keys:
     - Shift+Click
@@ -112,6 +115,12 @@
     - Ctrl+Shift+Drag
     - Ctrl+Alt+Drag
   scope: Fix Path map
+- action: Select all Fix Path points
+  description: Selects every non-removed correction point in the active section. Use Ctrl+A on Windows/Linux or Cmd+A on macOS.
+  id: fix-path-point-select-all
+  keys:
+    - Mod+A
+  scope: Fix Path editor
 
 ## Video
 
