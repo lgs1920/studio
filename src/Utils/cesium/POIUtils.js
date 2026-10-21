@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-03-01
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,46 @@ const finiteNumber = value => {
     const number = Number(value)
     return Number.isFinite(number) ? number : null
 }
+
+/**
+ * Resolve the active hide-other-journeys policy, including Replay overrides.
+ *
+ * @returns {{enabled: boolean, currentJourneySlug: string|null}} Active POI visibility filter.
+ */
+const journeyPOIVisibilityFilter = () => {
+    const lgs = globalThis.lgs
+    const replay = lgs?.stores?.replay
+    const replayActive = Boolean(replay?.active || replay?.playing || replay?.paused)
+    const replaySettings = lgs?.settings?.ui?.replay
+    let enabled = lgs?.settings?.journey?.hideOtherJourneys === true
+
+    if (replayActive) {
+        if (replaySettings?.userMode === 'basic') {
+            enabled = true
+        }
+        else if (replaySettings?.inheritHideOtherJourneys === false) {
+            enabled = replaySettings.hideOtherJourneys === true
+        }
+        else if (replaySettings?.userMode === 'expert' || replaySettings?.hideOtherJourneys === true) {
+            enabled = true
+        }
+    }
+
+    return {
+        enabled,
+        currentJourneySlug: (replayActive ? lgs?.stores?.main?.theJourney : null)?.slug ?? lgs?.theJourney?.slug ?? null,
+    }
+}
+
+/**
+ * Resolve the owning journey for a POI, including POIs attached to tracks.
+ *
+ * @param {object} poi - POI being rendered.
+ * @returns {object|null} Owning journey, when available.
+ */
+const journeyForPOI = poi => globalThis.__?.ui?.poiManager?.getJourneyForPOI?.(poi)
+    ?? globalThis.lgs?.getJourneyByTrackSlug?.(poi?.parent)
+    ?? globalThis.lgs?.getJourneyBySlug?.(poi?.parent)
 
 
 export class POIUtils {
@@ -375,6 +415,15 @@ export class POIUtils {
      */
     static setPOIVisibility = (poi, visibility) => {
         if (poi?.tooClose === true) {
+            return false
+        }
+
+        const filter = journeyPOIVisibilityFilter()
+        const owningJourney = journeyForPOI(poi)
+        if (filter.enabled
+            && filter.currentJourneySlug
+            && owningJourney?.slug
+            && owningJourney.slug !== filter.currentJourneySlug) {
             return false
         }
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -86,6 +86,7 @@ export const hideOtherJourneysVisibility = (mode) => {
 
         state.hiddenJourneyVisibility.set(journey.slug, true)
         setJourneyReplayTraceVisibility(journey, false)
+        TrackUtils.updatePOIsVisibility(journey, false)
     }
 
     globalThis.lgs?.scene?.requestRender?.()
@@ -526,6 +527,7 @@ export const restoreOtherJourneysVisibility = (mode, {respectReplaySetting = tru
         }
 
         setJourneyReplayTraceVisibility(journey, true)
+        TrackUtils.updatePOIsVisibility(journey, journey.visible !== false && journey.POIsVisible !== false)
     }
 
     state.hiddenJourneyVisibility.clear()

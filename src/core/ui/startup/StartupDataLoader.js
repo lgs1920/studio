@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -381,6 +381,7 @@ export class StartupDataLoader {
         const journeyVisible = journey.visible !== false
         journey.updateVisibility(journeyVisible)
         if (journeyVisible && getGlobalHideOtherJourneys() && journey.slug !== lgs.theJourney?.slug) {
+            TrackUtils.updatePOIsVisibility(journey, false)
             journey.tracks.forEach(track => {
                 if (!track?.slug) {
                     return

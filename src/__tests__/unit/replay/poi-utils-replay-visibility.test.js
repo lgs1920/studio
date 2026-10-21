@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-12
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -119,6 +119,48 @@ describe('POIUtils replay visibility', () => {
             visible:  true,
             tooClose: true,
         }, true)).toBe(false)
+    })
+
+    it('hides POIs attached to other journeys without changing their saved visibility', () => {
+        const currentJourney = {slug: 'journey-current'}
+        const otherJourney = {slug: 'journey-other'}
+        globalThis.lgs.theJourney = currentJourney
+        globalThis.lgs.settings = {journey: {hideOtherJourneys: true}}
+        globalThis.lgs.getJourneyByTrackSlug = parent => parent === 'track-other' ? otherJourney : null
+
+        const poi = {parent: 'track-other', visible: true}
+
+        expect(POIUtils.setPOIVisibility(poi, true)).toBe(false)
+        expect(poi.visible).toBe(true)
+    })
+
+    it('keeps current-journey and unassociated POIs visible while hiding other journeys', () => {
+        globalThis.lgs.theJourney = {slug: 'journey-current'}
+        globalThis.lgs.settings = {journey: {hideOtherJourneys: true}}
+        globalThis.lgs.getJourneyBySlug = slug => slug === 'journey-current' ? globalThis.lgs.theJourney : null
+
+        expect(POIUtils.setPOIVisibility({parent: 'journey-current', visible: true}, true)).toBe(true)
+        expect(POIUtils.setPOIVisibility({parent: null, visible: true}, true)).toBe(true)
+    })
+
+    it('honors an explicit Replay setting that shows other journeys', () => {
+        const otherJourney = {slug: 'journey-other'}
+        globalThis.lgs.theJourney = {slug: 'journey-current'}
+        globalThis.lgs.stores.main = {theJourney: globalThis.lgs.theJourney}
+        globalThis.lgs.stores.replay.active = true
+        globalThis.lgs.settings = {
+            journey: {hideOtherJourneys: true},
+            ui: {
+                replay: {
+                    userMode: 'expert',
+                    inheritHideOtherJourneys: false,
+                    hideOtherJourneys: false,
+                },
+            },
+        }
+        globalThis.lgs.getJourneyBySlug = slug => slug === otherJourney.slug ? otherJourney : null
+
+        expect(POIUtils.setPOIVisibility({parent: otherJourney.slug, visible: true}, true)).toBe(true)
     })
 
     it('updates an existing billboard visibility when replay hides the poi', async () => {

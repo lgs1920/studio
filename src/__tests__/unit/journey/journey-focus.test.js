@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-24
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -69,6 +69,7 @@ describe('Journey focus lifecycle', () => {
         const previousLgs = globalThis.lgs
         globalThis.lgs = {viewer: {dataSources: {}}}
         const updateTrackVisibility = vi.spyOn(TrackUtils, 'updateTrackVisibility').mockImplementation(() => {})
+        const updatePOIsVisibility = vi.spyOn(TrackUtils, 'updatePOIsVisibility').mockImplementation(() => {})
 
         try {
             await journey.draw({
@@ -81,9 +82,11 @@ describe('Journey focus lifecycle', () => {
             expect(track.visible).toBe(true)
             expect(journey.updateVisibility).toHaveBeenCalledWith(true)
             expect(updateTrackVisibility).toHaveBeenCalledWith(journey, track, false)
+            expect(updatePOIsVisibility).toHaveBeenCalledWith(journey, false)
         }
         finally {
             updateTrackVisibility.mockRestore()
+            updatePOIsVisibility.mockRestore()
             globalThis.lgs = previousLgs
         }
     })

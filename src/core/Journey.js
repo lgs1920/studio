@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-08
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -882,7 +882,7 @@ export class Journey extends MapElement {
      * @param {object} [options] - Journey drawing options.
      * @param {number} [options.action] - Drawing action applied to every track.
      * @param {number} [options.mode] - Camera focus mode after drawing.
-     * @param {boolean} [options.hideOtherJourneys=false] - Hide tracks outside the active journey.
+     * @param {boolean} [options.hideOtherJourneys=false] - Hide tracks and attached POIs outside the active journey.
      * @param {string|null} [options.currentJourneySlug] - Active journey identifier.
      * @param {boolean} [options.forceCurrentVisible=false] - Keep the active journey visible.
      * @returns {Promise<void>} Resolves after the journey tracks have been drawn.
@@ -899,8 +899,8 @@ export class Journey extends MapElement {
         const isVisibleJourney = forceCurrentVisible && isCurrentJourney
                                  ? true
                                  : this.visible !== false
-        const hideJourneyTracks = hideOtherJourneys && !isCurrentJourney
-        const forcedToHide = !isVisibleJourney || hideJourneyTracks
+        const hideOtherJourneyContent = hideOtherJourneys && !isCurrentJourney
+        const forcedToHide = !isVisibleJourney || hideOtherJourneyContent
 
         // Draw Tracks and flags
         this.tracks.forEach(track => {
@@ -915,7 +915,8 @@ export class Journey extends MapElement {
 
         await Promise.all(promises)
         this.updateVisibility(isVisibleJourney)
-        if (isVisibleJourney && hideJourneyTracks && globalThis.lgs?.viewer?.dataSources) {
+        if (isVisibleJourney && hideOtherJourneyContent && globalThis.lgs?.viewer?.dataSources) {
+            TrackUtils.updatePOIsVisibility(this, false)
             this.tracks.forEach(track => {
                 if (!track?.slug) {
                     return

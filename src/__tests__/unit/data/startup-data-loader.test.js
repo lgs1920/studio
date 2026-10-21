@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
         readCurrentFromDB:  vi.fn(),
         setProfileVisibility: vi.fn(),
         updateTrackVisibility: vi.fn(),
+        updatePOIsVisibility: vi.fn(),
 }))
 
 vi.mock('cesium', async importOriginal => {
@@ -76,6 +77,7 @@ vi.mock('@Utils/cesium/TrackUtils', () => ({
         readRemainingFromDB:   vi.fn(),
         setProfileVisibility:  mocks.setProfileVisibility,
         updateTrackVisibility: mocks.updateTrackVisibility,
+        updatePOIsVisibility:  mocks.updatePOIsVisibility,
     },
 }))
 
@@ -274,6 +276,10 @@ describe('startup data loader', () => {
                 globalThis.lgs.journeys.get('journey-a').tracks.get('track-a'),
                 false,
             )
+            expect(mocks.updatePOIsVisibility).toHaveBeenCalledWith(
+                globalThis.lgs.journeys.get('journey-a'),
+                false,
+            )
             expect(postTask).toHaveBeenCalledWith(expect.any(Function), {priority: 'background'})
         }
         finally {
@@ -284,6 +290,7 @@ describe('startup data loader', () => {
             mocks.draw.mockReset()
             mocks.setProfileVisibility.mockReset()
             mocks.updateTrackVisibility.mockReset()
+            mocks.updatePOIsVisibility.mockReset()
         }
     })
 

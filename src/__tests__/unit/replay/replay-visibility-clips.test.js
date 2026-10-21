@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -91,6 +91,7 @@ describe('replay visibility and clips', () => {
             [JOURNEY_REPLAY_INTERNAL_STATE]: {hiddenJourneyVisibility: new Map()},
         }
         const updateTrackVisibility = vi.spyOn(TrackUtils, 'updateTrackVisibility').mockImplementation(() => {})
+        const updatePOIsVisibility = vi.spyOn(TrackUtils, 'updatePOIsVisibility').mockImplementation(() => {})
 
         globalThis.lgs = {
             theJourney: legacyJourney,
@@ -115,6 +116,7 @@ describe('replay visibility and clips', () => {
                 legacyJourney.tracks.values().next().value,
                 false,
             )
+            expect(updatePOIsVisibility).toHaveBeenCalledWith(legacyJourney, false)
 
             mode[JOURNEY_REPLAY_INTERNAL_CALL].hideOtherJourneysVisibility = () => hideOtherJourneysVisibility(mode)
             globalThis.lgs.settings = {ui: {replay: {userMode: 'expert', inheritHideOtherJourneys: false, hideOtherJourneys: false}}}
@@ -127,9 +129,11 @@ describe('replay visibility and clips', () => {
                 legacyJourney.tracks.values().next().value,
                 true,
             )
+            expect(updatePOIsVisibility).toHaveBeenLastCalledWith(legacyJourney, true)
         }
         finally {
             updateTrackVisibility.mockRestore()
+            updatePOIsVisibility.mockRestore()
             globalThis.lgs = previousLgs
         }
     })
