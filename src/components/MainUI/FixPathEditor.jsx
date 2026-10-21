@@ -1383,7 +1383,7 @@ export const FixPathEditor = () => {
             }))
         if (enclosedPoints.length === 0) return true
 
-        const currentSelection = selectedControlPoints.filter(sameSection)
+        const currentSelection = draft.replaceSelection ? [] : selectedControlPoints.filter(sameSection)
         const nextSelection = [...new Map([...currentSelection, ...enclosedPoints]
             .map(point => [point.controlPointId, point])).values()]
         setSelectedControlPoints(nextSelection)
@@ -1391,7 +1391,7 @@ export const FixPathEditor = () => {
         selectionAnchorRef.current = anchor && sameSection(anchor)
             && nextSelection.some(point => point.controlPointId === anchor.controlPointId)
             ? anchor
-            : nextSelection[0]
+            : nextSelection[0] ?? null
         setPersistedActiveCorrection({trackSlug: draft.trackSlug, correctionId: draft.correctionId})
         setAreaMode(false)
         return true
@@ -1407,9 +1407,11 @@ export const FixPathEditor = () => {
             : null
         const modifier = selectionGestureModifier(event)
         const lasso = isLassoModifier(modifier)
-        const sourceSelection = modifier === 'shift' || modifier === 'ctrl'
+        const replaceSelection = event.altKey === true
+        const sourceSelection = !replaceSelection && (modifier === 'shift' || modifier === 'ctrl')
         const previousLasso = lassoDraftRef.current
         const continuesLasso = lasso && previousLasso?.modifier === modifier
+            && previousLasso.replaceSelection === replaceSelection
         const selectSourcePoints = continuesLasso
             ? previousLasso.kind === 'source'
             : sourceSelection && !marker
@@ -1465,6 +1467,7 @@ export const FixPathEditor = () => {
             trackSlug: section?.trackSlug ?? null,
             correctionId,
             modifier,
+            replaceSelection,
             markerControlPointId: markerPoint?.controlPointId,
             previousLasso: continuesLasso ? previousLasso : null,
         }
@@ -1555,6 +1558,7 @@ export const FixPathEditor = () => {
                 shape: 'lasso',
                 kind: drag.mode,
                 modifier: drag.modifier,
+                replaceSelection: drag.replaceSelection,
                 trackSlug: drag.trackSlug,
                 correctionId: drag.correctionId,
                 points,

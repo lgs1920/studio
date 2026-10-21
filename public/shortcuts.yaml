@@ -103,7 +103,7 @@
     - Delete
   scope: Fix Path point row
 - action: Select multiple Fix Path points
-  description: Shift-click on a correction marker toggles it. Shift-drag or Alt-drag draws a lasso; Ctrl+Shift-drag or Ctrl+Alt-drag draws a rectangle. Shift and Ctrl gestures select Journey points or correction points depending on where they start; Alt gestures select correction points in the current section. Double-click closes a click-vertex lasso; Escape cancels. Cmd gestures are ignored so Cesium retains those events.
+  description: Shift-click on a correction marker toggles it. Shift-drag or Alt-drag draws a lasso; Ctrl+Shift-drag or Ctrl+Alt-drag draws a rectangle. Shift and Ctrl+Shift gestures add Journey points or correction points depending on where they start; Alt and Ctrl+Alt gestures replace the selection of correction points in the current section, keeping it when the area is empty. Double-click closes a click-vertex lasso; Escape cancels. Cmd gestures are ignored so Cesium retains those events.
   id: fix-path-point-multiselect
   keys:
     - Shift+Click

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,14 +42,14 @@ export const FixPathEditorHelp = ({active, onRequestClose}) => (
                         <p>
                             {'Use '}
                             <kbd className="lgs--shortcut-key">{'Shift'}</kbd>
-                            {' + click on a correction marker to add or remove it from the selection. Shift-drag or Alt-drag draws a lasso; Ctrl+Shift-drag or Ctrl+Alt-drag draws a rectangle. Shift and Ctrl gestures select Journey points when they start over the route, or correction points when they start over a correction marker. Alt gestures select correction points in the current section. Draw a lasso freehand or click vertices and double-click to finish. Press Escape to cancel. If added points bridge other sections, they merge automatically and the point list updates to the resulting section.'}
+                            {' + click on a correction marker to add or remove it from the selection. Shift-drag or Alt-drag draws a lasso; Ctrl+Shift-drag or Ctrl+Alt-drag draws a rectangle. Shift and Ctrl+Shift gestures add Journey points when they start over the route, or correction points when they start over a correction marker. Alt and Ctrl+Alt gestures replace the selection of correction points in the current section. An empty selection area keeps the current selection. Draw a lasso freehand or click vertices and double-click to finish. Press Escape to cancel. If added points bridge other sections, they merge automatically and the point list updates to the resulting section.'}
                         </p>
                         <p>{'Clicking a point selects it without changing the camera view or zoom. Section navigation centers the selected section while preserving camera zoom, orientation, and widget position.'}</p>
                         <p>{'Use the eye control to show or hide the corrected route and its editing points for the current section. This changes only the map display; accepted corrections remain stored and continue to apply to statistics and Replay.'}</p>
                     </section>
                     <section className="fix-path-help-section">
                         <h3>{'Correcting the path'}</h3>
-                        <p>{'Select Journey points with a Ctrl+Shift or Ctrl+Alt rectangle, or with a Shift lasso, to create or extend a section. Newly included or restored source points appear as blue diamonds. Only points in the current section can be dragged; click a point in another section to activate and display that section before moving it.'}</p>
+                        <p>{'Select Journey points with a Ctrl+Shift rectangle, or with a Shift lasso, to create or extend a section. Newly included or restored source points appear as blue diamonds. Only points in the current section can be dragged; click a point in another section to activate and display that section before moving it.'}</p>
                         <p>{'When multiple points are selected, drag any highlighted point to move them together.'}</p>
                         <p>{'Choose Erase, then click a point in the current section to remove its membership. The remaining points split into contiguous sections when needed.'}</p>
                         <p>{'Undo and Redo cover edits to section membership, point positions, heights, removals, resets, and merges.'}</p>
