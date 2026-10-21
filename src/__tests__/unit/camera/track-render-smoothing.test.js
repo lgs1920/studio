@@ -128,6 +128,49 @@ describe('track render smoothing', () => {
         })).toBe('1:2')
     })
 
+    it('keeps a removed source sample out of the Cesium render path', () => {
+        const track = makeTrack({enabled: true, step: 1})
+        const sourceCoordinates = [
+            [6, 45, 100],
+            [6.00005, 45.00002, 110],
+            [6.0001, 45.0002, 120],
+            [6.00015, 45.00002, 130],
+            [6.0002, 45, 140],
+        ]
+        track.content.geometry.coordinates = sourceCoordinates
+        const correction = {
+            id: 'removed-source-sample',
+            segmentIndex: 0,
+            startIndex: 1,
+            endIndex: 3,
+            sourceFingerprint: getFixPathSourceFingerprint(track.content, 0, 1, 3),
+            controlPoints: [1, 2, 3].map(index => ({
+                id: 'fix-point-0-' + index,
+                sourceIndex: index,
+                progress: (index - 1) / 2,
+                coordinate: sourceCoordinates[index],
+                fixed: index !== 2,
+                removed: index === 2,
+            })),
+        }
+        const journey = {
+            slug: track.parent,
+            fixPathEnabled: true,
+            fixPathCorrectionData: {tracks: {[track.slug]: [correction]}},
+            renderSmoothing: {enabled: true, step: 1},
+            tracks: new Map([[track.slug, track]]),
+        }
+        vi.stubGlobal('lgs', {
+            getJourneyBySlug: vi.fn(() => journey),
+            theJourneyEditorProxy: {journey},
+            settings: {journey: {}},
+        })
+
+        const renderContent = getTrackRenderContent(track)
+
+        expect(renderContent.geometry.coordinates).not.toContainEqual(sourceCoordinates[2])
+    })
+
     it('keeps moved Fix Path source vertices exact through render smoothing', () => {
         const track = makeTrack({enabled: true, step: 1})
         const sourceCoordinates = [
@@ -170,6 +213,51 @@ describe('track render smoothing', () => {
 
         expect(renderContent.geometry.coordinates).toContainEqual(movedCoordinate)
         expect(renderContent.geometry.coordinates.length).toBeGreaterThan(sourceCoordinates.length)
+    })
+
+    it('keeps every point in an edited section exact even when its controls are unchanged', () => {
+        const track = makeTrack({enabled: true, step: 1})
+        const sourceCoordinates = [
+            [6, 45, 100],
+            [6.00005, 45.00002, 110],
+            [6.0001, 45, 120],
+            [6.00015, 45.00002, 130],
+            [6.0002, 45, 140],
+        ]
+        track.content.geometry.coordinates = sourceCoordinates
+        const correction = {
+            id: 'unchanged-section',
+            segmentIndex: 0,
+            startIndex: 1,
+            endIndex: 3,
+            sourceFingerprint: getFixPathSourceFingerprint(track.content, 0, 1, 3),
+            controlPoints: [1, 2, 3].map(index => ({
+                id: 'fix-point-0-' + index,
+                sourceIndex: index,
+                progress: (index - 1) / 2,
+                coordinate: sourceCoordinates[index],
+                fixed: false,
+                removed: false,
+            })),
+        }
+        const journey = {
+            slug: track.parent,
+            fixPathEnabled: true,
+            fixPathCorrectionData: {tracks: {[track.slug]: [correction]}},
+            renderSmoothing: {enabled: true, step: 1},
+            tracks: new Map([[track.slug, track]]),
+        }
+        vi.stubGlobal('lgs', {
+            getJourneyBySlug: vi.fn(() => journey),
+            theJourneyEditorProxy: {journey},
+            settings: {journey: {}},
+        })
+
+        const renderContent = getTrackRenderContent(track)
+
+        sourceCoordinates.slice(1, 4).forEach(coordinate => {
+            expect(renderContent.geometry.coordinates).toContainEqual(coordinate)
+        })
     })
 
     it('retains every vertex in a corrected section when capped render geometry is sampled', () => {

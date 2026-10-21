@@ -14,7 +14,11 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {getCorrectedTrackContent, getFixPathSourceFingerprint} from './fixPathCorrections'
+import {
+    getCorrectedTrackContent,
+    getFixPathDisplayRangeForSourceRange,
+    getFixPathSourceFingerprint,
+} from './fixPathCorrections'
 
 export const TRACK_RENDER_SMOOTHING_DEFAULT = Object.freeze({
     enabled: false,
@@ -305,17 +309,17 @@ const getJourneyFromTrack = track => {
 /**
  * Find valid corrected route ranges whose samples must stay visible in Cesium.
  * @param {object} track - Track whose corrected path is rendered.
- * @param {object} geometry - Corrected geometry currently being rendered.
+ * @param {object} content - Corrected feature currently being rendered.
  * @param {boolean} includeDraftCorrections - Whether an explicit display override is active.
- * @returns {Map<number, Array<{startIndex: number, endIndex: number}>>} Protected source ranges by segment.
+ * @returns {Map<number, Array<{startIndex: number, endIndex: number}>>} Protected display ranges by segment.
  */
-const getProtectedFixPathRangesBySegment = (track, geometry, includeDraftCorrections = false) => {
+const getProtectedFixPathRangesBySegment = (track, content, includeDraftCorrections = false) => {
     const journey = track?.parent && typeof track.parent === 'object'
         ? track.parent
         : getJourneyFromTrack(track)
     if (journey?.fixPathEnabled !== true && !includeDraftCorrections) return new Map()
 
-    const corrections = journey.fixPathCorrectionData?.tracks?.[track?.slug]
+    const corrections = journey?.fixPathCorrectionData?.tracks?.[track?.slug]
     if (!Array.isArray(corrections)) return new Map()
     const sourceGeometry = track?.content?.geometry
     const rangesBySegment = new Map()
@@ -337,38 +341,29 @@ const getProtectedFixPathRangesBySegment = (track, geometry, includeDraftCorrect
             : sourceGeometry?.type === MULTI_LINE_STRING
                 ? sourceGeometry.coordinates?.[segmentIndex]
                 : null
-        const renderedSegment = geometry?.type === LINE_STRING
-            ? geometry.coordinates
-            : geometry?.type === MULTI_LINE_STRING
-                ? geometry.coordinates?.[segmentIndex]
+        const renderedGeometry = content?.geometry
+        const renderedSegment = renderedGeometry?.type === LINE_STRING
+            ? renderedGeometry.coordinates
+            : renderedGeometry?.type === MULTI_LINE_STRING
+                ? renderedGeometry.coordinates?.[segmentIndex]
                 : null
         if (!Array.isArray(sourceSegment)
             || !Array.isArray(renderedSegment)
             || endIndex >= sourceSegment.length
-            || endIndex >= renderedSegment.length) {
+            || !correction.controlPoints.some(point => point.erased !== true)) {
             return
         }
 
-        const hasEffectiveAnchor = controlPoints.some(point => {
-            if (point.fixed === false || point.removed === true) return false
-            const match = /^fix-point-(\d+)-(\d+)$/.exec(point.id ?? '')
-            const sourceIndex = Number.isInteger(point.sourceIndex)
-                ? point.sourceIndex
-                : match && Number(match[1]) === segmentIndex
-                    ? Number(match[2])
-                    : null
-            if (sourceIndex === null) return true
-            const originalCoordinate = sourceSegment[sourceIndex]
-            return Array.isArray(originalCoordinate)
-                && Array.isArray(point.coordinate)
-                && point.coordinate.slice(0, 3).some((value, coordinateIndex) => (
-                    Number(value) !== Number(originalCoordinate[coordinateIndex])
-                ))
-        })
-        if (!hasEffectiveAnchor) return
+        const displayRange = getFixPathDisplayRangeForSourceRange(
+            content,
+            segmentIndex,
+            startIndex,
+            endIndex,
+        )
+        if (!displayRange || displayRange.endIndex >= renderedSegment.length) return
 
         const ranges = rangesBySegment.get(segmentIndex) ?? []
-        ranges.push({startIndex, endIndex})
+        ranges.push(displayRange)
         rangesBySegment.set(segmentIndex, ranges)
     })
 
@@ -416,7 +411,7 @@ const getFixedSourceIndexesBySegment = (track, geometry, includeDraftCorrections
         : getJourneyFromTrack(track)
     if (journey?.fixPathEnabled !== true && !includeDraftCorrections) return new Map()
 
-    const corrections = journey.fixPathCorrectionData?.tracks?.[track?.slug]
+    const corrections = journey?.fixPathCorrectionData?.tracks?.[track?.slug]
     if (!Array.isArray(corrections)) return new Map()
     const indexesBySegment = new Map()
     corrections.forEach(correction => {
@@ -566,7 +561,7 @@ export const getTrackRenderContent = (track, options = {}) => {
     )
     const protectedRangesBySegment = getProtectedFixPathRangesBySegment(
         track,
-        geometry,
+        content,
         options.content !== undefined,
     )
     const smoothingKey = getRenderedContentCacheKey(
