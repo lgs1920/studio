@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-20
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -93,7 +93,7 @@ const renderPointList = async theme => {
         </div>,
     )
     const panel = document.querySelector('.fix-path-panel')
-    await Promise.all(Array.from(panel.querySelectorAll('wa-input, wa-number-input, wa-button'), element => element.updateComplete))
+    await Promise.all(Array.from(panel.querySelectorAll('wa-input, wa-number-input, wa-button, wa-icon'), element => element.updateComplete))
     return panel
 }
 
@@ -104,6 +104,21 @@ it.each([
     await page.viewport(width, height)
     const panel = await renderPointList(theme)
     const rows = Array.from(panel.querySelectorAll('.fix-path-correction-point-row'))
+    const selectAllCheckbox = panel.querySelector('.fix-path-select-all-toggle')
+    const selectAllIndicator = panel.querySelector('.fix-path-select-all-indicator')
+    const firstStatusIndicator = rows[0].querySelector('.fix-path-correction-point-status-indicator')
+    const selectAllBounds = selectAllIndicator.getBoundingClientRect()
+    const firstStatusBounds = firstStatusIndicator.getBoundingClientRect()
+    const headerLatitude = panel.querySelector('.fix-path-coordinate-header > span:nth-of-type(1)')
+    const headerLatitudeBounds = headerLatitude.getBoundingClientRect()
+
+    expect(selectAllCheckbox.type).toBe('checkbox')
+    expect(selectAllCheckbox.checked).toBe(false)
+    expect(selectAllCheckbox.indeterminate).toBe(true)
+    expect(selectAllIndicator.getAttribute('name')).toBe('square-full')
+    expect(selectAllIndicator.getAttribute('variant')).toBe('solid')
+    expect(Math.abs(selectAllBounds.left + selectAllBounds.width / 2 - firstStatusBounds.left - firstStatusBounds.width / 2)).toBeLessThanOrEqual(0.5)
+    expect(Math.abs(selectAllBounds.top + selectAllBounds.height / 2 - headerLatitudeBounds.top - headerLatitudeBounds.height / 2)).toBeLessThanOrEqual(0.5)
     const fields = rows.map(row => Array.from(row.querySelectorAll('wa-input, wa-number-input'), input => (
         input.shadowRoot.querySelector('[part~="base"]').getBoundingClientRect()
     )))
@@ -172,7 +187,7 @@ it('shows working decrement and increment steppers on both sides of each height 
     expect(persistCurrentDraftCorrections).toHaveBeenCalledTimes(2)
 })
 
-it('keeps correction markers clickable and mirrors point colors with duotone status indicators', async () => {
+it('keeps correction markers clickable and mirrors point colors with status indicators', async () => {
     const panel = await renderPointList('wa-light')
     const markers = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
     markers.classList.add('fix-path-markers', 'is-selecting-area')
@@ -199,7 +214,7 @@ it('keeps correction markers clickable and mirrors point colors with duotone sta
     // Await actual icon loading: Lit updates alone do not await the SVG resolver.
     await expect.poll(() => statusIcons.every(icon => {
         const paths = icon.shadowRoot?.querySelectorAll('svg path')
-        return paths?.length === 2 && [...paths].every(path => Boolean(path.getAttribute('d')))
+        return paths?.length > 0 && [...paths].every(path => Boolean(path.getAttribute('d')))
     })).toBe(true)
 
     /** Normalize theme token values to the browser's computed color format. */
@@ -216,17 +231,24 @@ it('keeps correction markers clickable and mirrors point colors with duotone sta
         {selector: '.is-moved:not(.is-selected)', count: 3, name: 'circle', primary: '#ffffff', secondary: '#ff3d91'},
         {selector: '.is-unmodified:not(.is-selected)', count: 3, name: 'diamond', primary: '#000000', secondary: '#2680ff'},
         {selector: '.is-selected', count: 2, primary: '#000000', secondary: '#7fff00'},
-        {selector: '.is-removed', count: 1, name: 'circle', primary: 'danger-border', secondary: 'danger-fill'},
+        {selector: '.is-removed', count: 1, name: 'trash-can', family: null, colorToken: '--wa-color-text-normal'},
     ]
-    for (const {selector, count, name, primary, secondary} of statusStates) {
+    for (const {selector, count, name, family = 'duotone', colorToken, primary, secondary} of statusStates) {
         const indicators = statusIcons.filter(icon => icon.matches(selector))
         expect(indicators).toHaveLength(count)
         indicators.forEach(icon => {
             if (name) expect(icon.getAttribute('name')).toBe(name)
-            expect(icon.getAttribute('family')).toBe('duotone')
+            expect(icon.getAttribute('family')).toBe(family)
             expect(icon.getAttribute('variant')).toBe('regular')
-            expect(icon.classList.contains('poi-duotone-icon')).toBe(false)
             expect(icon.classList.contains('fix-path-correction-point-status-indicator')).toBe(true)
+            const svg = icon.shadowRoot.querySelector('svg')
+            if (colorToken) {
+                const expectedColor = resolveColor(getComputedStyle(panel).getPropertyValue(colorToken).trim())
+                expect(getComputedStyle(icon).color).toBe(expectedColor)
+                expect([...svg.querySelectorAll('path')].every(path => getComputedStyle(path).fill === expectedColor)).toBe(true)
+                return
+            }
+            expect(icon.classList.contains('poi-duotone-icon')).toBe(false)
             expect(icon.style.getPropertyValue('--primary-color')).toBe('')
             expect(icon.style.getPropertyValue('--secondary-color')).toBe('')
             const primaryColor = primary === 'danger-border'
@@ -237,7 +259,6 @@ it('keeps correction markers clickable and mirrors point colors with duotone sta
                 : secondary
             expect(getComputedStyle(icon).getPropertyValue('--primary-color').trim()).toBe(primaryColor)
             expect(getComputedStyle(icon).getPropertyValue('--secondary-color').trim()).toBe(secondaryColor)
-            const svg = icon.shadowRoot.querySelector('svg')
             expect(svg.getAttribute('data-prefix')).toBe('fadr')
             const border = svg.querySelector('path.fa-primary')
             const fill = svg.querySelector('path.fa-secondary')

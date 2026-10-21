@@ -105,6 +105,7 @@ describe('FixPathEditor map input ownership', () => {
         activeAppShortcutRemovers.splice(0).forEach(remove => remove())
         fixPathWidgetMockState.childRef = null
         cleanup()
+        document.querySelectorAll('.fix-path-test-viewer-container').forEach(element => element.remove())
         vi.restoreAllMocks()
         vi.unstubAllGlobals()
         globalThis.lgs = previousLgs
@@ -217,6 +218,14 @@ describe('FixPathEditor map input ownership', () => {
         document.body.append(viewerContainer)
         const fixPathWidgetRuntimeConfig = {dimensions: {width: 200, height: 200}}
         const updateFixPathWidgetRect = vi.fn()
+        const canvasEventCallbacks = {}
+        const canvasEvents = {
+            onRightClick: vi.fn((callback, options) => {
+                canvasEventCallbacks.rightClick = callback
+                canvasEventCallbacks.rightClickOptions = options
+            }),
+            offRightClick: vi.fn(),
+        }
         globalThis.lgs = {
             getJourneyBySlug: vi.fn(slug => slug === journey.slug ? journey : null),
             stores: {
@@ -236,6 +245,7 @@ describe('FixPathEditor map input ownership', () => {
                 canvas,
                 scene: {
                     screenSpaceCameraController: controller,
+                    pick: vi.fn(() => null),
                     cartesianToCanvasCoordinates: position => {
                         const cartographic = Cartographic.fromCartesian(position)
                         const longitude = CesiumMath.toDegrees(cartographic.longitude)
@@ -253,6 +263,7 @@ describe('FixPathEditor map input ownership', () => {
             },
         }
         globalThis.__ = {
+            canvasEvents,
             ui: {
                 poiManager: {stopRotationAndSync},
                 widgetManager: {
@@ -283,6 +294,27 @@ describe('FixPathEditor map input ownership', () => {
             ).content,
         ))
         await waitFor(() => expect(document.querySelectorAll('.fix-path-control-point')).toHaveLength(6))
+        lgs.viewer.scene.pick.mockReturnValue({id: 'track-a'})
+        act(() => fireEvent.pointerMove(canvas, {clientX: 50, clientY: 50, pointerType: 'mouse'}))
+        const journeyCursor = document.querySelector('.fix-path-journey-cursor')
+        expect(journeyCursor.classList.contains('is-visible')).toBe(true)
+        expect(journeyCursor.textContent).toBe('circle-plus')
+        act(() => {
+            fireEvent.keyDown(document, {key: 'Shift', shiftKey: true})
+        })
+        expect(journeyCursor.textContent).toBe('lasso')
+        act(() => {
+            fireEvent.keyUp(document, {key: 'Shift', shiftKey: false})
+            fireEvent.keyDown(document, {key: 'Alt', altKey: true})
+        })
+        expect(journeyCursor.textContent).toBe('lasso')
+        act(() => fireEvent.keyDown(document, {key: 'Control', ctrlKey: true, altKey: true}))
+        expect(journeyCursor.textContent).toBe('square-dashed')
+        act(() => fireEvent.keyUp(document, {key: 'Control', ctrlKey: false, altKey: true}))
+        expect(journeyCursor.textContent).toBe('lasso')
+        act(() => fireEvent.keyUp(document, {key: 'Alt', altKey: false}))
+        expect(journeyCursor.textContent).toBe('circle-plus')
+        act(() => fireEvent.pointerLeave(canvas))
         expect(document.querySelectorAll('.fix-path-preview-line, .fix-path-markers polyline')).toHaveLength(0)
         expect(rotateState.running).toBe(false)
         expect(panoramaState.active).toBe(false)
@@ -306,6 +338,17 @@ describe('FixPathEditor map input ownership', () => {
         expect(screen.getByRole('button', {name: 'Undo correction change'}).disabled).toBe(true)
         expect(screen.getByRole('button', {name: 'Redo correction change'}).disabled).toBe(true)
         await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(3))
+        const selectAllCorrectionPoints = screen.getByRole('checkbox', {name: 'Select all correction points'})
+        const initialCorrectionRows = [...document.querySelectorAll('.fix-path-correction-point-row')]
+        expect(initialCorrectionRows.every(row => !row.classList.contains('is-selected'))).toBe(true)
+        fireEvent.click(selectAllCorrectionPoints)
+        await waitFor(() => expect(initialCorrectionRows.every(row => row.classList.contains('is-selected'))).toBe(true))
+        expect(initialCorrectionRows.every(row => document.querySelector(
+            '.fix-path-control-point[data-control-point-id="' + row.dataset.controlPointId + '"]',
+        )?.classList.contains('is-selected'))).toBe(true)
+        fireEvent.click(screen.getByRole('checkbox', {name: 'Select all correction points'}))
+        await waitFor(() => expect(initialCorrectionRows.every(row => !row.classList.contains('is-selected'))).toBe(true))
+        expect(document.querySelectorAll('.fix-path-control-point.is-selected')).toHaveLength(0)
         const setViewCallsAfterOpening = camera.setView.mock.calls.length
         const fixPathWidget = screen.getByTestId('fix-path-widget')
         fixPathWidget.style.top = '24px'
@@ -682,6 +725,8 @@ describe('FixPathEditor map input ownership', () => {
         expect(renderedControlLasso.getAttribute('d')).toMatch(/ C/)
         expect(document.querySelector('.fix-path-selection-guide')?.textContent)
             .toContain('Alt: drag around correction points and release, or click vertices and double-click to select')
+        expect(document.querySelector('.fix-path-selection-guide')?.classList.contains('wa-theme-lgs1920-on-map'))
+            .toBe(true)
         fireEvent.pointerUp(viewerContainer, {
             pointerId: 18,
             button: 0,
@@ -785,7 +830,6 @@ describe('FixPathEditor map input ownership', () => {
                 progress: index === 8 ? 0.25 : 0.75,
                 coordinate: [-122.01 + index * 0.001, 37, 10],
                 fixed: false,
-                ...(index === 9 ? {removed: true, erased: true} : {}),
             })),
         }
         act(() => {
@@ -836,19 +880,19 @@ describe('FixPathEditor map input ownership', () => {
         const tailAddedMarker = document.querySelector('.fix-path-control-point[data-control-point-id="fix-point-0-10"]')
         expect(tailAddedMarker?.classList.contains('is-unmodified')).toBe(true)
         expect(tailAddedMarker?.classList.contains('is-selected')).toBe(false)
-        const tailRestoredMarker = document.querySelector('.fix-path-control-point[data-control-point-id="fix-point-0-9"]')
-        expect(tailRestoredMarker?.classList.contains('is-unmodified')).toBe(true)
-        expect(tailRestoredMarker?.classList.contains('is-selected')).toBe(false)
-        const restoredTailPoint = journey.fixPathCorrectionData.tracks['track-a']
+        const tailUnmodifiedMarker = document.querySelector('.fix-path-control-point[data-control-point-id="fix-point-0-9"]')
+        expect(tailUnmodifiedMarker?.classList.contains('is-unmodified')).toBe(true)
+        expect(tailUnmodifiedMarker?.classList.contains('is-selected')).toBe(false)
+        const tailSourcePoint = journey.fixPathCorrectionData.tracks['track-a']
             .find(correction => correction.id === 'tail-section')
             .controlPoints.find(point => point.sourceIndex === 9)
-        expect(restoredTailPoint).toMatchObject({fixed: false, removed: false})
-        expect(restoredTailPoint.erased).toBeUndefined()
+        expect(tailSourcePoint).toMatchObject({fixed: false, removed: false})
+        expect(tailSourcePoint.erased).toBeUndefined()
         expect(document.querySelector('.fix-path-source-points')).toBeNull()
         const updateCallsBeforeUndoAddition = updateJourney.mock.calls.length
         fireEvent.click(screen.getByRole('button', {name: 'Undo correction change'}))
-        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(1))
-        expect(document.querySelector('.fix-path-control-point[data-control-point-id="fix-point-0-9"]')).toBeNull()
+        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(2))
+        expect(document.querySelector('.fix-path-control-point[data-control-point-id="fix-point-0-9"]')).not.toBeNull()
         expect(document.querySelector('.fix-path-control-point[data-control-point-id="fix-point-0-10"]')).toBeNull()
         expect(document.querySelector('.fix-path-source-points')).toBeNull()
         await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeUndoAddition + 1))
@@ -1130,7 +1174,8 @@ describe('FixPathEditor map input ownership', () => {
         expect(selectedPointIds).toHaveLength(activeSectionRows.length)
         const updateCallsBeforeErase = updateJourney.mock.calls.length
         fireEvent.click(screen.getByRole('button', {name: 'Erase selection'}))
-        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(0))
+        await waitFor(() => expect([...document.querySelectorAll('.fix-path-correction-point-row')]
+            .every(row => row.dataset.correctionId !== 'tail-section')).toBe(true))
         expect(screen.getByRole('button', {name: 'Erase selection'}).getAttribute('aria-pressed')).toBe('false')
         selectedPointIds.forEach(id => {
             expect(document.querySelector('.fix-path-control-point[data-control-point-id="' + id + '"]')).toBeNull()
@@ -1138,9 +1183,8 @@ describe('FixPathEditor map input ownership', () => {
         await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeErase + 1))
         await waitFor(() => expect(screen.queryByText('Validating and applying Journey changes…')).toBeNull())
         const erasedSection = journey.fixPathCorrectionData.tracks['track-a'].find(section => section.id === 'tail-section')
-        expect(erasedSection.controlPoints.filter(point => point.erased === true && point.removed === true))
-            .toHaveLength(selectedPointIds.length)
-        expect(journey.fixPathCorrectionData.tracks['track-a']).toHaveLength(3)
+        expect(erasedSection).toBeUndefined()
+        expect(journey.fixPathCorrectionData.tracks['track-a']).toHaveLength(2)
         expect(screen.getByRole('button', {name: 'Undo correction change'}).disabled).toBe(false)
 
         const updateCallsBeforeUndo = updateJourney.mock.calls.length
@@ -1151,12 +1195,102 @@ describe('FixPathEditor map input ownership', () => {
         expect(screen.getByRole('button', {name: 'Redo correction change'}).disabled).toBe(false)
         const updateCallsBeforeRedo = updateJourney.mock.calls.length
         fireEvent.click(screen.getByRole('button', {name: 'Redo correction change'}))
-        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(0))
+        await waitFor(() => expect([...document.querySelectorAll('.fix-path-correction-point-row')]
+            .every(row => row.dataset.correctionId !== 'tail-section')).toBe(true))
         await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeRedo + 1))
-        expect(journey.fixPathCorrectionData.tracks['track-a'].find(section => section.id === 'tail-section')
-            .controlPoints.filter(point => point.erased === true && point.removed === true))
-            .toHaveLength(selectedPointIds.length)
-        expect(journey.fixPathCorrectionData.tracks['track-a']).toHaveLength(3)
+        expect(journey.fixPathCorrectionData.tracks['track-a'].find(section => section.id === 'tail-section'))
+            .toBeUndefined()
+        expect(journey.fixPathCorrectionData.tracks['track-a']).toHaveLength(2)
+
+        const sectionRowToDelete = document.querySelector('.fix-path-correction-point-row')
+        const sectionIdToDelete = sectionRowToDelete?.dataset.correctionId
+        const updateCallsBeforeSectionDelete = updateJourney.mock.calls.length
+        fireEvent.click(screen.getByRole('button', {name: 'Delete entire section'}))
+        await waitFor(() => expect(journey.fixPathCorrectionData.tracks['track-a']).toHaveLength(1))
+        expect(journey.fixPathCorrectionData.tracks['track-a'].some(section => section.id === sectionIdToDelete))
+            .toBe(false)
+        await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeSectionDelete + 1))
+        const updateCallsBeforeUndoSectionDelete = updateJourney.mock.calls.length
+        fireEvent.click(screen.getByRole('button', {name: 'Undo correction change'}))
+        await waitFor(() => expect(journey.fixPathCorrectionData.tracks['track-a']).toHaveLength(2))
+        expect(journey.fixPathCorrectionData.tracks['track-a'].some(section => section.id === sectionIdToDelete))
+            .toBe(true)
+        await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeUndoSectionDelete + 1))
+
+        const fixtureSection = journey.fixPathCorrectionData.tracks['track-a']
+            .find(section => section.id === sectionIdToDelete)
+        const initialPointCoordinates = new Map(initialCorrectionSections.flatMap(section => (
+            section.controlPoints.map(point => [point.id, point.coordinate])
+        )))
+        const editedPointCoordinates = new Map()
+        act(() => {
+            journey.fixPathCorrectionData = {
+                ...journey.fixPathCorrectionData,
+                revision: journey.fixPathCorrectionData.revision + 1,
+                currentSection: {trackSlug: 'track-a', correctionId: sectionIdToDelete},
+                tracks: {
+                    'track-a': journey.fixPathCorrectionData.tracks['track-a'].map(section => section.id !== sectionIdToDelete
+                        ? section
+                        : {
+                            ...section,
+                            controlPoints: section.controlPoints.map(point => {
+                                const coordinate = [
+                                    Number(point.coordinate[0]) + 0.01,
+                                    Number(point.coordinate[1]) + 0.01,
+                                    Number(point.coordinate[2] ?? 0) + 100,
+                                ]
+                                editedPointCoordinates.set(point.id, coordinate)
+                                return {...point, coordinate, fixed: true, removed: false, erased: false}
+                            }),
+                        }),
+                },
+            }
+        })
+        await waitFor(() => expect([...document.querySelectorAll('.fix-path-correction-point-row')]
+            .filter(row => row.dataset.correctionId === sectionIdToDelete).length).toBe(fixtureSection.controlPoints.length))
+        const selectedSectionRows = [...document.querySelectorAll('.fix-path-correction-point-row')]
+            .filter(row => row.dataset.correctionId === sectionIdToDelete)
+        expect(selectedSectionRows.length).toBeGreaterThan(1)
+        fireEvent.click(selectedSectionRows[0])
+        fireEvent.click(selectedSectionRows.at(-1), {shiftKey: true})
+        await waitFor(() => expect(screen.getByRole('button', {name: 'Reset selected correction points'})).not.toBeNull())
+        expect(screen.getByRole('button', {name: 'Remove selected correction points'}).disabled).toBe(false)
+        expect(screen.getAllByRole('button', {name: 'Reset correction point'}).every(button => button.disabled)).toBe(true)
+        expect(screen.getAllByRole('button', {name: 'Remove correction point'}).every(button => button.disabled)).toBe(true)
+
+        const selectedPointIdsForBulkActions = selectedSectionRows.map(row => row.dataset.controlPointId)
+        const updateCallsBeforeBulkReset = updateJourney.mock.calls.length
+        fireEvent.click(screen.getByRole('button', {name: 'Reset selected correction points'}))
+        await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeBulkReset + 1))
+        const resetSection = journey.fixPathCorrectionData.tracks['track-a']
+            .find(section => section.id === sectionIdToDelete)
+        selectedPointIdsForBulkActions.forEach(controlPointId => {
+            const point = resetSection.controlPoints.find(control => control.id === controlPointId)
+            const sourcePoint = /^fix-point-(\d+)-(\d+)$/.exec(controlPointId)
+            const sourceIndex = Number.isInteger(point.sourceIndex)
+                ? point.sourceIndex
+                : sourcePoint ? Number(sourcePoint[2]) : Number.NaN
+            const expectedCoordinate = Number.isInteger(sourceIndex)
+                ? journey.tracks.get('track-a').content.geometry.coordinates[sourceIndex]
+                : initialPointCoordinates.get(controlPointId) ?? editedPointCoordinates.get(controlPointId)
+            expect(point.coordinate).toEqual(expectedCoordinate)
+        })
+
+        const updateCallsBeforeBulkRemove = updateJourney.mock.calls.length
+        fireEvent.click(screen.getByRole('button', {name: 'Remove selected correction points'}))
+        await waitFor(() => expect([...document.querySelectorAll('.fix-path-correction-point-row')]
+            .filter(row => row.dataset.correctionId === sectionIdToDelete)
+            .every(row => row.classList.contains('is-removed'))).toBe(true))
+        await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeBulkRemove + 1))
+        expect(screen.queryByRole('button', {name: 'Reset selected correction points'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Remove selected correction points'})).toBeNull()
+
+        const updateCallsBeforeUndoBulkRemove = updateJourney.mock.calls.length
+        fireEvent.click(screen.getByRole('button', {name: 'Undo correction change'}))
+        await waitFor(() => expect([...document.querySelectorAll('.fix-path-correction-point-row')]
+            .filter(row => row.dataset.correctionId === sectionIdToDelete)
+            .every(row => !row.classList.contains('is-removed'))).toBe(true))
+        await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeUndoBulkRemove + 1))
 
         /** Build a source-matched correction fixture for validation behavior. */
         const makeValidationSection = (id, startIndex, endIndex) => ({
@@ -1298,6 +1432,215 @@ describe('FixPathEditor map input ownership', () => {
             trackSlug: 'track-a',
             correctionId: journey.fixPathCorrectionData.tracks['track-a'][0].id,
         })
+
+        lgs.viewer.scene.pick.mockReturnValue({id: 'track-a'})
+        act(() => fireEvent.pointerMove(canvas, {clientX: 50, clientY: 50, pointerType: 'mouse'}))
+        expect(canvas.classList.contains('fix-path-journey-hover')).toBe(true)
+        const journeyCursorAfterPointerMove = document.querySelector('.fix-path-journey-cursor')
+        expect(journeyCursorAfterPointerMove.classList.contains('is-visible')).toBe(true)
+        expect(journeyCursorAfterPointerMove.textContent).toBe('circle-plus')
+        expect(canvasEventCallbacks.rightClickOptions).toMatchObject({
+            entity: false,
+            priority: 100,
+            preventLowerPriority: 'handled',
+        })
+        act(() => expect(canvasEventCallbacks.rightClick({position: {x: 50, y: 50}})).toBe(true))
+        const mapContextMenu = vi.fn()
+        canvas.addEventListener('contextmenu', mapContextMenu)
+        fireEvent.contextMenu(canvas, {button: 2, clientX: 50, clientY: 50})
+        expect(mapContextMenu).not.toHaveBeenCalled()
+        expect(screen.getByRole('menu', {name: 'Journey route actions'}).classList.contains('wa-theme-lgs1920-on-map'))
+            .toBe(true)
+        fireEvent.keyDown(screen.getByRole('menu', {name: 'Journey route actions'}), {key: 'Escape'})
+        await waitFor(() => expect(screen.queryByRole('menu', {name: 'Journey route actions'})).toBeNull())
+        fireEvent.click(canvas, {button: 0, clientX: 50, clientY: 50})
+        await waitFor(() => expect(journey.fixPathCorrectionData.tracks['track-a']).toHaveLength(2))
+        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(1))
+        const routeAddedSection = journey.fixPathCorrectionData.tracks['track-a'].find(section => section.startIndex > 3)
+        expect(routeAddedSection).toBeDefined()
+        expect(routeAddedSection.startIndex).toBe(5)
+        expect(routeAddedSection.endIndex).toBe(6)
+        expect(routeAddedSection.controlPoints).toHaveLength(1)
+        expect(routeAddedSection.controlPoints[0]).toMatchObject({fixed: true, removed: false})
+
+        const updateCallsBeforeRouteUndo = updateJourney.mock.calls.length
+        fireEvent.click(screen.getByRole('button', {name: 'Undo correction change'}))
+        await waitFor(() => expect(journey.fixPathCorrectionData.tracks['track-a']).toHaveLength(1))
+        await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeRouteUndo + 1))
         viewerContainer.remove()
+    }, 45000)
+
+    it('does not restore a removed source point when Shift-Lasso selects it', async () => {
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => ({
+            left: 0,
+            top: 0,
+            right: 100,
+            bottom: 100,
+            width: 100,
+            height: 100,
+        }))
+
+        const editorStore = proxy({fixPathEditorOpen: true})
+        const rotateState = proxy({running: false})
+        const panoramaState = proxy({active: false})
+        const unitSystem = proxy({current: 0})
+        const content = {
+            geometry: {
+                type: 'LineString',
+                coordinates: Array.from({length: 12}, (_, index) => [-122.01 + index * 0.001, 37, 10]),
+            },
+        }
+        const removedSection = {
+            id: 'tail-section',
+            segmentIndex: 0,
+            startIndex: 8,
+            endIndex: 9,
+            sourceFingerprint: getFixPathSourceFingerprint(content, 0, 8, 9),
+            controlPoints: [
+                {
+                    id: 'fix-point-0-8',
+                    sourceIndex: 8,
+                    progress: 0,
+                    coordinate: content.geometry.coordinates[8],
+                    fixed: false,
+                    removed: false,
+                },
+                {
+                    id: 'fix-point-0-9',
+                    sourceIndex: 9,
+                    progress: 1,
+                    coordinate: content.geometry.coordinates[9],
+                    fixed: false,
+                    removed: true,
+                    erased: true,
+                },
+            ],
+        }
+        const journey = proxy({
+            slug: 'journey-a',
+            focus: vi.fn(async () => {}),
+            tracks: proxyMap([['track-a', {
+                slug: 'track-a',
+                parent: 'journey-a',
+                title: 'Track A',
+                content,
+            }]]),
+            fixPathCorrectionData: {
+                revision: 1,
+                tracks: {'track-a': [removedSection]},
+                currentSection: {trackSlug: 'track-a', correctionId: 'tail-section'},
+            },
+            fixPathEnabled: true,
+            persistToDatabase: vi.fn(async () => {}),
+        })
+        const camera = {
+            setView: vi.fn(),
+            flyTo: vi.fn(),
+            zoomIn: vi.fn(),
+            zoomOut: vi.fn(),
+            positionWC: Cartesian3.fromDegrees(-122.011, 37, 1000),
+            directionWC: new Cartesian3(0, 0, -1),
+            upWC: new Cartesian3(0, 1, 0),
+            pickEllipsoid: vi.fn(() => Cartesian3.fromDegrees(-122.011, 37, 0)),
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = 100
+        canvas.height = 100
+        const viewerContainer = document.createElement('div')
+        viewerContainer.className = 'fix-path-test-viewer-container'
+        viewerContainer.append(canvas)
+        document.body.append(viewerContainer)
+        const widgetList = proxyMap([['journey-toolbar-widget', {widgetsBoard: 'scene', zIndex: 4100}]])
+        const updateFixPathWidgetRect = vi.fn()
+
+        globalThis.lgs = {
+            getJourneyBySlug: vi.fn(slug => slug === journey.slug ? journey : null),
+            stores: {
+                journeyEditor: editorStore,
+                ui: {
+                    mainUI: {rotate: rotateState, panorama: panoramaState},
+                    widget: {list: widgetList},
+                },
+            },
+            theJourneyEditorProxy: proxy({journey, track: null}),
+            settings: {journey: proxy({}), unitSystem},
+            viewer: {
+                container: viewerContainer,
+                canvas,
+                scene: {
+                    camera,
+                    screenSpaceCameraController: {
+                        enableInputs: true,
+                        enableRotate: true,
+                        enableTranslate: true,
+                        enableZoom: true,
+                        enableTilt: true,
+                        enableLook: true,
+                    },
+                    cartesianToCanvasCoordinates: position => {
+                        const cartographic = Cartographic.fromCartesian(position)
+                        const longitude = CesiumMath.toDegrees(cartographic.longitude)
+                        const latitude = CesiumMath.toDegrees(cartographic.latitude)
+                        return {
+                            x: Math.round((longitude + 122.01) * 8000),
+                            y: Math.round((37.005 - latitude) * 10000),
+                        }
+                    },
+                    pickPositionSupported: true,
+                    pickPosition: () => Cartesian3.fromDegrees(-122.004, 37.002, 50),
+                    postRender: {addEventListener: () => () => {}},
+                },
+                camera,
+            },
+        }
+        globalThis.__ = {
+            ui: {
+                poiManager: {stopRotationAndSync: vi.fn(async () => {})},
+                widgetManager: {
+                    getElementById: vi.fn(() => document.querySelector('[data-testid="fix-path-widget"]')),
+                    getMoveable: vi.fn(() => ({current: {updateRect: updateFixPathWidgetRect}})),
+                    getWidgetConfig: vi.fn(() => ({type: 'lgs-visual-widget', widgetsBoard: 'scene'})),
+                },
+            },
+        }
+        const updateJourney = vi.spyOn(Utils, 'updateJourney').mockResolvedValue({draw: vi.fn()})
+        vi.spyOn(TrackUtils, 'setDisplayContentOverride')
+        vi.spyOn(TrackUtils, 'draw').mockResolvedValue(undefined)
+
+        render(<FixPathEditor/>)
+
+        await waitFor(() => expect([...document.querySelectorAll('.fix-path-correction-point-row')]
+            .map(row => row.dataset.controlPointId)).toEqual(['fix-point-0-8']))
+        const updateCallsBeforeLasso = updateJourney.mock.calls.length
+        const removedPointLasso = [
+            {x: 70, y: 46},
+            {x: 76, y: 46},
+            {x: 76, y: 54},
+            {x: 70, y: 54},
+        ]
+        removedPointLasso.forEach(({x, y}, index) => {
+            const pointer = {pointerId: 60, button: 0, shiftKey: true, clientX: x, clientY: y}
+            if (index === 0) fireEvent.pointerDown(viewerContainer, pointer)
+            else fireEvent.pointerMove(viewerContainer, pointer)
+        })
+        fireEvent.pointerUp(viewerContainer, {
+            pointerId: 60,
+            button: 0,
+            shiftKey: true,
+            clientX: removedPointLasso.at(-1).x,
+            clientY: removedPointLasso.at(-1).y,
+        })
+        await act(async () => {
+            await Promise.resolve()
+            await Promise.resolve()
+        })
+
+        expect(journey.fixPathCorrectionData.revision).toBe(1)
+        expect(journey.fixPathCorrectionData.tracks['track-a'][0].controlPoints.find(point => point.sourceIndex === 9))
+            .toMatchObject({fixed: false, removed: true, erased: true})
+        expect(document.querySelector('.fix-path-control-point[data-control-point-id="fix-point-0-9"]')).toBeNull()
+        expect(document.querySelector('.fix-path-correction-point-row[data-control-point-id="fix-point-0-9"]'))
+            .toBeNull()
+        expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeLasso)
     }, 20000)
 })

@@ -9,18 +9,18 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-20
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, fireEvent, render, screen} from '@testing-library/react'
+import {cleanup, fireEvent, render, screen, within} from '@testing-library/react'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
-    WaButton: ({children, onClick, disabled, id, className, 'aria-label': ariaLabel}) => (
-        <button type="button" onClick={onClick} disabled={disabled} id={id} className={className} aria-label={ariaLabel}>
+    WaButton: ({children, onClick, disabled, id, className, role, 'aria-label': ariaLabel, 'aria-checked': ariaChecked}) => (
+        <button type="button" onClick={onClick} disabled={disabled} id={id} className={className} role={role} aria-label={ariaLabel} aria-checked={ariaChecked}>
             {children}
         </button>
     ),
@@ -38,8 +38,8 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
             {children}
         </div>
     ),
-    WaIcon: ({name, slot, 'aria-hidden': ariaHidden}) => (
-        <span data-icon={name} data-slot={slot} aria-hidden={ariaHidden}>{name}</span>
+    WaIcon: ({name, slot, variant, className, 'aria-hidden': ariaHidden}) => (
+        <span data-icon={name} data-slot={slot} data-variant={variant} className={className} aria-hidden={ariaHidden}>{name}</span>
     ),
     WaInput: () => <input/>,
     WaNumberInput: () => <input type="number"/>,
@@ -77,10 +77,13 @@ const createPanelProps = feedback => ({
     persistCurrentDraftCorrections: () => {},
     projected: {sourcePoints: []},
     removeControlPoint: () => {},
+    removeSelectedControlPoints: () => {},
     resetControlPoint: () => {},
+    resetSelectedControlPoints: () => {},
     saving: false,
     scanProgress: null,
     selectCorrectionPoint: () => {},
+    toggleDisplayedCorrectionPointSelection: () => {},
     selectedControlPoints: [],
     selection: {phase: 'choose-start', startPoint: null, controlPoints: []},
     setHelpOpen: () => {},
@@ -138,10 +141,177 @@ describe('FixPathEditorPanel feedback callouts', () => {
         expect(callout.querySelector('[data-slot="icon"]')?.getAttribute('data-icon')).toBe('circle-check')
     })
 
+    it('shows bulk reset and remove actions only for multiple selected points', () => {
+        const resetSelectedControlPoints = vi.fn()
+        const removeSelectedControlPoints = vi.fn()
+        const displayedCorrection = {
+            id: 'section-1',
+            trackSlug: 'track-1',
+            segmentIndex: 0,
+            startIndex: 0,
+            endIndex: 1,
+            controlPoints: [
+                {id: 'point-1', coordinate: [10, 20, 30], fixed: true},
+                {id: 'point-2', coordinate: [11, 21, 31], fixed: false},
+            ],
+        }
+        const baseProps = {
+            ...createPanelProps(null),
+            areaMode: false,
+            displayedCorrection,
+            displayedTrack: {content: {geometry: {type: 'LineString', coordinates: [[10, 20, 30], [11, 21, 31]]}}},
+            resetSelectedControlPoints,
+            removeSelectedControlPoints,
+            selectedControlPoints: [
+                {trackSlug: 'track-1', correctionId: 'section-1', controlPointId: 'point-1'},
+                {trackSlug: 'track-1', correctionId: 'section-1', controlPointId: 'point-2'},
+            ],
+        }
+        const {rerender} = render(<FixPathEditorPanel {...baseProps}/>);
+
+        const bulkResetButton = screen.getByRole('button', {name: 'Reset selected correction points'})
+        const bulkRemoveButton = screen.getByRole('button', {name: 'Remove selected correction points'})
+        expect(bulkResetButton.disabled).toBe(false)
+        expect(bulkRemoveButton.disabled).toBe(false)
+        expect(document.querySelector('.fix-path-coordinate-header-actions')).not.toBeNull()
+        expect(screen.getAllByRole('button', {name: 'Reset correction point'}).every(button => button.disabled)).toBe(true)
+        expect(screen.getAllByRole('button', {name: 'Remove correction point'}).every(button => button.disabled)).toBe(true)
+
+        fireEvent.click(bulkResetButton)
+        fireEvent.click(bulkRemoveButton)
+        expect(resetSelectedControlPoints).toHaveBeenCalledOnce()
+        expect(removeSelectedControlPoints).toHaveBeenCalledOnce()
+
+        rerender(<FixPathEditorPanel {...baseProps} selectedControlPoints={[baseProps.selectedControlPoints[0]]}/>);
+        expect(screen.queryByRole('button', {name: 'Reset selected correction points'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Remove selected correction points'})).toBeNull()
+
+        const firstRow = document.querySelector('[data-control-point-id="point-1"]')
+        expect(within(firstRow).getByRole('button', {name: 'Reset correction point'}).disabled).toBe(false)
+        expect(within(firstRow).getByRole('button', {name: 'Remove correction point'}).disabled).toBe(false)
+    })
+
+    it('toggles all visible correction points from the status column header', () => {
+        const toggleDisplayedCorrectionPointSelection = vi.fn()
+        const displayedCorrection = {
+            id: 'section-1',
+            trackSlug: 'track-1',
+            segmentIndex: 0,
+            startIndex: 0,
+            endIndex: 1,
+            controlPoints: [
+                {id: 'point-1', coordinate: [10, 20, 30], fixed: true},
+                {id: 'point-2', coordinate: [11, 21, 31], fixed: false},
+                {id: 'point-3', coordinate: [12, 22, 32], fixed: false, removed: true},
+            ],
+        }
+        const baseProps = {
+            ...createPanelProps(null),
+            areaMode: false,
+            displayedCorrection,
+            displayedTrack: {content: {geometry: {type: 'LineString', coordinates: [[10, 20, 30], [11, 21, 31], [12, 22, 32]]}}},
+            toggleDisplayedCorrectionPointSelection,
+        }
+        const {rerender} = render(<FixPathEditorPanel {...baseProps}/>);
+
+        const selectAllCheckbox = screen.getByRole('checkbox', {name: 'Select all correction points'})
+        expect(selectAllCheckbox.getAttribute('aria-checked')).toBe('false')
+        expect(selectAllCheckbox.checked).toBe(false)
+        expect(selectAllCheckbox.indeterminate).toBe(false)
+        expect(document.querySelector('.fix-path-select-all-indicator')?.getAttribute('data-icon')).toBe('square')
+        expect(document.querySelector('.fix-path-select-all-indicator')?.getAttribute('data-variant')).toBe('regular')
+        expect(selectAllCheckbox.closest('.fix-path-coordinate-status-header-slot')).not.toBeNull()
+        expect(selectAllCheckbox.closest('.fix-path-coordinate-header')).not.toBeNull()
+        fireEvent.click(selectAllCheckbox)
+        expect(toggleDisplayedCorrectionPointSelection).toHaveBeenCalledOnce()
+
+        rerender(<FixPathEditorPanel
+            {...baseProps}
+            selectedControlPoints={[
+                {trackSlug: 'track-1', correctionId: 'section-1', controlPointId: 'point-1'},
+            ]}
+        />)
+
+        const selectRemainingCheckbox = screen.getByRole('checkbox', {name: 'Select all correction points'})
+        expect(selectRemainingCheckbox.getAttribute('aria-checked')).toBe('mixed')
+        expect(selectRemainingCheckbox.checked).toBe(false)
+        expect(selectRemainingCheckbox.indeterminate).toBe(true)
+        expect(document.querySelector('.fix-path-select-all-indicator')?.getAttribute('data-icon')).toBe('square-full')
+        expect(document.querySelector('.fix-path-select-all-indicator')?.getAttribute('data-variant')).toBe('solid')
+        fireEvent.click(selectRemainingCheckbox)
+        expect(toggleDisplayedCorrectionPointSelection).toHaveBeenCalledTimes(2)
+
+        rerender(<FixPathEditorPanel
+            {...baseProps}
+            selectedControlPoints={[
+                {trackSlug: 'track-1', correctionId: 'section-1', controlPointId: 'point-1'},
+                {trackSlug: 'track-1', correctionId: 'section-1', controlPointId: 'point-2'},
+            ]}
+        />)
+
+        const selectAllIncludingRemovedCheckbox = screen.getByRole('checkbox', {name: 'Select all correction points'})
+        expect(selectAllIncludingRemovedCheckbox.getAttribute('aria-checked')).toBe('mixed')
+        expect(selectAllIncludingRemovedCheckbox.checked).toBe(false)
+        expect(selectAllIncludingRemovedCheckbox.indeterminate).toBe(true)
+        expect(document.querySelector('.fix-path-select-all-indicator')?.getAttribute('data-icon')).toBe('square-full')
+        expect(document.querySelector('.fix-path-select-all-indicator')?.getAttribute('data-variant')).toBe('solid')
+        rerender(<FixPathEditorPanel
+            {...baseProps}
+            selectedControlPoints={[
+                {trackSlug: 'track-1', correctionId: 'section-1', controlPointId: 'point-1'},
+                {trackSlug: 'track-1', correctionId: 'section-1', controlPointId: 'point-2'},
+                {trackSlug: 'track-1', correctionId: 'section-1', controlPointId: 'point-3'},
+            ]}
+        />)
+        const deselectAllCheckbox = screen.getByRole('checkbox', {name: 'Select all correction points'})
+        expect(deselectAllCheckbox.getAttribute('aria-checked')).toBe('true')
+        expect(deselectAllCheckbox.checked).toBe(true)
+        expect(deselectAllCheckbox.indeterminate).toBe(false)
+        expect(document.querySelector('.fix-path-select-all-indicator')?.getAttribute('data-icon')).toBe('square-check')
+        expect(document.querySelector('.fix-path-select-all-indicator')?.getAttribute('data-variant')).toBe('regular')
+        fireEvent.click(deselectAllCheckbox)
+        expect(toggleDisplayedCorrectionPointSelection).toHaveBeenCalledTimes(3)
+        rerender(<FixPathEditorPanel
+            {...baseProps}
+            selectedControlPoints={[
+                {trackSlug: 'track-1', correctionId: 'section-1', controlPointId: 'point-1'},
+            ]}
+        />)
+        expect(document.querySelector('.fix-path-select-all-indicator')?.getAttribute('data-icon')).toBe('square-full')
+        expect(document.querySelector('.fix-path-select-all-indicator')?.getAttribute('data-variant')).toBe('solid')
+    })
+
+    it('keeps global selection enabled when every visible point is removed', () => {
+        const displayedCorrection = {
+            id: 'section-removed',
+            trackSlug: 'track-1',
+            segmentIndex: 0,
+            startIndex: 0,
+            endIndex: 0,
+            controlPoints: [{id: 'removed-point', coordinate: [10, 20, 30], fixed: false, removed: true}],
+        }
+        const toggleDisplayedCorrectionPointSelection = vi.fn()
+        render(<FixPathEditorPanel
+            {...createPanelProps(null)}
+            areaMode={false}
+            displayedCorrection={displayedCorrection}
+            displayedTrack={{content: {geometry: {type: 'LineString', coordinates: [[10, 20, 30]]}}}}
+            toggleDisplayedCorrectionPointSelection={toggleDisplayedCorrectionPointSelection}
+        />)
+
+        const selectAllCheckbox = screen.getByRole('checkbox', {name: 'Select all correction points'})
+        expect(selectAllCheckbox.disabled).toBe(false)
+        expect(selectAllCheckbox.getAttribute('aria-checked')).toBe('false')
+        fireEvent.click(selectAllCheckbox)
+        expect(toggleDisplayedCorrectionPointSelection).toHaveBeenCalledOnce()
+    })
+
     it('lets the selection instruction close and shows it again after the status changes', () => {
         const baseProps = createPanelProps(null)
         const selectionInstruction = 'Shift or Alt draws a lasso; Ctrl+Shift or Ctrl+Alt draws a rectangle.'
         const {rerender} = render(<FixPathEditorPanel {...baseProps} areaMode={false}/>);
+
+        expect(findCalloutFor(selectionInstruction).classList.contains('wa-theme-lgs1920-on-map')).toBe(true)
 
         fireEvent.click(screen.getByRole('button', {name: 'Dismiss selection instruction'}))
         expect(screen.queryByText(selectionInstruction)).toBeNull()

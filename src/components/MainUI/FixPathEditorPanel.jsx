@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -89,6 +89,7 @@ export const FixPathEditorPanel = ({
     displayedCorrection,
     displayedCorrectionPreview,
     displayedTrack,
+    deleteCurrentSection,
     feedback,
     eraseSelectedControlPoints,
     handleCorrectionPointListKeyDown,
@@ -101,10 +102,13 @@ export const FixPathEditorPanel = ({
     onCorrectionVisibilityChange,
     persistCurrentDraftCorrections,
     removeControlPoint,
+    removeSelectedControlPoints,
     resetControlPoint,
+    resetSelectedControlPoints,
     saving,
     scanProgress,
     selectCorrectionPoint,
+    toggleDisplayedCorrectionPointSelection,
     selectedControlPoints,
     selection,
     setHelpOpen,
@@ -135,6 +139,28 @@ export const FixPathEditorPanel = ({
     }, [displayedCorrection?.id, displayedCorrection?.trackSlug, selectedControlPoints])
 
     const visibleFeedback = feedback
+    const selectedControlPointIds = new Set(selectedControlPoints
+        .filter(point => point.trackSlug === displayedCorrection?.trackSlug
+            && point.correctionId === displayedCorrection?.id)
+        .map(point => point.controlPointId))
+    const selectedCorrectionPoints = (displayedCorrection?.controlPoints ?? [])
+        .filter(point => point.erased !== true && selectedControlPointIds.has(point.id))
+    const selectableCorrectionPoints = (displayedCorrection?.controlPoints ?? [])
+        .filter(point => point.erased !== true)
+    const selectedSelectableCorrectionPointCount = selectableCorrectionPoints
+        .filter(point => selectedControlPointIds.has(point.id)).length
+    const allSelectableCorrectionPointsSelected = selectableCorrectionPoints.length > 0
+        && selectedSelectableCorrectionPointCount === selectableCorrectionPoints.length
+    const someSelectableCorrectionPointsSelected = selectedSelectableCorrectionPointCount > 0
+        && !allSelectableCorrectionPointsSelected
+    const selectionIndicatorIcon = someSelectableCorrectionPointsSelected
+        ? 'square-full'
+        : allSelectableCorrectionPointsSelected ? 'square-check' : 'square'
+    const multipleCorrectionPointsSelected = selectedCorrectionPoints.length > 1
+    const canResetSelectedCorrectionPoints = selectedCorrectionPoints.some(point => (
+        point.removed === true || point.fixed === true
+    ))
+    const canRemoveSelectedCorrectionPoints = selectedCorrectionPoints.some(point => point.removed !== true)
     const statusMessage = scanProgress
         ? {
             type: 'progress',
@@ -335,6 +361,18 @@ export const FixPathEditorPanel = ({
                 >
                     <WaIcon name="eraser" variant="regular" aria-hidden="true"/>
                 </WaButton>
+                <WaTooltip for="fix-path-delete-section" placement="top">{'Delete entire section'}</WaTooltip>
+                <WaButton
+                    id="fix-path-delete-section"
+                    size="s"
+                    appearance="plain"
+                    variant="danger"
+                    aria-label="Delete entire section"
+                    disabled={saving || !displayedCorrection}
+                    onClick={deleteCurrentSection}
+                >
+                    <WaIcon name="trash-can" variant="regular" aria-hidden="true"/>
+                </WaButton>
             </div>
         </nav>
 
@@ -351,7 +389,7 @@ export const FixPathEditorPanel = ({
         {statusMessage && (
             <FixPathCallout
                 key={statusMessage.text}
-                className="fix-path-panel-callout fix-path-status-callout"
+                className={'fix-path-panel-callout fix-path-status-callout' + (!areaMode ? ' wa-theme-lgs1920-on-map' : '')}
                 type={statusMessage.type}
                 icon={statusMessage.icon}
                 closable={canDismissSelectionInstruction}
@@ -397,11 +435,78 @@ export const FixPathEditorPanel = ({
                 )}
                 {displayedCorrection && (
                     <section className="fix-path-correction-section" key={displayedCorrection.id}>
-                        <div className="fix-path-coordinate-header" aria-hidden="true">
+                        <div className="fix-path-coordinate-header">
+                            <div className="fix-path-coordinate-status-header-slot">
+                                <WaTooltip for="fix-path-select-all-points" placement="top">
+                                    {allSelectableCorrectionPointsSelected ? 'Deselect all points' : 'Select all points'}
+                                </WaTooltip>
+                                <input
+                                    id="fix-path-select-all-points"
+                                    className="fix-path-select-all-toggle lgs-widget-no-drag"
+                                    type="checkbox"
+                                    checked={allSelectableCorrectionPointsSelected}
+                                    aria-label="Select all correction points"
+                                    aria-checked={allSelectableCorrectionPointsSelected ? 'true' : someSelectableCorrectionPointsSelected ? 'mixed' : 'false'}
+                                    disabled={saving || selectableCorrectionPoints.length === 0}
+                                    ref={element => {
+                                        if (element) {
+                                            element.indeterminate = someSelectableCorrectionPointsSelected
+                                        }
+                                    }}
+                                    onClick={event => event.stopPropagation()}
+                                    onChange={event => {
+                                        event.stopPropagation()
+                                        toggleDisplayedCorrectionPointSelection()
+                                    }}
+                                />
+                                <WaIcon
+                                    className="fix-path-select-all-indicator"
+                                    name={selectionIndicatorIcon}
+                                    variant={someSelectableCorrectionPointsSelected ? 'solid' : 'regular'}
+                                    aria-hidden="true"
+                                />
+                            </div>
                             <span>{'Lat'}</span>
                             <span>{'Lon'}</span>
                             <span>{'Height (' + heightUnit + ')'}</span>
-                            <span/>
+                            <div className="fix-path-correction-point-actions fix-path-coordinate-header-actions lgs-widget-no-drag">
+                                {multipleCorrectionPointsSelected && (
+                                    <>
+                                        <WaTooltip for="fix-path-reset-selection" placement="top">{'Reset selected points'}</WaTooltip>
+                                        <WaButton
+                                            className="lgs-widget-no-drag"
+                                            id="fix-path-reset-selection"
+                                            size="s"
+                                            appearance="plain"
+                                            variant="neutral"
+                                            aria-label="Reset selected correction points"
+                                            disabled={saving || !canResetSelectedCorrectionPoints}
+                                            onClick={event => {
+                                                event.stopPropagation()
+                                                resetSelectedControlPoints()
+                                            }}
+                                        >
+                                            <WaIcon name="arrow-rotate-left" variant="regular" aria-hidden="true"/>
+                                        </WaButton>
+                                        <WaTooltip for="fix-path-remove-selection" placement="top">{'Remove selected points'}</WaTooltip>
+                                        <WaButton
+                                            className="lgs-widget-no-drag"
+                                            id="fix-path-remove-selection"
+                                            size="s"
+                                            appearance="plain"
+                                            variant="danger"
+                                            aria-label="Remove selected correction points"
+                                            disabled={saving || !canRemoveSelectedCorrectionPoints}
+                                            onClick={event => {
+                                                event.stopPropagation()
+                                                removeSelectedControlPoints()
+                                            }}
+                                        >
+                                            <WaIcon name="trash-can" variant="regular" aria-hidden="true"/>
+                                        </WaButton>
+                                    </>
+                                )}
+                            </div>
                         </div>
                         <div className="fix-path-correction-points-scroll-area">
                             <LGSScrollbars
@@ -473,10 +578,10 @@ export const FixPathEditorPanel = ({
                                                 {showStatus && (
                                                     <WaIcon
                                                         className={'fix-path-correction-point-status-indicator ' + statusClass}
-                                                        name={unmodified ? 'diamond' : 'circle'}
+                                                        name={removed ? 'trash-can' : unmodified ? 'diamond' : 'circle'}
                                                         variant="regular"
-                                                        family="duotone"
-                                                        onWaLoad={applyPOIDuotoneIconStyles}
+                                                        family={removed ? undefined : 'duotone'}
+                                                        onWaLoad={removed ? undefined : applyPOIDuotoneIconStyles}
                                                         aria-hidden="true"
                                                     />
                                                 )}
@@ -520,7 +625,7 @@ export const FixPathEditorPanel = ({
                                                         appearance="plain"
                                                         variant="neutral"
                                                         aria-label={removed ? 'Restore correction point' : 'Reset correction point'}
-                                                        disabled={saving || (!removed && point.fixed !== true)}
+                                                        disabled={saving || multipleCorrectionPointsSelected || (!removed && point.fixed !== true)}
                                                         onClick={event => {
                                                             event.stopPropagation()
                                                             resetControlPoint(displayedCorrection.trackSlug, displayedCorrection.id, point.id)
@@ -536,7 +641,7 @@ export const FixPathEditorPanel = ({
                                                         appearance="plain"
                                                         variant="danger"
                                                         aria-label="Remove correction point"
-                                                        disabled={saving || removed}
+                                                        disabled={saving || multipleCorrectionPointsSelected || removed}
                                                         onClick={event => {
                                                             event.stopPropagation()
                                                             removeControlPoint(displayedCorrection.trackSlug, displayedCorrection.id, point.id)

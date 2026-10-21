@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,12 +16,36 @@
 
 import {FIX_PATH_EDITOR_WIDGET, LGS_TOOLBAR, SCENE_WIDGETS_BOARD, WIDGET_LAYER_START} from '@Core/constants'
 import {
-    applyFixPathCorrections,
+    createFixPathDistanceIndex,
     getFixPathSourceFingerprint,
     getFixPathSegmentDistanceMeters,
     mergeAdjacentFixPathCorrections,
+    normalizeFixPathManualControlProgress,
 } from '@Utils/cesium/fixPathCorrections'
 import {Cartesian2, Cartesian3, Cartographic} from 'cesium'
+import {SOURCE_VISIBILITY_CELL_SIZE} from './FixPathEditorConfig'
+
+const correctionDistanceIndexes = new WeakMap()
+
+/**
+ * Reuse a source-distance profile while an immutable correction is displayed.
+ * @param {object} content - Source track feature.
+ * @param {object} correction - Correction section.
+ * @returns {object|null} Cumulative source-distance lookup.
+ */
+const distanceIndexForCorrection = (content, correction) => {
+    if (!correction || typeof correction !== 'object') return null
+    const cached = correctionDistanceIndexes.get(correction)
+    if (cached?.content === content) return cached.distanceIndex
+    const distanceIndex = createFixPathDistanceIndex(
+        content,
+        correction.segmentIndex,
+        correction.startIndex,
+        correction.endIndex,
+    )
+    correctionDistanceIndexes.set(correction, {content, distanceIndex})
+    return distanceIndex
+}
 
 /**
  * Resolve the scene-toolbar stacking layer used by the Fix Path overlay and widget.
@@ -73,6 +97,99 @@ export const getGeometrySegments = geometry => {
 }
 
 /**
+ * Find the closest position on a route geometry to a map coordinate.
+ * @param {object} geometry - A GeoJSON LineString or MultiLineString geometry.
+ * @param {Array<number>} coordinate - Longitude and latitude of the map position.
+ * @returns {{segmentIndex: number, index: number, progress: number, distanceMeters: number, coordinate: Array<number>}|null} Nearest route position.
+ */
+export const findClosestRoutePosition = (geometry, coordinate) => {
+    const longitude = Number(coordinate?.[0])
+    const latitude = Number(coordinate?.[1])
+    if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return null
+
+    const latitudeRadians = latitude * Math.PI / 180
+    const longitudeScale = Math.cos(latitudeRadians) * Math.PI / 180 * 6371008.8
+    const latitudeScale = Math.PI / 180 * 6371008.8
+    const segments = getGeometrySegments(geometry)
+    let closest = null
+    const coordinateAtProgress = (first, second, progress) => {
+        let longitudeDelta = Number(second[0]) - Number(first[0])
+        if (longitudeDelta > 180) longitudeDelta -= 360
+        if (longitudeDelta < -180) longitudeDelta += 360
+        const longitude = Number(first[0]) + longitudeDelta * progress
+        const normalizedLongitude = ((longitude + 180) % 360 + 360) % 360 - 180
+        const result = [normalizedLongitude, Number(first[1]) + (Number(second[1]) - Number(first[1])) * progress]
+        const firstHeight = first[2] === null || first[2] === undefined ? Number.NaN : Number(first[2])
+        const secondHeight = second[2] === null || second[2] === undefined ? Number.NaN : Number(second[2])
+        if (Number.isFinite(firstHeight) && Number.isFinite(secondHeight)) {
+            result.push(firstHeight + (secondHeight - firstHeight) * progress)
+        }
+        else if (Number.isFinite(firstHeight)) {
+            result.push(firstHeight)
+        }
+        else if (Number.isFinite(secondHeight)) {
+            result.push(secondHeight)
+        }
+        return result
+    }
+    const toLocal = point => {
+        const pointLongitude = Number(point?.[0])
+        const pointLatitude = Number(point?.[1])
+        if (!Number.isFinite(pointLongitude) || !Number.isFinite(pointLatitude)) return null
+        let longitudeDelta = pointLongitude - longitude
+        if (longitudeDelta > 180) longitudeDelta -= 360
+        if (longitudeDelta < -180) longitudeDelta += 360
+        return [longitudeDelta * longitudeScale, (pointLatitude - latitude) * latitudeScale]
+    }
+
+    segments.forEach((segment, segmentIndex) => {
+        if (!Array.isArray(segment) || segment.length === 0) return
+        if (segment.length === 1) {
+            const candidate = toLocal(segment[0])
+            if (!candidate) return
+            const distanceSquared = candidate[0] ** 2 + candidate[1] ** 2
+            if (!closest || distanceSquared < closest.distanceSquared) {
+                closest = {segmentIndex, index: 0, progress: 0, distanceSquared, coordinate: [...segment[0]]}
+            }
+            return
+        }
+
+        for (let index = 0; index < segment.length - 1; index += 1) {
+            const first = toLocal(segment[index])
+            const second = toLocal(segment[index + 1])
+            if (!first || !second) continue
+            const deltaX = second[0] - first[0]
+            const deltaY = second[1] - first[1]
+            const lengthSquared = deltaX ** 2 + deltaY ** 2
+            const progress = lengthSquared > 0
+                ? Math.min(1, Math.max(0, -(first[0] * deltaX + first[1] * deltaY) / lengthSquared))
+                : 0
+            const distanceX = first[0] + deltaX * progress
+            const distanceY = first[1] + deltaY * progress
+            const distanceSquared = distanceX ** 2 + distanceY ** 2
+            if (!closest || distanceSquared < closest.distanceSquared) {
+                closest = {
+                    segmentIndex,
+                    index,
+                    progress,
+                    distanceSquared,
+                    coordinate: coordinateAtProgress(segment[index], segment[index + 1], progress),
+                }
+            }
+        }
+    })
+
+    if (!closest) return null
+    return {
+        segmentIndex: closest.segmentIndex,
+        index: closest.index,
+        progress: closest.progress,
+        distanceMeters: Math.sqrt(closest.distanceSquared),
+        coordinate: closest.coordinate,
+    }
+}
+
+/**
  * Create a unique identifier for a new correction point or section.
  * @returns {string} A unique identifier.
  */
@@ -117,6 +234,13 @@ export const cloneCorrectionList = (corrections, content = null) => {
     const existingSourcePoints = new Map(existingPoints
         .filter(point => Number.isInteger(point.sourceIndex))
         .map(point => [point.sourceIndex, point]))
+    if (existingPoints.length > 0 && existingSourcePoints.size === 0) {
+        return {
+            ...correction,
+            controlPoints: existingPoints.sort((first, second) => first.progress - second.progress
+                || first.id.localeCompare(second.id)),
+        }
+    }
     const sourcePoints = []
     for (let index = correction.startIndex; index <= correction.endIndex; index += 1) {
         const offset = index - correction.startIndex
@@ -155,6 +279,7 @@ export const cloneCorrectionList = (corrections, content = null) => {
     if (!content) return normalized
 
     const merged = mergeAdjacentFixPathCorrections(content, normalized)
+        .map(correction => normalizeFixPathManualControlProgress(content, correction))
     const claimedContextIndexes = new Set()
     return merged.map(correction => {
         const segment = getGeometrySegments(content.geometry)[correction.segmentIndex]
@@ -319,52 +444,32 @@ export const getControlPointCoordinate = (content, correction, point, correctedC
         return coordinate
     }
 
-    const segment = getGeometrySegments(content?.geometry)[correction.segmentIndex]
-    const totalDistance = getFixPathSegmentDistanceMeters(
-        content,
-        correction.segmentIndex,
-        correction.startIndex,
-        correction.endIndex,
-    )
-    if (!Array.isArray(segment) || !Number.isFinite(totalDistance) || totalDistance <= 0) {
+    const distanceIndex = distanceIndexForCorrection(content, correction)
+    const totalDistance = distanceIndex?.totalDistance
+    if (!distanceIndex || !Number.isFinite(totalDistance) || totalDistance <= 0) {
         coordinate[2] = 0
         return coordinate
     }
 
-    const targetDistance = point.progress * totalDistance
-    let distanceAtPrevious = 0
-    for (let index = correction.startIndex + 1; index <= correction.endIndex; index += 1) {
-        const distanceAtCurrent = distanceAtPrevious + coordinateDistanceMeters(segment[index - 1], segment[index])
-        if (targetDistance <= distanceAtCurrent) {
-            const rawFirstHeight = segment[index - 1]?.[2]
-            const rawSecondHeight = segment[index]?.[2]
-            const firstHeight = rawFirstHeight !== null && rawFirstHeight !== undefined
-                && !(typeof rawFirstHeight === 'string' && rawFirstHeight.trim() === '')
-                && Number.isFinite(Number(rawFirstHeight))
-                ? Number(rawFirstHeight)
-                : Number.NaN
-            const secondHeight = rawSecondHeight !== null && rawSecondHeight !== undefined
-                && !(typeof rawSecondHeight === 'string' && rawSecondHeight.trim() === '')
-                && Number.isFinite(Number(rawSecondHeight))
-                ? Number(rawSecondHeight)
-                : Number.NaN
-            const interval = distanceAtCurrent - distanceAtPrevious
-            const localProgress = interval > 0 ? (targetDistance - distanceAtPrevious) / interval : 0
-            const sampledHeight = Number.isFinite(firstHeight) && Number.isFinite(secondHeight)
-                ? firstHeight + (secondHeight - firstHeight) * localProgress
-                : Number.isFinite(firstHeight) ? firstHeight : secondHeight
-            coordinate[2] = Number.isFinite(sampledHeight) ? Math.round(sampledHeight) : 0
-            return coordinate
-        }
-        distanceAtPrevious = distanceAtCurrent
-    }
-
-    const rawEndHeight = segment[correction.endIndex]?.[2]
-    const endHeight = rawEndHeight !== null && rawEndHeight !== undefined
-        && !(typeof rawEndHeight === 'string' && rawEndHeight.trim() === '')
-        ? Number(rawEndHeight)
+    const interval = distanceIndex.intervalAtDistance(Number(point.progress) * totalDistance)
+    const firstRawHeight = distanceIndex.segment[interval?.firstIndex]?.[2]
+    const secondRawHeight = distanceIndex.segment[interval?.secondIndex]?.[2]
+    const firstHeight = firstRawHeight !== null && firstRawHeight !== undefined
+        && !(typeof firstRawHeight === 'string' && firstRawHeight.trim() === '')
+        && Number.isFinite(Number(firstRawHeight))
+        ? Number(firstRawHeight)
         : Number.NaN
-    coordinate[2] = Number.isFinite(endHeight) ? Math.round(endHeight) : 0
+    const secondHeight = secondRawHeight !== null && secondRawHeight !== undefined
+        && !(typeof secondRawHeight === 'string' && secondRawHeight.trim() === '')
+        && Number.isFinite(Number(secondRawHeight))
+        ? Number(secondRawHeight)
+        : Number.NaN
+    const firstValid = Number.isFinite(firstHeight)
+    const secondValid = Number.isFinite(secondHeight)
+    const sampledHeight = firstValid && secondValid
+        ? firstHeight + (secondHeight - firstHeight) * (interval?.fraction ?? 0)
+        : firstValid ? firstHeight : secondValid ? secondHeight : 0
+    coordinate[2] = Math.round(sampledHeight)
     return coordinate
 }
 
@@ -596,7 +701,7 @@ export const projectEditOverlay = (
         }] : []
     })
 
-    const controlPoints = []
+    const controlCandidates = []
     Object.entries(correctionsByTrack).forEach(([trackSlug, corrections]) => {
         const track = trackBySlug.get(trackSlug)
         const content = track?.content
@@ -605,19 +710,13 @@ export const projectEditOverlay = (
         }
         corrections.forEach(correction => {
             if (hiddenCorrectionKeys.has(trackSlug + ':' + correction.id)) return
-            const preview = applyFixPathCorrections(content, [correction]).content
             const active = correction.id === activeCorrection?.id && trackSlug === activeCorrection?.trackSlug
             correction.controlPoints.forEach(point => {
                 if (point.removed === true) return
-                const coordinate = getControlPointCoordinate(content, correction, point, preview)
+                const coordinate = getControlPointCoordinate(content, correction, point)
                 const screen = toLocal(coordinate)
-                if (screen && isWorldPositionVisible(
-                    scene,
-                    scene.camera,
-                    new Cartesian2(screen.canvasX, screen.canvasY),
-                    screen.worldPosition,
-                )) {
-                    controlPoints.push({
+                if (screen) {
+                    controlCandidates.push({
                         trackSlug,
                         correctionId: correction.id,
                         controlPointId: point.id,
@@ -628,11 +727,45 @@ export const projectEditOverlay = (
                         active,
                         x: screen.x,
                         y: screen.y,
+                        canvasX: screen.canvasX,
+                        canvasY: screen.canvasY,
+                        worldPosition: screen.worldPosition,
                     })
                 }
             })
 
         })
+    })
+
+    const visibilityCells = new Map()
+    controlCandidates.forEach(point => {
+        const cell = Math.floor(point.x / SOURCE_VISIBILITY_CELL_SIZE)
+            + ':' + Math.floor(point.y / SOURCE_VISIBILITY_CELL_SIZE)
+        const group = visibilityCells.get(cell) ?? []
+        group.push(point)
+        visibilityCells.set(cell, group)
+    })
+    const controlPoints = []
+    visibilityCells.forEach(group => {
+        const cameraPosition = scene.camera?.positionWC ?? scene.camera?.position
+        const point = cameraPosition
+            ? group.reduce((closest, candidate) => (
+                Cartesian3.distance(cameraPosition, candidate.worldPosition)
+                    < Cartesian3.distance(cameraPosition, closest.worldPosition)
+                    ? candidate
+                    : closest
+            ))
+            : group[0]
+        if (isWorldPositionVisible(
+            scene,
+            scene.camera,
+            new Cartesian2(point.canvasX, point.canvasY),
+            point.worldPosition,
+        )) {
+            group.forEach(({canvasX: _canvasX, canvasY: _canvasY, worldPosition: _worldPosition, ...controlPoint}) => {
+                controlPoints.push(controlPoint)
+            })
+        }
     })
 
     const pendingControlPoints = []
