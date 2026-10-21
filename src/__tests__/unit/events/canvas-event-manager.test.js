@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-22
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -117,6 +117,29 @@ describe('CanvasEventManager', () => {
         expect(() => inputActions.get(`${ScreenSpaceEventType.WHEEL}:`)(120)).not.toThrow()
         expect(viewer.scene.pick).not.toHaveBeenCalled()
         expect(wheel).toHaveBeenCalledWith(120, null, expect.any(Object), null)
+    })
+
+    it('only prevents lower-priority right-click handlers when the conditional handler handles the event', () => {
+        const routeHandler = vi.fn(() => false)
+        const mapHandler = vi.fn()
+        manager.onRightClick(routeHandler, {
+            entity: false,
+            priority: 100,
+            preventLowerPriority: 'handled',
+        })
+        manager.onRightClick(mapHandler, {entity: false})
+
+        const rightClick = inputActions.get(`${ScreenSpaceEventType.RIGHT_CLICK}:`)
+        rightClick({position: {x: 10, y: 20}})
+
+        expect(routeHandler).toHaveBeenCalledOnce()
+        expect(mapHandler).toHaveBeenCalledOnce()
+
+        routeHandler.mockReturnValue(true)
+        rightClick({position: {x: 10, y: 20}})
+
+        expect(routeHandler).toHaveBeenCalledTimes(2)
+        expect(mapHandler).toHaveBeenCalledOnce()
     })
 
     it('focuses the canvas when a pointer interaction starts', () => {

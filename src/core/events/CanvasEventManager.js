@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -421,11 +421,12 @@ export class CanvasEventManager {
                 }
                 const entityId = this.#validateEntity(event, options.entity ?? false, pickedEntityId)
                 if (entityId !== null || options.entity === false) {
-                    callback(event, entityId, options, userData)
+                    const callbackResult = callback(event, entityId, options, userData)
                     if (options.once) {
                         this.off(eventName, callback)
                     }
-                    if (options.preventLowerPriority) {
+                    if (options.preventLowerPriority === true
+                        || (options.preventLowerPriority === 'handled' && callbackResult !== false)) {
                         stopPropagation = true
                     }
                 }
@@ -805,8 +806,8 @@ export class CanvasEventManager {
      *     first).
      * @param {boolean} [options.showSelector=true] - Whether to show the .cesium-selection-wrapper for picked
      *     entities.
-     * @param {boolean} [options.preventLowerPriority=false] - Whether to prevent lower-priority listeners from
-     *     executing.
+     * @param {boolean|'handled'} [options.preventLowerPriority=false] - Whether to prevent lower-priority listeners
+     *     from executing. The `handled` value stops propagation unless the callback returns false.
      * @param {string[]} [options.modifiers=[]] - Required modifier keys for mouse or keyboard events (e.g., ['ctrl',
      *     'shift'], case-insensitive).
      * @param {string[]} [options.keys=[]] - Specific keys to listen for in KEY_DOWN/KEY_UP (e.g., ['s', 'enter'],
