@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-27
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,7 +50,7 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
     )
     const canFixPath = useProxyValue(
         lgs.stores.journeyEditor,
-        editor => (editor?.journey?.tracks?.size ?? 0) > 0,
+        editor => editor?.fixPathEditorOpen !== true && (editor?.journey?.tracks?.size ?? 0) > 0,
         false,
     )
     const canResizeVideo = video.editing === true && video.preRecording !== true

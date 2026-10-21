@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -80,6 +80,10 @@ describe('MapPointContextMenu video preparation actions', () => {
                         pois: {list: new Map()},
                     },
                 },
+                journeyEditor: proxy({
+                    fixPathEditorOpen: false,
+                    journey: {tracks: new Map([['track-1', {}]])},
+                }),
                 ui: proxy({
                     mainUI: {
                         rotate:    {running: false},
@@ -149,5 +153,19 @@ describe('MapPointContextMenu video preparation actions', () => {
         render(<MapPointContextMenu target={target} menuRef={{current: null}} hideVideoActions/>)
 
         expect(screen.queryByText('Resize Video')).toBeNull()
+    })
+
+    it('hides Fix Path while the editor is already open', () => {
+        lgs.stores.journeyEditor.fixPathEditorOpen = true
+
+        render(<MapPointContextMenu target={target} menuRef={{current: null}} hideVideoActions/>)
+
+        expect(screen.queryByText('Fix Path')).toBeNull()
+    })
+
+    it('offers Fix Path when the editor is closed and the current Journey has tracks', () => {
+        render(<MapPointContextMenu target={target} menuRef={{current: null}} hideVideoActions/>)
+
+        expect(screen.getByText('Fix Path')).not.toBeNull()
     })
 })
