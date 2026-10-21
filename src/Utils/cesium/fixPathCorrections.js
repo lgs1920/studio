@@ -8,11 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
+import {Cartesian3, Cartographic, Ellipsoid, Math as CesiumMath} from 'cesium'
 
 const EARTH_RADIUS_METERS = 6371008.8
 
@@ -204,6 +206,63 @@ export const getFixPathSegmentDistanceMeters = (content, segmentIndex, startInde
     return distance
 }
 
+/**
+ * Precompute cumulative route distance for an inclusive source-index interval.
+ * @param {object} content - Source track feature.
+ * @param {number} segmentIndex - Geometry segment index.
+ * @param {number} startIndex - First source coordinate index.
+ * @param {number} endIndex - Last source coordinate index.
+ * @returns {object|null} Distance lookup for the requested interval.
+ */
+export const createFixPathDistanceIndex = (content, segmentIndex, startIndex, endIndex) => {
+    const segment = getLineSegments(content?.geometry)?.[segmentIndex]
+    if (!Array.isArray(segment) || !Number.isInteger(startIndex) || !Number.isInteger(endIndex)
+        || startIndex < 0 || endIndex < startIndex || endIndex >= segment.length) {
+        return null
+    }
+
+    const cumulativeDistances = [0]
+    for (let index = startIndex + 1; index <= endIndex; index += 1) {
+        cumulativeDistances.push(cumulativeDistances.at(-1)
+            + coordinateDistanceMeters(segment[index - 1], segment[index]))
+    }
+    const totalDistance = cumulativeDistances.at(-1)
+    const distanceAtIndex = index => cumulativeDistances[index - startIndex]
+    const distanceBetween = (firstIndex, secondIndex) => (
+        distanceAtIndex(secondIndex) - distanceAtIndex(firstIndex)
+    )
+    const progressAtIndex = index => {
+        if (index <= startIndex) return 0
+        if (index >= endIndex) return 1
+        if (!Number.isFinite(totalDistance) || totalDistance <= 0) {
+            return (index - startIndex) / (endIndex - startIndex)
+        }
+        return Math.min(1, Math.max(0, distanceAtIndex(index) / totalDistance))
+    }
+    const intervalAtDistance = distance => {
+        if (cumulativeDistances.length < 2) return null
+        const targetDistance = Math.min(totalDistance, Math.max(0, distance))
+        let low = 1
+        let high = cumulativeDistances.length - 1
+        while (low < high) {
+            const middle = Math.floor((low + high) / 2)
+            if (cumulativeDistances[middle] < targetDistance) low = middle + 1
+            else high = middle
+        }
+
+        const firstDistance = cumulativeDistances[low - 1]
+        const secondDistance = cumulativeDistances[low]
+        const intervalDistance = secondDistance - firstDistance
+        return {
+            firstIndex: startIndex + low - 1,
+            secondIndex: startIndex + low,
+            fraction: intervalDistance > 0 ? (targetDistance - firstDistance) / intervalDistance : 0,
+        }
+    }
+
+    return {segment, startIndex, endIndex, cumulativeDistances, totalDistance, distanceAtIndex, distanceBetween, progressAtIndex, intervalAtDistance}
+}
+
 const fingerprintCoordinates = coordinates => {
     const source = JSON.stringify(coordinates)
     let firstHash = 2166136261
@@ -242,17 +301,6 @@ const correctionSourceIndex = (point, segmentIndex) => {
     return match && Number(match[1]) === segmentIndex ? Number(match[2]) : null
 }
 
-const correctionProgressAtIndex = (content, segmentIndex, startIndex, endIndex, index) => {
-    if (index <= startIndex) return 0
-    if (index >= endIndex) return 1
-    const totalDistance = getFixPathSegmentDistanceMeters(content, segmentIndex, startIndex, endIndex)
-    if (!Number.isFinite(totalDistance) || totalDistance <= 0) {
-        return (index - startIndex) / (endIndex - startIndex)
-    }
-    const partialDistance = getFixPathSegmentDistanceMeters(content, segmentIndex, startIndex, index)
-    return Math.min(1, Math.max(0, partialDistance / totalDistance))
-}
-
 /**
  * Merge correction sections whose source vertices are directly adjacent.
  * @param {object} content - Source track GeoJSON feature.
@@ -288,22 +336,15 @@ export const mergeAdjacentFixPathCorrections = (content, corrections = []) => {
 
         const startIndex = previous.startIndex
         const endIndex = correction.endIndex
-        const totalDistance = getFixPathSegmentDistanceMeters(content, correction.segmentIndex, startIndex, endIndex)
+        const distanceIndex = createFixPathDistanceIndex(content, correction.segmentIndex, startIndex, endIndex)
+        const totalDistance = distanceIndex?.totalDistance ?? Number.POSITIVE_INFINITY
         const sourcePoints = new Map()
         const manualPoints = []
         for (const section of [previous, correction]) {
-            const sectionDistance = getFixPathSegmentDistanceMeters(
-                content,
-                correction.segmentIndex,
-                section.startIndex,
-                section.endIndex,
-            )
-            const distanceBeforeSection = getFixPathSegmentDistanceMeters(
-                content,
-                correction.segmentIndex,
-                startIndex,
-                section.startIndex,
-            )
+            const sectionDistance = distanceIndex?.distanceBetween(section.startIndex, section.endIndex)
+                ?? Number.POSITIVE_INFINITY
+            const distanceBeforeSection = distanceIndex?.distanceBetween(startIndex, section.startIndex)
+                ?? Number.POSITIVE_INFINITY
             for (const point of section.controlPoints ?? []) {
                 const sourceIndex = correctionSourceIndex(point, correction.segmentIndex)
                 if (sourceIndex !== null && sourceIndex >= startIndex && sourceIndex <= endIndex) {
@@ -333,7 +374,7 @@ export const mergeAdjacentFixPathCorrections = (content, corrections = []) => {
                 ...existing,
                 id: existing?.id ?? 'fix-point-' + correction.segmentIndex + '-' + index,
                 sourceIndex: index,
-                progress: correctionProgressAtIndex(content, correction.segmentIndex, startIndex, endIndex, index),
+                progress: distanceIndex?.progressAtIndex(index) ?? 0,
                 coordinate: existing?.coordinate ?? segment[index],
                 fixed: typeof existing?.fixed === 'boolean' ? existing.fixed : existing !== undefined,
                 removed: existing?.removed === true,
@@ -353,29 +394,43 @@ export const mergeAdjacentFixPathCorrections = (content, corrections = []) => {
     return merged
 }
 
-const localCoordinates = (coordinate, origin) => {
-    const latitudeRadians = origin[1] * Math.PI / 180
-    const longitudeDelta = wrappedLongitudeDelta(coordinate[0] - origin[0]) * Math.PI / 180
+const localCoordinates = (coordinate, originCartesian) => {
+    const cartesian = Ellipsoid.WGS84.cartographicToCartesian(Cartographic.fromDegrees(
+        Number(coordinate[0]),
+        Number(coordinate[1]),
+        0,
+    ))
     return {
-        x: longitudeDelta * EARTH_RADIUS_METERS * Math.cos(latitudeRadians),
-        y: (coordinate[1] - origin[1]) * Math.PI / 180 * EARTH_RADIUS_METERS,
+        x: cartesian.x - originCartesian.x,
+        y: cartesian.y - originCartesian.y,
+        z: cartesian.z - originCartesian.z,
     }
 }
 
-const geographicCoordinates = (point, origin) => {
-    const latitudeRadians = origin[1] * Math.PI / 180
-    const cosine = Math.max(0.01, Math.cos(latitudeRadians))
+const geographicCoordinates = (point, originCartesian, fallbackCoordinate) => {
+    const cartesian = new Cartesian3(
+        point.x + originCartesian.x,
+        point.y + originCartesian.y,
+        point.z + originCartesian.z,
+    )
+    const surfacePosition = Ellipsoid.WGS84.scaleToGeodeticSurface(cartesian)
+    const cartographic = surfacePosition && Ellipsoid.WGS84.cartesianToCartographic(surfacePosition)
+    if (!cartographic || !Number.isFinite(cartographic.longitude) || !Number.isFinite(cartographic.latitude)) {
+        return fallbackCoordinate.slice(0, 2)
+    }
     return [
-        origin[0] + point.x / (EARTH_RADIUS_METERS * cosine) * 180 / Math.PI,
-        origin[1] + point.y / EARTH_RADIUS_METERS * 180 / Math.PI,
+        wrappedLongitudeDelta(CesiumMath.toDegrees(cartographic.longitude)),
+        CesiumMath.toDegrees(cartographic.latitude),
     ]
 }
 
 const catmullRomPoint = (previous, first, second, next, progress) => {
     const tangentFirstX = (second.x - previous.x) / 2
     const tangentFirstY = (second.y - previous.y) / 2
+    const tangentFirstZ = (second.z - previous.z) / 2
     const tangentSecondX = (next.x - first.x) / 2
     const tangentSecondY = (next.y - first.y) / 2
+    const tangentSecondZ = (next.z - first.z) / 2
     const t2 = progress * progress
     const t3 = t2 * progress
     return {
@@ -387,6 +442,10 @@ const catmullRomPoint = (previous, first, second, next, progress) => {
             + (t3 - 2 * t2 + progress) * tangentFirstY
             + (-2 * t3 + 3 * t2) * second.y
             + (t3 - t2) * tangentSecondY,
+        z: (2 * t3 - 3 * t2 + 1) * first.z
+            + (t3 - 2 * t2 + progress) * tangentFirstZ
+            + (-2 * t3 + 3 * t2) * second.z
+            + (t3 - t2) * tangentSecondZ,
     }
 }
 
@@ -417,16 +476,6 @@ const applyCorrection = (sourceSegment, destinationSegment, correction, originCo
         return true
     }
 
-    const distance = getFixPathSegmentDistanceMeters(
-        {geometry: {type: 'LineString', coordinates: sourceSegment}},
-        0,
-        correction.startIndex,
-        correction.endIndex,
-    )
-    if (!Number.isFinite(distance)) {
-        return false
-    }
-
     const sourceDistanceAtIndex = [0]
     for (let index = correction.startIndex + 1; index <= correction.endIndex; index += 1) {
         sourceDistanceAtIndex.push(sourceDistanceAtIndex.at(-1)
@@ -437,53 +486,83 @@ const applyCorrection = (sourceSegment, destinationSegment, correction, originCo
         return false
     }
 
+    let sourceHeightOffset = 1
     const sourceHeightAtProgress = progress => {
         const distance = progress * sourceDistanceTotal
-        for (let offset = 1; offset < sourceDistanceAtIndex.length; offset += 1) {
-            if (distance > sourceDistanceAtIndex[offset]) {
-                continue
-            }
-            const rawFirstHeight = sourceSegment[correction.startIndex + offset - 1]?.[2]
-            const rawSecondHeight = sourceSegment[correction.startIndex + offset]?.[2]
-            const firstHeight = numericValue(rawFirstHeight) ? Number(rawFirstHeight) : Number.NaN
-            const secondHeight = numericValue(rawSecondHeight) ? Number(rawSecondHeight) : Number.NaN
-            const interval = sourceDistanceAtIndex[offset] - sourceDistanceAtIndex[offset - 1]
-            const localProgress = interval > 0 ? (distance - sourceDistanceAtIndex[offset - 1]) / interval : 0
-            if (Number.isFinite(firstHeight) && Number.isFinite(secondHeight)) {
-                return firstHeight + (secondHeight - firstHeight) * localProgress
-            }
-            if (Number.isFinite(firstHeight)) return firstHeight
-            if (Number.isFinite(secondHeight)) return secondHeight
-            return null
+        while (sourceHeightOffset < sourceDistanceAtIndex.length - 1
+            && distance > sourceDistanceAtIndex[sourceHeightOffset]) {
+            sourceHeightOffset += 1
         }
-        const rawEndHeight = sourceSegment[correction.endIndex]?.[2]
-        return numericValue(rawEndHeight) ? Number(rawEndHeight) : null
-    }
-    const startMember = sectionPoints.find(point => point.progress === 0 && point.removed !== true)
-    const endMember = sectionPoints.find(point => point.progress === 1 && point.removed !== true)
-    const fixedPoints = sectionPoints.filter(point => point.fixed !== false
-        && point.removed !== true && point.progress > 0 && point.progress < 1)
-    const movedStart = startMember?.fixed === true
-        && startMember.coordinate.some((value, index) => value !== sourceSegment[correction.startIndex]?.[index])
-    const movedEnd = endMember?.fixed === true
-        && endMember.coordinate.some((value, index) => value !== sourceSegment[correction.endIndex]?.[index])
-    if (fixedPoints.length === 0 && !movedStart && !movedEnd) {
+        const rawFirstHeight = sourceSegment[correction.startIndex + sourceHeightOffset - 1]?.[2]
+        const rawSecondHeight = sourceSegment[correction.startIndex + sourceHeightOffset]?.[2]
+        const firstHeight = numericValue(rawFirstHeight) ? Number(rawFirstHeight) : Number.NaN
+        const secondHeight = numericValue(rawSecondHeight) ? Number(rawSecondHeight) : Number.NaN
+        const interval = sourceDistanceAtIndex[sourceHeightOffset] - sourceDistanceAtIndex[sourceHeightOffset - 1]
+        const localProgress = interval > 0
+            ? (distance - sourceDistanceAtIndex[sourceHeightOffset - 1]) / interval
+            : 0
+        if (Number.isFinite(firstHeight) && Number.isFinite(secondHeight)) {
+            return firstHeight + (secondHeight - firstHeight) * localProgress
+        }
+        if (Number.isFinite(firstHeight)) return firstHeight
+        if (Number.isFinite(secondHeight)) return secondHeight
         return null
     }
-    const rawAnchors = [
-        {
-            progress: 0,
-            coordinate: movedStart ? startMember.coordinate : sourceSegment[correction.startIndex],
-        },
-        ...fixedPoints,
-        {
-            progress: 1,
-            coordinate: movedEnd ? endMember.coordinate : sourceSegment[correction.endIndex],
-        },
-    ].sort((first, second) => first.progress - second.progress)
+    const sourcePointByIndex = new Map()
+    const manualPoints = []
+    let hasActiveSourceCorrection = false
+    let hasActiveManualCorrection = false
+    sectionPoints.forEach(point => {
+        const sourceIndex = correctionSourceIndex(point, correction.segmentIndex)
+        if (sourceIndex !== null) {
+            if (sourceIndex < correction.startIndex || sourceIndex > correction.endIndex) return
+            sourcePointByIndex.set(sourceIndex, point)
+            const sourceCoordinate = sourceSegment[sourceIndex]
+            if (point.fixed !== false && point.removed !== true
+                && point.coordinate.some((value, index) => value !== sourceCoordinate?.[index])) {
+                hasActiveSourceCorrection = true
+            }
+            return
+        }
+
+        if (point.removed !== true && point.fixed !== false) {
+            manualPoints.push(point)
+            hasActiveManualCorrection = true
+        }
+    })
+    if (!hasActiveSourceCorrection && !hasActiveManualCorrection) {
+        return null
+    }
+    // When a source vertex is moved, keep every real source sample as an anchor.
+    // Manual controls without a moved source vertex retain their original behavior.
+    const sourceAnchors = sourceSegment
+        .slice(correction.startIndex, correction.endIndex + 1)
+        .map((coordinate, offset) => {
+            const sourceIndex = correction.startIndex + offset
+            const member = sourcePointByIndex.get(sourceIndex)
+            const isMoved = Boolean(member && member.fixed !== false && member.removed !== true)
+            return {
+                progress: sourceDistanceAtIndex[offset] / sourceDistanceTotal,
+                coordinate: isMoved ? member.coordinate : coordinate,
+                sourceIndex,
+                isSource: true,
+            }
+        })
+    const rawAnchors = (hasActiveSourceCorrection
+        ? [...sourceAnchors, ...manualPoints]
+        : [
+            {progress: 0, coordinate: sourceSegment[correction.startIndex]},
+            ...manualPoints,
+            {progress: 1, coordinate: sourceSegment[correction.endIndex]},
+        ])
+        .sort((first, second) => first.progress - second.progress
+            || Number(second.isSource === true) - Number(first.isSource === true)
+            || (first.sourceIndex ?? Number.MAX_SAFE_INTEGER) - (second.sourceIndex ?? Number.MAX_SAFE_INTEGER))
     const uniqueAnchors = rawAnchors.reduce((result, anchor) => {
         const previous = result.at(-1)
         if (previous && Math.abs(previous.progress - anchor.progress) < 1e-9) {
+            // A control point at the exact progress of a route vertex edits that
+            // vertex. Other source vertices remain independent curve anchors.
             result[result.length - 1] = anchor
         }
         else {
@@ -491,22 +570,28 @@ const applyCorrection = (sourceSegment, destinationSegment, correction, originCo
         }
         return result
     }, [])
+    const originCartesian = Ellipsoid.WGS84.cartographicToCartesian(Cartographic.fromDegrees(
+        Number(originCoordinate[0]),
+        Number(originCoordinate[1]),
+        0,
+    ))
     const anchors = uniqueAnchors.map(anchor => {
         const rawCoordinateHeight = anchor.coordinate?.[2]
         const coordinateHeight = numericValue(rawCoordinateHeight) ? Number(rawCoordinateHeight) : Number.NaN
         const fallbackHeight = sourceHeightAtProgress(anchor.progress)
         return {
             progress: anchor.progress,
-            point: localCoordinates(anchor.coordinate, originCoordinate),
+            point: localCoordinates(anchor.coordinate, originCartesian),
             height: Number.isFinite(coordinateHeight) ? coordinateHeight : fallbackHeight,
         }
     })
+    let currentAnchorIndex = 0
     const anchorAt = progress => {
-        let anchorIndex = anchors.findIndex((anchor, index) => index < anchors.length - 1
-            && progress >= anchor.progress && progress <= anchors[index + 1].progress)
-        if (anchorIndex < 0) {
-            anchorIndex = anchors.length - 2
+        while (currentAnchorIndex < anchors.length - 2
+            && progress > anchors[currentAnchorIndex + 1].progress) {
+            currentAnchorIndex += 1
         }
+        const anchorIndex = currentAnchorIndex
         const first = anchors[anchorIndex]
         const second = anchors[anchorIndex + 1]
         const previous = anchors[Math.max(0, anchorIndex - 1)].point
@@ -528,17 +613,28 @@ const applyCorrection = (sourceSegment, destinationSegment, correction, originCo
         const progress = sourceDistanceTotal > 0 ? distanceAtIndex / sourceDistanceTotal : 0
         const coordinate = sourceSegment[index]
         const corrected = anchorAt(progress)
-        const correctedCoordinate = geographicCoordinates(corrected.point, originCoordinate)
-        const member = sectionPoints.find(point => point.sourceIndex === index
-            || point.id === 'fix-point-' + correction.segmentIndex + '-' + index)
-        const fixedAtIndex = member?.fixed !== false && member?.removed !== true
-        const outputCoordinate = fixedAtIndex && member ? member.coordinate : correctedCoordinate
-        const rawOutputHeight = fixedAtIndex ? member?.coordinate?.[2] : corrected.height
-        const outputHeight = numericValue(rawOutputHeight) ? Number(rawOutputHeight) : corrected.height
+        const member = sourcePointByIndex.get(index)
+        const fixedAtIndex = Boolean(member && member.fixed !== false && member.removed !== true)
+        if (fixedAtIndex && member) {
+            const rawOutputHeight = member.coordinate?.[2]
+            const outputHeight = numericValue(rawOutputHeight) ? Number(rawOutputHeight) : corrected.height
+            destinationSegment[index] = Number.isFinite(outputHeight)
+                ? [member.coordinate[0], member.coordinate[1], outputHeight, ...coordinate.slice(3)]
+                : [member.coordinate[0], member.coordinate[1], ...coordinate.slice(2)]
+            continue
+        }
+        if (hasActiveSourceCorrection) {
+            // Keep all real source samples byte-for-byte where they were not moved.
+            destinationSegment[index] = [...coordinate]
+            continue
+        }
+        const correctedCoordinate = geographicCoordinates(corrected.point, originCartesian, coordinate)
+        const outputHeight = corrected.height
         destinationSegment[index] = Number.isFinite(outputHeight)
-            ? [outputCoordinate[0], outputCoordinate[1], outputHeight, ...coordinate.slice(3)]
-            : [outputCoordinate[0], outputCoordinate[1], ...coordinate.slice(2)]
+            ? [correctedCoordinate[0], correctedCoordinate[1], outputHeight, ...coordinate.slice(3)]
+            : [correctedCoordinate[0], correctedCoordinate[1], ...coordinate.slice(2)]
     }
+
     return true
 }
 

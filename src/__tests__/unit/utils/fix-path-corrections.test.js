@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
     applyFixPathCorrections,
+    createFixPathDistanceIndex,
     getCorrectedTrackContent,
     getFixPathSegmentDistanceMeters,
     getFixPathSourceFingerprint,
@@ -61,7 +62,21 @@ describe('Fix Path correction data', () => {
         expect(getFixPathSegmentDistanceMeters(content, 0, 0, 1)).toBeLessThan(length)
     })
 
-    it('applies a smooth local correction without mutating source geometry or vertical values', () => {
+    it('indexes cumulative distance and locates interpolation intervals without rescanning the section', () => {
+        const content = makeFeature()
+        const distanceIndex = createFixPathDistanceIndex(content, 0, 0, 4)
+
+        expect(distanceIndex.totalDistance).toBe(getFixPathSegmentDistanceMeters(content, 0, 0, 4))
+        expect(distanceIndex.progressAtIndex(2)).toBeCloseTo(0.5)
+        expect(distanceIndex.distanceBetween(1, 3)).toBeCloseTo(
+            getFixPathSegmentDistanceMeters(content, 0, 1, 3),
+        )
+        const interval = distanceIndex.intervalAtDistance(distanceIndex.totalDistance / 2)
+        expect(interval).toMatchObject({firstIndex: 1, secondIndex: 2})
+        expect(interval.fraction).toBeCloseTo(1)
+    })
+
+    it('applies a local correction without mutating source geometry or vertical values', () => {
         const content = makeFeature()
         const correction = makeCorrection(content)
 
@@ -72,13 +87,102 @@ describe('Fix Path correction data', () => {
         expect(result.content).not.toBe(content)
         expect(result.content.geometry.coordinates).toHaveLength(5)
         expect(result.content.geometry.coordinates[0]).toEqual(content.geometry.coordinates[0])
-        expect(result.content.geometry.coordinates[2]).toEqual([0.002, 0.001, 30])
+        expect(result.content.geometry.coordinates[2][0]).toBeCloseTo(0.002, 12)
+        expect(result.content.geometry.coordinates[2][1]).toBeCloseTo(0.001, 12)
+        expect(result.content.geometry.coordinates[2][2]).toBe(30)
         expect(result.content.geometry.coordinates[4]).toEqual(content.geometry.coordinates[4])
         expect(result.content.properties).toBe(content.properties)
         expect(content.geometry.coordinates[2]).toEqual([0.002, 0, 30])
     })
 
-    it('interpolates corrected elevations between control points for the Journey profile', () => {
+    it('keeps every real route point as an anchor when one source point is moved', () => {
+        const content = makeFeature()
+        const movedCoordinate = [0.002, 0.001, 30]
+        const correction = makeCorrection(content, {
+            controlPoints: [{
+                id: 'fix-point-0-2',
+                sourceIndex: 2,
+                progress: 0.5,
+                coordinate: movedCoordinate,
+                fixed: true,
+                removed: false,
+            }],
+        })
+
+        const result = applyFixPathCorrections(content, [correction])
+
+        expect(result.changed).toBe(true)
+        expect(result.content.geometry.coordinates).toHaveLength(content.geometry.coordinates.length)
+        result.content.geometry.coordinates.forEach((coordinate, index) => {
+            expect(coordinate).toEqual(index === 2 ? movedCoordinate : content.geometry.coordinates[index])
+        })
+    })
+
+    it('preserves coincident source samples when one of them is moved', () => {
+        const content = makeFeature([
+            [0, 0, 10],
+            [0.001, 0, 20],
+            [0.001, 0, 21],
+            [0.002, 0, 30],
+        ])
+        const movedCoordinate = [0.001, 0.001, 20]
+        const correction = makeCorrection(content, {
+            endIndex: 3,
+            controlPoints: [{
+                id: 'fix-point-0-1',
+                sourceIndex: 1,
+                progress: 0.5,
+                coordinate: movedCoordinate,
+                fixed: true,
+                removed: false,
+            }],
+        })
+
+        const result = applyFixPathCorrections(content, [correction])
+
+        expect(result.changed).toBe(true)
+        expect(result.content.geometry.coordinates).toEqual([
+            content.geometry.coordinates[0],
+            movedCoordinate,
+            content.geometry.coordinates[2],
+            content.geometry.coordinates[3],
+        ])
+    })
+
+    it('keeps corrected coordinates valid across the antimeridian and at high latitudes', () => {
+        const content = makeFeature([
+            [179.6, 70, 100],
+            [179.9, 74, 200],
+            [-179.9, 78, 300],
+            [-179.6, 82, 400],
+        ])
+        const correction = makeCorrection(content, {
+            endIndex: 3,
+            controlPoints: [{
+                id: 'manual-high-latitude',
+                progress: 0.5,
+                coordinate: [-179.9, 84, 1200],
+                fixed: true,
+                removed: false,
+            }],
+        })
+
+        const result = applyFixPathCorrections(content, [correction])
+        const correctedCoordinates = result.content.geometry.coordinates
+
+        expect(result.changed).toBe(true)
+        expect(correctedCoordinates).toHaveLength(content.geometry.coordinates.length)
+        correctedCoordinates.forEach(([longitude, latitude]) => {
+            expect(Number.isFinite(longitude)).toBe(true)
+            expect(longitude).toBeGreaterThanOrEqual(-180)
+            expect(longitude).toBeLessThanOrEqual(180)
+            expect(Number.isFinite(latitude)).toBe(true)
+            expect(latitude).toBeGreaterThanOrEqual(-90)
+            expect(latitude).toBeLessThanOrEqual(90)
+        })
+    })
+
+    it('interpolates corrected elevations between manual control points for the Journey profile', () => {
         const content = makeFeature()
         const correction = makeCorrection(content, {
             controlPoints: [{id: 'control-high', progress: 0.5, coordinate: [0.002, 0.001, 210]}],
@@ -278,6 +382,9 @@ describe('Fix Path correction data', () => {
 
         expect(getCorrectedTrackContent(track)).toBe(content)
         journey.fixPathEnabled = true
-        expect(getCorrectedTrackContent(track).geometry.coordinates[2]).toEqual([0.002, 0.001, 30])
+        const correctedCoordinate = getCorrectedTrackContent(track).geometry.coordinates[2]
+        expect(correctedCoordinate[0]).toBeCloseTo(0.002, 12)
+        expect(correctedCoordinate[1]).toBeCloseTo(0.001, 12)
+        expect(correctedCoordinate[2]).toBe(30)
     })
 })

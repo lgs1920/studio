@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-03
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { getCorrectedTrackContent } from './fixPathCorrections'
+import {getCorrectedTrackContent, getFixPathSourceFingerprint} from './fixPathCorrections'
 
 export const TRACK_RENDER_SMOOTHING_DEFAULT = Object.freeze({
     enabled: false,
@@ -133,13 +133,14 @@ const sampleCoordinates = (coordinates, maxPoints) => {
 }
 
 /**
- * Smooth each side of fixed Journey source points while retaining the points as exact vertices.
+ * Smooth the route around fixed points while leaving corrected Fix Path sections intact.
  * @param {Array<Array<number>>} coordinates - Corrected source coordinates.
  * @param {number} step - Number of Chaikin passes for each span.
  * @param {Set<number>} anchorIndexes - Source indexes that must remain on the rendered path.
- * @returns {{coordinates: Array<Array<number>>, anchorIndexes: Set<number>}} Smoothed coordinates and remapped anchors.
+ * @param {Array<{startIndex: number, endIndex: number}>} protectedRanges - Source ranges that must remain exact.
+ * @returns {{coordinates: Array<Array<number>>, anchorIndexes: Set<number>}} Render coordinates and preserved vertices.
  */
-const smoothCoordinateSegmentAtAnchors = (coordinates, step, anchorIndexes) => {
+const smoothCoordinateSegmentAtAnchors = (coordinates, step, anchorIndexes, protectedRanges = []) => {
     if (!Array.isArray(coordinates) || coordinates.length === 0) {
         return {coordinates: [], anchorIndexes: new Set()}
     }
@@ -147,27 +148,45 @@ const smoothCoordinateSegmentAtAnchors = (coordinates, step, anchorIndexes) => {
     const anchors = new Set([...(anchorIndexes ?? [])].filter(index => (
         Number.isInteger(index) && index >= 0 && index <= lastIndex
     )))
-    if (anchors.size === 0) {
+    const ranges = protectedRanges.filter(range => Number.isInteger(range.startIndex)
+        && Number.isInteger(range.endIndex)
+        && range.startIndex >= 0
+        && range.endIndex <= lastIndex
+        && range.startIndex <= range.endIndex)
+    if (anchors.size === 0 && ranges.length === 0) {
         return {coordinates: smoothCoordinateSegment(coordinates, step), anchorIndexes: new Set()}
     }
     if (coordinates.length === 1) {
         return {coordinates: coordinates.map(cloneCoordinate), anchorIndexes: new Set([0])}
     }
 
-    const boundaries = [...new Set([0, lastIndex, ...anchors])].sort((first, second) => first - second)
+    const boundaries = [...new Set([
+        0,
+        lastIndex,
+        ...anchors,
+        ...ranges.flatMap(range => [range.startIndex, range.endIndex]),
+    ])].sort((first, second) => first - second)
     const smoothedCoordinates = []
-    const smoothedAnchorIndexes = new Set()
+    const preservedIndexes = new Set()
     for (let index = 0; index < boundaries.length - 1; index += 1) {
         const startIndex = boundaries[index]
         const stopIndex = boundaries[index + 1]
-        const smoothedSpan = smoothCoordinateSegment(coordinates.slice(startIndex, stopIndex + 1), step)
+        const isProtectedSpan = ranges.some(range => startIndex >= range.startIndex && stopIndex <= range.endIndex)
+        const smoothedSpan = isProtectedSpan
+            ? coordinates.slice(startIndex, stopIndex + 1).map(cloneCoordinate)
+            : smoothCoordinateSegment(coordinates.slice(startIndex, stopIndex + 1), step)
         const outputStartIndex = smoothedCoordinates.length === 0 ? 0 : smoothedCoordinates.length - 1
         smoothedCoordinates.push(...(smoothedCoordinates.length === 0 ? smoothedSpan : smoothedSpan.slice(1)))
-        if (anchors.has(startIndex)) smoothedAnchorIndexes.add(outputStartIndex)
-        if (anchors.has(stopIndex)) smoothedAnchorIndexes.add(smoothedCoordinates.length - 1)
+        if (isProtectedSpan) {
+            for (let offset = 0; offset < smoothedSpan.length; offset += 1) {
+                preservedIndexes.add(outputStartIndex + offset)
+            }
+        }
+        if (anchors.has(startIndex)) preservedIndexes.add(outputStartIndex)
+        if (anchors.has(stopIndex)) preservedIndexes.add(smoothedCoordinates.length - 1)
     }
 
-    return {coordinates: smoothedCoordinates, anchorIndexes: smoothedAnchorIndexes}
+    return {coordinates: smoothedCoordinates, anchorIndexes: preservedIndexes}
 }
 
 /**
@@ -281,6 +300,109 @@ const getJourneyFromTrack = track => {
     }
 
     return globalThis.lgs?.getJourneyBySlug?.(track?.parent)
+}
+
+/**
+ * Find valid corrected route ranges whose samples must stay visible in Cesium.
+ * @param {object} track - Track whose corrected path is rendered.
+ * @param {object} geometry - Corrected geometry currently being rendered.
+ * @param {boolean} includeDraftCorrections - Whether an explicit display override is active.
+ * @returns {Map<number, Array<{startIndex: number, endIndex: number}>>} Protected source ranges by segment.
+ */
+const getProtectedFixPathRangesBySegment = (track, geometry, includeDraftCorrections = false) => {
+    const journey = track?.parent && typeof track.parent === 'object'
+        ? track.parent
+        : getJourneyFromTrack(track)
+    if (journey?.fixPathEnabled !== true && !includeDraftCorrections) return new Map()
+
+    const corrections = journey.fixPathCorrectionData?.tracks?.[track?.slug]
+    if (!Array.isArray(corrections)) return new Map()
+    const sourceGeometry = track?.content?.geometry
+    const rangesBySegment = new Map()
+    corrections.forEach(correction => {
+        const {segmentIndex, startIndex, endIndex, controlPoints} = correction
+        if (!Number.isInteger(segmentIndex)
+            || !Number.isInteger(startIndex)
+            || !Number.isInteger(endIndex)
+            || startIndex < 0
+            || endIndex < startIndex
+            || !Array.isArray(controlPoints)
+            || getFixPathSourceFingerprint(track?.content, segmentIndex, startIndex, endIndex)
+                !== correction.sourceFingerprint) {
+            return
+        }
+
+        const sourceSegment = sourceGeometry?.type === LINE_STRING
+            ? sourceGeometry.coordinates
+            : sourceGeometry?.type === MULTI_LINE_STRING
+                ? sourceGeometry.coordinates?.[segmentIndex]
+                : null
+        const renderedSegment = geometry?.type === LINE_STRING
+            ? geometry.coordinates
+            : geometry?.type === MULTI_LINE_STRING
+                ? geometry.coordinates?.[segmentIndex]
+                : null
+        if (!Array.isArray(sourceSegment)
+            || !Array.isArray(renderedSegment)
+            || endIndex >= sourceSegment.length
+            || endIndex >= renderedSegment.length) {
+            return
+        }
+
+        const hasEffectiveAnchor = controlPoints.some(point => {
+            if (point.fixed === false || point.removed === true) return false
+            const match = /^fix-point-(\d+)-(\d+)$/.exec(point.id ?? '')
+            const sourceIndex = Number.isInteger(point.sourceIndex)
+                ? point.sourceIndex
+                : match && Number(match[1]) === segmentIndex
+                    ? Number(match[2])
+                    : null
+            if (sourceIndex === null) return true
+            const originalCoordinate = sourceSegment[sourceIndex]
+            return Array.isArray(originalCoordinate)
+                && Array.isArray(point.coordinate)
+                && point.coordinate.slice(0, 3).some((value, coordinateIndex) => (
+                    Number(value) !== Number(originalCoordinate[coordinateIndex])
+                ))
+        })
+        if (!hasEffectiveAnchor) return
+
+        const ranges = rangesBySegment.get(segmentIndex) ?? []
+        ranges.push({startIndex, endIndex})
+        rangesBySegment.set(segmentIndex, ranges)
+    })
+
+    rangesBySegment.forEach((ranges, segmentIndex) => {
+        const mergedRanges = []
+        ranges.sort((first, second) => first.startIndex - second.startIndex).forEach(range => {
+            const previous = mergedRanges.at(-1)
+            if (previous && range.startIndex <= previous.endIndex + 1) {
+                previous.endIndex = Math.max(previous.endIndex, range.endIndex)
+            }
+            else {
+                mergedRanges.push({...range})
+            }
+        })
+        rangesBySegment.set(segmentIndex, mergedRanges)
+    })
+
+    return rangesBySegment
+}
+
+const addProtectedRangesToIndexes = (rangesBySegment, indexesBySegment) => {
+    const result = new Map([...indexesBySegment].map(([segmentIndex, indexes]) => (
+        [segmentIndex, new Set(indexes)]
+    )))
+    rangesBySegment.forEach((ranges, segmentIndex) => {
+        const indexes = result.get(segmentIndex) ?? new Set()
+        ranges.forEach(({startIndex, endIndex}) => {
+            for (let index = startIndex; index <= endIndex; index += 1) {
+                indexes.add(index)
+            }
+        })
+        result.set(segmentIndex, indexes)
+    })
+    return result
 }
 
 /**
@@ -442,6 +564,11 @@ export const getTrackRenderContent = (track, options = {}) => {
         geometry,
         options.content !== undefined,
     )
+    const protectedRangesBySegment = getProtectedFixPathRangesBySegment(
+        track,
+        geometry,
+        options.content !== undefined,
+    )
     const smoothingKey = getRenderedContentCacheKey(
         track,
         options,
@@ -455,7 +582,7 @@ export const getTrackRenderContent = (track, options = {}) => {
     }
 
     let renderContent = content
-    let preservedIndexesBySegment = fixedIndexesBySegment
+    let preservedIndexesBySegment = addProtectedRangesToIndexes(protectedRangesBySegment, fixedIndexesBySegment)
     if (smoothing.enabled) {
         renderContent = deepClone(content)
         if (geometry.type === LINE_STRING) {
@@ -463,6 +590,7 @@ export const getTrackRenderContent = (track, options = {}) => {
                 geometry.coordinates,
                 smoothing.step,
                 fixedIndexesBySegment.get(0) ?? new Set(),
+                protectedRangesBySegment.get(0) ?? [],
             )
             renderContent.geometry.coordinates = smoothed.coordinates
             preservedIndexesBySegment = new Map([[0, smoothed.anchorIndexes]])
@@ -474,6 +602,7 @@ export const getTrackRenderContent = (track, options = {}) => {
                     segment,
                     smoothing.step,
                     fixedIndexesBySegment.get(segmentIndex) ?? new Set(),
+                    protectedRangesBySegment.get(segmentIndex) ?? [],
                 )
                 preservedIndexesBySegment.set(segmentIndex, smoothed.anchorIndexes)
                 return smoothed.coordinates

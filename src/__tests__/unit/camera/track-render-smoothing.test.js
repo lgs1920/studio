@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-03
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -142,14 +142,16 @@ describe('track render smoothing', () => {
         const correction = {
             id: 'section-a',
             segmentIndex: 0,
-            startIndex: 0,
-            endIndex: sourceCoordinates.length - 1,
-            sourceFingerprint: getFixPathSourceFingerprint(track.content, 0, 0, sourceCoordinates.length - 1),
-            controlPoints: [
-                {id: 'fix-point-0-0', sourceIndex: 0, progress: 0, coordinate: sourceCoordinates[0], fixed: false},
-                {id: 'fix-point-0-2', sourceIndex: 2, progress: 0.5, coordinate: movedCoordinate, fixed: true},
-                {id: 'fix-point-0-4', sourceIndex: 4, progress: 1, coordinate: sourceCoordinates[4], fixed: false},
-            ],
+            startIndex: 2,
+            endIndex: 2,
+            sourceFingerprint: getFixPathSourceFingerprint(track.content, 0, 2, 2),
+            controlPoints: [{
+                id: 'fix-point-0-2',
+                sourceIndex: 2,
+                progress: 0,
+                coordinate: movedCoordinate,
+                fixed: true,
+            }],
         }
         const journey = {
             slug: track.parent,
@@ -170,38 +172,38 @@ describe('track render smoothing', () => {
         expect(renderContent.geometry.coordinates.length).toBeGreaterThan(sourceCoordinates.length)
     })
 
-    it('retains moved Fix Path vertices when capped render geometry is sampled', () => {
-        const track = makeTrack()
+    it('retains every vertex in a corrected section when capped render geometry is sampled', () => {
+        const track = makeTrack({enabled: true, step: 1})
         const coordinates = Array.from({length: MAX_RENDER_POINTS * 4}, (_, index) => [
             6 + (index * 0.0001),
             45 + (index * 0.0001),
             100 + index,
         ])
         const anchorIndex = 7777
+        const startIndex = anchorIndex - 5
+        const endIndex = anchorIndex + 5
         track.content.geometry.coordinates = coordinates
         const movedCoordinate = [...coordinates[anchorIndex]]
         movedCoordinate[2] += 0.5
         const previewCoordinates = coordinates.slice()
         previewCoordinates[anchorIndex] = movedCoordinate
+        const correction = {
+            segmentIndex: 0,
+            startIndex,
+            endIndex,
+            sourceFingerprint: getFixPathSourceFingerprint(track.content, 0, startIndex, endIndex),
+            controlPoints: [{
+                id: 'fix-point-0-' + anchorIndex,
+                sourceIndex: anchorIndex,
+                coordinate: movedCoordinate,
+                fixed: true,
+                removed: false,
+            }],
+        }
         const journey = {
             slug: track.parent,
             fixPathEnabled: true,
-            fixPathCorrectionData: {
-                tracks: {
-                    [track.slug]: [{
-                        segmentIndex: 0,
-                        startIndex: 0,
-                        endIndex: coordinates.length - 1,
-                        controlPoints: [{
-                            id: 'fix-point-0-' + anchorIndex,
-                            sourceIndex: anchorIndex,
-                            coordinate: movedCoordinate,
-                            fixed: true,
-                            removed: false,
-                        }],
-                    }],
-                },
-            },
+            fixPathCorrectionData: {tracks: {[track.slug]: [correction]}},
             tracks: new Map([[track.slug, track]]),
         }
         vi.stubGlobal('lgs', {
@@ -218,7 +220,9 @@ describe('track render smoothing', () => {
         })
 
         expect(renderContent.geometry.coordinates).toHaveLength(MAX_RENDER_POINTS)
-        expect(renderContent.geometry.coordinates).toContainEqual(movedCoordinate)
+        for (let index = startIndex; index <= endIndex; index += 1) {
+            expect(renderContent.geometry.coordinates).toContainEqual(previewCoordinates[index])
+        }
     })
 
     it('uses journey settings for a single-track journey and track settings for multi-track journeys', () => {
