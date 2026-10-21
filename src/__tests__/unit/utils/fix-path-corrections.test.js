@@ -19,8 +19,10 @@ import {
     applyFixPathCorrections,
     createFixPathDistanceIndex,
     getCorrectedTrackContent,
+    getFixPathDisplayRangeForSourceRange,
     getFixPathSegmentDistanceMeters,
     getFixPathSourceFingerprint,
+    hasFixPathRouteEdits,
     mergeAdjacentFixPathCorrections,
     normalizeFixPathCorrectionData,
 } from '@Utils/cesium/fixPathCorrections'
@@ -76,6 +78,28 @@ describe('Fix Path correction data', () => {
         expect(interval.fraction).toBeCloseTo(1)
     })
 
+    it('maps source section ranges across inserted display points', () => {
+        const content = makeFeature()
+        const correction = makeCorrection(content, {
+            startIndex: 1,
+            endIndex: 3,
+            controlPoints: [{
+                id: 'manual-point',
+                progress: 0.75,
+                sourcePosition: 2.5,
+                coordinate: [0.0025, 0, 35],
+                fixed: true,
+                removed: false,
+                inserted: true,
+            }],
+        })
+        const correctedContent = applyFixPathCorrections(content, [correction]).content
+
+        expect(correctedContent.geometry.coordinates).toHaveLength(6)
+        expect(getFixPathDisplayRangeForSourceRange(correctedContent, 0, 1, 3))
+            .toEqual({startIndex: 1, endIndex: 4})
+    })
+
     it('applies a local correction without mutating source geometry or vertical values', () => {
         const content = makeFeature()
         const correction = makeCorrection(content)
@@ -116,6 +140,227 @@ describe('Fix Path correction data', () => {
         result.content.geometry.coordinates.forEach((coordinate, index) => {
             expect(coordinate).toEqual(index === 2 ? movedCoordinate : content.geometry.coordinates[index])
         })
+    })
+
+    it('does not route through a removed source point when another source point is moved', () => {
+        const content = makeFeature([
+            [0, 0, 10],
+            [0.001, 0, 20],
+            [0.002, 0.003, 30],
+            [0.003, 0, 40],
+            [0.004, 0, 50],
+        ])
+        const movedCoordinate = [0.001, 0.001, 20]
+        const correction = makeCorrection(content, {
+            controlPoints: [
+                {
+                    id: 'fix-point-0-1',
+                    sourceIndex: 1,
+                    progress: 0.25,
+                    coordinate: movedCoordinate,
+                    fixed: true,
+                    removed: false,
+                },
+                {
+                    id: 'fix-point-0-2',
+                    sourceIndex: 2,
+                    progress: 0.5,
+                    coordinate: [0.002, 0.01, 300],
+                    fixed: true,
+                    removed: true,
+                },
+            ],
+        })
+
+        const result = applyFixPathCorrections(content, [correction])
+
+        expect(result.changed).toBe(true)
+        expect(result.content.geometry.coordinates[1]).toEqual(movedCoordinate)
+        expect(result.content.geometry.coordinates[2]).not.toEqual(content.geometry.coordinates[2])
+        expect(result.content.geometry.coordinates[2]).not.toEqual([0.002, 0.01, 300])
+        expect(content.geometry.coordinates[2]).toEqual([0.002, 0.003, 30])
+    })
+
+    it('removes a source point from the corrected trace even when it is the only edit', () => {
+        const content = makeFeature([
+            [0, 0, 10],
+            [0.001, 0, 20],
+            [0.002, 0.003, 30],
+            [0.003, 0, 40],
+            [0.004, 0, 50],
+        ])
+        const correction = makeCorrection(content, {
+            startIndex: 2,
+            endIndex: 2,
+            controlPoints: [{
+                id: 'fix-point-0-2',
+                sourceIndex: 2,
+                progress: 0.5,
+                coordinate: content.geometry.coordinates[2],
+                fixed: false,
+                removed: true,
+            }],
+        })
+
+        const result = applyFixPathCorrections(content, [correction])
+
+        expect(result.changed).toBe(true)
+        expect(result.content.geometry.coordinates).toHaveLength(content.geometry.coordinates.length)
+        expect(result.content.geometry.coordinates[2]).not.toEqual(content.geometry.coordinates[2])
+        expect(result.content.geometry.coordinates[2][1]).toBeCloseTo(0, 12)
+    })
+
+    it('does not use a removed sample to calculate the remaining trace distances', () => {
+        const sourceCoordinates = [
+            [0, 0, 10],
+            [0.001, 0, 20],
+            [0.002, 0.003, 30],
+            [0.003, 0, 40],
+            [0.004, 0, 50],
+        ]
+        const makeRemoval = coordinates => {
+            const content = makeFeature(coordinates)
+            const correction = makeCorrection(content, {
+                startIndex: 1,
+                endIndex: 3,
+                controlPoints: [1, 2, 3].map(index => ({
+                    id: 'fix-point-0-' + index,
+                    sourceIndex: index,
+                    progress: (index - 1) / 2,
+                    coordinate: coordinates[index],
+                    fixed: index !== 2,
+                    removed: index === 2,
+                })),
+            })
+            return applyFixPathCorrections(content, [correction]).content.geometry.coordinates
+        }
+        const alternativeCoordinates = sourceCoordinates.map(coordinate => [...coordinate])
+        alternativeCoordinates[2] = [0.002, 0.02, 900]
+
+        expect(makeRemoval(alternativeCoordinates)).toEqual(makeRemoval(sourceCoordinates))
+    })
+
+    it('bridges a section whose source points have all been removed', () => {
+        const content = makeFeature([
+            [0, 0, 10],
+            [0.001, 0.004, 20],
+            [0.002, 0.008, 30],
+            [0.003, 0.004, 40],
+            [0.004, 0, 50],
+        ])
+        const correction = makeCorrection(content, {
+            startIndex: 1,
+            endIndex: 3,
+            controlPoints: [1, 2, 3].map(index => ({
+                id: 'fix-point-0-' + index,
+                sourceIndex: index,
+                progress: (index - 1) / 2,
+                coordinate: content.geometry.coordinates[index],
+                fixed: false,
+                removed: true,
+            })),
+        })
+
+        const result = applyFixPathCorrections(content, [correction])
+
+        expect(result.changed).toBe(true)
+        expect(result.content.geometry.coordinates.slice(1, 4))
+            .not.toEqual(content.geometry.coordinates.slice(1, 4))
+        expect(result.content.geometry.coordinates.slice(1, 4))
+            .not.toContainEqual(content.geometry.coordinates[2])
+    })
+
+    it('keeps Fix Path enabled when the only remaining correction removes a source point', () => {
+        expect(hasFixPathRouteEdits({
+            'track-a': [{
+                controlPoints: [{
+                    id: 'fix-point-0-2',
+                    sourceIndex: 2,
+                    removed: true,
+                }],
+            }],
+        })).toBe(true)
+
+        expect(hasFixPathRouteEdits({
+            'track-a': [{
+                controlPoints: [{id: 'manual-control', removed: true}],
+            }],
+        })).toBe(false)
+    })
+
+    it('interpolates removed points when only one source anchor remains in a section', () => {
+        const content = makeFeature([
+            [0, 0, 10],
+            [0.001, 0.001, 20],
+        ])
+        const movedCoordinate = [0, 0.001, 10]
+        const correction = makeCorrection(content, {
+            endIndex: 1,
+            controlPoints: [
+                {
+                    id: 'fix-point-0-0',
+                    sourceIndex: 0,
+                    progress: 0,
+                    coordinate: movedCoordinate,
+                    fixed: true,
+                    removed: false,
+                },
+                {
+                    id: 'fix-point-0-1',
+                    sourceIndex: 1,
+                    progress: 1,
+                    coordinate: [0.001, 0.01, 200],
+                    fixed: true,
+                    removed: true,
+                },
+            ],
+        })
+
+        const result = applyFixPathCorrections(content, [correction])
+
+        expect(result.changed).toBe(true)
+        expect(result.content.geometry.coordinates[0]).toEqual(movedCoordinate)
+        expect(result.content.geometry.coordinates[1][0]).toBeCloseTo(movedCoordinate[0], 12)
+        expect(result.content.geometry.coordinates[1][1]).toBeCloseTo(movedCoordinate[1], 12)
+        expect(result.content.geometry.coordinates[1][2]).toBe(movedCoordinate[2])
+        expect(result.content.geometry.coordinates[1]).not.toEqual([0.001, 0.01, 200])
+        expect(content.geometry.coordinates[1]).toEqual([0.001, 0.001, 20])
+    })
+
+    it('does not retain a removed section endpoint as an implicit manual anchor', () => {
+        const content = makeFeature([
+            [0, 0, 10],
+            [0.001, 0, 20],
+            [0.002, 0, 30],
+        ])
+        const correction = makeCorrection(content, {
+            endIndex: 2,
+            controlPoints: [
+                {
+                    id: 'fix-point-0-0',
+                    sourceIndex: 0,
+                    progress: 0,
+                    coordinate: content.geometry.coordinates[0],
+                    fixed: true,
+                    removed: true,
+                },
+                {
+                    id: 'manual-control',
+                    progress: 0.5,
+                    coordinate: [0.001, 0.001, 200],
+                    fixed: true,
+                    removed: false,
+                },
+            ],
+        })
+
+        const result = applyFixPathCorrections(content, [correction])
+
+        expect(result.changed).toBe(true)
+        expect(result.content.geometry.coordinates[0]).not.toEqual(content.geometry.coordinates[0])
+        expect(result.content.geometry.coordinates[1][1]).toBeCloseTo(0.001, 12)
+        expect(result.content.geometry.coordinates[1][2]).toBe(200)
+        expect(content.geometry.coordinates[0]).toEqual([0, 0, 10])
     })
 
     it('preserves coincident source samples when one of them is moved', () => {
@@ -254,7 +499,50 @@ describe('Fix Path correction data', () => {
             currentSection: {trackSlug: 'track-a', correctionId: 'missing-section'},
         })).not.toHaveProperty('currentSection')
         expect(normalizeFixPathCorrectionData({revision: 1, tracks: {'track-a': [first, second]}})).toBeNull()
-        expect(normalizeFixPathCorrectionData({revision: 1, tracks: {'track-a': [{...first, controlPoints: []}]}})).toBeNull()
+        expect(normalizeFixPathCorrectionData({revision: 1, tracks: {'track-a': [{...first, controlPoints: []}]}}))
+            .toMatchObject({tracks: {'track-a': []}})
+        expect(normalizeFixPathCorrectionData({
+            revision: 1,
+            tracks: {'track-a': [{
+                ...first,
+                controlPoints: [{...first.controlPoints[0], coordinate: []}],
+            }]},
+        })).toBeNull()
+    })
+
+    it('removes empty and erased-only sections while loading saved correction data', () => {
+        const content = makeFeature()
+        const empty = {
+            ...makeCorrection(content, {startIndex: 0, endIndex: 0}),
+            id: 'empty-section',
+            controlPoints: [],
+        }
+        const erasedOnly = {
+            ...makeCorrection(content, {startIndex: 1, endIndex: 2}),
+            id: 'erased-section',
+            controlPoints: [{
+                id: 'fix-point-0-1',
+                sourceIndex: 1,
+                progress: 0.5,
+                coordinate: [0.001, 0, 20],
+                fixed: false,
+                removed: true,
+                erased: true,
+            }],
+        }
+        const valid = {
+            ...makeCorrection(content, {startIndex: 3, endIndex: 4}),
+            id: 'valid-section',
+        }
+
+        const normalized = normalizeFixPathCorrectionData({
+            revision: 7,
+            tracks: {'track-a': [empty, erasedOnly, valid]},
+            currentSection: {trackSlug: 'track-a', correctionId: erasedOnly.id},
+        })
+
+        expect(normalized.tracks['track-a'].map(section => section.id)).toEqual(['valid-section'])
+        expect(normalized).not.toHaveProperty('currentSection')
     })
 
     it('merges saved sections that directly follow each other on the source route', () => {

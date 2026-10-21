@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,15 +17,18 @@
 import {afterEach, describe, expect, it} from 'vitest'
 import {
     applyFixPathCorrections,
+    getFixPathSourcePosition,
     getFixPathSegmentDistanceMeters,
     getFixPathSourceFingerprint,
+    normalizeFixPathManualControlProgress,
     normalizeFixPathCorrectionData,
 } from '@Utils/cesium/fixPathCorrections'
 import {
+    buildFixPathSectionsFromSourceIndexes,
+    buildFixPathControlPointAddition,
     buildDraggedPointCorrections,
     buildFixPathSection,
     removeFixPathControlPointsFromSection,
-    restoreRemovedFixPathSourcePoints,
     translateFixPathControlPoints,
 } from '@Utils/cesium/fixPathCorrectionEditing'
 
@@ -75,6 +78,59 @@ describe('Fix Path correction editing', () => {
         })
     })
 
+    it('orders added manual points by route position instead of click order', () => {
+        const content = makeFeature()
+        const result = buildFixPathSection(content, [], 0, 0, 8, [
+            {
+                id: 'added-later-on-route',
+                progress: 0.2,
+                sourcePosition: 6,
+                coordinate: [0.0003, 0.0002, 60],
+            },
+            {
+                id: 'added-earlier-on-route',
+                progress: 0.8,
+                coordinate: [0.0001, 0.0002, 20],
+            },
+        ])
+        const manualPoints = result.correction.controlPoints.filter(point => !Number.isInteger(point.sourceIndex))
+
+        expect(manualPoints.map(point => point.id)).toEqual([
+            'added-earlier-on-route',
+            'added-later-on-route',
+        ])
+        expect(manualPoints[0].progress).toBeCloseTo(0.25, 2)
+        expect(manualPoints[1].progress).toBeCloseTo(0.75, 2)
+        expect(manualPoints[0].sourcePosition).toBeCloseTo(2, 2)
+        expect(manualPoints[1].sourcePosition).toBeCloseTo(6, 2)
+    })
+
+    it('repairs the ordering of saved manual controls that were stored in click order', () => {
+        const content = makeFeature()
+        const correction = makeCorrection(content, 'saved-section', 0, 8, 'manual-later', [0.0003, 0.0002, 60])
+        correction.controlPoints = [
+            {id: 'manual-later', progress: 0.2, coordinate: [0.0003, 0.0002, 60], inserted: true},
+            {id: 'manual-earlier', progress: 0.8, coordinate: [0.0001, 0.0002, 20], inserted: true},
+        ]
+
+        const normalized = normalizeFixPathManualControlProgress(content, correction)
+        const applied = applyFixPathCorrections(content, [correction])
+        const insertedLongitudes = applied.content.geometry.coordinates
+            .filter(coordinate => coordinate[1] === 0.0002
+                && (coordinate[0] === 0.0001 || coordinate[0] === 0.0003))
+            .map(coordinate => coordinate[0])
+
+        expect(normalized.controlPoints.map(point => point.id)).toEqual([
+            'manual-earlier',
+            'manual-later',
+        ])
+        expect(normalized.controlPoints[0].sourcePosition).toBeCloseTo(2, 2)
+        expect(normalized.controlPoints[1].sourcePosition).toBeCloseTo(6, 2)
+        expect(normalized.controlPoints[0].progress).toBeCloseTo(0.25, 2)
+        expect(normalized.controlPoints[1].progress).toBeCloseTo(0.75, 2)
+        expect(insertedLongitudes).toEqual([0.0001, 0.0003])
+    })
+
     it('merges nearby corrections when a moved route point would overlap them', () => {
         const content = makeFeature()
         const corrections = [
@@ -107,6 +163,121 @@ describe('Fix Path correction editing', () => {
         expect(applied.skippedCorrectionIds).toEqual([])
     })
 
+    it('creates a short section and inserts a control point at the clicked route position', () => {
+        const content = makeFeature()
+        const coordinate = [0.000125, 0.0001, 25]
+
+        const result = buildFixPathControlPointAddition(content, [], 0, 2, 0.5, coordinate)
+
+        expect(result.error).toBeUndefined()
+        expect(result.correction).toMatchObject({segmentIndex: 0, startIndex: 2, endIndex: 3})
+        expect(result.correction.controlPoints).toHaveLength(1)
+        expect(result.correction.controlPoints.find(point => point.id === result.controlPointId))
+            .toMatchObject({progress: 0.5, coordinate, fixed: true, removed: false})
+        expect(applyFixPathCorrections(content, result.corrections)).toMatchObject({
+            changed: true,
+            skippedCorrectionIds: [],
+        })
+    })
+
+    it('integrates an added point into the trace, keeps it draggable, and maps the display back to source points', () => {
+        const content = makeFeature()
+        const addedCoordinate = [0.000125, 0.00003, 25]
+        const result = buildFixPathControlPointAddition(content, [], 0, 2, 0.5, addedCoordinate)
+        const insertedPoint = result.correction.controlPoints[0]
+        const displayed = applyFixPathCorrections(content, result.corrections).content
+
+        expect(insertedPoint.inserted).toBe(true)
+        expect(normalizeFixPathCorrectionData({revision: 1, tracks: {'track-a': result.corrections}})
+            .tracks['track-a'][0].controlPoints[0].inserted).toBe(true)
+        expect(displayed.geometry.coordinates).toHaveLength(content.geometry.coordinates.length + 1)
+        expect(displayed.geometry.coordinates[3]).toEqual(addedCoordinate)
+        expect(getFixPathSourcePosition(displayed, 0, 2, 0.5)).toBeCloseTo(2.25)
+        expect(getFixPathSourcePosition(displayed, 0, 3, 0.5)).toBeCloseTo(2.75)
+
+        const movedCoordinate = [0.00014, 0.00008, 30]
+        const movedCorrections = result.corrections.map(correction => ({
+            ...correction,
+            controlPoints: correction.controlPoints.map(point => ({...point, coordinate: movedCoordinate})),
+        }))
+        const movedDisplay = applyFixPathCorrections(content, movedCorrections).content
+
+        expect(movedDisplay.geometry.coordinates).toHaveLength(content.geometry.coordinates.length + 1)
+        expect(movedDisplay.geometry.coordinates[3]).toEqual(movedCoordinate)
+        expect(movedDisplay.geometry.coordinates[3]).not.toEqual(displayed.geometry.coordinates[3])
+    })
+
+    it('keeps a single added point independent from an adjacent source section', () => {
+        const content = makeFeature()
+        const existing = buildFixPathSection(content, [], 0, 0, 1)
+
+        const result = buildFixPathControlPointAddition(
+            content,
+            existing.corrections,
+            0,
+            2,
+            0.5,
+            [0.000125, 0.0001, 25],
+        )
+        const pointOnlySection = result.corrections.find(correction => correction.id === result.correction.id)
+
+        expect(result.error).toBeUndefined()
+        expect(result.corrections).toHaveLength(2)
+        expect(pointOnlySection.controlPoints).toHaveLength(1)
+        expect(applyFixPathCorrections(content, result.corrections)).toMatchObject({
+            changed: true,
+            skippedCorrectionIds: [],
+        })
+    })
+
+    it('adds a clicked route point to the correction section it falls inside', () => {
+        const content = makeFeature()
+        const existing = makeCorrection(content, 'existing-section', 1, 5, 'existing-control', [0.00015, 0.0002, 30])
+
+        const result = buildFixPathControlPointAddition(
+            content,
+            [existing],
+            0,
+            2,
+            0.5,
+            [0.000125, 0.0001, 25],
+        )
+
+        expect(result.error).toBeUndefined()
+        expect(result.corrections).toHaveLength(1)
+        expect(result.correction).toMatchObject({id: 'existing-section', startIndex: 1, endIndex: 5})
+        expect(result.correction.controlPoints.find(point => point.id === result.controlPointId))
+            .toMatchObject({coordinate: [0.000125, 0.0001, 25], fixed: true})
+    })
+
+    it('creates and applies a dense multi-kilometre section without losing source-point progress', () => {
+        const content = makeFeature()
+        const coordinates = Array.from({length: 4096}, (_, index) => [
+            index * 0.00001,
+            Math.sin(index / 200) * 0.0001,
+            index,
+        ])
+        content.geometry.coordinates = coordinates
+
+        const result = buildFixPathSection(content, [], 0, 0, coordinates.length - 1, [{
+            id: 'long-section-control',
+            progress: 0.5,
+            coordinate: [0.02048, 0.001, 2500],
+        }])
+        const applied = applyFixPathCorrections(content, [result.correction])
+
+        expect(result.error).toBeUndefined()
+        expect(result.correction.controlPoints).toHaveLength(coordinates.length + 1)
+        expect(result.correction.controlPoints[0].progress).toBe(0)
+        expect(result.correction.controlPoints.at(-1).progress).toBe(1)
+        expect(applied.changed).toBe(true)
+        expect(applied.skippedCorrectionIds).toEqual([])
+        expect(applied.content.geometry.coordinates).toHaveLength(coordinates.length)
+        expect(applied.content.geometry.coordinates.every(coordinate => (
+            Number.isFinite(coordinate[0]) && Number.isFinite(coordinate[1])
+        ))).toBe(true)
+    })
+
     it('retains every source point and merges two sections bridged by the selected points', () => {
         const content = makeFeature()
         const corrections = [
@@ -125,6 +296,35 @@ describe('Fix Path correction editing', () => {
             .toMatchObject({sourceIndex: 4, fixed: false, removed: false})
         expect(result.correction.controlPoints.find(point => point.id === 'control-a').fixed).toBe(true)
         expect(result.correction.controlPoints.find(point => point.id === 'control-b').fixed).toBe(true)
+    })
+
+    it('keeps a disjoint source selection separate from the active section', () => {
+        const content = makeFeature()
+        const initial = buildFixPathSection(content, [], 0, 0, 2).correction
+
+        const result = buildFixPathSectionsFromSourceIndexes(content, [initial], 0, new Set([6, 7, 8]))
+
+        expect(result.errors).toEqual([])
+        expect(result.corrections.map(section => [section.startIndex, section.endIndex])).toEqual([
+            [0, 2],
+            [6, 8],
+        ])
+        expect(result.sections).toHaveLength(1)
+        expect(result.sections[0]).toMatchObject({startIndex: 6, endIndex: 8})
+        expect(result.sections[0].id).not.toBe(initial.id)
+        expect(result.corrections.some(section => section.startIndex <= 3 && section.endIndex >= 5)).toBe(false)
+    })
+
+    it('creates one section per disjoint selected route interval', () => {
+        const content = makeFeature()
+
+        const result = buildFixPathSectionsFromSourceIndexes(content, [], 0, new Set([1, 2, 6, 7]))
+
+        expect(result.errors).toEqual([])
+        expect(result.corrections.map(section => [section.startIndex, section.endIndex])).toEqual([
+            [1, 2],
+            [6, 7],
+        ])
     })
 
     it('keeps erased source points hidden when the surrounding sections are extended again', () => {
@@ -163,23 +363,38 @@ describe('Fix Path correction editing', () => {
             .map(point => point.sourceIndex)).toEqual([3, 4])
     })
 
-    it('restores only explicitly reselected erased source points as unmodified controls', () => {
-        const corrections = [{
-            id: 'section-a',
-            segmentIndex: 0,
-            startIndex: 2,
-            endIndex: 5,
-            controlPoints: [
-                {id: 'fix-point-0-3', sourceIndex: 3, fixed: false, removed: true, erased: true},
-                {id: 'fix-point-0-4', sourceIndex: 4, fixed: false, removed: true, erased: true},
-            ],
-        }]
+    it('removes a section when erasing its last remaining source points', () => {
+        const content = makeFeature()
+        const initial = buildFixPathSection(content, [], 0, 0, 8).correction
+        const removedIds = new Set(initial.controlPoints.map(point => point.id))
 
-        const restored = restoreRemovedFixPathSourcePoints(corrections, 0, new Set([3]))
+        expect(removeFixPathControlPointsFromSection(content, initial, removedIds)).toEqual([])
+    })
 
-        expect(restored[0].controlPoints[0]).toMatchObject({sourceIndex: 3, fixed: false, removed: false})
-        expect(restored[0].controlPoints[0].erased).toBeUndefined()
-        expect(restored[0].controlPoints[1]).toMatchObject({sourceIndex: 4, fixed: false, removed: true, erased: true})
+    it('keeps removed source points excluded from lasso section creation', () => {
+        const content = makeFeature()
+        const section = buildFixPathSection(content, [], 0, 2, 5).correction
+        const removedSection = {
+            ...section,
+            controlPoints: section.controlPoints.map(point => point.sourceIndex === 3
+                ? {...point, removed: true, erased: true}
+                : point),
+        }
+        const corrections = [removedSection]
+
+        const removedOnly = buildFixPathSectionsFromSourceIndexes(content, corrections, 0, new Set([3]))
+
+        expect(removedOnly.sections).toEqual([])
+        expect(removedOnly.corrections).toBe(corrections)
+
+        const withNeighbor = buildFixPathSectionsFromSourceIndexes(content, corrections, 0, new Set([3, 4]))
+        const updatedSection = withNeighbor.sections[0]
+
+        expect(withNeighbor.sections).toHaveLength(1)
+        expect(updatedSection.controlPoints.find(point => point.sourceIndex === 3))
+            .toMatchObject({sourceIndex: 3, fixed: false, removed: true, erased: true})
+        expect(updatedSection.controlPoints.find(point => point.sourceIndex === 4))
+            .toMatchObject({sourceIndex: 4, fixed: false, removed: false})
     })
 
     it('merges sections whose source vertices are directly adjacent', () => {
@@ -238,5 +453,28 @@ describe('Fix Path correction editing', () => {
         expect(moved[0].coordinate.slice(1)).toEqual([10.5, 15])
         expect(moved[1].coordinate[0]).toBeCloseTo(-179.7)
         expect(moved[1].coordinate.slice(1)).toEqual([11.5, 26])
+    })
+
+    it('excludes removed control points from a global move', () => {
+        const selectedPoints = [
+            {trackSlug: 'track-a', controlPointId: 'first', coordinate: [179.9, 10, 10.3]},
+            {trackSlug: 'track-a', controlPointId: 'removed', coordinate: [-179.9, 11, 20.6], removed: true},
+            {trackSlug: 'track-a', controlPointId: 'third', coordinate: [-179.8, 12, 30.4]},
+        ]
+
+        const moved = translateFixPathControlPoints(
+            selectedPoints,
+            {trackSlug: 'track-a', controlPointId: 'first'},
+            [-179.9, 10.5, 15],
+        )
+        const removedAnchorMove = translateFixPathControlPoints(
+            selectedPoints,
+            {trackSlug: 'track-a', controlPointId: 'removed'},
+            [-179.9, 10.5, 15],
+        )
+
+        expect(moved.map(point => point.controlPointId)).toEqual(['first', 'third'])
+        expect(moved.every(point => point.removed === false)).toBe(true)
+        expect(removedAnchorMove).toEqual([])
     })
 })

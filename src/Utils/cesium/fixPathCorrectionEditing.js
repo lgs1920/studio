@@ -8,15 +8,18 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
+    createFixPathDistanceIndex,
+    getNearestFixPathSourcePosition,
     getFixPathSegmentDistanceMeters,
     getFixPathSourceFingerprint,
+    normalizeFixPathManualControlProgress,
 } from '@Utils/cesium/fixPathCorrections'
 
 const getLineSegments = geometry => {
@@ -36,19 +39,11 @@ const correctionAtPoint = (corrections, segmentIndex, index) => corrections.find
     correction.segmentIndex === segmentIndex && index >= correction.startIndex && index <= correction.endIndex
 ))
 
-const distanceBetweenIndices = (content, segmentIndex, firstIndex, secondIndex) => firstIndex === secondIndex
-    ? 0
-    : getFixPathSegmentDistanceMeters(content, segmentIndex, firstIndex, secondIndex)
-
-const progressAtIndex = (content, segmentIndex, startIndex, endIndex, index) => {
+const progressAtIndex = (startIndex, endIndex, index, distanceIndex) => {
     if (index <= startIndex) return 0
     if (index >= endIndex) return 1
-    const totalDistance = distanceBetweenIndices(content, segmentIndex, startIndex, endIndex)
-    if (!Number.isFinite(totalDistance) || totalDistance <= 0) {
-        return (index - startIndex) / (endIndex - startIndex)
-    }
-    const partialDistance = distanceBetweenIndices(content, segmentIndex, startIndex, index)
-    return Math.min(1, Math.max(0, partialDistance / totalDistance))
+    return distanceIndex?.progressAtIndex(index)
+        ?? (index - startIndex) / (endIndex - startIndex)
 }
 
 const normalizeControlCoordinate = coordinate => {
@@ -67,13 +62,14 @@ const longitudeOffsetDegrees = offset => ((offset + 180) % 360 + 360) % 360 - 18
 
 /**
  * Translate selected control points by the offset of the point being dragged.
- * @param {Array<object>} selectedPoints - Selected control points with coordinates.
+ * @param {Array<object>} selectedPoints - Selected control points with coordinates; removed points are ignored.
  * @param {object} draggedPoint - Track and control point identifiers for the anchor.
  * @param {Array<number>} coordinate - New longitude, latitude, and height for the anchor.
  * @returns {Array<object>} Selected points with translated coordinates.
  */
 export const translateFixPathControlPoints = (selectedPoints, draggedPoint, coordinate) => {
-    const origin = selectedPoints.find(point => point.trackSlug === draggedPoint.trackSlug
+    const movablePoints = selectedPoints.filter(point => point && point.removed !== true)
+    const origin = movablePoints.find(point => point.trackSlug === draggedPoint.trackSlug
         && point.controlPointId === draggedPoint.controlPointId)
     if (!origin) {
         return []
@@ -81,7 +77,7 @@ export const translateFixPathControlPoints = (selectedPoints, draggedPoint, coor
     const longitudeOffset = longitudeOffsetDegrees(Number(coordinate[0]) - Number(origin.coordinate[0]))
     const latitudeOffset = Number(coordinate[1]) - Number(origin.coordinate[1])
     const heightOffset = Math.round(Number(coordinate[2] ?? 0) - Number(origin.coordinate[2] ?? 0))
-    return selectedPoints.map(point => {
+    return movablePoints.map(point => {
         const translated = normalizeControlCoordinate(point.coordinate) ?? [...point.coordinate]
         while (translated.length < 3) translated.push(0)
         translated[0] = longitudeOffsetDegrees(Number(translated[0]) + longitudeOffset)
@@ -99,37 +95,6 @@ const sourceIndexOf = point => {
     if (Number.isInteger(point?.sourceIndex)) return point.sourceIndex
     const match = /^fix-point-(\d+)-(\d+)$/.exec(point?.id ?? '')
     return match ? Number(match[2]) : null
-}
-
-/**
- * Restore explicitly reselected source points that were previously erased from a section.
- * @param {Array<object>} corrections - Current correction sections for one track.
- * @param {number} segmentIndex - Source segment containing the selected points.
- * @param {Set<number>} selectedSourceIndexes - Source point indexes enclosed by the selection.
- * @returns {Array<object>} Sections with selected erased points restored as unmodified controls.
- */
-export const restoreRemovedFixPathSourcePoints = (corrections, segmentIndex, selectedSourceIndexes) => {
-    if (!Array.isArray(corrections) || !(selectedSourceIndexes instanceof Set) || selectedSourceIndexes.size === 0) {
-        return corrections
-    }
-
-    return corrections.map(correction => {
-        if (correction.segmentIndex !== segmentIndex || !Array.isArray(correction.controlPoints)) {
-            return correction
-        }
-        let changed = false
-        const controlPoints = correction.controlPoints.map(point => {
-            const sourceIndex = sourceIndexOf(point)
-            if (!selectedSourceIndexes.has(sourceIndex) || point.removed !== true) {
-                return point
-            }
-
-            changed = true
-            const {erased: _erased, ...rest} = point
-            return {...rest, fixed: false, removed: false}
-        })
-        return changed ? {...correction, controlPoints} : correction
-    })
 }
 
 /**
@@ -188,7 +153,9 @@ export const removeFixPathControlPointsFromSection = (content, correction, remov
         : Math.min(1, Math.max(0, (sourceIndex - startIndex) / (endIndex - startIndex)))
 
     if (groups.length === 0) {
-        if (erasedSourcePoints.length === 0 && manualPoints.length === 0) {
+        // An erased-only correction has no visible or editable points left. Drop
+        // it instead of keeping a navigation entry made only of hidden tombstones.
+        if (manualPoints.length === 0) {
             return []
         }
         return [{
@@ -285,10 +252,7 @@ export const removeFixPathControlPointsFromSection = (content, correction, remov
     })
 }
 
-const remapManualProgress = (content, segmentIndex, correction, point, startIndex, endIndex) => {
-    const oldDistance = distanceBetweenIndices(content, segmentIndex, correction.startIndex, correction.endIndex)
-    const beforeDistance = distanceBetweenIndices(content, segmentIndex, startIndex, correction.startIndex)
-    const newDistance = distanceBetweenIndices(content, segmentIndex, startIndex, endIndex)
+const remapManualProgress = (correction, point, startIndex, endIndex, oldDistance, beforeDistance, newDistance) => {
     const oldLength = correction.endIndex - correction.startIndex
     const newLength = endIndex - startIndex
     const offset = Number.isFinite(oldDistance) && oldDistance > 0
@@ -342,10 +306,11 @@ export const buildFixPathSection = (content, corrections, segmentIndex, startInd
         })
     }
 
-    const distance = getFixPathSegmentDistanceMeters(content, segmentIndex, mergedStart, mergedEnd)
-    if (!Number.isFinite(distance)) {
+    const distanceIndex = createFixPathDistanceIndex(content, segmentIndex, mergedStart, mergedEnd)
+    if (!Number.isFinite(distanceIndex?.totalDistance)) {
         return {corrections, error: 'The selected route section is no longer available.'}
     }
+    const mergedDistance = distanceIndex.totalDistance
 
     const sourceFingerprint = getFixPathSourceFingerprint(content, segmentIndex, mergedStart, mergedEnd)
     if (!sourceFingerprint) {
@@ -358,7 +323,7 @@ export const buildFixPathSection = (content, corrections, segmentIndex, startInd
         pointsById.set(id, {
             id,
             sourceIndex: index,
-            progress: progressAtIndex(content, segmentIndex, mergedStart, mergedEnd, index),
+            progress: progressAtIndex(mergedStart, mergedEnd, index, distanceIndex),
             coordinate: normalizeControlCoordinate(segment[index]),
             fixed: false,
             removed: false,
@@ -366,6 +331,8 @@ export const buildFixPathSection = (content, corrections, segmentIndex, startInd
     }
 
     corrections.filter(correction => touchedIds.has(correction.id)).forEach(correction => {
+        const oldDistance = distanceIndex.distanceBetween(correction.startIndex, correction.endIndex)
+        const beforeDistance = distanceIndex.distanceBetween(mergedStart, correction.startIndex)
         correction.controlPoints.forEach(point => {
             const sourceIndex = sourceIndexOf(point)
             if (sourceIndex !== null && sourceIndex >= mergedStart && sourceIndex <= mergedEnd) {
@@ -375,7 +342,7 @@ export const buildFixPathSection = (content, corrections, segmentIndex, startInd
                     ...point,
                     id,
                     sourceIndex,
-                    progress: progressAtIndex(content, segmentIndex, mergedStart, mergedEnd, sourceIndex),
+                    progress: progressAtIndex(mergedStart, mergedEnd, sourceIndex, distanceIndex),
                     coordinate: normalizeControlCoordinate(point.coordinate),
                     fixed: point.fixed !== false,
                     removed: point.removed === true,
@@ -386,7 +353,15 @@ export const buildFixPathSection = (content, corrections, segmentIndex, startInd
             const remapped = {
                 ...point,
                 sourceIndex: undefined,
-                progress: remapManualProgress(content, segmentIndex, correction, point, mergedStart, mergedEnd),
+                progress: remapManualProgress(
+                    correction,
+                    point,
+                    mergedStart,
+                    mergedEnd,
+                    oldDistance,
+                    beforeDistance,
+                    mergedDistance,
+                ),
                 coordinate: normalizeControlCoordinate(point.coordinate),
                 fixed: point.fixed !== false,
                 removed: point.removed === true,
@@ -395,9 +370,8 @@ export const buildFixPathSection = (content, corrections, segmentIndex, startInd
         })
     })
 
-    const selectedDistance = distanceBetweenIndices(content, segmentIndex, startIndex, endIndex)
-    const beforeSelectedDistance = distanceBetweenIndices(content, segmentIndex, mergedStart, startIndex)
-    const mergedDistance = distanceBetweenIndices(content, segmentIndex, mergedStart, mergedEnd)
+    const selectedDistance = distanceIndex.distanceBetween(startIndex, endIndex)
+    const beforeSelectedDistance = distanceIndex.distanceBetween(mergedStart, startIndex)
     addedPoints.forEach(point => {
         const sourceIndex = sourceIndexOf(point)
         if (sourceIndex !== null && sourceIndex >= mergedStart && sourceIndex <= mergedEnd) {
@@ -408,7 +382,7 @@ export const buildFixPathSection = (content, corrections, segmentIndex, startInd
                 ...point,
                 id,
                 sourceIndex,
-                progress: progressAtIndex(content, segmentIndex, mergedStart, mergedEnd, sourceIndex),
+                progress: progressAtIndex(mergedStart, mergedEnd, sourceIndex, distanceIndex),
                 coordinate: normalizeControlCoordinate(point.coordinate),
                 fixed: true,
                 removed: false,
@@ -416,15 +390,38 @@ export const buildFixPathSection = (content, corrections, segmentIndex, startInd
             return
         }
 
-        const localProgress = Math.min(1, Math.max(0, Number(point.progress) || 0.5))
+        const inferredSourcePosition = getNearestFixPathSourcePosition(segment, point.coordinate, startIndex, endIndex)
+        const sourcePosition = point.sourcePosition !== null && point.sourcePosition !== undefined
+            && Number.isFinite(Number(point.sourcePosition))
+            ? Number(point.sourcePosition)
+            : inferredSourcePosition
+        const boundedSourcePosition = Number.isFinite(sourcePosition)
+            ? Math.min(endIndex, Math.max(startIndex, sourcePosition))
+            : null
+        const lowerIndex = boundedSourcePosition === null
+            ? null
+            : Math.min(endIndex, Math.floor(boundedSourcePosition))
+        const sourceDistanceAtPoint = lowerIndex === null
+            ? null
+            : distanceIndex.distanceAtIndex(lowerIndex)
+                + (lowerIndex < endIndex
+                    ? (distanceIndex.distanceAtIndex(lowerIndex + 1) - distanceIndex.distanceAtIndex(lowerIndex))
+                        * (boundedSourcePosition - lowerIndex)
+                    : 0)
+        const localProgress = Number.isFinite(sourceDistanceAtPoint) && selectedDistance > 0
+            ? Math.min(1, Math.max(0, (sourceDistanceAtPoint - beforeSelectedDistance) / selectedDistance))
+            : Math.min(1, Math.max(0, Number(point.progress) || 0.5))
         const offset = Number.isFinite(selectedDistance) && selectedDistance > 0
             ? beforeSelectedDistance + selectedDistance * localProgress
             : startIndex - mergedStart + (endIndex - startIndex) * localProgress
         const total = Number.isFinite(mergedDistance) && mergedDistance > 0
             ? mergedDistance
             : mergedEnd - mergedStart
+        const pointData = {...point}
+        delete pointData.sourcePosition
         pointsById.set(point.id, {
-            ...point,
+            ...pointData,
+            ...(Number.isFinite(boundedSourcePosition) ? {sourcePosition: boundedSourcePosition} : {}),
             progress: total > 0 ? Math.min(0.999999, Math.max(0.000001, offset / total)) : 0.5,
             coordinate: normalizeControlCoordinate(point.coordinate),
             fixed: true,
@@ -436,16 +433,184 @@ export const buildFixPathSection = (content, corrections, segmentIndex, startInd
         || (first.sourceIndex ?? Number.MAX_SAFE_INTEGER) - (second.sourceIndex ?? Number.MAX_SAFE_INTEGER)
         || first.id.localeCompare(second.id))
     const firstTouched = corrections.find(correction => touchedIds.has(correction.id))
-    const correction = {
+    const correction = normalizeFixPathManualControlProgress(content, {
         id: firstTouched?.id ?? makeId(),
         segmentIndex,
         startIndex: mergedStart,
         endIndex: mergedEnd,
         sourceFingerprint,
         controlPoints,
-    }
+    })
     const retained = corrections.filter(item => !touchedIds.has(item.id))
     return {corrections: sortCorrections([...retained, correction]), correction}
+}
+
+/**
+ * Add one manually positioned control point to an existing section, or create a
+ * one-point correction over the nearest source interval.
+ * @param {object} content - Source track feature.
+ * @param {Array<object>} corrections - Current track correction sections.
+ * @param {number} segmentIndex - Geometry segment index.
+ * @param {number} index - Start index of the route interval under the pointer.
+ * @param {number} intervalProgress - Fraction along the route interval.
+ * @param {Array<number>} coordinate - New longitude, latitude, and height.
+ * @returns {{corrections: Array<object>, correction?: object, controlPointId?: string, error?: string}} Updated sections.
+ */
+export const buildFixPathControlPointAddition = (
+    content,
+    corrections,
+    segmentIndex,
+    index,
+    intervalProgress,
+    coordinate,
+) => {
+    const segment = getLineSegments(content?.geometry)?.[segmentIndex]
+    if (!Array.isArray(segment) || segment.length === 0 || !Number.isInteger(index)
+        || index < 0 || index >= segment.length || !Array.isArray(coordinate)
+        || !Number.isFinite(Number(coordinate[0])) || !Number.isFinite(Number(coordinate[1]))) {
+        return {corrections, error: 'The selected Journey position is no longer available.'}
+    }
+
+    const clampedProgress = Math.min(1, Math.max(0, Number(intervalProgress) || 0))
+    const sourcePosition = index + clampedProgress
+    const existing = corrections.find(correction => (
+        correction.segmentIndex === segmentIndex
+        && sourcePosition >= correction.startIndex
+        && sourcePosition <= correction.endIndex
+    )) ?? corrections.find(correction => (
+        correction.segmentIndex === segmentIndex
+        && index <= correction.endIndex
+        && index + 1 >= correction.startIndex
+    ))
+    const startIndex = existing?.startIndex ?? index
+    const endIndex = existing?.endIndex ?? Math.min(index + 1, segment.length - 1)
+    const distanceIndex = createFixPathDistanceIndex(content, segmentIndex, startIndex, endIndex)
+    if (!distanceIndex) {
+        return {corrections, error: 'The selected Journey position is no longer available.'}
+    }
+
+    const boundedSourcePosition = Math.min(endIndex, Math.max(startIndex, sourcePosition))
+    const lowerIndex = Math.min(endIndex, Math.max(startIndex, Math.floor(boundedSourcePosition)))
+    const localIntervalProgress = boundedSourcePosition - lowerIndex
+    const distanceBeforePoint = distanceIndex.distanceAtIndex(lowerIndex)
+        + (lowerIndex < endIndex
+            ? (distanceIndex.distanceAtIndex(lowerIndex + 1) - distanceIndex.distanceAtIndex(lowerIndex))
+                * localIntervalProgress
+            : 0)
+    const progress = distanceIndex.totalDistance > 0
+        ? distanceBeforePoint / distanceIndex.totalDistance
+        : endIndex > startIndex ? (sourcePosition - startIndex) / (endIndex - startIndex) : 0.5
+    const controlPointId = makeId()
+    if (!existing) {
+        if (endIndex <= startIndex) {
+            return {corrections, error: 'The selected route needs two neighboring points.'}
+        }
+
+        const correction = {
+            id: makeId(),
+            segmentIndex,
+            startIndex,
+            endIndex,
+            sourceFingerprint: getFixPathSourceFingerprint(content, segmentIndex, startIndex, endIndex),
+            controlPoints: [{
+                id: controlPointId,
+                progress: Math.min(0.999999, Math.max(0.000001, progress)),
+                sourcePosition,
+                coordinate: normalizeControlCoordinate(coordinate),
+                fixed: true,
+                removed: false,
+                inserted: true,
+            }],
+        }
+
+        return {
+            corrections: sortCorrections([...corrections, correction]),
+            correction,
+            controlPointId,
+        }
+    }
+
+    const result = buildFixPathSection(content, corrections, segmentIndex, startIndex, endIndex, [{
+        id: controlPointId,
+        progress,
+        sourcePosition,
+        coordinate,
+        inserted: true,
+    }])
+    return result.error
+        ? result
+        : {...result, controlPointId}
+}
+
+/**
+ * Split selected source vertices into independent contiguous route intervals.
+ * @param {Iterable<number>} sourceIndexes - Selected source coordinate indexes.
+ * @returns {Array<Array<number>>} Sorted contiguous index groups.
+ */
+export const groupFixPathSourceIndexes = sourceIndexes => {
+    const indexes = [...new Set(Array.from(sourceIndexes ?? []).filter(index => (
+        Number.isInteger(index) && index >= 0
+    )))].sort((first, second) => first - second)
+    const groups = []
+
+    indexes.forEach(index => {
+        const currentGroup = groups.at(-1)
+        if (!currentGroup || index !== currentGroup.at(-1) + 1) {
+            groups.push([index])
+            return
+        }
+        currentGroup.push(index)
+    })
+
+    return groups
+}
+
+/**
+ * Create or extend sections for selected, non-removed source vertices without filling disjoint gaps.
+ * @param {object} content - Track content.
+ * @param {Array<object>} corrections - Existing track correction sections.
+ * @param {number} segmentIndex - Geometry segment index.
+ * @param {Iterable<number>} sourceIndexes - Selected source coordinate indexes.
+ * @returns {{corrections: Array<object>, sections: Array<object>, errors: Array<string>}} Updated sections.
+ */
+export const buildFixPathSectionsFromSourceIndexes = (content, corrections, segmentIndex, sourceIndexes) => {
+    let nextCorrections = corrections
+    const sectionsById = new Map()
+    const errors = []
+    const removedSourceIndexes = new Set()
+
+    corrections.forEach(correction => {
+        if (correction.segmentIndex !== segmentIndex) return
+        correction.controlPoints?.forEach(point => {
+            const sourceIndex = sourceIndexOf(point)
+            if (point.removed === true && Number.isInteger(sourceIndex)) {
+                removedSourceIndexes.add(sourceIndex)
+            }
+        })
+    })
+
+    const selectableSourceIndexes = Array.from(sourceIndexes ?? [])
+        .filter(index => !removedSourceIndexes.has(index))
+
+    groupFixPathSourceIndexes(selectableSourceIndexes).forEach(indexes => {
+        const result = buildFixPathSection(
+            content,
+            nextCorrections,
+            segmentIndex,
+            indexes[0],
+            indexes.at(-1),
+        )
+        if (result.error || !result.correction) {
+            errors.push(result.error ?? 'The selected Journey points could not form a correction section.')
+            return
+        }
+
+        nextCorrections = result.corrections
+        const section = nextCorrections.find(item => item.id === result.correction.id)
+        if (section) sectionsById.set(section.id, section)
+    })
+
+    return {corrections: nextCorrections, sections: [...sectionsById.values()], errors}
 }
 
 /**
@@ -462,7 +627,8 @@ export const buildDraggedPointCorrections = (content, corrections, segmentIndex,
     const existing = correctionAtPoint(corrections, segmentIndex, index)
     const controlId = 'fix-point-' + segmentIndex + '-' + index
     if (existing) {
-        const progress = progressAtIndex(content, segmentIndex, existing.startIndex, existing.endIndex, index)
+        const distanceIndex = createFixPathDistanceIndex(content, segmentIndex, existing.startIndex, existing.endIndex)
+        const progress = progressAtIndex(existing.startIndex, existing.endIndex, index, distanceIndex)
         const found = existing.controlPoints.some(point => sourceIndexOf(point) === index)
         const controlPoints = found
             ? existing.controlPoints.map(point => sourceIndexOf(point) === index
