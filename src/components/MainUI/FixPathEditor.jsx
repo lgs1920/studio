@@ -63,6 +63,7 @@ import {
     findClosestRoutePosition,
     getControlPointCoordinate,
     getGeometrySegments,
+    isRouteCoordinateScreenHit,
     isWorldPositionVisible,
     makeId,
     nextAnimationFrame,
@@ -83,6 +84,33 @@ const closeFixPathEditor = () => {
 
 const MAX_HISTORY_ENTRIES = 100
 const FIX_PATH_CONTROL_MARKER_RADIUS = 7
+
+/** Return comparable correction data while ignoring fields derived during draft hydration. */
+const stableCorrectionSnapshot = correction => ({
+    id: correction?.id,
+    segmentIndex: correction?.segmentIndex,
+    startIndex: correction?.startIndex,
+    endIndex: correction?.endIndex,
+    sourceFingerprint: correction?.sourceFingerprint,
+    controlPoints: (correction?.controlPoints ?? []).map(point => {
+        const coordinate = (point.coordinate ?? []).map((value, index) => (
+            index >= 2 && Number.isFinite(Number(value)) ? Math.round(Number(value)) : Number(value)
+        ))
+        return {
+            id: point.id,
+            coordinate,
+            fixed: typeof point.fixed === 'boolean' ? point.fixed : true,
+            removed: point.removed === true,
+            erased: point.erased === true,
+            inserted: point.inserted === true,
+        }
+    }).sort((first, second) => String(first.id).localeCompare(String(second.id))),
+})
+
+/** Check whether a correction is unchanged from its persisted snapshot. */
+const isSameCorrectionSnapshot = (correction, persistedCorrection) => Boolean(persistedCorrection)
+    && JSON.stringify(stableCorrectionSnapshot(correction))
+        === JSON.stringify(stableCorrectionSnapshot(persistedCorrection))
 
 /** Resolve the selection mode and shape modifier from a pointer event. */
 const selectionGestureModifier = event => {
@@ -168,6 +196,8 @@ export const FixPathEditor = () => {
     const [areaMode, setAreaMode] = useState(true)
     const [areaDrag, setAreaDrag] = useState(null)
     const [journeyCursorIcon, setJourneyCursorIcon] = useState('circle-plus')
+    const [journeyCursorSelectionColor, setJourneyCursorSelectionColor] = useState(null)
+    const [journeyCursorVisible, setJourneyCursorVisible] = useState(false)
     const [scanProgress, setScanProgress] = useState(null)
     const [helpOpen, setHelpOpen] = useState(false)
     const [widgetResized, setWidgetResized] = useState(false)
@@ -201,6 +231,7 @@ export const FixPathEditor = () => {
     const _activeSection = useRef(null)
     const _heightInputSnapshot = useRef(null)
     const _displayContentOverrides = useRef(new Map())
+    const lastJourneyHoverHitAtRef = useRef(0)
     const unitSystemSnapshot = useOptionalSnapshot(lgs.settings.unitSystem)
     const unitSystem = Number(unitSystemSnapshot.current ?? INTERNATIONAL)
     const heightUnit = ELEVATION_UNITS[unitSystem] ?? ELEVATION_UNITS[INTERNATIONAL]
@@ -841,19 +872,48 @@ export const FixPathEditor = () => {
         )
     }, [])
 
+    /** Resolve a visible route hit and map its interval back to original GPX indices. */
     const journeyMapHit = useCallback((clientX, clientY, pickedTrack = null) => {
+        const scene = lgs.viewer?.scene
+        const camera = lgs.viewer?.camera
         const canvasPosition = canvasPositionFromClient(clientX, clientY)
-        const track = pickedTrack ?? (canvasPosition ? pickedTrackAtPosition(canvasPosition) : null)
-        if (!track?.content) return null
-
+        const scenePickedTrack = pickedTrack ?? (canvasPosition ? pickedTrackAtPosition(canvasPosition) : null)
         const coordinate = pointAtScreenPosition(clientX, clientY)
         if (!coordinate) return null
-        const visibleCorrections = (displayCorrectionsByTrack[track.slug] ?? []).filter(correction => (
-            !hiddenCorrectionKeys.has(track.slug + ':' + correction.id)
+
+        /** Find the nearest corrected route without terrain queries for every vertex. */
+        const findNearestRoute = tracks => {
+            let closest = null
+            tracks.forEach(track => {
+                if (!track?.content) return
+                const visibleCorrections = (displayCorrectionsByTrack[track.slug] ?? []).filter(correction => (
+                    !hiddenCorrectionKeys.has(track.slug + ':' + correction.id)
+                ))
+                const displayedContent = applyFixPathCorrections(track.content, visibleCorrections).content
+                const routePosition = findClosestRoutePosition(displayedContent?.geometry, coordinate)
+                if (routePosition && (!closest || routePosition.distanceMeters < closest.routePosition.distanceMeters)) {
+                    closest = {track, displayedContent, routePosition}
+                }
+            })
+            return closest
+        }
+
+        let closestRoute = findNearestRoute(scenePickedTrack ? [scenePickedTrack] : availableTracks)
+        /** Validate one nearest route candidate without projecting the whole track. */
+        const isScreenHit = candidate => Boolean(candidate && isRouteCoordinateScreenHit(
+            scene,
+            camera,
+            canvasPosition,
+            candidate.routePosition.coordinate,
         ))
-        const displayedContent = applyFixPathCorrections(track.content, visibleCorrections).content
-        const routePosition = findClosestRoutePosition(displayedContent?.geometry, coordinate)
-        if (!routePosition) return null
+
+        if (!isScreenHit(closestRoute)) {
+            if (!scenePickedTrack) return null
+            closestRoute = findNearestRoute(availableTracks.filter(track => track !== scenePickedTrack))
+            if (!isScreenHit(closestRoute)) return null
+        }
+
+        const {track, displayedContent, routePosition} = closestRoute
         const snappedCoordinate = routePosition.coordinate ?? coordinate
         const sourcePosition = getFixPathSourcePosition(
             displayedContent,
@@ -877,7 +937,7 @@ export const FixPathEditor = () => {
             progress: Math.min(1, Math.max(0, sourcePosition - sourceIndex)),
             coordinate: snappedCoordinate,
         }
-    }, [canvasPositionFromClient, displayCorrectionsByTrack, hiddenCorrectionKeys, pickedTrackAtPosition, pointAtScreenPosition])
+    }, [availableTracks, canvasPositionFromClient, displayCorrectionsByTrack, hiddenCorrectionKeys, pickedTrackAtPosition, pointAtScreenPosition])
 
     const addJourneyControlPoint = useCallback(routeTarget => {
         if (validationInProgressRef.current || scanProgress || !routeTarget) return false
@@ -956,6 +1016,7 @@ export const FixPathEditor = () => {
         const canvas = lgs.viewer?.canvas
         if (!canvas) return
         setJourneyCursorIcon(selectionCursorIcon(event))
+        setJourneyCursorSelectionColor(event.shiftKey ? 'journey' : event.altKey ? 'section' : null)
         const container = lgs.viewer?.container
         const drag = dragRef.current
         const isAreaSelectionDrag = drag?.kind === 'control-area' || drag?.kind === 'section-area'
@@ -967,6 +1028,7 @@ export const FixPathEditor = () => {
         const cursor = journeyCursorRef.current
         /** Keep native cursor suppression synchronized with the overlay visibility. */
         const setCursorVisible = isVisible => {
+            setJourneyCursorVisible(isVisible)
             canvas.classList.toggle('fix-path-journey-hover', isVisible)
             container?.classList.toggle('fix-path-custom-cursor', isVisible)
             cursor?.classList.toggle('is-visible', isVisible)
@@ -977,9 +1039,17 @@ export const FixPathEditor = () => {
         }
         const position = canvasPositionFromClient(event.clientX, event.clientY)
         const pickedTrack = position ? pickedTrackAtPosition(position) : null
-        const isJourneyHovered = isAreaSelectionDrag || Boolean(isModifiedControlPointTarget)
+        let isJourneyHovered = isAreaSelectionDrag || Boolean(isModifiedControlPointTarget)
             || isClickLassoDraft || (event.target === canvas && Boolean(selectionGestureModifier(event)))
             || Boolean(position && pickedTrack)
+        const now = performance.now()
+        if (!isJourneyHovered && position && now - lastJourneyHoverHitAtRef.current >= 80) {
+            lastJourneyHoverHitAtRef.current = now
+            isJourneyHovered = Boolean(journeyMapHit(event.clientX, event.clientY))
+        }
+        else if (!isJourneyHovered && position) {
+            isJourneyHovered = canvas.classList.contains('fix-path-journey-hover')
+        }
         const overlayRect = mapOverlayRef.current?.getBoundingClientRect()
         if (!isJourneyHovered || !cursor || !overlayRect) {
             setCursorVisible(false)
@@ -988,11 +1058,12 @@ export const FixPathEditor = () => {
         setCursorVisible(true)
         cursor.style.left = `${event.clientX - overlayRect.left}px`
         cursor.style.top = `${event.clientY - overlayRect.top}px`
-    }, [canvasPositionFromClient, pickedTrackAtPosition])
+    }, [canvasPositionFromClient, journeyMapHit, pickedTrackAtPosition])
 
     /** Refresh the custom map cursor when a selection modifier changes. */
     const handleJourneyCursorModifierChange = useCallback(event => {
         setJourneyCursorIcon(selectionCursorIcon(event))
+        setJourneyCursorSelectionColor(event.shiftKey ? 'journey' : event.altKey ? 'section' : null)
     }, [])
 
     /** Hide the custom cursor and restore the native cursor when leaving Cesium's canvas. */
@@ -1002,7 +1073,9 @@ export const FixPathEditor = () => {
         lgs.viewer?.canvas?.classList.remove('fix-path-journey-hover')
         lgs.viewer?.container?.classList.remove('fix-path-custom-cursor')
         journeyCursorRef.current?.classList.remove('is-visible')
+        setJourneyCursorVisible(false)
         setJourneyCursorIcon('circle-plus')
+        setJourneyCursorSelectionColor(null)
     }, [])
 
     const handleJourneyClick = useCallback(event => {
@@ -1467,13 +1540,14 @@ export const FixPathEditor = () => {
             trackSlug: section?.trackSlug ?? null,
             correctionId,
             modifier,
+            selectionColor: event.altKey ? 'section' : 'journey',
             replaceSelection,
             markerControlPointId: markerPoint?.controlPointId,
             previousLasso: continuesLasso ? previousLasso : null,
         }
         setAreaDrag(lasso
-            ? {shape: 'lasso', kind: mode, modifier, points}
-            : {shape: 'rectangle', start, current: start})
+            ? {shape: 'lasso', kind: mode, modifier, selectionColor: dragRef.current.selectionColor, points}
+            : {shape: 'rectangle', modifier, selectionColor: dragRef.current.selectionColor, start, current: start})
     }, [activeCorrection, clearSelectionLasso, displayedCorrection, orderedCorrections, projected.controlPoints, scanProgress, selectedControlPoints, selection.phase])
 
     /** Track rectangle bounds or freehand lasso vertices while suspending Cesium gestures. */
@@ -1492,8 +1566,8 @@ export const FixPathEditor = () => {
             : drag.points
         dragRef.current = {...drag, current, moved, points}
         setAreaDrag(drag.shape === 'lasso'
-            ? {shape: 'lasso', kind: drag.mode, modifier: drag.modifier, points}
-            : {shape: 'rectangle', start: drag.start, current})
+            ? {shape: 'lasso', kind: drag.mode, modifier: drag.modifier, selectionColor: drag.selectionColor, points}
+            : {shape: 'rectangle', modifier: drag.modifier, selectionColor: drag.selectionColor, start: drag.start, current})
     }, [])
 
     /** Finish a rectangle or freehand lasso on pointer release. */
@@ -1558,13 +1632,14 @@ export const FixPathEditor = () => {
                 shape: 'lasso',
                 kind: drag.mode,
                 modifier: drag.modifier,
+                selectionColor: drag.selectionColor,
                 replaceSelection: drag.replaceSelection,
                 trackSlug: drag.trackSlug,
                 correctionId: drag.correctionId,
                 points,
             }
             lassoDraftRef.current = draft
-            setAreaDrag({shape: 'lasso', kind: drag.mode, modifier: drag.modifier, points})
+            setAreaDrag({shape: 'lasso', kind: drag.mode, modifier: drag.modifier, selectionColor: drag.selectionColor, points})
             handleJourneyPointerMove(event)
             return
         }
@@ -1675,6 +1750,7 @@ export const FixPathEditor = () => {
             canvas.classList.remove('fix-path-journey-hover')
             container.classList.remove('fix-path-custom-cursor')
             cursorElement?.classList.remove('is-visible')
+            setJourneyCursorVisible(false)
             container.removeEventListener('pointermove', handleJourneyPointerMove, true)
             canvas.removeEventListener('click', handleJourneyClick, true)
             canvas.removeEventListener('contextmenu', handleJourneyContextMenu, true)
@@ -1747,8 +1823,35 @@ export const FixPathEditor = () => {
         }
     }
 
+    /** Clear point-drag ownership and its preview before releasing browser capture. */
+    const clearPointDrag = useCallback(() => {
+        const drag = dragRef.current
+        if (!drag || ['area', 'control-area', 'section-area'].includes(drag.kind)) return null
+        dragRef.current = null
+        setDragPreview(null)
+        if (drag.moved) suppressControlClickRef.current = true
+        try {
+            if (drag.captureElement?.hasPointerCapture?.(drag.pointerId)) {
+                drag.captureElement.releasePointerCapture(drag.pointerId)
+            }
+        }
+        catch {
+            // Capture may already have been lost or its marker removed.
+        }
+        return drag
+    }, [])
+
+    /** Discard an interrupted point drag without saving its preview. */
+    const cancelPointDrag = useCallback(event => {
+        const drag = dragRef.current
+        if (!drag || (event?.pointerId !== undefined && event.pointerId !== drag.pointerId)) return
+        clearPointDrag()
+    }, [clearPointDrag])
+
+    /** Start a point drag owned by one primary-button pointer. */
     const handlePointDragStart = (event, drag) => {
-        if (validationInProgressRef.current) return
+        if (validationInProgressRef.current || event.button !== 0 || event.isPrimary === false) return
+        clearPointDrag()
         event.preventDefault()
         event.stopPropagation()
         if (drag.kind === 'control') {
@@ -1761,12 +1864,25 @@ export const FixPathEditor = () => {
         catch {
             // A browser can invalidate the pointer before capture; keep the drag session alive.
         }
-        dragRef.current = {...drag, startX: event.clientX, startY: event.clientY, moved: false}
+        dragRef.current = {
+            ...drag,
+            pointerId: event.pointerId,
+            captureElement: event.currentTarget,
+            startX: event.clientX,
+            startY: event.clientY,
+            moved: false,
+        }
     }
 
-    const handlePointDragMove = event => {
+    /** Move points only while their owning pointer still holds the primary button. */
+    const handlePointDragMove = useCallback(event => {
         if (validationInProgressRef.current || !dragRef.current
-            || ['area', 'control-area', 'section-area'].includes(dragRef.current.kind)) {
+            || ['area', 'control-area', 'section-area'].includes(dragRef.current.kind)
+            || event.pointerId !== dragRef.current.pointerId) {
+            return
+        }
+        if ((event.buttons & 1) === 0) {
+            cancelPointDrag(event)
             return
         }
         event.preventDefault()
@@ -1792,24 +1908,30 @@ export const FixPathEditor = () => {
         }
         dragRef.current = {...dragRef.current, moved: true, coordinate, translatedControlPoints}
         setDragPreview(dragRef.current)
-    }
+    }, [cancelPointDrag, pointAtScreenPosition])
 
-    const showDragError = message => setPanelFeedback({
+    /** Report a rejected drag without discarding the editable section. */
+    const showDragError = useCallback(message => setPanelFeedback({
         type: 'warning',
         caption: 'Fix Path point not moved',
         text: message,
-    })
+    }), [])
 
-    const handlePointDragEnd = event => {
-        if (validationInProgressRef.current || !dragRef.current
-            || ['area', 'control-area', 'section-area'].includes(dragRef.current.kind)) {
+    /** Commit the last valid preview when the owning primary-button pointer is released. */
+    const handlePointDragEnd = useCallback(event => {
+        if (!dragRef.current
+            || ['area', 'control-area', 'section-area'].includes(dragRef.current.kind)
+            || event.pointerId !== dragRef.current.pointerId) {
+            return
+        }
+        if (event.button !== 0) {
+            cancelPointDrag(event)
             return
         }
         event.preventDefault()
         event.stopPropagation()
-        const drag = dragRef.current
-        dragRef.current = null
-        setDragPreview(null)
+        const drag = clearPointDrag()
+        if (validationInProgressRef.current) return
         if (!drag.moved) {
             return
         }
@@ -1841,7 +1963,32 @@ export const FixPathEditor = () => {
             return
         }
         commitDraftCorrections({...draftCorrectionsRef.current, [drag.trackSlug]: result.corrections})
-    }
+    }, [cancelPointDrag, clearPointDrag, commitDraftCorrections, showDragError, trackBySlug])
+
+    // Window capture keeps release/cancel observable even when a marker loses
+    // capture or the pointer leaves the map. Area selection retains its own handlers.
+    useEffect(() => {
+        if (!open) return undefined
+        /** Discard a drag when its tab becomes hidden. */
+        const cancelHiddenDrag = () => {
+            if (document.visibilityState === 'hidden') cancelPointDrag()
+        }
+        window.addEventListener('pointermove', handlePointDragMove, true)
+        window.addEventListener('pointerup', handlePointDragEnd, true)
+        window.addEventListener('pointercancel', cancelPointDrag, true)
+        window.addEventListener('lostpointercapture', cancelPointDrag, true)
+        window.addEventListener('blur', cancelPointDrag)
+        document.addEventListener('visibilitychange', cancelHiddenDrag)
+        return () => {
+            window.removeEventListener('pointermove', handlePointDragMove, true)
+            window.removeEventListener('pointerup', handlePointDragEnd, true)
+            window.removeEventListener('pointercancel', cancelPointDrag, true)
+            window.removeEventListener('lostpointercapture', cancelPointDrag, true)
+            window.removeEventListener('blur', cancelPointDrag)
+            document.removeEventListener('visibilitychange', cancelHiddenDrag)
+            clearPointDrag()
+        }
+    }, [cancelPointDrag, clearPointDrag, handlePointDragEnd, handlePointDragMove, open])
 
     const resolveControlPointSelection = (event, target) => {
         const anchor = selectionAnchorRef.current
@@ -2071,7 +2218,7 @@ export const FixPathEditor = () => {
     }
 
     const handleControlPointPointerDown = (event, renderedPoint) => {
-        if (validationInProgressRef.current) return
+        if (validationInProgressRef.current || event.button !== 0 || event.isPrimary === false) return
         const point = controlPointForEvent(event, renderedPoint)
         if (eraseMode && point.active && event.button === 0) {
             event.preventDefault()
@@ -2565,6 +2712,17 @@ export const FixPathEditor = () => {
         validationInProgressRef.current = true
         setSaving(true)
         try {
+            const currentData = journey.fixPathCorrectionData ?? {revision: 0, tracks: {}}
+            const persistedCorrectionsByTrack = currentData.tracks ?? {}
+            const unchangedInvalidCorrections = new Set()
+            /** Detect persisted corrections that remain untouched by the current edit. */
+            const isUnchangedPersistedCorrection = (trackSlug, correction) => (
+                isSameCorrectionSnapshot(
+                    correction,
+                    persistedCorrectionsByTrack[trackSlug]?.find(item => item.id === correction.id),
+                )
+            )
+
             for (const [trackSlug, corrections] of Object.entries(correctionsByTrack)) {
                 const trackContent = trackBySlug.get(trackSlug)?.content
                 if (!trackContent) continue
@@ -2575,6 +2733,10 @@ export const FixPathEditor = () => {
                         correction.startIndex,
                         correction.endIndex,
                     )) {
+                        if (isUnchangedPersistedCorrection(trackSlug, correction)) {
+                            unchangedInvalidCorrections.add(correction.id)
+                            continue
+                        }
                         setPanelFeedback({
                             type: 'warning',
                             caption: 'Track changed',
@@ -2584,7 +2746,15 @@ export const FixPathEditor = () => {
                     }
                 }
                 const applied = applyFixPathCorrections(trackContent, corrections)
-                if (applied.skippedCorrectionIds.length > 0) {
+                const blockingSkippedIds = applied.skippedCorrectionIds.filter(correctionId => {
+                    const correction = corrections.find(item => item.id === correctionId)
+                    if (correction && isUnchangedPersistedCorrection(trackSlug, correction)) {
+                        unchangedInvalidCorrections.add(correctionId)
+                        return false
+                    }
+                    return true
+                })
+                if (blockingSkippedIds.length > 0) {
                     setPanelFeedback({
                         type: 'warning',
                         caption: 'Correction could not be applied',
@@ -2594,7 +2764,6 @@ export const FixPathEditor = () => {
                 }
             }
 
-            const currentData = journey.fixPathCorrectionData ?? {revision: 0, tracks: {}}
             const tracks = {...(currentData.tracks ?? {})}
             Object.entries(correctionsByTrack).forEach(([trackSlug, corrections]) => {
                 if (corrections.length > 0) {
@@ -2664,6 +2833,13 @@ export const FixPathEditor = () => {
                 return false
             }
             draftNeedsPersistenceRef.current = false
+            if (unchangedInvalidCorrections.size > 0) {
+                setPanelFeedback({
+                    type: 'warning',
+                    caption: 'Other sections need review',
+                    text: 'The edit was saved. Recreate any unchanged sections whose source track has changed.',
+                })
+            }
             return true
         }
         finally {
@@ -2716,7 +2892,13 @@ export const FixPathEditor = () => {
                 }
             }}
         >
-            <div ref={journeyCursorRef} className="fix-path-journey-cursor" aria-hidden="true">
+            <div
+                ref={journeyCursorRef}
+                className={'fix-path-journey-cursor'
+                    + (journeyCursorVisible ? ' is-visible' : '')
+                    + (journeyCursorSelectionColor ? ' is-' + journeyCursorSelectionColor + '-selection' : '')}
+                aria-hidden="true"
+            >
                 <WaIcon
                     name={journeyCursorIcon}
                     variant={journeyCursorIcon === 'circle-plus' ? 'regular' : 'solid'}
@@ -2736,7 +2918,7 @@ export const FixPathEditor = () => {
             <svg className={'fix-path-markers' + (areaMode ? ' is-selecting-area' : '') + (eraseMode ? ' is-erasing' : '')} width={projected.width} height={projected.height} aria-label="Journey correction points">
                 {areaRectangle && (
                     <rect
-                        className="fix-path-selection-rectangle"
+                        className={'fix-path-selection-rectangle is-' + (areaDrag.selectionColor ?? 'journey') + '-selection'}
                         x={areaRectangle.left}
                         y={areaRectangle.top}
                         width={areaRectangle.width}
@@ -2745,10 +2927,10 @@ export const FixPathEditor = () => {
                     />
                 )}
                 {lassoGeometry && (
-                    <path className="fix-path-selection-lasso" d={lassoGeometry.path} aria-hidden="true"/>
+                    <path className={'fix-path-selection-lasso is-' + (areaDrag.selectionColor ?? 'journey') + '-selection'} d={lassoGeometry.path} aria-hidden="true"/>
                 )}
                 {lassoPoints && areaDrag.points.length === 2 && (
-                    <polyline className="fix-path-selection-lasso" points={lassoPoints} aria-hidden="true"/>
+                    <polyline className={'fix-path-selection-lasso is-' + (areaDrag.selectionColor ?? 'journey') + '-selection'} points={lassoPoints} aria-hidden="true"/>
                 )}
                 {projected.controlPoints.map(point => {
                     const selected = selectedControlPoints.some(item => item.trackSlug === point.trackSlug
@@ -2775,9 +2957,6 @@ export const FixPathEditor = () => {
                                 ? 'Correction point in current section, drag to move or right-click to remove'
                                 : 'Correction point in another section, click to activate or right-click for options'}
                             onPointerDown={event => handleControlPointPointerDown(event, point)}
-                            onPointerMove={handlePointDragMove}
-                            onPointerUp={handlePointDragEnd}
-                            onPointerCancel={handlePointDragEnd}
                             onClick={event => handleControlPointClick(event, point)}
                             onContextMenu={event => handleControlPointContextMenu(event, point)}
                             onKeyDown={event => handleControlPointKeyDown(event, point)}

@@ -605,6 +605,29 @@ export const isWorldPositionVisible = (scene, camera, position, worldPosition) =
 }
 
 /**
+ * Check a nearby route coordinate at its own projected pixel, including terrain occlusion.
+ * @param {object} scene - Cesium scene.
+ * @param {object} camera - Active Cesium camera.
+ * @param {{x: number, y: number}} pointerPosition - Pointer position in canvas pixels.
+ * @param {Array<number>} coordinate - Candidate route coordinate.
+ * @param {number} tolerance - Maximum pointer distance in canvas pixels.
+ * @returns {boolean} Whether the visible route coordinate is close enough to the pointer.
+ */
+export const isRouteCoordinateScreenHit = (scene, camera, pointerPosition, coordinate, tolerance = 18) => {
+    if (!scene || !camera || !Number.isFinite(pointerPosition?.x) || !Number.isFinite(pointerPosition?.y)) return false
+    const worldPosition = worldPositionForCoordinate(scene, coordinate)
+    const projectedPosition = worldPosition && scene.cartesianToCanvasCoordinates?.(worldPosition)
+    if (!Number.isFinite(projectedPosition?.x) || !Number.isFinite(projectedPosition?.y)) return false
+    const distance = Math.hypot(
+        projectedPosition.x - pointerPosition.x,
+        projectedPosition.y - pointerPosition.y,
+    )
+    // A nearby pointer can lie over a different slope. Compare depth only
+    // along the candidate's own sightline, after applying the hit tolerance.
+    return distance <= tolerance && isWorldPositionVisible(scene, camera, projectedPosition, worldPosition)
+}
+
+/**
  * Project a world coordinate into the editor overlay.
  * @param {object} scene - Cesium scene.
  * @param {DOMRect} overlayRect - Overlay bounds.

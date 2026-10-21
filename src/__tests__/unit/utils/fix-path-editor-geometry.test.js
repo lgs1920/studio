@@ -19,12 +19,36 @@ import {
     cloneCorrectionList,
     findClosestRoutePosition,
     getControlPointCoordinate,
+    isRouteCoordinateScreenHit,
     projectEditOverlay,
 } from '@Components/MainUI/FixPathEditorGeometry'
 import {getFixPathSegmentDistanceMeters, getFixPathSourceFingerprint} from '@Utils/cesium/fixPathCorrections'
 import {Cartesian3} from 'cesium'
 
 describe('Fix Path editor geometry', () => {
+    it('checks nearby route hits against the terrain at the route pixel instead of the pointer pixel', () => {
+        const coordinate = [1, 2, 0]
+        const worldPosition = Cartesian3.fromDegrees(1, 2, 0.5)
+        const nearerSlope = Cartesian3.fromDegrees(1, 2, 500)
+        const projectedPosition = {x: 105, y: 205}
+        const scene = {
+            globe: {getHeight: () => 0},
+            cartesianToCanvasCoordinates: () => projectedPosition,
+            pickPositionSupported: true,
+            pickPosition: vi.fn(position => position.x === 105 && position.y === 205 ? worldPosition : nearerSlope),
+        }
+        const camera = {positionWC: Cartesian3.fromDegrees(1, 2, 1000)}
+
+        expect(isRouteCoordinateScreenHit(scene, camera, {x: 110, y: 200}, coordinate)).toBe(true)
+        expect(scene.pickPosition).toHaveBeenCalledWith(projectedPosition)
+
+        scene.pickPosition.mockReturnValue(nearerSlope)
+        expect(isRouteCoordinateScreenHit(scene, camera, {x: 110, y: 200}, coordinate)).toBe(false)
+        scene.pickPosition.mockClear()
+        expect(isRouteCoordinateScreenHit(scene, camera, {x: 140, y: 200}, coordinate)).toBe(false)
+        expect(scene.pickPosition).not.toHaveBeenCalled()
+    })
+
     it('finds the nearest route interval across a MultiLineString and the antimeridian', () => {
         const geometry = {
             type: 'MultiLineString',

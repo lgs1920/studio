@@ -472,7 +472,7 @@ export const buildFixPathControlPointAddition = (
     }
 
     const clampedProgress = Math.min(1, Math.max(0, Number(intervalProgress) || 0))
-    const sourcePosition = index + clampedProgress
+    const sourcePosition = Math.min(segment.length - 1, index + clampedProgress)
     const existing = corrections.find(correction => (
         correction.segmentIndex === segmentIndex
         && sourcePosition >= correction.startIndex
@@ -482,8 +482,13 @@ export const buildFixPathControlPointAddition = (
         && index <= correction.endIndex
         && index + 1 >= correction.startIndex
     ))
-    const startIndex = existing?.startIndex ?? index
-    const endIndex = existing?.endIndex ?? Math.min(index + 1, segment.length - 1)
+    // A neighboring interval extends the section. Clamping it to the previous
+    // bounds would insert the new coordinate before the wrong GPX vertex.
+    const startIndex = Math.min(existing?.startIndex ?? index, Math.floor(sourcePosition))
+    const endIndex = Math.max(
+        existing?.endIndex ?? Math.min(index + 1, segment.length - 1),
+        Math.ceil(sourcePosition),
+    )
     const distanceIndex = createFixPathDistanceIndex(content, segmentIndex, startIndex, endIndex)
     if (!distanceIndex) {
         return {corrections, error: 'The selected Journey position is no longer available.'}

@@ -307,5 +307,72 @@ describe('FixPathEditor replacement selection', () => {
         fireEvent.click(marker(1))
         drawArea(16, {modifiers: {shiftKey: true}, startTarget: marker(2)})
         expect(selectedIds()).toEqual(['fix-point-0-1', 'fix-point-0-2'])
+
+        const originalHeights = [...document.querySelectorAll('input[aria-label="Height (m)"]')].map(input => input.value)
+        expect(originalHeights).toHaveLength(3)
+        const originalData = JSON.stringify(journey.fixPathCorrectionData)
+        const originalDisplay = JSON.stringify(TrackUtils.setDisplayContentOverride.mock.lastCall[1])
+        /** Build a primary-button event for the selected group's owning pointer. */
+        const dragPointer = overrides => ({
+            pointerId: 71,
+            pointerType: 'mouse',
+            isPrimary: true,
+            button: 0,
+            buttons: 1,
+            clientX: 8,
+            clientY: 50,
+            ...overrides,
+        })
+        /** Verify that a discarded gesture preserves the route, selection, and saved data. */
+        const expectUnchanged = () => {
+            expect([...document.querySelectorAll('input[aria-label="Height (m)"]')].map(input => input.value)).toEqual(originalHeights)
+            expect(JSON.stringify(journey.fixPathCorrectionData)).toBe(originalData)
+            expect(JSON.stringify(TrackUtils.setDisplayContentOverride.mock.lastCall[1])).toBe(originalDisplay)
+            expect(selectedIds()).toEqual(['fix-point-0-1', 'fix-point-0-2'])
+            expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeSelection)
+            expect(lgs.viewer.scene.screenSpaceCameraController.enableInputs).toBe(true)
+        }
+
+        marker(1).setPointerCapture = vi.fn(() => { throw new Error('Pointer capture failed') })
+        fireEvent.pointerDown(marker(1), dragPointer())
+        fireEvent.pointerUp(window, dragPointer({buttons: 0, clientX: 40, clientY: 40}))
+        fireEvent.pointerMove(marker(2), dragPointer({buttons: 0, clientX: 50, clientY: 30}))
+        expectUnchanged()
+
+        for (const interruption of ['released button', 'pointercancel', 'lostpointercapture', 'blur', 'hidden tab']) {
+            fireEvent.pointerDown(marker(1), dragPointer())
+
+            // Another pointer must neither move the selected group nor end its gesture.
+            fireEvent.pointerMove(window, dragPointer({pointerId: 72, clientX: 40, clientY: 40}))
+            fireEvent.pointerUp(window, dragPointer({pointerId: 72, buttons: 0}))
+            expectUnchanged()
+            fireEvent.pointerMove(window, dragPointer({clientX: 40, clientY: 40}))
+            expect(JSON.stringify(TrackUtils.setDisplayContentOverride.mock.lastCall[1]), interruption).not.toBe(originalDisplay)
+
+            if (interruption === 'released button') {
+                // The release was lost entirely: the next hover must discard the preview.
+                fireEvent.pointerMove(canvas, dragPointer({buttons: 0, clientX: 50, clientY: 30}))
+            }
+            else if (interruption === 'blur') fireEvent.blur(window)
+            else if (interruption === 'hidden tab') {
+                const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+                fireEvent(document, new Event('visibilitychange'))
+                visibility.mockRestore()
+            }
+            else fireEvent(window, new PointerEvent(interruption, dragPointer()))
+
+            expectUnchanged()
+            fireEvent.pointerMove(marker(2), dragPointer({buttons: 0, clientX: 50, clientY: 30}))
+            fireEvent.pointerUp(window, dragPointer({buttons: 0}))
+            expectUnchanged()
+        }
+
+        // Right clicks and non-primary pointers cannot arm a later hover as a drag.
+        for (const pointer of [{button: 2, buttons: 2}, {isPrimary: false}]) {
+            fireEvent.pointerDown(marker(1), dragPointer(pointer))
+            fireEvent.pointerMove(marker(2), dragPointer({clientX: 40, clientY: 40}))
+            fireEvent.pointerUp(window, dragPointer({buttons: 0}))
+            expectUnchanged()
+        }
     }, 20000)
 })

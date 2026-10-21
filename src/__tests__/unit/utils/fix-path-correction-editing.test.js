@@ -207,6 +207,136 @@ describe('Fix Path correction editing', () => {
         expect(movedDisplay.geometry.coordinates[3]).not.toEqual(displayed.geometry.coordinates[3])
     })
 
+    it.each([
+        {firstIndex: 2, nextIndex: 3},
+        {firstIndex: 3, nextIndex: 2},
+    ])('keeps additions on consecutive intervals in GPX order ($firstIndex then $nextIndex)', ({firstIndex, nextIndex}) => {
+        const content = makeFeature()
+        const firstCoordinate = [(firstIndex + 0.5) * 0.00005, 0, 25]
+        const nextCoordinate = [(nextIndex + 0.5) * 0.00005, 0, 35]
+        const first = buildFixPathControlPointAddition(content, [], 0, firstIndex, 0.5, firstCoordinate)
+
+        const next = buildFixPathControlPointAddition(content, first.corrections, 0, nextIndex, 0.5, nextCoordinate)
+        const addedPoint = next.correction.controlPoints.find(point => point.id === next.controlPointId)
+        const displayed = applyFixPathCorrections(content, next.corrections)
+        const expected = content.geometry.coordinates.flatMap((coordinate, index) => {
+            const insertion = index === firstIndex ? firstCoordinate : index === nextIndex ? nextCoordinate : null
+            return insertion ? [coordinate, insertion] : [coordinate]
+        })
+
+        expect(addedPoint.sourcePosition).toBeCloseTo(nextIndex + 0.5)
+        expect(normalizeFixPathCorrectionData({revision: 1, tracks: {'track-a': next.corrections}})).not.toBeNull()
+        expect(displayed.skippedCorrectionIds).toEqual([])
+        expect(displayed.content.geometry.coordinates).toEqual(expected)
+    })
+
+    it('inserts a moved point into a large section without resampling untouched GPX vertices', () => {
+        const content = makeFeature()
+        content.geometry.coordinates = content.geometry.coordinates.map((coordinate, index) => [...coordinate, index * 1000])
+        const section = buildFixPathSection(content, [], 0, 0, 8)
+        const coordinate = [0.000125, 0.001, 25]
+        const added = buildFixPathControlPointAddition(content, section.corrections, 0, 2, 0.5, coordinate)
+
+        const displayed = applyFixPathCorrections(content, added.corrections)
+
+        expect(displayed.content.geometry.coordinates).toEqual([
+            ...content.geometry.coordinates.slice(0, 3),
+            [...coordinate, 2500],
+            ...content.geometry.coordinates.slice(3),
+        ])
+    })
+
+    it('keeps insertion order after dragging, reloading, adding on the corrected edge, and extending the section', () => {
+        const content = makeFeature()
+        const originalCoordinates = structuredClone(content.geometry.coordinates)
+        const first = buildFixPathControlPointAddition(content, [], 0, 2, 0.5, [0.000125, 0, 25])
+        const movedCoordinate = [0.00019, 0.001, 25]
+        const moved = first.corrections.map(correction => ({
+            ...correction,
+            controlPoints: correction.controlPoints.map(point => ({...point, coordinate: movedCoordinate})),
+        }))
+        const reloaded = normalizeFixPathCorrectionData(JSON.parse(JSON.stringify({revision: 1, tracks: {'track-a': moved}})))
+        const displayed = applyFixPathCorrections(content, reloaded.tracks['track-a']).content
+        const sourcePosition = getFixPathSourcePosition(displayed, 0, 3, 0.5)
+        const middleCoordinate = [0.00017, 0.0005, 28]
+        const middle = buildFixPathControlPointAddition(
+            content,
+            reloaded.tracks['track-a'],
+            0,
+            Math.floor(sourcePosition),
+            sourcePosition % 1,
+            middleCoordinate,
+        )
+        const nextCoordinate = [0.000175, 0, 35]
+        const extended = buildFixPathControlPointAddition(content, middle.corrections, 0, 3, 0.5, nextCoordinate)
+        const saved = normalizeFixPathCorrectionData(JSON.parse(JSON.stringify({revision: 2, tracks: {'track-a': extended.corrections}})))
+        const result = applyFixPathCorrections(content, saved.tracks['track-a'])
+
+        expect(sourcePosition).toBeCloseTo(2.75)
+        expect(result.skippedCorrectionIds).toEqual([])
+        expect(result.content.geometry.coordinates).toEqual([
+            ...originalCoordinates.slice(0, 3),
+            movedCoordinate,
+            middleCoordinate,
+            originalCoordinates[3],
+            nextCoordinate,
+            ...originalCoordinates.slice(4),
+        ])
+        expect(getFixPathSourcePosition(result.content, 0, 3, 0.5)).toBeCloseTo(2.625)
+        expect(content.geometry.coordinates).toEqual(originalCoordinates)
+    })
+
+    it.each(['LineString', 'MultiLineString'])('keeps GPX order when an insertion joins two sections in a %s', type => {
+        const content = makeFeature()
+        const original = structuredClone(content.geometry.coordinates)
+        const segmentIndex = type === 'MultiLineString' ? 1 : 0
+        if (segmentIndex === 1) content.geometry = {type, coordinates: [[[1, 1, 0], [1.1, 1.1, 0]], original]}
+        const firstCoordinate = [0.000125, 0.001, 25]
+        const lastCoordinate = [0.000225, -0.001, 45]
+        const middleCoordinate = [0.000175, 0.002, 35]
+        const first = buildFixPathControlPointAddition(content, [], segmentIndex, 2, 0.5, firstCoordinate)
+        const last = buildFixPathControlPointAddition(content, first.corrections, segmentIndex, 4, 0.5, lastCoordinate)
+        expect(last.corrections).toHaveLength(2)
+
+        const joined = buildFixPathControlPointAddition(content, last.corrections, segmentIndex, 3, 0.5, middleCoordinate)
+        const applied = applyFixPathCorrections(content, joined.corrections)
+        const coordinates = segmentIndex === 1 ? applied.content.geometry.coordinates[1] : applied.content.geometry.coordinates
+
+        expect(joined.corrections).toHaveLength(1)
+        expect(joined.correction).toMatchObject({segmentIndex, startIndex: 2, endIndex: 5})
+        expect(applied.skippedCorrectionIds).toEqual([])
+        expect(coordinates).toEqual([
+            ...original.slice(0, 3), firstCoordinate,
+            original[3], middleCoordinate,
+            original[4], lastCoordinate,
+            ...original.slice(5),
+        ])
+        expect(normalizeFixPathCorrectionData({revision: 1, tracks: {'track-a': joined.corrections}})).not.toBeNull()
+        if (segmentIndex === 1) expect(applied.content.geometry.coordinates[0]).toEqual(content.geometry.coordinates[0])
+    })
+
+    it.each(['LineString', 'MultiLineString'])('keeps timestamps aligned with inserted vertices in a %s', type => {
+        const content = makeFeature()
+        const originalTimes = content.geometry.coordinates.map((_, index) => new Date(Date.UTC(2026, 0, 1, 0, 0, index * 10)).toISOString())
+        const segmentIndex = type === 'MultiLineString' ? 1 : 0
+        const otherTimes = originalTimes.slice(0, 2)
+        if (segmentIndex === 1) content.geometry = {type, coordinates: [[[1, 1, 0], [1.1, 1.1, 0]], content.geometry.coordinates]}
+        content.properties.coordinateProperties = {times: segmentIndex === 1 ? [otherTimes, originalTimes] : originalTimes}
+        const first = buildFixPathControlPointAddition(content, [], segmentIndex, 2, 0.5, [0.000125, 0, 25])
+        const next = buildFixPathControlPointAddition(content, first.corrections, segmentIndex, 3, 0.5, [0.000175, 0, 35])
+
+        const result = applyFixPathCorrections(content, next.corrections).content
+        const times = segmentIndex === 1 ? result.properties.coordinateProperties.times[1] : result.properties.coordinateProperties.times
+
+        expect(times).toEqual([
+            ...originalTimes.slice(0, 3), '2026-01-01T00:00:25.000Z',
+            originalTimes[3], '2026-01-01T00:00:35.000Z',
+            ...originalTimes.slice(4),
+        ])
+        expect(originalTimes).toHaveLength(9)
+        if (segmentIndex === 1) expect(result.properties.coordinateProperties.times[0]).toEqual(otherTimes)
+    })
+
     it('keeps a single added point independent from an adjacent source section', () => {
         const content = makeFeature()
         const existing = buildFixPathSection(content, [], 0, 0, 1)

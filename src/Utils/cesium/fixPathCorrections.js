@@ -733,6 +733,7 @@ const catmullRomScalar = (previous, first, second, next, progress) => {
         + (t3 - t2) * tangentSecond
 }
 
+/** Apply source edits and legacy interpolation without resampling explicit insertions. */
 const applyCorrection = (sourceSegment, destinationSegment, correction, originCoordinate) => {
     const sourceCoordinates = sourceSegment.slice(correction.startIndex, correction.endIndex + 1)
     if (fingerprintCoordinates(sourceCoordinates) !== correction.sourceFingerprint) {
@@ -823,6 +824,11 @@ const applyCorrection = (sourceSegment, destinationSegment, correction, originCo
     })
     if (!hasActiveSourceCorrection && !hasActiveManualCorrection) {
         return null
+    }
+    if (!hasActiveSourceCorrection && manualPoints.every(point => point.inserted === true)) {
+        // Explicit insertions are spliced into the source sequence below.
+        // They must not also deform unrelated GPX samples through the spline.
+        return true
     }
     if (removedSourceIndexes.size > 0 && manualPoints.length === 0) {
         const cleanedDistanceIndex = distanceIndexWithoutRemovedSamples(
@@ -959,6 +965,48 @@ const applyCorrection = (sourceSegment, destinationSegment, correction, originCo
     return true
 }
 
+/** Interpolate an inserted vertex's timestamp while retaining exact source timestamps. */
+const timestampAtSourcePosition = (times, sourcePosition) => {
+    const index = Math.floor(sourcePosition)
+    const fraction = sourcePosition - index
+    const first = times[index]
+    if (fraction === 0) return first
+    const second = times[index + 1]
+    if (typeof first === 'number' && typeof second === 'number') {
+        return Number.isFinite(first) && Number.isFinite(second) ? first + (second - first) * fraction : null
+    }
+    if (typeof first !== 'string' || typeof second !== 'string') return null
+    const firstTime = Date.parse(first)
+    const secondTime = Date.parse(second)
+    return Number.isFinite(firstTime) && Number.isFinite(secondTime)
+        ? new Date(firstTime + (secondTime - firstTime) * fraction).toISOString()
+        : null
+}
+
+/** Align derived GPX timestamps with inserted vertices without mutating source properties. */
+const propertiesWithInsertedPointTimes = (content, positionsBySegment) => {
+    const coordinateProperties = content.properties?.coordinateProperties
+    const times = coordinateProperties?.times
+    if (!Array.isArray(times)) return content.properties
+    const segments = getLineSegments(content.geometry)
+    let changed = false
+    /** Retain a segment's original timestamps unless its inserted vertices have an exact source mapping. */
+    const remapTimes = (segmentTimes, segmentIndex) => {
+        const positions = positionsBySegment[segmentIndex]
+        if (!positions || !Array.isArray(segmentTimes) || segmentTimes.length !== segments[segmentIndex]?.length) {
+            return segmentTimes
+        }
+        changed = true
+        return positions.map(position => timestampAtSourcePosition(segmentTimes, position))
+    }
+    const correctedTimes = content.geometry.type === 'LineString'
+        ? remapTimes(times, 0)
+        : times.map((segmentTimes, segmentIndex) => remapTimes(segmentTimes, segmentIndex))
+    return changed
+        ? {...content.properties, coordinateProperties: {...coordinateProperties, times: correctedTimes}}
+        : content.properties
+}
+
 /**
  * Apply local Bezier-like path edits to position and, when available, altitude.
  *
@@ -1026,8 +1074,10 @@ export const applyFixPathCorrections = (content, corrections = []) => {
                 && correctionSourceIndex(point, correction.segmentIndex) === null
             )).flatMap(point => {
                 const interval = distanceIndex?.intervalAtDistance(Number(point.progress) * distanceIndex.totalDistance)
-                if (!interval) return []
-                const sourcePosition = interval.firstIndex + interval.fraction
+                const sourcePosition = numericValue(point.sourcePosition)
+                    ? Number(point.sourcePosition)
+                    : interval ? interval.firstIndex + interval.fraction : null
+                if (!Number.isFinite(sourcePosition)) return []
                 const lowerIndex = Math.floor(sourcePosition)
                 const fraction = sourcePosition - lowerIndex
                 const first = sourceSegment[lowerIndex] ?? sourceSegment[0]
@@ -1096,9 +1146,11 @@ export const applyFixPathCorrections = (content, corrections = []) => {
         return {content, changed: false, skippedCorrectionIds}
     }
 
+    const properties = propertiesWithInsertedPointTimes(content, sourcePositionSegments)
     const correctedContent = {
         content: {
             ...content,
+            ...(properties !== content.properties ? {properties} : {}),
             geometry: {
                 ...content.geometry,
                 coordinates: content.geometry.type === 'LineString' ? outputSegments[0] : outputSegments,
