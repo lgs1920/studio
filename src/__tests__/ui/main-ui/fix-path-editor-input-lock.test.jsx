@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -676,7 +676,10 @@ describe('FixPathEditor map input ownership', () => {
             if (index === 0) fireEvent.pointerDown(viewerContainer, pointer)
             else fireEvent.pointerMove(viewerContainer, pointer)
         })
-        expect(document.querySelector('.fix-path-selection-lasso')).not.toBeNull()
+        const renderedControlLasso = document.querySelector('.fix-path-selection-lasso')
+        expect(renderedControlLasso).not.toBeNull()
+        expect(renderedControlLasso.tagName.toLowerCase()).toBe('path')
+        expect(renderedControlLasso.getAttribute('d')).toMatch(/ C/)
         expect(document.querySelector('.fix-path-selection-guide')?.textContent)
             .toContain('Alt: drag around correction points and release, or click vertices and double-click to select')
         fireEvent.pointerUp(viewerContainer, {
@@ -823,7 +826,12 @@ describe('FixPathEditor map input ownership', () => {
         await waitFor(() => expect(document.querySelector(
             '.fix-path-correction-point-row[data-control-point-id="fix-point-0-10"]',
         )).not.toBeNull())
-        await waitFor(() => expect(document.querySelectorAll('.fix-path-correction-point-row')).toHaveLength(3))
+        await waitFor(() => expect([...document.querySelectorAll('.fix-path-correction-point-row')]
+            .map(row => row.dataset.controlPointId)).toEqual([
+            'fix-point-0-8',
+            'fix-point-0-9',
+            'fix-point-0-10',
+        ]))
         await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeTailShiftAdd + 1))
         const tailAddedMarker = document.querySelector('.fix-path-control-point[data-control-point-id="fix-point-0-10"]')
         expect(tailAddedMarker?.classList.contains('is-unmodified')).toBe(true)

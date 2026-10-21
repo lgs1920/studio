@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { describe, expect, it } from 'vitest'
 import {
     appendScreenSelectionVertex,
+    buildSmoothClosedScreenSelectionGeometry,
     buildSourcePointSvgPath,
     findClosestSourcePoint,
     isScreenPointInsideArea,
@@ -59,6 +60,23 @@ describe('Fix Path screen area selection', () => {
             {x: 20, y: 10},
         ])
         expect(appendScreenSelectionVertex(vertices, {x: NaN, y: 10})).toBe(vertices)
+    })
+
+    it('closes the lasso with a smooth Bezier segment and matching hit-test geometry', () => {
+        const vertices = [
+            {x: 10, y: 10},
+            {x: 100, y: 10},
+            {x: 100, y: 100},
+            {x: 10, y: 100},
+        ]
+        const geometry = buildSmoothClosedScreenSelectionGeometry(vertices)
+
+        expect(geometry.path.match(/C/g)).toHaveLength(vertices.length)
+        expect(geometry.path).toMatch(/10 10$/)
+        expect(geometry.polygon).toHaveLength(vertices.length * 8)
+        expect(geometry.polygon.at(-1).x).not.toBe(vertices.at(-1).x)
+        expect(isScreenPointInsidePolygon({x: 0, y: 55}, geometry.polygon)).toBe(true)
+        expect(isScreenPointInsidePolygon({x: -10, y: 55}, geometry.polygon)).toBe(false)
     })
 
     it('draws many source squares in one SVG path and resolves pointer hits', () => {

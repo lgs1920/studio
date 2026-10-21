@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,6 +32,7 @@ import {
 } from '@Utils/cesium/fixPathCorrectionEditing'
 import {
     appendScreenSelectionVertex,
+    buildSmoothClosedScreenSelectionGeometry,
     isScreenPointInsidePolygon,
     normalizeScreenSelectionArea,
 } from '@Utils/cesium/fixPathScreenSelection'
@@ -1142,7 +1143,10 @@ export const FixPathEditor = () => {
     }, [commitDraftCorrections, setPersistedActiveCorrection, trackBySlug])
 
     /** Complete a source-point or correction-point rectangle or lasso selection. */
-    const finishSelectionLasso = useCallback((draft, polygon) => {
+    const finishSelectionLasso = useCallback((draft, vertices) => {
+        const polygon = draft.shape === 'lasso'
+            ? buildSmoothClosedScreenSelectionGeometry(vertices).polygon
+            : vertices
         if (polygon.length < 3) {
             clearSelectionLasso()
             return false
@@ -1343,6 +1347,7 @@ export const FixPathEditor = () => {
         if (!moved && drag.shape === 'lasso') {
             const points = appendScreenSelectionVertex(drag.points, end)
             const draft = {
+                shape: 'lasso',
                 kind: drag.mode,
                 modifier: drag.modifier,
                 trackSlug: drag.trackSlug,
@@ -2317,6 +2322,9 @@ export const FixPathEditor = () => {
     const lassoPoints = areaDrag?.shape === 'lasso'
         ? areaDrag.points.map(point => point.x + ',' + point.y).join(' ')
         : ''
+    const lassoGeometry = areaDrag?.shape === 'lasso' && areaDrag.points.length >= 3
+        ? buildSmoothClosedScreenSelectionGeometry(areaDrag.points)
+        : null
     const lassoTargetLabel = areaDrag?.kind === 'source' ? 'Journey points' : 'correction points'
     const lassoGestureLabel = areaDrag?.modifier === 'shift'
         ? 'Shift'
@@ -2359,8 +2367,8 @@ export const FixPathEditor = () => {
                         aria-hidden="true"
                     />
                 )}
-                {lassoPoints && areaDrag.points.length >= 3 && (
-                    <polygon className="fix-path-selection-lasso" points={lassoPoints} aria-hidden="true"/>
+                {lassoGeometry && (
+                    <path className="fix-path-selection-lasso" d={lassoGeometry.path} aria-hidden="true"/>
                 )}
                 {lassoPoints && areaDrag.points.length === 2 && (
                     <polyline className="fix-path-selection-lasso" points={lassoPoints} aria-hidden="true"/>

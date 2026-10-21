@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -80,6 +80,91 @@ export const appendScreenSelectionVertex = (vertices, point, minimumDistance = 3
         return vertices
     }
     return [...vertices, {x: point.x, y: point.y}]
+}
+
+/** Build a closed centripetal Bezier lasso and matching sampled hit-test polygon. */
+export const buildSmoothClosedScreenSelectionGeometry = (vertices, sampleCount = 8) => {
+    const points = Array.isArray(vertices)
+        ? vertices.filter(point => Number.isFinite(point?.x) && Number.isFinite(point?.y))
+        : []
+    if (points.length < 3) return {path: '', polygon: []}
+
+    const steps = Number.isFinite(sampleCount) ? Math.max(4, Math.min(16, Math.round(sampleCount))) : 8
+    /** Round a screen coordinate to the precision used by the SVG path. */
+    const formatCoordinate = coordinate => Number(coordinate.toFixed(2))
+    /** Calculate the centripetal parameter interval between two screen vertices. */
+    const intervalBetween = (first, second) => Math.max(
+        Math.sqrt(Math.hypot(second.x - first.x, second.y - first.y)),
+        0.001,
+    )
+    /** Evaluate a cubic Bezier segment at a normalized progress value. */
+    const evaluateBezier = (start, firstControl, secondControl, end, progress) => {
+        const inverse = 1 - progress
+        const inverseSquared = inverse * inverse
+        const progressSquared = progress * progress
+        return {
+            x: inverseSquared * inverse * start.x
+                + 3 * inverseSquared * progress * firstControl.x
+                + 3 * inverse * progressSquared * secondControl.x
+                + progressSquared * progress * end.x,
+            y: inverseSquared * inverse * start.y
+                + 3 * inverseSquared * progress * firstControl.y
+                + 3 * inverse * progressSquared * secondControl.y
+                + progressSquared * progress * end.y,
+        }
+    }
+
+    const path = ['M' + formatCoordinate(points[0].x) + ' ' + formatCoordinate(points[0].y)]
+    const polygon = [{x: points[0].x, y: points[0].y}]
+    for (let index = 0; index < points.length; index += 1) {
+        const previous = points[(index - 1 + points.length) % points.length]
+        const start = points[index]
+        const end = points[(index + 1) % points.length]
+        const next = points[(index + 2) % points.length]
+        const previousInterval = intervalBetween(previous, start)
+        const currentInterval = intervalBetween(start, end)
+        const nextInterval = intervalBetween(end, next)
+        const firstControl = {
+            x: start.x + currentInterval / 3 * (
+                (start.x - previous.x) / previousInterval
+                - (end.x - previous.x) / (previousInterval + currentInterval)
+                + (end.x - start.x) / currentInterval
+            ),
+            y: start.y + currentInterval / 3 * (
+                (start.y - previous.y) / previousInterval
+                - (end.y - previous.y) / (previousInterval + currentInterval)
+                + (end.y - start.y) / currentInterval
+            ),
+        }
+        const secondControl = {
+            x: end.x - currentInterval / 3 * (
+                (end.x - start.x) / currentInterval
+                - (next.x - start.x) / (currentInterval + nextInterval)
+                + (next.x - end.x) / nextInterval
+            ),
+            y: end.y - currentInterval / 3 * (
+                (end.y - start.y) / currentInterval
+                - (next.y - start.y) / (currentInterval + nextInterval)
+                + (next.y - end.y) / nextInterval
+            ),
+        }
+        path.push(
+            'C'
+            + formatCoordinate(firstControl.x) + ' ' + formatCoordinate(firstControl.y) + ' '
+            + formatCoordinate(secondControl.x) + ' ' + formatCoordinate(secondControl.y) + ' '
+            + formatCoordinate(end.x) + ' ' + formatCoordinate(end.y),
+        )
+
+        for (let step = 1; step <= steps; step += 1) {
+            if (index === points.length - 1 && step === steps) continue
+            const progress = step / steps
+            polygon.push(step === steps
+                ? {x: end.x, y: end.y}
+                : evaluateBezier(start, firstControl, secondControl, end, progress))
+        }
+    }
+
+    return {path: path.join(' '), polygon}
 }
 
 /** Build one SVG path containing a square marker for every supplied point. */
