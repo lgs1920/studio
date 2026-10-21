@@ -116,22 +116,3 @@ distinguishable from original GPX vertices.
 
 Add focused regression coverage for route hit testing, click-and-drag insertion, section reuse and creation,
 source-geometry preservation, timestamp alignment, Replay sampling, and GPX export.
-
-Dans le widget
-
-- header action contient ? help et X pour fereme
-- en dessous une barre de menu de toute la largeur :
-- A gauche : undo-redo de n'importe quelle action sur la section
-- au milieu : navigatoin par section (rajouter acces 1er et dernière si plus de 2 sections).
-- attention la navigation par section deplace aussi le widget ce qui est pénible en multi click. A fixer
-- a droitre replacer l'icon trash par erase cela permet d'effacer des points de la sections (et donc potentiellement
-  d'en créer d'autres)
-- puis un switch personnaliser avec un oeil (chercher le composant maison qui le fait) qui permet d'afficher ou pas les
-  correction de la section courante (cel ne gere que l'affichage pas la prise en compte des corrections qui sont auto
-  validée
-- les hauteurs doivent etre dans un wa-number (la saisie doit tebnir compte des unités de l'appli)
-
-Dans la selection Shift/click drag selectionne de nouveaux poiunts.
-Ce spoints sont ensuite automatiquement rajouté à la section (cela peut auss merger des sections)
-la liste dans le widget et alors mise à jour avec le spoints de la nouvelel section
-Si l'on click directement sur les points dans ka carte, le zoom change. Il ne faut pas il faut garder le zoom courant
