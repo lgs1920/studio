@@ -3719,3 +3719,11 @@
 ## 2026-10-19 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/2b7ca53170e9ad82f3c3db9a3561dd09f5b3ce3b)
 
 - Recorded automatically from Git history.
+
+## 2026-10-19 — [`feat(journey): add manual Fix Path corrections`](https://github.com/lgs1920/studio/commit/650c00456e48248595850a7327c28b118d9187e7)
+
+- Recorded automatically from Git history.
+
+## 2026-10-19 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/65c40f59779fbf493a17f5f5fa585c6964a66e33)
+
+- Recorded automatically from Git history.
