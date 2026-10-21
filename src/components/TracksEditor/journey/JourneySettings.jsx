@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-17
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -56,6 +56,7 @@ import {
 }                                     from '@Editor/track/TrackStyleSettings'
 import { Utils }                      from '@Editor/Utils'
 import { TrackUtils }                 from '@Utils/cesium/TrackUtils'
+import { applyFixPathCorrections }    from '@Utils/cesium/fixPathCorrections'
 import {
     defaultBasicReplaySettings,
     normalizeBasicReplaySettings,
@@ -110,6 +111,28 @@ const EXPORT_DIALOG_FORMATS = {
         {value: JOURNEY_EXPORT_FORMATS.HTML, label: 'html'},
     ],
 }
+
+/** Build an export-only Journey copy with saved path corrections applied to its tracks. */
+const journeyWithAppliedPathCorrections = journey => {
+    const correctionsByTrack = journey?.fixPathCorrectionData?.tracks
+    if (!journey?.tracks || !correctionsByTrack) return journey
+
+    let changed = false
+    const tracks = new Map(Array.from(journey.tracks, ([slug, track]) => {
+        const corrections = correctionsByTrack[track?.slug ?? slug]
+        if (!Array.isArray(corrections) || corrections.length === 0 || !track?.content) {
+            return [slug, track]
+        }
+
+        const result = applyFixPathCorrections(track.content, corrections)
+        if (!result.changed) return [slug, track]
+        changed = true
+        return [slug, {...track, content: result.content}]
+    }))
+
+    return changed ? Object.assign({}, journey, {tracks}) : journey
+}
+
 const REPORT_EXPORT_STAGES = {
     SNAPSHOTS: 'snapshots',
     WRITING:   'writing',
@@ -222,9 +245,11 @@ export const JourneySettings = () => {
     const _elevationRequestId = useRef(0)
     const _exportFormat = useRef(JOURNEY_EXPORT_FORMATS.GPX)
     const _exportFileName = useRef('')
+    const _applyPathCorrectionsToExport = useRef(true)
 
     const [exportFormat, setExportFormatState] = useState(JOURNEY_EXPORT_FORMATS.GPX)
     const [exportFileName, setExportFileNameState] = useState('')
+    const [applyPathCorrectionsToExport, setApplyPathCorrectionsToExport] = useState(true)
     const [exportChoiceOpen, setExportChoiceOpen] = useState(false)
     const [reportExportAnimation, setReportExportAnimation] = useState(null)
 
@@ -530,6 +555,14 @@ export const JourneySettings = () => {
     const resetExportDialog = (currentJourney, format = JOURNEY_EXPORT_FORMATS.GPX) => {
         setExportFormatValue(format)
         setExportFileNameValue(getJourneyExportBaseName(currentJourney))
+        _applyPathCorrectionsToExport.current = true
+        setApplyPathCorrectionsToExport(true)
+    }
+
+    const handlePathCorrectionsExportChange = event => {
+        const checked = event.target.checked === true
+        _applyPathCorrectionsToExport.current = checked
+        setApplyPathCorrectionsToExport(checked)
     }
 
     const handleExportFileNameChange = (event) => {
@@ -579,6 +612,16 @@ export const JourneySettings = () => {
                         ))}
                     </WaSelect>
                 </div>
+                {kind === 'file' && (
+                    <WaSwitch
+                        size="xs"
+                        label-at-start
+                        checked={applyPathCorrectionsToExport}
+                        onChange={handlePathCorrectionsExportChange}
+                    >
+                        {'Apply path corrections'}
+                    </WaSwitch>
+                )}
             </div>
         )
     }
@@ -654,9 +697,12 @@ export const JourneySettings = () => {
             const pois = getExportableJourneyPOIs(currentJourney)
             const format = _exportFormat.current
             const fileName = normalizeJourneyExportFileName(_exportFileName.current, format, currentJourney)
+            const journeyToExport = _applyPathCorrectionsToExport.current
+                ? journeyWithAppliedPathCorrections(currentJourney)
+                : currentJourney
             const content = format === JOURNEY_EXPORT_FORMATS.GEOJSON
-                            ? exportJourneyToGeoJSON(currentJourney, {pois})
-                            : exportJourneyToGPX(currentJourney, {pois})
+                            ? exportJourneyToGeoJSON(journeyToExport, {pois})
+                            : exportJourneyToGPX(journeyToExport, {pois})
             await Export.toFile(content, fileName, JOURNEY_EXPORT_MIME_TYPES[format])
 
             UIToast.success({

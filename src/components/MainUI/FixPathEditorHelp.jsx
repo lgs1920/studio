@@ -40,52 +40,18 @@ export const FixPathEditorHelp = ({active, onRequestClose}) => (
                     <section className="fix-path-help-section">
                         <h3>{'Point selection'}</h3>
                         <p>
-                            {'Use '}
-                            <kbd className="lgs--shortcut-key">{'Shift'}</kbd>
-                            {' + click on a correction marker to add or remove it from the selection. Shift-drag or Alt-drag draws a lasso; Ctrl+Shift-drag or Ctrl+Alt-drag draws a rectangle. Shift and Ctrl+Shift gestures add Journey points when they start over the route, or correction points when they start over a correction marker. Alt and Ctrl+Alt gestures replace the selection of correction points in the current section. An empty selection area keeps the current selection. Draw a lasso freehand or click vertices and double-click to finish. Press Escape to cancel. If added points bridge other sections, they merge automatically and the point list updates to the resulting section.'}
+                            {'Shift-click toggles a correction point. Shift/Alt-drag draws a lasso; Ctrl+Shift/Ctrl+Alt-drag draws a rectangle. Shift selects route points or adds correction points. Alt replaces the selection in the current section. Empty areas keep the selection. Click vertices, then double-click to finish; Escape cancels.'}
                         </p>
-                        <p>{'Clicking a point selects it without changing the camera view or zoom. Section navigation centers the selected section while preserving camera zoom, orientation, and widget position.'}</p>
-                        <p>{'Use the eye control to show or hide the corrected route and its editing points for the current section. This changes only the map display; accepted corrections remain stored and continue to apply to statistics and Replay.'}</p>
+                        <p>{'Click a point to select it. Section navigation centers it. The eye toggles the current section display; corrections remain applied.'}</p>
                     </section>
                     <section className="fix-path-help-section">
                         <h3>{'Correcting the path'}</h3>
-                        <p>{'Select Journey points with a Ctrl+Shift rectangle, or with a Shift lasso, to create or extend a section. Newly included or restored source points appear as blue diamonds. Only points in the current section can be dragged; click a point in another section to activate and display that section before moving it.'}</p>
-                        <p>{'When multiple points are selected, drag any highlighted point to move them together.'}</p>
-                        <p>{'Choose Erase, then click a point in the current section to remove its membership. The remaining points split into contiguous sections when needed.'}</p>
-                        <p>{'Undo and Redo cover edits to section membership, point positions, heights, removals, resets, and merges.'}</p>
+                        <p>{'Select route points with Shift to create or extend a section. New points appear as orange diamonds. Drag selected points to move them.'}</p>
+                        <p>{'Choose Erase and click a point to remove it. Undo and Redo restore edits.'}</p>
                     </section>
                     <section className="fix-path-help-section">
                         <h3>{'Keyboard'}</h3>
-                        <p>
-                            {'With a correction row focused, use '}
-                            <kbd className="lgs--shortcut-key" aria-label="Arrow Up">{'↑'}</kbd>
-                            {' / '}
-                            <kbd className="lgs--shortcut-key" aria-label="Arrow Down">{'↓'}</kbd>
-                            {' to move focus between rows without changing the selected points.'}
-                        </p>
-                        <p>
-                            {'Use '}
-                            <kbd className="lgs--shortcut-key">{'Page Up'}</kbd>
-                            {' for the first row and '}
-                            <kbd className="lgs--shortcut-key">{'Page Down'}</kbd>
-                            {' for the last row.'}
-                        </p>
-                        <p>
-                            {'Press '}
-                            <kbd className="lgs--shortcut-key">{'Ctrl'}</kbd>
-                            {' + '}
-                            <kbd className="lgs--shortcut-key">{'A'}</kbd>
-                            {' to select every point in the active section.'}
-                        </p>
-                        <p>
-                            {'With a correction point on the map or its row focused, press '}
-                            <kbd className="lgs--shortcut-key">{'Backspace'}</kbd>
-                            {' to reset it and '}
-                            <kbd className="lgs--shortcut-key">{'Delete'}</kbd>
-                            {' to mark it removed. From the point or any field in its row, '}
-                            <kbd className="lgs--shortcut-key">{'Ctrl/Cmd + R'}</kbd>
-                            {' also resets or restores it. Height uses the unit configured in application settings. The row stays available so Reset can restore a removed point.'}
-                        </p>
+                        <p>{'↑/↓ moves through the list; Page Up/Down jumps to either end. Ctrl+A selects the section. Backspace resets a point; Delete removes it; Ctrl/Cmd+R resets or restores it.'}</p>
                     </section>
                 </div>
             </LGSScrollbars>
