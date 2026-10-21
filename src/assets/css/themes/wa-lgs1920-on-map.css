@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-27
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -267,7 +267,7 @@
 
 .wa-theme-lgs1920-on-map:is(wa-button, wa-icon-button)[disabled],
 .wa-theme-lgs1920-on-map :is(wa-button, wa-icon-button)[disabled] {
-    opacity: 1;
+    opacity: 0.85;
 }
 
 .wa-theme-lgs1920-on-map:is(wa-button, wa-icon-button)[disabled]::part(base),

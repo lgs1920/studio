@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-30
- * Last modified: 2026-09-30
+ * Created on: 2026-09-27
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,11 +19,25 @@ import {resolve} from 'node:path'
 import {describe, expect, it} from 'vitest'
 
 const styleSource = readFileSync(resolve('src/assets/css/themes/wa-lgs1920-on-map.css'), 'utf8')
+const fixPathEditorStyleSource = readFileSync(resolve('src/components/MainUI/FixPathEditor.css'), 'utf8')
+
+describe('Fix Path map cursor branding', () => {
+    it('uses the application brand token for its Font Awesome cursor icons', () => {
+        expect(fixPathEditorStyleSource).toMatch(/\.fix-path-journey-cursor\s*\{[^}]*color:\s*var\(--wa-color-brand\);/s)
+    })
+})
 
 describe('on-map selected controls', () => {
     it('keeps selected controls visibly distinct from their surface', () => {
         expect(styleSource).toContain('--lgs-card-on-map-selected-bg-color: color-mix(in oklab, var(--wa-color-brand) 18%, var(--lgs-card-on-map-bg-color) 82%);')
         expect(styleSource).toContain('--lgs-card-on-map-selected-border-color: var(--lgs-card-on-map-hover-outline-color);')
         expect(styleSource).toContain('outline-color: var(--lgs-card-on-map-selected-border-color);')
+    })
+})
+
+describe('on-map disabled controls', () => {
+    it('slightly reduces the visibility of disabled buttons and their contents', () => {
+        expect(styleSource).toContain('.wa-theme-lgs1920-on-map:is(wa-button, wa-icon-button)[disabled]')
+        expect(styleSource).toContain('opacity: 0.85;')
     })
 })

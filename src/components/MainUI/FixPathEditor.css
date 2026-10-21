@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,8 +22,23 @@
     pointer-events: none;
 }
 
-.fix-path-selecting-area {
-    cursor: crosshair;
+.fix-path-journey-hover {
+    cursor: none;
+}
+
+.fix-path-journey-cursor {
+    position: absolute;
+    z-index: 3;
+    display: none;
+    color: var(--wa-color-brand);
+    transform: translate(-50%, -50%);
+    filter: drop-shadow(0 1px 1px var(--wa-color-neutral-10));
+    font-size: 1.35rem;
+    pointer-events: none;
+
+    &.is-visible {
+        display: block;
+    }
 }
 
 .fix-path-markers {
@@ -184,6 +199,16 @@
     gap: 0;
     margin-left: auto;
     flex: 0 0 auto;
+}
+
+/* Keep disabled on-map actions visually plain instead of showing the theme border. */
+.fix-path-panel.wa-theme-lgs1920-on-map :is(wa-button, wa-icon-button)[disabled]::part(base) {
+    border-color: transparent !important;
+    outline-color: transparent !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
 }
 
 .fix-path-main-toolbar {
@@ -386,38 +411,81 @@
     font-size: var(--wa-font-size-s);
 }
 
-.fix-path-coordinate-header > span:nth-child(-n + 3),
+.fix-path-coordinate-header > span:nth-of-type(-n + 3),
 .fix-path-correction-point-row > .fix-path-correction-point-coordinate {
     flex: 1 1 0;
     min-width: 0;
 }
 
-.fix-path-coordinate-header > span:nth-child(-n + 2),
+.fix-path-coordinate-header > span:nth-of-type(-n + 2),
 .fix-path-correction-point-row > .fix-path-correction-point-coordinate:not(.fix-path-correction-point-altitude) {
     flex: 0.9 1 12ch;
     min-width: 12ch;
 }
 
-.fix-path-coordinate-header > span:nth-child(3),
+.fix-path-coordinate-header > span:nth-of-type(3),
 .fix-path-correction-point-row > .fix-path-correction-point-altitude {
     flex: 1.4 1 10ch;
     min-width: 10ch;
 }
 
-.fix-path-coordinate-header > span:last-child,
+.fix-path-coordinate-header > .fix-path-coordinate-header-actions,
 .fix-path-correction-point-row > .fix-path-correction-point-actions {
     flex: 0 0 calc(var(--wa-form-control-height) + var(--wa-form-control-height));
+}
+
+.fix-path-coordinate-header > .fix-path-coordinate-status-header-slot {
+    position: relative;
+    display: flex;
+    flex: 0 0 calc(var(--fix-path-correction-status-gutter) - var(--fix-path-correction-gap));
+    align-items: center;
+    height: var(--fix-path-correction-row-height);
+}
+
+.fix-path-coordinate-header > .fix-path-coordinate-header-actions {
+    height: var(--fix-path-correction-row-height);
 }
 
 .fix-path-coordinate-header {
     box-sizing: border-box;
     margin: 0;
-    padding-left: var(--fix-path-correction-status-gutter);
     color: var(--wa-color-text-quiet);
     font-weight: var(--wa-font-weight-bold);
 }
 
-.fix-path-coordinate-header > span:nth-child(-n + 3) {
+.fix-path-select-all-toggle {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    width: var(--fix-path-correction-status-icon-slot);
+    height: var(--fix-path-correction-row-height);
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    cursor: pointer;
+
+    &:focus-visible + .fix-path-select-all-indicator {
+        color: var(--wa-color-focus);
+    }
+
+    &:disabled {
+        cursor: default;
+    }
+
+    &:disabled + .fix-path-select-all-indicator {
+        opacity: 0.55;
+    }
+}
+
+.fix-path-select-all-indicator {
+    width: 1rem;
+    height: 1rem;
+    margin-inline-start: calc((var(--fix-path-correction-status-icon-slot) - 1rem) / 2);
+    font-size: 1rem;
+    pointer-events: none;
+}
+
+.fix-path-coordinate-header > span:nth-of-type(-n + 3) {
     text-align: center;
 }
 
@@ -509,10 +577,8 @@
     }
 
     &.is-removed {
-        /* The primary layer uses the danger border token. */
-        --primary-color: var(--wa-color-danger-border-normal);
-        /* The secondary layer uses the danger fill token. */
-        --secondary-color: var(--wa-color-danger-fill-normal);
+        /* Keep the removed point's trash icon as legible as the surrounding text. */
+        color: var(--wa-color-text-normal);
     }
 }
 
