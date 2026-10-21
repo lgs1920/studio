@@ -107,11 +107,17 @@ const MY_LIBRARY_KITS = [
 registerIconLibraryFromKits('my-library', MY_LIBRARY_KITS)
 ```
 
-The application also bundles the Classic Regular `ruler-vertical` and `question`
-definitions from `@fortawesome/pro-regular-svg-icons`. They use an explicit
-`regular` registration in the same bootstrap registry, so the camera adjustment
-overlay and Fix Path help button do not depend on the remote Kit subset for these
-icons.
+The application also bundles Classic Regular `ruler-vertical`, `question`, and
+`circle-plus` definitions from `@fortawesome/pro-regular-svg-icons`, plus the
+Classic Solid `lasso` and `square-dashed` definitions from
+`@fortawesome/pro-solid-svg-icons`. They use explicit variant registrations in
+the same bootstrap registry, so the camera adjustment overlay, Fix Path help
+button, and Fix Path selection cursor do not depend on the remote Kit subset for
+these icons.
+
+The Fix Path point-selection indicator also bundles Classic Regular `square` and
+`square-check`, plus Classic Solid `square-full`, for its empty, complete, and
+partial selection states.
 
 The overlay calculates vertical clearance from the physical camera's cartographic
 height minus the cached terrain height at that same longitude and latitude. It

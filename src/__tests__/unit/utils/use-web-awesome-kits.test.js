@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-11
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -82,6 +82,48 @@ describe('useWebAwesomeKits', () => {
 
         expect(source).toMatch(/^data:image\/svg\+xml,/)
         expect(decodeURIComponent(source.slice('data:image/svg+xml,'.length))).toContain('<svg')
+    })
+
+    it('bundles the regular circle-plus icon independently of the remote Kit', () => {
+        registerLGS1920IconLibrary()
+
+        const [, options] = mocks.registerIconLibrary.mock.calls.find(
+            ([libraryName]) => libraryName === 'default',
+        )
+        const source = options.resolver('circle-plus', 'classic', 'regular')
+
+        expect(source).toMatch(/^data:image\/svg\+xml,/)
+        expect(decodeURIComponent(source.slice('data:image/svg+xml,'.length))).toContain('data-prefix="far"')
+    })
+
+    it.each(['lasso', 'square-dashed'])('bundles the solid %s icon independently of the remote Kit', name => {
+        registerLGS1920IconLibrary()
+
+        const [, options] = mocks.registerIconLibrary.mock.calls.find(
+            ([libraryName]) => libraryName === 'default',
+        )
+        const source = options.resolver(name, 'classic', 'solid')
+
+        expect(source).toMatch(/^data:image\/svg\+xml,/)
+        expect(decodeURIComponent(source.slice('data:image/svg+xml,'.length))).toContain('data-prefix="fas"')
+        expect(mocks.defaultResolver).not.toHaveBeenCalled()
+    })
+
+    it.each([
+        ['square', 'regular', 'far'],
+        ['square-check', 'regular', 'far'],
+        ['square-full', 'solid', 'fas'],
+    ])('bundles the %s %s icon independently of the remote Kit', (name, variant, prefix) => {
+        registerLGS1920IconLibrary()
+
+        const [, options] = mocks.registerIconLibrary.mock.calls.find(
+            ([libraryName]) => libraryName === 'default',
+        )
+        const source = options.resolver(name, 'classic', variant)
+
+        expect(source).toMatch(/^data:image\/svg\+xml,/)
+        expect(decodeURIComponent(source.slice('data:image/svg+xml,'.length))).toContain('data-prefix="' + prefix + '"')
+        expect(mocks.defaultResolver).not.toHaveBeenCalled()
     })
 
     it('resolves icons from the kit duotone exports', () => {
