@@ -3727,3 +3727,111 @@
 ## 2026-10-19 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/65c40f59779fbf493a17f5f5fa585c6964a66e33)
 
 - Recorded automatically from Git history.
+
+## 2026-10-19 — [`docs(todo): update Fix Path requirements`](https://github.com/lgs1920/studio/commit/8ccef208b88d7ecc9b6bf4e01514c973aace0581)
+
+- Recorded automatically from Git history.
+
+## 2026-10-20 — [`chore(rules): require browser WebGL preflight`](https://github.com/lgs1920/studio/commit/564cf07eec9ec4e08a1093ef4f0f66dcab3809af)
+
+- Recorded automatically from Git history.
+
+## 2026-10-20 — [`docs(skills): add reliable WebGL browser setup`](https://github.com/lgs1920/studio/commit/ec05b8529e591249876122ba88a44f8f77ac286d)
+
+- Recorded automatically from Git history.
+
+## 2026-10-20 — [`fix: align Fix Path row and column gaps`](https://github.com/lgs1920/studio/commit/ee417b2f2978bdfab85a2868b1238d8997c91627)
+
+- Recorded automatically from Git history.
+
+## 2026-10-20 — [`feat: expand Fix Path editing workflow`](https://github.com/lgs1920/studio/commit/b2652175aa484bd66f893c76af81575c83e54766)
+
+- Recorded automatically from Git history.
+
+## 2026-10-20 — [`fix: align widget resize handles with widget edges`](https://github.com/lgs1920/studio/commit/73b53a075d1f03f0dea02b062fc27f8bd080917d)
+
+- Recorded automatically from Git history.
+
+## 2026-10-20 — [`fix: clarify Fix Path section visibility label`](https://github.com/lgs1920/studio/commit/8bbc5829cbbf9958c98a90d66d7ad0932ea198c1)
+
+- Recorded automatically from Git history.
+
+## 2026-10-20 — [`feat: improve Fix Path selection and rendering`](https://github.com/lgs1920/studio/commit/6d4f0e5fa596f32ec5ca4cb320b1fdd615ea2fbb)
+
+- Recorded automatically from Git history.
+
+## 2026-10-20 — [`chore: remove GitNexus tooling and guidance`](https://github.com/lgs1920/studio/commit/4fdbccf447d74c1e3c09f7f5f1a106fc21aa9457)
+
+- Recorded automatically from Git history.
+
+## 2026-10-20 — [`fix: remove Fix Path section size limit`](https://github.com/lgs1920/studio/commit/f8ce97271d728d4c238445033a264dc938f2c2dd)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`fix: smooth Fix Path lasso closure`](https://github.com/lgs1920/studio/commit/e376025d2fa3bbd4f8b4abf64fbd6ae3d6f6452b)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`fix: preserve Fix Path source vertices`](https://github.com/lgs1920/studio/commit/44af602b25db22eaada307a8c9def72fa7b3b231)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`fix: hide Fix Path action when editor is open`](https://github.com/lgs1920/studio/commit/6fa5c91da3edb4150de967b03f87c46fda1a6c52)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`chore: bundle Fix Path selection icons`](https://github.com/lgs1920/studio/commit/f448e5c3b992a837abf92591aad2919a4a6802c5)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`fix: allow conditional canvas event propagation`](https://github.com/lgs1920/studio/commit/5419ea288d1339436d0d8bb1f38e40e23f64e3a4)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`fix: preserve Fix Path section and route order`](https://github.com/lgs1920/studio/commit/0be85822832de1cd66d47f98e36d1e181b4d0b44)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`fix: protect corrected route samples during smoothing`](https://github.com/lgs1920/studio/commit/ba58d0737cd1ae5c31d60da31ae4c0e6d37c92ab)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`style: refine Fix Path and on-map controls`](https://github.com/lgs1920/studio/commit/7285001929176ed1060144ec55f4a34a142ebcba)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`feat: expand Fix Path selection and editing controls`](https://github.com/lgs1920/studio/commit/f48064d3fabdecff8b3c52d9d96468765d2e4de0)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`docs: remove completed Fix Path editor tasks`](https://github.com/lgs1920/studio/commit/7c7a417bc53f5a0f7bc515ea8877799dddfd2e93)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/f5adfca001efc60770579bac7fbf1937bb44d4c7)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`fix: keep Fix Path selection cursors visible during gestures`](https://github.com/lgs1920/studio/commit/41a50e1727dd62bb1706e1cfd7c5c40480d6b88c)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`fix: replace Fix Path point selection with Alt gestures`](https://github.com/lgs1920/studio/commit/8a783363ee83e8bf1704ba1bcfd02f75c8066c9c)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`fix: stabilize Fix Path point edits`](https://github.com/lgs1920/studio/commit/3cbc9ec487eeb90f10299962e9c1904a23803d8d)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`feat: apply path corrections in journey exports`](https://github.com/lgs1920/studio/commit/bbf8184efd9649af18c3fa07d121febeea49456f)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`feat: group Fix Path shortcuts in information drawer`](https://github.com/lgs1920/studio/commit/272c239a5480768e78ef58c0cb2bd44f7f843d32)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`docs: remove completed Fix Path backlog`](https://github.com/lgs1920/studio/commit/5e25d2758a1cd9cd5b17c59f764dbd8256913f81)
+
+- Recorded automatically from Git history.
