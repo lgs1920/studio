@@ -8,18 +8,18 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { JourneyReplayCesiumRenderer } from '@Core/ui/replay/JourneyReplayCesiumRenderer'
-import { JourneyReplayPathSampler }    from '@Core/ui/replay/JourneyReplayPathSampler'
-import { defaultJourneyReplaySettings, REPLAY_TRACE_MODE_FULL } from '@Core/ui/replay/JourneyReplayProgressionStyle'
-import { Cartesian3, Color, ColorMaterialProperty, PolylineGlowMaterialProperty } from 'cesium'
-import { REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NEON }               from '@Core/ui/replay/JourneyReplayProgressionStyle'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import {JourneyReplayCesiumRenderer} from '@Core/ui/replay/JourneyReplayCesiumRenderer'
+import {JourneyReplayPathSampler} from '@Core/ui/replay/JourneyReplayPathSampler'
+import {defaultJourneyReplaySettings, REPLAY_TRACE_MODE_FULL} from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {Cartesian3, Color, ColorMaterialProperty, PolylineGlowMaterialProperty} from 'cesium'
+import {REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NEON} from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {afterEach, describe, expect, it, vi} from 'vitest'
 
 vi.mock('@Utils/cesium/TrackUtils', () => ({
     TrackUtils: {
@@ -33,9 +33,9 @@ const makeTrack = ({slug, coordinates}) => ({
     visible: true,
     metrics: {},
     content: {
-        type:       'Feature',
+        type: 'Feature',
         properties: {},
-        geometry:   {
+        geometry: {
             type: 'LineString',
             coordinates,
         },
@@ -107,7 +107,7 @@ const installReplayGlobals = ({dataSources, replay = defaultJourneyReplaySetting
             dataSources,
             camera: {
                 position: Cartesian3.fromDegrees(2, 48, 1500),
-                frustum:  {fovy: Math.PI / 3},
+                frustum: {fovy: Math.PI / 3},
             },
             scene: {
                 canvas: {height: 1000},
@@ -140,13 +140,13 @@ describe('JourneyReplayCesiumRenderer', () => {
             samples: [],
             totalDistance: 0,
             completedSegmentsAt: () => [],
-            remainingSegmentsAt:  () => [],
+            remainingSegmentsAt: () => [],
         }
         const sample = {
             longitude: 2,
-            latitude:  48,
-            altitude:  120,
-            progress:  0,
+            latitude: 48,
+            altitude: 120,
+            progress: 0,
             distanceFromStart: 0,
         }
         const renderer = new JourneyReplayCesiumRenderer()
@@ -160,7 +160,7 @@ describe('JourneyReplayCesiumRenderer', () => {
 
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
             }),
         ])
@@ -194,7 +194,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         installReplayGlobals({dataSources})
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
             }),
         ])
@@ -228,7 +228,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         installReplayGlobals({dataSources})
         const firstJourney = makeJourney([
             makeTrack({
-                slug:        'track#first#gpx#main',
+                slug: 'track#first#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
             }),
         ], 'first#gpx')
@@ -242,7 +242,7 @@ describe('JourneyReplayCesiumRenderer', () => {
 
         const secondJourney = makeJourney([
             makeTrack({
-                slug:        'track#second#gpx#main',
+                slug: 'track#second#gpx#main',
                 coordinates: [[3, 49, 220], [3.001, 49.001, 230], [3.002, 49.002, 240]],
             }),
         ], 'second#gpx')
@@ -265,13 +265,13 @@ describe('JourneyReplayCesiumRenderer', () => {
         replay.userMode = 'expert'
         replay.progression = {
             ...replay.progression,
-            fill:   {...replay.progression.fill, color: '#ff2525', opacity: 1, width: 6},
+            fill: {...replay.progression.fill, color: '#ff2525', opacity: 1, width: 6},
             border: {...replay.progression.border, color: '#ffffff', opacity: 1, width: 1.5},
         }
         installReplayGlobals({dataSources, replay})
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
             }),
         ])
@@ -314,7 +314,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         }
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
             }),
         ])
@@ -365,13 +365,13 @@ describe('JourneyReplayCesiumRenderer', () => {
         replay.progression = {
             ...replay.progression,
             effect: {mode: REPLAY_EFFECT_GLOW},
-            fill:   {...replay.progression.fill, color: '#112233', opacity: 0.35, width: 6},
+            fill: {...replay.progression.fill, color: '#112233', opacity: 0.35, width: 6},
             border: {...replay.progression.border, color: '#abcdef', opacity: 0.6, width: 1.5},
         }
         installReplayGlobals({dataSources, replay})
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
             }),
         ])
@@ -440,13 +440,13 @@ describe('JourneyReplayCesiumRenderer', () => {
         replay.progression = {
             ...replay.progression,
             effect: {mode: REPLAY_EFFECT_NEON},
-            fill:   {...replay.progression.fill, color: '#123456', opacity: 0.15, width: 6},
+            fill: {...replay.progression.fill, color: '#123456', opacity: 0.15, width: 6},
             border: {...replay.progression.border, color: '#abcdef', opacity: 1, width: 0},
         }
         installReplayGlobals({dataSources, replay})
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
             }),
         ])
@@ -527,7 +527,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         globalThis.lgs.stores.replay.playing = true
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
             }),
         ])
@@ -553,13 +553,13 @@ describe('JourneyReplayCesiumRenderer', () => {
         replay.userMode = 'expert'
         replay.progression = {
             ...replay.progression,
-            fill:   {...replay.progression.fill, color: '#123456'},
+            fill: {...replay.progression.fill, color: '#123456'},
             border: {...replay.progression.border, color: '#abcdef'},
         }
         installReplayGlobals({dataSources, replay})
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
             }),
         ])
@@ -594,18 +594,18 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(replayEntity(dataSources, '#cursor-border')?.show).not.toBe(true)
     })
 
-    it('smooths trace coordinates geographically before applying ground clamping', () => {
+    it('uses Replay sampler geometry once when global journey smoothing is enabled', () => {
         const dataSources = makeDataSources()
         installReplayGlobals({dataSources})
         globalThis.lgs.settings.getJourney = {
             renderSmoothing: {
                 enabled: true,
-                step:    1,
+                step: 6,
             },
         }
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48, 140]],
             }),
         ])
@@ -626,9 +626,41 @@ describe('JourneyReplayCesiumRenderer', () => {
         const completedFill = replayEntity(dataSources, '#completed#smoothed#fill')
         const positions = propertyValue(completedFill?.polyline?.positions)
 
-        expect(positions).toHaveLength(6)
-        expect(Cartesian3.equals(positions[1], Cartesian3.fromDegrees(2.00025, 48.00025, 0))).toBe(true)
+        expect(sampler.samples).toHaveLength(3)
+        expect(positions).toHaveLength(3)
+        expect(Cartesian3.equals(positions[1], Cartesian3.fromDegrees(2.001, 48.001, 0))).toBe(true)
         expect(propertyValue(completedFill?.polyline?.clampToGround)).toBe(true)
+    })
+
+    it('refreshes the cached trace when a Fix Path sampler rebuilds its samples', () => {
+        const dataSources = makeDataSources()
+        installReplayGlobals({dataSources})
+        const makeJourneyWithMiddlePoint = middlePoint => makeJourney([
+            makeTrack({
+                slug: 'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], middlePoint, [2.002, 48, 140]],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({
+            journey: makeJourneyWithMiddlePoint([2.001, 48.001, 130]),
+            renderSmoothing: {enabled: false, step: 1},
+        })
+        const renderer = new JourneyReplayCesiumRenderer()
+
+        renderer.show({sampler})
+        renderer.update({sample: sampler.atProgress(1), sampler, forceGeometry: true, staticCompletedTrace: true})
+        const line = replayEntity(dataSources, '#completed#smoothed#fill')
+        const firstMiddle = propertyValue(line?.polyline?.positions)[1]
+
+        sampler.update({
+            journey: makeJourneyWithMiddlePoint([2.001, 48.002, 130]),
+            renderSmoothing: {enabled: false, step: 1},
+        })
+        renderer.update({sample: sampler.atProgress(1), sampler, forceGeometry: true, staticCompletedTrace: true})
+        const updatedMiddle = propertyValue(line?.polyline?.positions)[1]
+
+        expect(Cartesian3.equals(firstMiddle, updatedMiddle)).toBe(false)
+        expect(Cartesian3.equals(updatedMiddle, Cartesian3.fromDegrees(2.001, 48.002, 0))).toBe(true)
     })
 
     it('uses the dense replay camera guide for a smooth ground trace', () => {
@@ -636,17 +668,17 @@ describe('JourneyReplayCesiumRenderer', () => {
         installReplayGlobals({dataSources})
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48, 140]],
             }),
         ])
         const sampler = new JourneyReplayPathSampler({journey})
         const smoothedGuide = [
-            {progress: 0,    longitude: 2,        latitude: 48},
+            {progress: 0, longitude: 2, latitude: 48},
             {progress: 0.25, longitude: 2.00025, latitude: 48.0003},
-            {progress: 0.5,  longitude: 2.001,   latitude: 48.001},
+            {progress: 0.5, longitude: 2.001, latitude: 48.001},
             {progress: 0.75, longitude: 2.00175, latitude: 48.0003},
-            {progress: 1,    longitude: 2.002,   latitude: 48},
+            {progress: 1, longitude: 2.002, latitude: 48},
         ]
         const renderer = new JourneyReplayCesiumRenderer()
 
@@ -701,8 +733,7 @@ describe('JourneyReplayCesiumRenderer', () => {
             const positions = propertyValue(completedFill?.polyline?.positions)
             expect(positions).toHaveLength(guide.length)
             expect(Cartesian3.equals(positions.at(-1), Cartesian3.fromDegrees(2.01, 48.01, 0))).toBe(true)
-        }
-        finally {
+        } finally {
             fromDegrees.mockRestore()
             renderer.clear()
         }
@@ -730,8 +761,7 @@ describe('JourneyReplayCesiumRenderer', () => {
             renderer.clear()
             guide[1].latitude = 48.03
             expect(Cartesian3.equals(renderEnd(), Cartesian3.fromDegrees(2.01, 48.03, 0))).toBe(true)
-        }
-        finally {
+        } finally {
             renderer.clear()
         }
     })
@@ -743,7 +773,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         globalThis.lgs.stores.replay.playing = true
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
             }),
         ])
@@ -820,7 +850,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         installReplayGlobals({dataSources})
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
             }),
         ])
@@ -886,10 +916,10 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(renderedPositions.length).toBeGreaterThan(8)
     })
 
-    it('uniformly keeps at most 2048 trace points and preserves both endpoints', () => {
+    it('uniformly keeps at most 4096 trace points and preserves both endpoints', () => {
         const dataSources = makeDataSources()
         installReplayGlobals({dataSources})
-        const coordinates = Array.from({length: 4096}, (_, index) => [2 + (index * 0.00001), 48 + (index * 0.00001), 120])
+        const coordinates = Array.from({length: 8192}, (_, index) => [2 + (index * 0.00001), 48 + (index * 0.00001), 120])
         const journey = makeJourney([makeTrack({slug: 'track#journey#gpx#main', coordinates})])
         const sampler = new JourneyReplayPathSampler({journey})
         const renderer = new JourneyReplayCesiumRenderer()
@@ -899,9 +929,31 @@ describe('JourneyReplayCesiumRenderer', () => {
 
         const completedFill = replayEntity(dataSources, '#completed#smoothed#fill')
         const positions = propertyValue(completedFill?.polyline?.positions)
-        expect(positions).toHaveLength(2048)
+        expect(positions).toHaveLength(4096)
         expect(Cartesian3.equals(positions[0], Cartesian3.fromDegrees(coordinates[0][0], coordinates[0][1], 0))).toBe(true)
         expect(Cartesian3.equals(positions.at(-1), Cartesian3.fromDegrees(coordinates.at(-1)[0], coordinates.at(-1)[1], 0))).toBe(true)
+    })
+
+    it('caps partial replay geometry without copying the full completed prefix', () => {
+        const dataSources = makeDataSources()
+        installReplayGlobals({dataSources})
+        globalThis.lgs.stores.replay.recordingSync = true
+        const coordinates = Array.from({length: 8192}, (_, index) => [2 + (index * 0.00001), 48 + (index * 0.00001), 120])
+        const journey = makeJourney([makeTrack({slug: 'track#journey#gpx#main', coordinates})])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const sample = sampler.atProgress(0.75)
+        const renderer = new JourneyReplayCesiumRenderer()
+
+        renderer.show({sampler})
+        renderer.update({sample, sampler, forceGeometry: true, showTrace: true})
+
+        const completedFill = replayEntity(dataSources, '#completed#smoothed#fill')
+        const positions = propertyValue(completedFill?.polyline?.positions)
+        expect(positions).toHaveLength(4096)
+        expect(Cartesian3.equals(
+            positions.at(-1),
+            Cartesian3.fromDegrees(sample.longitude, sample.latitude, 0),
+        )).toBe(true)
     })
 
     it('does not resurrect the remaining trace for stop clip frames', () => {
@@ -915,7 +967,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         installReplayGlobals({dataSources, replay})
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
             }),
         ])
@@ -952,7 +1004,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         installReplayGlobals({dataSources})
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
             }),
         ])
@@ -992,7 +1044,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         installReplayGlobals({dataSources})
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
             }),
         ])
@@ -1015,7 +1067,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         installReplayGlobals({dataSources})
         const journey = makeJourney([
             makeTrack({
-                slug:        'track#journey#gpx#main',
+                slug: 'track#journey#gpx#main',
                 coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
             }),
         ])

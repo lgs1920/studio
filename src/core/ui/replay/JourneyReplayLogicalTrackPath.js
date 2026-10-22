@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { getCorrectedTrackContent } from '@Utils/cesium/fixPathCorrections'
+import {getCorrectedTrackContent} from '@Utils/cesium/fixPathCorrections'
+import {smoothCoordinateSegment} from '@Utils/cesium/trackRenderSmoothing'
 
 /**
  * Renderer-independent track-path preparation for replay.
@@ -22,12 +23,11 @@ import { getCorrectedTrackContent } from '@Utils/cesium/fixPathCorrections'
 
 export const TRACK_LOGICAL_SMOOTHING_DEFAULT = Object.freeze({
     enabled: false,
-    step:    1,
+    step: 1,
 })
 
 const LINE_STRING = 'LineString'
 const MULTI_LINE_STRING = 'MultiLineString'
-const MAX_SMOOTHED_SEGMENT_POINTS = 4096
 const logicalTrackContentCache = new WeakMap()
 
 const finiteNumber = value => {
@@ -56,8 +56,6 @@ const normalizeStep = (value, fallback = TRACK_LOGICAL_SMOOTHING_DEFAULT.step) =
     return Math.min(6, Math.max(1, Math.round(number)))
 }
 
-const cloneCoordinate = coordinate => Array.isArray(coordinate) ? [...coordinate] : coordinate
-
 const deepClone = value => JSON.parse(JSON.stringify(value))
 
 const journeyForTrack = track => {
@@ -77,63 +75,22 @@ const resolveSmoothing = (track, options = {}) => {
     }
     const isMultiTrackJourney = (journey?.tracks?.size ?? 0) > 1
     const source = isMultiTrackJourney
-                   ? track?.renderSmoothing
-                   : (journey?.renderSmoothing ?? track?.renderSmoothing)
+        ? track?.renderSmoothing
+        : (journey?.renderSmoothing ?? track?.renderSmoothing)
     const configured = options.renderSmoothing ?? source ?? defaults
     const smoothing = {
         enabled: normalizeBoolean(configured?.enabled, defaults.enabled),
-        step:    normalizeStep(configured?.step, defaults.step),
+        step: normalizeStep(configured?.step, defaults.step),
     }
 
     return options.forceRenderSmoothing === true
-           ? {...smoothing, enabled: true}
-           : smoothing
+        ? {...smoothing, enabled: true}
+        : smoothing
 }
 
 const smoothingKey = (track, options = {}) => {
     const smoothing = resolveSmoothing(track, options)
     return `${smoothing.enabled ? 1 : 0}:${smoothing.step}`
-}
-
-const interpolateCoordinate = (start, stop, ratio) => {
-    const dimensions = Math.max(2, Math.min(start?.length ?? 0, stop?.length ?? 0))
-    return Array.from({length: dimensions}, (_, index) => {
-        const startValue = finiteNumber(start?.[index])
-        const stopValue = finiteNumber(stop?.[index])
-        if (startValue === undefined || stopValue === undefined) {
-            return ratio < 0.5 ? start?.[index] : stop?.[index]
-        }
-
-        return startValue + ((stopValue - startValue) * ratio)
-    })
-}
-
-const chaikinPass = segment => {
-    if (!Array.isArray(segment) || segment.length < 3) {
-        return Array.isArray(segment) ? segment.map(cloneCoordinate) : []
-    }
-
-    const result = [cloneCoordinate(segment[0])]
-    for (let index = 0; index < segment.length - 1; index++) {
-        const start = segment[index]
-        const stop = segment[index + 1]
-        result.push(interpolateCoordinate(start, stop, 0.25))
-        result.push(interpolateCoordinate(start, stop, 0.75))
-    }
-    result.push(cloneCoordinate(segment[segment.length - 1]))
-    return result
-}
-
-const smoothCoordinateSegment = (coordinates, step) => {
-    let result = Array.isArray(coordinates) ? coordinates.map(cloneCoordinate) : []
-    for (let index = 0; index < step; index++) {
-        const projectedLength = ((result.length - 1) * 2) + 1
-        if (projectedLength > MAX_SMOOTHED_SEGMENT_POINTS) {
-            break
-        }
-        result = chaikinPass(result)
-    }
-    return result
 }
 
 const rawGeometry = track => getCorrectedTrackContent(track)?.geometry
@@ -202,8 +159,8 @@ export const logicalTrackContent = (track, options = {}) => {
     const segments = logicalCoordinateSegmentsFromTrack(track, options)
     const cloned = deepClone(content)
     cloned.geometry.coordinates = geometry.type === LINE_STRING
-                                   ? segments[0] ?? []
-                                   : segments
+        ? segments[0] ?? []
+        : segments
     return cloned
 }
 
@@ -215,11 +172,11 @@ export const logicalTrackContent = (track, options = {}) => {
  * @returns {Array<Object>} Logical track path entries.
  */
 export const logicalTrackPathFromJourney = (journey, {
-                                                scope = 'all-tracks',
-                                                trackSlug = null,
-                                                includeHiddenTracks = false,
-                                                ...options
-                                            } = {}) => {
+    scope = 'all-tracks',
+    trackSlug = null,
+    includeHiddenTracks = false,
+    ...options
+} = {}) => {
     const tracks = Array.from(journey?.tracks?.values?.() ?? [])
         .map((track, trackIndex) => ({track, trackIndex}))
         .filter(({track}) => {

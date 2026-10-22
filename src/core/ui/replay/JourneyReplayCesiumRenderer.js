@@ -8,26 +8,24 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {
-    normalizeTrackRenderSmoothing, smoothCoordinateSegment,
-}                                                                 from '@Utils/cesium/trackRenderSmoothing'
-import { TrackUtils }                                             from '@Utils/cesium/TrackUtils'
+import {MAX_RENDER_POINTS} from '@Utils/cesium/trackRenderSmoothing'
+import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {
     ArcType, CallbackProperty, Cartesian3, Cartographic, Color, CustomDataSource, HeightReference,
     ColorMaterialProperty, PolylineGlowMaterialProperty,
-}                                                                 from 'cesium'
+} from 'cesium'
 import {
     getJourneyReplaySettings, normalizeJourneyReplayProgressionStyle, normalizeJourneyReplayTrace, REPLAY_EFFECT_NEON,
     REPLAY_EFFECT_NONE, REPLAY_MIN_TRACE_WIDTH, REPLAY_TRACE_MODE_FULL,
-}                                                                 from './JourneyReplayProgressionStyle'
-import {isJourneyReplayBasicMode}                                  from './ReplayUserModeConstants'
-import { replayVideoTraceDebug }                                  from './ReplayVideoTraceDebug'
+} from './JourneyReplayProgressionStyle'
+import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
+import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 
 export const REPLAY_DATA_SOURCE_PREFIX = 'replay'
 
@@ -42,7 +40,6 @@ const REMAINING_KEY_PREFIX = 'remaining:'
 const PATH_GEOMETRY_UPDATE_INTERVAL = 120
 const DYNAMIC_POLYLINE_PROGRESS_STEP = 0.002
 const DYNAMIC_POLYLINE_PROGRESS_STEP_PLAYING = 0.00025
-const LIVE_PROGRESS_MAX_POINTS = 2048
 const GROUND_POLYLINE_GRANULARITY_METERS = 8
 const REPLAY_EFFECT_GLOW_POWER = 0.18
 const REPLAY_EFFECT_NEON_POWER = 0.28
@@ -111,7 +108,8 @@ export class JourneyReplayCesiumRenderer {
     #sourceAddPending = false
     #maskedTrackSources = new Map()
     #traceGuide = null
-    #traceGuideKey = null
+    #traceGuideSamples = null
+    #smoothedGroundPositionCache = null
     #providedTraceGuide = null
     #providedTraceGuideSource = null
     #completedTracePositionsFactory = null
@@ -156,6 +154,9 @@ export class JourneyReplayCesiumRenderer {
         this.#options = {...this.#options, ...options}
         this.#providedTraceGuide = null
         this.#providedTraceGuideSource = null
+        this.#traceGuide = null
+        this.#traceGuideSamples = null
+        this.#smoothedGroundPositionCache = null
         this.#invalidateDynamicTraceFrames()
         this.#journeySlug = this.#sampler?.journey?.slug ?? globalThis.lgs?.theJourney?.slug ?? 'current'
         this.#traceVisible = true
@@ -196,6 +197,11 @@ export class JourneyReplayCesiumRenderer {
             return
         }
 
+        if (sampler !== this.#sampler) {
+            this.#traceGuide = null
+            this.#traceGuideSamples = null
+            this.#smoothedGroundPositionCache = null
+        }
         this.#sampler = sampler
         this.#journeySlug = sampler?.journey?.slug ?? globalThis.lgs?.theJourney?.slug ?? 'current'
         this.#sample = sample
@@ -236,16 +242,15 @@ export class JourneyReplayCesiumRenderer {
         const styleChanged = traceStyleKey !== this.#lastTraceStyleKey
         this.#lastTraceStyleKey = traceStyleKey
         const shouldUpdateGeometry = forceGeometry
-                                     || styleChanged
-                                     || (!hideTrace && wasTraceHidden)
-                                     || (!freezeDynamic && this.#shouldUpdatePathGeometry(sample, {
-                                         allowPlaybackGeometryUpdate,
-                                     }))
+            || styleChanged
+            || (!hideTrace && wasTraceHidden)
+            || (!freezeDynamic && this.#shouldUpdatePathGeometry(sample, {
+                allowPlaybackGeometryUpdate,
+            }))
         if (shouldUpdateGeometry) {
             this.#updateCompletedLines(sample, {staticGeometry: completedTraceMode === 'static'})
             this.#updateRemainingLines(sample, {hideRemainingTrace})
-        }
-        else if (hideRemainingTrace) {
+        } else if (hideRemainingTrace) {
             this.#hideRemainingLines()
         }
         if (freezeDynamic && !staticCompletedTrace) {
@@ -254,14 +259,11 @@ export class JourneyReplayCesiumRenderer {
         this.#updateCursor(sample, {syncToTrace: syncCursorToTrace === true})
         if (hideTrace === true) {
             this.setTraceVisibility(false)
-        }
-        else if (hideTrace === false) {
+        } else if (hideTrace === false) {
             this.setTraceVisibility(showTrace !== false)
-        }
-        else if (typeof showTrace === 'boolean') {
+        } else if (typeof showTrace === 'boolean') {
             this.setTraceVisibility(showTrace)
-        }
-        else if (!this.#traceVisible) {
+        } else if (!this.#traceVisible) {
             this.#removeTraceGeometry()
         }
         this.#applyTraceVisibility({hideCursor})
@@ -278,7 +280,7 @@ export class JourneyReplayCesiumRenderer {
 
     #traceEntitySummary = () => {
         const summary = {
-            records:  this.#lineEntities.size,
+            records: this.#lineEntities.size,
             sourceValues: this.#source?.entities?.values?.length ?? null,
             completed: 0,
             completedVisible: 0,
@@ -331,7 +333,8 @@ export class JourneyReplayCesiumRenderer {
         this.#sourceRaised = false
         this.#sourceAddPending = false
         this.#traceGuide = null
-        this.#traceGuideKey = null
+        this.#traceGuideSamples = null
+        this.#smoothedGroundPositionCache = null
         this.#providedTraceGuide = null
         this.#providedTraceGuideSource = null
         this.#invalidateDynamicTraceFrames()
@@ -397,8 +400,7 @@ export class JourneyReplayCesiumRenderer {
             try {
                 source.entities.removeAll()
                 source.show = false
-            }
-            catch {
+            } catch {
                 // The source may already have been removed by Cesium during scene cleanup.
             }
         }
@@ -435,7 +437,8 @@ export class JourneyReplayCesiumRenderer {
         this.#sourceRaised = false
         this.#sourceAddPending = false
         this.#traceGuide = null
-        this.#traceGuideKey = null
+        this.#traceGuideSamples = null
+        this.#smoothedGroundPositionCache = null
         this.#traceHidden = false
     }
 
@@ -452,8 +455,7 @@ export class JourneyReplayCesiumRenderer {
         if (source && dataSources?.contains?.(source)) {
             try {
                 dataSources.remove?.(source, true)
-            }
-            catch {
+            } catch {
                 // The source may already have been removed by Cesium during scene cleanup.
             }
         }
@@ -678,24 +680,12 @@ export class JourneyReplayCesiumRenderer {
         this.#maskedTrackSources.clear()
     }
 
-    #smoothedGroundPositions = () => this.#smoothedGuideEntries().map(entry => entry.position)
+    #smoothedGroundPositions = () => {
+        if (this.#smoothedGroundPositionCache === null) {
+            this.#smoothedGroundPositionCache = this.#smoothedGuideEntries().map(entry => entry.position)
+        }
 
-    #traceGuideKeyForSampler = smoothing => {
-        const samples = this.#sampler?.samples ?? []
-        const first = samples[0]
-        const last = samples[samples.length - 1]
-        return [
-            this.#journeySlug,
-            samples.length,
-            first?.progress ?? 0,
-            first?.longitude ?? 0,
-            first?.latitude ?? 0,
-            last?.progress ?? 1,
-            last?.longitude ?? 0,
-            last?.latitude ?? 0,
-            smoothing.enabled ? 1 : 0,
-            smoothing.step,
-        ].join(':')
+        return this.#smoothedGroundPositionCache
     }
 
     #rawTraceGuideEntries = () => (this.#sampler?.samples ?? [])
@@ -717,44 +707,16 @@ export class JourneyReplayCesiumRenderer {
         .filter(Boolean)
 
     #traceGuideEntries = () => {
-        const smoothing = normalizeTrackRenderSmoothing(
-            globalThis.lgs?.settings?.getJourney?.renderSmoothing,
-            {enabled: false, step: 1},
-        )
-        const key = this.#traceGuideKeyForSampler(smoothing)
-        if (this.#traceGuide && this.#traceGuideKey === key) {
+        const samples = this.#sampler?.samples ?? null
+        if (this.#traceGuide && this.#traceGuideSamples === samples) {
             return this.#traceGuide
         }
 
-        const raw = this.#rawTraceGuideEntries()
-
-        if (!smoothing.enabled) {
-            this.#traceGuide = raw
-            this.#traceGuideKey = key
-            return raw
-        }
-
-        const coordinates = raw.map(entry => [entry.longitude, entry.latitude, entry.progress])
-        const smoothedCoordinates = smoothCoordinateSegment(coordinates, smoothing.step)
-        const guide = smoothedCoordinates.map(coordinate => {
-            const longitude = finiteNumber(coordinate[0])
-            const latitude = finiteNumber(coordinate[1])
-            const progress = finiteNumber(coordinate[2])
-            if (longitude === null || latitude === null || progress === null) {
-                return null
-            }
-
-            return {
-                longitude,
-                latitude,
-                position: this.#groundPositionFromCoordinate({longitude, latitude}),
-                progress,
-            }
-        }).filter(Boolean)
-
-        this.#traceGuide = guide
-        this.#traceGuideKey = key
-        return guide
+        // The path sampler owns Replay smoothing; applying Journey smoothing here would smooth the route twice.
+        this.#smoothedGroundPositionCache = null
+        this.#traceGuide = this.#rawTraceGuideEntries()
+        this.#traceGuideSamples = samples
+        return this.#traceGuide
     }
 
     /** Normalize a supplied guide once per installation, falling back to the sampler's trace guide. */
@@ -774,7 +736,7 @@ export class JourneyReplayCesiumRenderer {
 
                     return {
                         longitude: Number(entry.longitude),
-                        latitude:  Number(entry.latitude),
+                        latitude: Number(entry.latitude),
                         position,
                         progress,
                     }
@@ -808,8 +770,7 @@ export class JourneyReplayCesiumRenderer {
             const mid = Math.floor((low + high) / 2)
             if (guide[mid].progress < progress) {
                 low = mid + 1
-            }
-            else {
+            } else {
                 high = mid
             }
         }
@@ -849,14 +810,39 @@ export class JourneyReplayCesiumRenderer {
     }
 
     #limitTracePositions = positions => {
-        if (!Array.isArray(positions) || positions.length <= LIVE_PROGRESS_MAX_POINTS) {
+        if (!Array.isArray(positions) || positions.length <= MAX_RENDER_POINTS) {
             return positions ?? []
         }
 
         const lastIndex = positions.length - 1
         const selected = []
-        for (let index = 0; index < LIVE_PROGRESS_MAX_POINTS; index += 1) {
-            const sourceIndex = Math.round((index * lastIndex) / (LIVE_PROGRESS_MAX_POINTS - 1))
+        for (let index = 0; index < MAX_RENDER_POINTS; index += 1) {
+            const sourceIndex = Math.round((index * lastIndex) / (MAX_RENDER_POINTS - 1))
+            const position = positions[sourceIndex]
+            if (position && position !== selected[selected.length - 1]) {
+                selected.push(position)
+            }
+        }
+
+        return selected
+    }
+
+    /** Sample a bounded route range directly instead of copying all preceding coordinates. */
+    #tracePositionRange = (positions, startIndex, endIndex) => {
+        if (!Array.isArray(positions) || positions.length === 0 || endIndex < startIndex) {
+            return []
+        }
+
+        const first = Math.max(0, Math.min(positions.length - 1, startIndex))
+        const last = Math.max(first, Math.min(positions.length - 1, endIndex))
+        const count = last - first + 1
+        if (count <= MAX_RENDER_POINTS) {
+            return positions.slice(first, last + 1)
+        }
+
+        const selected = []
+        for (let index = 0; index < MAX_RENDER_POINTS; index += 1) {
+            const sourceIndex = first + Math.round((index * (count - 1)) / (MAX_RENDER_POINTS - 1))
             const position = positions[sourceIndex]
             if (position && position !== selected[selected.length - 1]) {
                 selected.push(position)
@@ -867,8 +853,8 @@ export class JourneyReplayCesiumRenderer {
     }
 
     #completedSmoothedPositions = () => {
-        const {guide, leftIndex} = this.#smoothedProgressCursor()
-        const positions = guide.map(entry => entry.position)
+        const {leftIndex} = this.#smoothedProgressCursor()
+        const positions = this.#smoothedGroundPositions()
         if (positions.length < 2) {
             return positions
         }
@@ -877,7 +863,7 @@ export class JourneyReplayCesiumRenderer {
             return this.#limitTracePositions(positions)
         }
 
-        const completed = positions.slice(0, leftIndex + 1)
+        const completed = this.#tracePositionRange(positions, 0, leftIndex)
         const interpolated = this.#interpolatedSmoothedPosition()
         const lastCompleted = completed[completed.length - 1]
 
@@ -891,14 +877,14 @@ export class JourneyReplayCesiumRenderer {
     #liveCompletedSmoothedPositions = () => {
         const {guide, leftIndex} = this.#smoothedProgressCursor()
         if (guide.length < 2) {
-            return guide.map(entry => entry.position)
+            return this.#smoothedGroundPositions()
         }
 
         if ((Number(this.#sample?.progress) || 0) >= 1) {
-            return this.#limitTracePositions(guide.map(entry => entry.position))
+            return this.#limitTracePositions(this.#smoothedGroundPositions())
         }
 
-        const completed = guide.slice(0, leftIndex + 1).map(entry => entry.position)
+        const completed = this.#tracePositionRange(this.#smoothedGroundPositions(), 0, leftIndex)
 
         const interpolated = this.#interpolatedSmoothedPosition()
         const lastWithAnchor = completed[completed.length - 1]
@@ -913,14 +899,14 @@ export class JourneyReplayCesiumRenderer {
     }
 
     #remainingSmoothedPositions = () => {
-        const {guide, rightIndex} = this.#smoothedProgressCursor()
-        const positions = guide.map(entry => entry.position)
+        const {rightIndex} = this.#smoothedProgressCursor()
+        const positions = this.#smoothedGroundPositions()
         if (positions.length < 2) {
             return positions
         }
 
         const interpolated = this.#interpolatedSmoothedPosition()
-        const remaining = positions.slice(rightIndex)
+        const remaining = this.#tracePositionRange(positions, rightIndex, positions.length - 1)
 
         return this.#limitTracePositions(interpolated ? [interpolated, ...remaining] : remaining)
     }
@@ -928,10 +914,10 @@ export class JourneyReplayCesiumRenderer {
     #liveRemainingSmoothedPositions = () => {
         const {guide, rightIndex} = this.#smoothedProgressCursor()
         if (guide.length < 2) {
-            return guide.map(entry => entry.position)
+            return this.#smoothedGroundPositions()
         }
 
-        const stride = Math.max(1, Math.ceil(guide.length / Math.max(2, LIVE_PROGRESS_MAX_POINTS - 1)))
+        const stride = Math.max(1, Math.ceil(guide.length / Math.max(2, MAX_RENDER_POINTS - 1)))
         const remaining = []
         const interpolated = this.#interpolatedSmoothedPosition()
         if (interpolated) {
@@ -990,11 +976,11 @@ export class JourneyReplayCesiumRenderer {
         ).withAlpha(fill.opacity)
 
         return {
-            traceMode:      trace.mode,
-            fillColor:      cssColor(fillColor, Color.fromCssColorString(DEFAULT_COLOR)).withAlpha(fill.opacity),
-            cursorColor:    cssColor(fillColor, Color.fromCssColorString(DEFAULT_COLOR)).withAlpha(Math.max(0.85, fill.opacity)),
-            borderColor:    cssColor(borderColor, Color.WHITE).withAlpha(border.opacity),
-            effectMode:     effect.mode,
+            traceMode: trace.mode,
+            fillColor: cssColor(fillColor, Color.fromCssColorString(DEFAULT_COLOR)).withAlpha(fill.opacity),
+            cursorColor: cssColor(fillColor, Color.fromCssColorString(DEFAULT_COLOR)).withAlpha(Math.max(0.85, fill.opacity)),
+            borderColor: cssColor(borderColor, Color.WHITE).withAlpha(border.opacity),
+            effectMode: effect.mode,
             effectBorderOpacity,
             effectFillOpacity: fill.opacity,
             effectBorderColor,
@@ -1002,11 +988,11 @@ export class JourneyReplayCesiumRenderer {
             effectFillEdgeColor,
             remainingColor: cssColor(remaining.color, Color.GRAY).withAlpha(remaining.opacity),
             remainingUseDefinedTrackStyle: remaining.useDefinedTrackStyle !== false,
-            fillWidth:      Math.max(REPLAY_MIN_TRACE_WIDTH, fill.width) * sizeScale,
-            borderWidth:    Math.max(0, border.width) * sizeScale,
-            cursorDiameter:  Math.max(CURSOR_MIN_RADIUS_METERS * 2, fill.width),
+            fillWidth: Math.max(REPLAY_MIN_TRACE_WIDTH, fill.width) * sizeScale,
+            borderWidth: Math.max(0, border.width) * sizeScale,
+            cursorDiameter: Math.max(CURSOR_MIN_RADIUS_METERS * 2, fill.width),
             cursorSizeScale: sizeScale,
-            cursorBorder:    Math.max(0, border.width) * sizeScale,
+            cursorBorder: Math.max(0, border.width) * sizeScale,
         }
     }
 
@@ -1030,7 +1016,7 @@ export class JourneyReplayCesiumRenderer {
                 : REPLAY_EFFECT_GLOW_ALPHA)
 
         return new PolylineGlowMaterialProperty({
-            color:     brightenEffectColor(effectColor, style.effectMode)
+            color: brightenEffectColor(effectColor, style.effectMode)
                 .withAlpha(effectColor.alpha * alpha),
             glowPower: style.effectMode === REPLAY_EFFECT_NEON
                 ? REPLAY_EFFECT_NEON_POWER
@@ -1066,8 +1052,8 @@ export class JourneyReplayCesiumRenderer {
         }
 
         return layer === 'core'
-               ? this.#effectCoreMaterial(style)
-               : this.#effectMaterial(style, effectColor, layer)
+            ? this.#effectCoreMaterial(style)
+            : this.#effectMaterial(style, effectColor, layer)
     }
 
     /**
@@ -1221,19 +1207,19 @@ export class JourneyReplayCesiumRenderer {
 
         if (!this.#cursor) {
             this.#cursor = source.entities.add({
-                id:       `${source.name}#cursor`,
-                name:     'JourneyReplay cursor',
+                id: `${source.name}#cursor`,
+                name: 'JourneyReplay cursor',
                 position: cursorPosition,
-                point:    {
-                    pixelSize:       pointSize,
-                    color:           style.cursorColor,
-                    outlineColor:    style.borderColor,
+                point: {
+                    pixelSize: pointSize,
+                    color: style.cursorColor,
+                    outlineColor: style.borderColor,
                     outlineWidth: style.effectMode === REPLAY_EFFECT_NONE ? outlineWidth : 0,
                     heightReference: HeightReference.CLAMP_TO_GROUND,
                     // Keep depth testing enabled so terrain and 3D tiles can occlude the marker.
                     disableDepthTestDistance: 0,
                 },
-                })
+            })
             this.#syncCursorEffect({cursorPosition, pointSize, style})
             this.#setCursorVisibility(true)
             return
@@ -1278,12 +1264,12 @@ export class JourneyReplayCesiumRenderer {
 
         if (!this.#cursorEffectOuter) {
             this.#cursorEffectOuter = source.entities.add({
-                id:       `${source.name}#cursor-effect-outer`,
-                name:     'JourneyReplay cursor effect outer layer',
+                id: `${source.name}#cursor-effect-outer`,
+                name: 'JourneyReplay cursor effect outer layer',
                 position: cursorPosition,
-                point:    {
-                    pixelSize:       pointSize,
-                    color:           style.effectBorderColor,
+                point: {
+                    pixelSize: pointSize,
+                    color: style.effectBorderColor,
                     heightReference: HeightReference.CLAMP_TO_GROUND,
                     disableDepthTestDistance: 0,
                 },
@@ -1303,12 +1289,12 @@ export class JourneyReplayCesiumRenderer {
 
         if (!this.#cursorEffectInner) {
             this.#cursorEffectInner = source.entities.add({
-                id:       `${source.name}#cursor-effect-inner`,
-                name:     'JourneyReplay cursor effect inner transition',
+                id: `${source.name}#cursor-effect-inner`,
+                name: 'JourneyReplay cursor effect inner transition',
                 position: cursorPosition,
-                point:    {
-                    pixelSize:       pointSize,
-                    color:           style.effectFillEdgeColor,
+                point: {
+                    pixelSize: pointSize,
+                    color: style.effectFillEdgeColor,
                     heightReference: HeightReference.CLAMP_TO_GROUND,
                     disableDepthTestDistance: 0,
                 },
@@ -1337,12 +1323,12 @@ export class JourneyReplayCesiumRenderer {
 
         if (!this.#cursorEffectCore) {
             this.#cursorEffectCore = source.entities.add({
-                id:       `${source.name}#cursor-effect-core`,
-                name:     'JourneyReplay cursor effect core layer',
+                id: `${source.name}#cursor-effect-core`,
+                name: 'JourneyReplay cursor effect core layer',
                 position: cursorPosition,
-                point:    {
-                    pixelSize:       pointSize,
-                    color:           style.effectFillColor,
+                point: {
+                    pixelSize: pointSize,
+                    color: style.effectFillColor,
                     heightReference: HeightReference.CLAMP_TO_GROUND,
                     disableDepthTestDistance: 0,
                 },
@@ -1361,7 +1347,7 @@ export class JourneyReplayCesiumRenderer {
         const viewer = this.#viewer()
         const camera = viewer?.camera
         const canvasHeight = finiteNumber(viewer?.scene?.canvas?.height
-                                          ?? this.#scene()?.canvas?.height) ?? 0
+            ?? this.#scene()?.canvas?.height) ?? 0
         const cameraPosition = camera?.positionWC ?? camera?.position
         const hasPosition = isUsableCartesian3(position)
         const hasCameraPosition = isUsableCartesian3(cameraPosition)
@@ -1435,14 +1421,13 @@ export class JourneyReplayCesiumRenderer {
             clampToGround: clampToGround !== false,
             material,
             width,
-            arcType:       ArcType.GEODESIC,
+            arcType: ArcType.GEODESIC,
         }
 
         if (options.clampToGround) {
             options.granularity = GROUND_POLYLINE_GRANULARITY_METERS
             options.zIndex = zIndex
-        }
-        else if (depthFailMaterial) {
+        } else if (depthFailMaterial) {
             options.depthFailMaterial = depthFailMaterial
         }
 
@@ -1452,10 +1437,16 @@ export class JourneyReplayCesiumRenderer {
     #syncPolyline = (record, options) => {
         const geometryKey = this.#polylineGeometryKey(options.positions)
         const styleKey = this.#polylineStyleKey(options)
+        const geometrySamples = this.#sampler?.samples ?? null
+        const geometryGuide = this.#options.smoothedGuide ?? null
 
-        if (record.geometryKey !== geometryKey) {
+        if (record.geometryKey !== geometryKey
+            || record.geometrySamples !== geometrySamples
+            || record.geometryGuide !== geometryGuide) {
             record.entity.polyline.positions = options.positions
             record.geometryKey = geometryKey
+            record.geometrySamples = geometrySamples
+            record.geometryGuide = geometryGuide
         }
 
         if (record.styleKey !== styleKey) {
@@ -1496,12 +1487,12 @@ export class JourneyReplayCesiumRenderer {
 
             const options = {
                 positions,
-                width:    record.width,
+                width: record.width,
                 material: record.material,
-                zIndex:   record.zIndex,
+                zIndex: record.zIndex,
                 clampToGround: record.clampToGround !== false,
                 depthFailMaterial: record.depthFailMaterial ?? null,
-                show:     record.show !== false && record.entity.show !== false,
+                show: record.show !== false && record.entity.show !== false,
             }
 
             const id = record.entity.id
@@ -1558,14 +1549,16 @@ export class JourneyReplayCesiumRenderer {
         }
 
         this.#lineEntities.set(key, {
-            entity:      source.entities.add({
+            entity: source.entities.add({
                 id,
                 name,
                 polyline: this.#polylineOptions(options),
                 show,
             }),
             geometryKey: this.#polylineGeometryKey(positions),
-            styleKey:    this.#polylineStyleKey(options),
+            geometrySamples: this.#sampler?.samples ?? null,
+            geometryGuide: this.#options.smoothedGuide ?? null,
+            styleKey: this.#polylineStyleKey(options),
             width,
             material,
             zIndex,
@@ -1604,8 +1597,8 @@ export class JourneyReplayCesiumRenderer {
         }
 
         const dynamicRecord = {
-            entity:           null,
-            geometryKey:      'dynamic',
+            entity: null,
+            geometryKey: 'dynamic',
             styleKey,
             positionsFactory,
             width,
@@ -1614,8 +1607,8 @@ export class JourneyReplayCesiumRenderer {
             clampToGround: true,
             depthFailMaterial: null,
             show,
-            lastProgressKey:  null,
-            lastPositions:    [],
+            lastProgressKey: null,
+            lastPositions: [],
         }
         const dynamicPositions = new CallbackProperty(() => {
             const frame = this.#traceFrameForCurrentProgress(dynamicRecord.positionsFactory)
@@ -1647,7 +1640,7 @@ export class JourneyReplayCesiumRenderer {
         }
 
         const style = this.#style()
-        const smoothedPositions = this.#smoothedGroundPositions()
+        const smoothedPositions = this.#smoothedGuideEntries()
         this.#invalidateDynamicTraceFrames()
         if (smoothedPositions.length >= 2) {
             const fillWidth = style.fillWidth
@@ -1675,37 +1668,36 @@ export class JourneyReplayCesiumRenderer {
                 })
                 if (positions.length >= 2) {
                     this.#upsertPolyline({
-                        key:               'smoothed#border',
-                        id:                `${source.name}#completed#smoothed#border`,
-                        name:              'JourneyReplay completed track border',
+                        key: 'smoothed#border',
+                        id: `${source.name}#completed#smoothed#border`,
+                        name: 'JourneyReplay completed track border',
                         positions,
-                        material:          this.#traceMaterial(style, style.borderColor, style.effectBorderColor, 'border'),
-                    width:             renderedBorderWidth,
-                        zIndex:            PROGRESS_Z_INDEX_BORDER,
-                        clampToGround:     true,
+                        material: this.#traceMaterial(style, style.borderColor, style.effectBorderColor, 'border'),
+                        width: renderedBorderWidth,
+                        zIndex: PROGRESS_Z_INDEX_BORDER,
+                        clampToGround: true,
                     })
                     this.#upsertPolyline({
-                        key:               'smoothed#inner-glow',
-                        id:                `${source.name}#completed#smoothed#inner-glow`,
-                        name:              'JourneyReplay completed track inner glow',
+                        key: 'smoothed#inner-glow',
+                        id: `${source.name}#completed#smoothed#inner-glow`,
+                        name: 'JourneyReplay completed track inner glow',
                         positions,
-                        material:          this.#traceMaterial(style, style.fillColor, style.effectFillEdgeColor, 'inner-glow'),
-                        width:             renderedInnerGlowWidth,
-                        zIndex:            PROGRESS_Z_INDEX_BORDER + 0.5,
-                        clampToGround:     true,
+                        material: this.#traceMaterial(style, style.fillColor, style.effectFillEdgeColor, 'inner-glow'),
+                        width: renderedInnerGlowWidth,
+                        zIndex: PROGRESS_Z_INDEX_BORDER + 0.5,
+                        clampToGround: true,
                     })
                     this.#upsertPolyline({
-                        key:               'smoothed#fill',
-                        id:                `${source.name}#completed#smoothed#fill`,
-                        name:              'JourneyReplay completed track',
+                        key: 'smoothed#fill',
+                        id: `${source.name}#completed#smoothed#fill`,
+                        name: 'JourneyReplay completed track',
                         positions,
-                        material:          this.#traceMaterial(style, style.fillColor, style.effectFillColor, 'core'),
-                        width:             renderedFillWidth,
-                        zIndex:            PROGRESS_Z_INDEX_FILL,
-                        clampToGround:     true,
+                        material: this.#traceMaterial(style, style.fillColor, style.effectFillColor, 'core'),
+                        width: renderedFillWidth,
+                        zIndex: PROGRESS_Z_INDEX_FILL,
+                        clampToGround: true,
                     })
-                }
-                else {
+                } else {
                     this.#hideLineEntities(key => !key.startsWith(REMAINING_KEY_PREFIX))
                     return
                 }
@@ -1716,31 +1708,31 @@ export class JourneyReplayCesiumRenderer {
             if (playing) {
                 this.#completedTracePositionsFactory = this.#liveCompletedSmoothedPositions
                 this.#upsertDynamicPolyline({
-                    key:       'smoothed#border',
-                    id:        `${source.name}#completed#smoothed#border`,
-                    name:      'JourneyReplay completed track border',
+                    key: 'smoothed#border',
+                    id: `${source.name}#completed#smoothed#border`,
+                    name: 'JourneyReplay completed track border',
                     positionsFactory: this.#liveCompletedSmoothedPositions,
-                    material:  this.#traceMaterial(style, style.borderColor, style.effectBorderColor, 'border'),
-                    width:     renderedBorderWidth,
-                    zIndex:    PROGRESS_Z_INDEX_BORDER,
+                    material: this.#traceMaterial(style, style.borderColor, style.effectBorderColor, 'border'),
+                    width: renderedBorderWidth,
+                    zIndex: PROGRESS_Z_INDEX_BORDER,
                 })
                 this.#upsertDynamicPolyline({
-                    key:               'smoothed#inner-glow',
-                    id:                `${source.name}#completed#smoothed#inner-glow`,
-                    name:              'JourneyReplay completed track inner glow',
+                    key: 'smoothed#inner-glow',
+                    id: `${source.name}#completed#smoothed#inner-glow`,
+                    name: 'JourneyReplay completed track inner glow',
                     positionsFactory: this.#liveCompletedSmoothedPositions,
-                    material:          this.#traceMaterial(style, style.fillColor, style.effectFillEdgeColor, 'inner-glow'),
-                    width:             renderedInnerGlowWidth,
-                    zIndex:            PROGRESS_Z_INDEX_BORDER + 0.5,
+                    material: this.#traceMaterial(style, style.fillColor, style.effectFillEdgeColor, 'inner-glow'),
+                    width: renderedInnerGlowWidth,
+                    zIndex: PROGRESS_Z_INDEX_BORDER + 0.5,
                 })
                 this.#upsertDynamicPolyline({
-                    key:       'smoothed#fill',
-                    id:        `${source.name}#completed#smoothed#fill`,
-                    name:      'JourneyReplay completed track',
+                    key: 'smoothed#fill',
+                    id: `${source.name}#completed#smoothed#fill`,
+                    name: 'JourneyReplay completed track',
                     positionsFactory: this.#liveCompletedSmoothedPositions,
-                    material:  this.#traceMaterial(style, style.fillColor, style.effectFillColor, 'core'),
-                    width:     renderedFillWidth,
-                    zIndex:    PROGRESS_Z_INDEX_FILL,
+                    material: this.#traceMaterial(style, style.fillColor, style.effectFillColor, 'core'),
+                    width: renderedFillWidth,
+                    zIndex: PROGRESS_Z_INDEX_FILL,
                 })
                 this.#hideLineEntities(key => !key.startsWith(REMAINING_KEY_PREFIX) && !activeKeys.has(key))
                 return
@@ -1748,31 +1740,31 @@ export class JourneyReplayCesiumRenderer {
 
             this.#completedTracePositionsFactory = this.#completedSmoothedPositions
             this.#upsertDynamicPolyline({
-                key:       'smoothed#border',
-                id:        `${source.name}#completed#smoothed#border`,
-                name:      'JourneyReplay completed track border',
+                key: 'smoothed#border',
+                id: `${source.name}#completed#smoothed#border`,
+                name: 'JourneyReplay completed track border',
                 positionsFactory: this.#completedSmoothedPositions,
-                material:  this.#traceMaterial(style, style.borderColor, style.effectBorderColor, 'border'),
-                width:     renderedBorderWidth,
-                zIndex:    PROGRESS_Z_INDEX_BORDER,
+                material: this.#traceMaterial(style, style.borderColor, style.effectBorderColor, 'border'),
+                width: renderedBorderWidth,
+                zIndex: PROGRESS_Z_INDEX_BORDER,
             })
             this.#upsertDynamicPolyline({
-                key:               'smoothed#inner-glow',
-                id:                `${source.name}#completed#smoothed#inner-glow`,
-                name:              'JourneyReplay completed track inner glow',
+                key: 'smoothed#inner-glow',
+                id: `${source.name}#completed#smoothed#inner-glow`,
+                name: 'JourneyReplay completed track inner glow',
                 positionsFactory: this.#completedSmoothedPositions,
-                material:          this.#traceMaterial(style, style.fillColor, style.effectFillEdgeColor, 'inner-glow'),
-                width:             renderedInnerGlowWidth,
-                zIndex:            PROGRESS_Z_INDEX_BORDER + 0.5,
+                material: this.#traceMaterial(style, style.fillColor, style.effectFillEdgeColor, 'inner-glow'),
+                width: renderedInnerGlowWidth,
+                zIndex: PROGRESS_Z_INDEX_BORDER + 0.5,
             })
             this.#upsertDynamicPolyline({
-                key:       'smoothed#fill',
-                id:        `${source.name}#completed#smoothed#fill`,
-                name:      'JourneyReplay completed track',
+                key: 'smoothed#fill',
+                id: `${source.name}#completed#smoothed#fill`,
+                name: 'JourneyReplay completed track',
                 positionsFactory: this.#completedSmoothedPositions,
-                material:  this.#traceMaterial(style, style.fillColor, style.effectFillColor, 'core'),
-                width:     renderedFillWidth,
-                zIndex:    PROGRESS_Z_INDEX_FILL,
+                material: this.#traceMaterial(style, style.fillColor, style.effectFillColor, 'core'),
+                width: renderedFillWidth,
+                zIndex: PROGRESS_Z_INDEX_FILL,
             })
 
             this.#hideLineEntities(key => !key.startsWith(REMAINING_KEY_PREFIX) && !activeKeys.has(key))
@@ -1797,38 +1789,38 @@ export class JourneyReplayCesiumRenderer {
             const borderKey = `${segment.key}#border`
             activeKeys.add(borderKey)
             this.#upsertPolyline({
-                                     key:       borderKey,
-                                     id:        `${source.name}#completed#${borderKey}`,
-                                     name:      'JourneyReplay completed track border',
-                                     positions,
-                                     material:  this.#traceMaterial(style, style.borderColor, style.effectBorderColor, 'border'),
-                                     width:     renderedBorderWidth,
-                                     zIndex:    PROGRESS_Z_INDEX_BORDER,
-                                 })
+                key: borderKey,
+                id: `${source.name}#completed#${borderKey}`,
+                name: 'JourneyReplay completed track border',
+                positions,
+                material: this.#traceMaterial(style, style.borderColor, style.effectBorderColor, 'border'),
+                width: renderedBorderWidth,
+                zIndex: PROGRESS_Z_INDEX_BORDER,
+            })
 
             const innerGlowKey = `${segment.key}#inner-glow`
             activeKeys.add(innerGlowKey)
             this.#upsertPolyline({
-                                     key:       innerGlowKey,
-                                     id:        `${source.name}#completed#${innerGlowKey}`,
-                                     name:      'JourneyReplay completed track inner glow',
-                                     positions,
-                                     material:  this.#traceMaterial(style, style.fillColor, style.effectFillEdgeColor, 'inner-glow'),
-                                     width:     renderedInnerGlowWidth,
-                                     zIndex:    PROGRESS_Z_INDEX_BORDER + 0.5,
-                                 })
+                key: innerGlowKey,
+                id: `${source.name}#completed#${innerGlowKey}`,
+                name: 'JourneyReplay completed track inner glow',
+                positions,
+                material: this.#traceMaterial(style, style.fillColor, style.effectFillEdgeColor, 'inner-glow'),
+                width: renderedInnerGlowWidth,
+                zIndex: PROGRESS_Z_INDEX_BORDER + 0.5,
+            })
 
             const fillKey = `${segment.key}#fill`
             activeKeys.add(fillKey)
             this.#upsertPolyline({
-                                     key:       fillKey,
-                                     id:        `${source.name}#completed#${fillKey}`,
-                                     name:      'JourneyReplay completed track',
-                                     positions,
-                                     material:  this.#traceMaterial(style, style.fillColor, style.effectFillColor, 'core'),
-                                     width:     renderedFillWidth,
-                                     zIndex:    PROGRESS_Z_INDEX_FILL,
-                                 })
+                key: fillKey,
+                id: `${source.name}#completed#${fillKey}`,
+                name: 'JourneyReplay completed track',
+                positions,
+                material: this.#traceMaterial(style, style.fillColor, style.effectFillColor, 'core'),
+                width: renderedFillWidth,
+                zIndex: PROGRESS_Z_INDEX_FILL,
+            })
         })
 
         this.#hideLineEntities(key => !key.startsWith(REMAINING_KEY_PREFIX) && !activeKeys.has(key))
@@ -1846,38 +1838,38 @@ export class JourneyReplayCesiumRenderer {
             return
         }
 
-        const smoothedPositions = this.#smoothedGroundPositions()
+        const smoothedPositions = this.#smoothedGuideEntries()
         if (smoothedPositions.length >= 2) {
             const fillWidth = this.#traceWidth(style, style.fillWidth, 'border')
             const activeKeys = new Set([`${REMAINING_KEY_PREFIX}smoothed#fill`])
             const trackStyle = style.remainingUseDefinedTrackStyle ? this.#trackStyleForSegment(this.#sampler?.segments?.[0]) : null
             const remainingMaterial = style.remainingUseDefinedTrackStyle && trackStyle
-                                      ? TrackUtils.createTrackMaterial(trackStyle, trackStyle.color)
-                                      : style.remainingColor
+                ? TrackUtils.createTrackMaterial(trackStyle, trackStyle.color)
+                : style.remainingColor
             const replayStore = globalThis.lgs?.stores?.replay
             const playing = replayStore?.playing === true && replayStore?.recordingSync !== true
             if (playing) {
                 this.#upsertDynamicPolyline({
-                    key:       `${REMAINING_KEY_PREFIX}smoothed#fill`,
-                    id:        `${source.name}#remaining#smoothed#fill`,
-                    name:      'JourneyReplay remaining track',
+                    key: `${REMAINING_KEY_PREFIX}smoothed#fill`,
+                    id: `${source.name}#remaining#smoothed#fill`,
+                    name: 'JourneyReplay remaining track',
                     positionsFactory: this.#liveRemainingSmoothedPositions,
-                    material:  this.#traceMaterial(style, remainingMaterial, style.effectFillColor, 'border'),
-                    width:     fillWidth,
-                    zIndex:    PROGRESS_Z_INDEX_REMAINING_FILL,
+                    material: this.#traceMaterial(style, remainingMaterial, style.effectFillColor, 'border'),
+                    width: fillWidth,
+                    zIndex: PROGRESS_Z_INDEX_REMAINING_FILL,
                 })
                 this.#hideLineEntities(key => key.startsWith(REMAINING_KEY_PREFIX) && !activeKeys.has(key))
                 return
             }
 
             this.#upsertDynamicPolyline({
-                key:      `${REMAINING_KEY_PREFIX}smoothed#fill`,
-                id:       `${source.name}#remaining#smoothed#fill`,
-                name:     'JourneyReplay remaining track',
+                key: `${REMAINING_KEY_PREFIX}smoothed#fill`,
+                id: `${source.name}#remaining#smoothed#fill`,
+                name: 'JourneyReplay remaining track',
                 positionsFactory: this.#remainingSmoothedPositions,
                 material: this.#traceMaterial(style, remainingMaterial, style.effectFillColor, 'border'),
-                width:    fillWidth,
-                zIndex:   PROGRESS_Z_INDEX_REMAINING_FILL,
+                width: fillWidth,
+                zIndex: PROGRESS_Z_INDEX_REMAINING_FILL,
             })
 
             this.#hideLineEntities(key => key.startsWith(REMAINING_KEY_PREFIX) && !activeKeys.has(key))
@@ -1895,19 +1887,19 @@ export class JourneyReplayCesiumRenderer {
             }
             const trackStyle = style.remainingUseDefinedTrackStyle ? this.#trackStyleForSegment(segment) : null
             const remainingMaterial = style.remainingUseDefinedTrackStyle && trackStyle
-                                      ? TrackUtils.createTrackMaterial(trackStyle, trackStyle.color)
-                                      : style.remainingColor
+                ? TrackUtils.createTrackMaterial(trackStyle, trackStyle.color)
+                : style.remainingColor
 
             const fillKey = `${REMAINING_KEY_PREFIX}${segment.key}#fill`
             activeKeys.add(fillKey)
             this.#upsertPolyline({
-                key:      fillKey,
-                id:       `${source.name}#remaining#${segment.key}#fill`,
-                name:     'JourneyReplay remaining track',
+                key: fillKey,
+                id: `${source.name}#remaining#${segment.key}#fill`,
+                name: 'JourneyReplay remaining track',
                 positions,
                 material: this.#traceMaterial(style, remainingMaterial, style.effectFillColor, 'border'),
-                width:    fillWidth,
-                zIndex:   PROGRESS_Z_INDEX_REMAINING_FILL,
+                width: fillWidth,
+                zIndex: PROGRESS_Z_INDEX_REMAINING_FILL,
             })
         })
 

@@ -8,30 +8,31 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-03
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
 import {
     getTrackRenderContent, MAX_RENDER_POINTS, normalizeTrackRenderSmoothing, resolveTrackRenderSmoothing,
+    smoothCoordinateSegment,
     trackRenderSmoothingKey,
-}                                                from '@Utils/cesium/trackRenderSmoothing'
+} from '@Utils/cesium/trackRenderSmoothing'
 import {getFixPathSourceFingerprint} from '@Utils/cesium/fixPathCorrections'
 
 const makeTrack = renderSmoothing => ({
     parent: 'journey#gpx',
-    slug:   'track#journey#gpx#main',
+    slug: 'track#journey#gpx#main',
     renderSmoothing,
     content: {
-        type:       'Feature',
+        type: 'Feature',
         properties: {
             name: 'Main track',
         },
-        geometry:   {
-            type:        'LineString',
+        geometry: {
+            type: 'LineString',
             coordinates: [
                 [6, 45, 100],
                 [6.1, 45.1, 110],
@@ -49,12 +50,29 @@ describe('track render smoothing', () => {
     it('normalizes smoothing settings', () => {
         expect(normalizeTrackRenderSmoothing({enabled: 'true', step: '2'})).toEqual({
             enabled: true,
-            step:    2,
+            step: 2,
         })
         expect(normalizeTrackRenderSmoothing({enabled: false, step: 12})).toEqual({
             enabled: false,
-            step:    6,
+            step: 6,
         })
+    })
+
+    it('still smooths long journeys when the requested smoothing is at its maximum', () => {
+        const coordinates = Array.from({length: 8192}, (_, index) => [
+            6 + (index * 0.00001),
+            index < 4096 ? 45 : 45 + ((index - 4096) * 0.00001),
+            100,
+        ])
+
+        const onePass = smoothCoordinateSegment(coordinates, 1)
+        const smoothed = smoothCoordinateSegment(coordinates, 6)
+
+        expect(smoothed).toHaveLength(4096)
+        expect(smoothed[0]).toEqual(coordinates[0])
+        expect(smoothed.at(-1)).toEqual(coordinates.at(-1))
+        expect(smoothed).not.toEqual(coordinates)
+        expect(smoothed).not.toEqual(onePass)
     })
 
     it('smooths only the render content without mutating the source track', () => {
@@ -322,15 +340,15 @@ describe('track render smoothing', () => {
                 getJourney: {
                     renderSmoothing: {
                         enabled: false,
-                        step:    1,
+                        step: 1,
                     },
                 },
             },
             theJourneyEditorProxy: {
                 journey: {
-                    slug:            'journey#gpx',
+                    slug: 'journey#gpx',
                     renderSmoothing: {enabled: true, step: 2},
-                    tracks:          new Map([[singleTrack.slug, singleTrack]]),
+                    tracks: new Map([[singleTrack.slug, singleTrack]]),
                 },
             },
         })

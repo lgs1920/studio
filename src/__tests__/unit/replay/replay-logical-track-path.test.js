@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -56,6 +56,27 @@ describe('Journey replay logical track path', () => {
         expect(first[0]).toHaveLength(6)
         expect(first[0][0]).toEqual([0, 0, 0])
         expect(first[0][first[0].length - 1]).toEqual([2, 0, 20])
+    })
+
+    it('applies the requested smoothing to long Replay tracks within the point budget', () => {
+        const coordinates = Array.from({length: 8192}, (_, index) => [
+            6 + (index * 0.00001),
+            index < 4096 ? 45 : 45 + ((index - 4096) * 0.00001),
+            100,
+        ])
+        const track = {content: {geometry: {type: 'LineString', coordinates}}}
+
+        const onePass = logicalCoordinateSegmentsFromTrack(track, {
+            renderSmoothing: {enabled: true, step: 1},
+        })[0]
+        const sixPasses = logicalCoordinateSegmentsFromTrack(track, {
+            renderSmoothing: {enabled: true, step: 6},
+        })[0]
+
+        expect(sixPasses).toHaveLength(4096)
+        expect(sixPasses[0]).toEqual(coordinates[0])
+        expect(sixPasses.at(-1)).toEqual(coordinates.at(-1))
+        expect(sixPasses).not.toEqual(onePass)
     })
 
     it('builds the shared path contract for selected journey tracks', () => {

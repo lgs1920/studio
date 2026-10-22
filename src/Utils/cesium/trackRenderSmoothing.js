@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-03
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,7 @@ import {
 
 export const TRACK_RENDER_SMOOTHING_DEFAULT = Object.freeze({
     enabled: false,
-    step:    1,
+    step: 1,
 })
 
 export const TRACK_RENDER_SMOOTHING_MIN_STEP = 1
@@ -288,7 +288,7 @@ export const normalizeTrackRenderSmoothing = (value, fallback = TRACK_RENDER_SMO
 
     return {
         enabled: normalizeBoolean(settings.enabled, fallbackSettings.enabled),
-        step:    normalizeStep(settings.step, fallbackSettings.step),
+        step: normalizeStep(settings.step, fallbackSettings.step),
     }
 }
 
@@ -332,7 +332,7 @@ const getProtectedFixPathRangesBySegment = (track, content, includeDraftCorrecti
             || endIndex < startIndex
             || !Array.isArray(controlPoints)
             || getFixPathSourceFingerprint(track?.content, segmentIndex, startIndex, endIndex)
-                !== correction.sourceFingerprint) {
+            !== correction.sourceFingerprint) {
             return
         }
 
@@ -373,8 +373,7 @@ const getProtectedFixPathRangesBySegment = (track, content, includeDraftCorrecti
             const previous = mergedRanges.at(-1)
             if (previous && range.startIndex <= previous.endIndex + 1) {
                 previous.endIndex = Math.max(previous.endIndex, range.endIndex)
-            }
-            else {
+            } else {
                 mergedRanges.push({...range})
             }
         })
@@ -495,20 +494,20 @@ export const resolveTrackRenderSmoothing = track => {
     const journey = getJourneyFromTrack(track)
     const isMultiTrackJourney = (journey?.tracks?.size ?? 0) > 1
     const source = isMultiTrackJourney
-                   ? track?.renderSmoothing
-                   : (journey?.renderSmoothing ?? track?.renderSmoothing)
+        ? track?.renderSmoothing
+        : (journey?.renderSmoothing ?? track?.renderSmoothing)
 
     return normalizeTrackRenderSmoothing(source, defaults)
 }
 
 const effectiveTrackRenderSmoothing = (track, {forceRenderSmoothing = false, renderSmoothing} = {}) => {
     const smoothing = renderSmoothing === undefined
-                      ? resolveTrackRenderSmoothing(track)
-                      : normalizeTrackRenderSmoothing(renderSmoothing, resolveTrackRenderSmoothing(track))
+        ? resolveTrackRenderSmoothing(track)
+        : normalizeTrackRenderSmoothing(renderSmoothing, resolveTrackRenderSmoothing(track))
 
     return forceRenderSmoothing === true
-           ? {...smoothing, enabled: true}
-           : smoothing
+        ? {...smoothing, enabled: true}
+        : smoothing
 }
 
 export const trackRenderSmoothingKey = (track, options = {}) => {
@@ -530,13 +529,29 @@ export const cachePreparedTrackRenderContent = (track, renderContent, renderSmoo
     ), renderContent)
 }
 
+/**
+ * Smooth a coordinate sequence while keeping long segments inside the renderer budget.
+ * @param {Array<Array<number>>} coordinates - Corrected source coordinates.
+ * @param {number} step - Requested number of Chaikin passes.
+ * @returns {Array<Array<number>>} Smoothed coordinates within the point budget.
+ */
 export const smoothCoordinateSegment = (coordinates, step) => {
     let result = Array.isArray(coordinates) ? coordinates.map(cloneCoordinate) : []
+    const maximumInputPoints = Math.floor((MAX_SMOOTHED_SEGMENT_POINTS + 1) / 2)
+    const boundedInput = result.length > maximumInputPoints
+
+    // Reserve room for one Chaikin pass so smoothing does not silently disappear on long GPX tracks.
+    if (boundedInput) {
+        result = sampleCoordinates(result, maximumInputPoints)
+    }
 
     for (let index = 0; index < step; index++) {
         const projectedLength = ((result.length - 1) * 2) + 1
         if (projectedLength > MAX_SMOOTHED_SEGMENT_POINTS) {
-            break
+            if (!boundedInput) {
+                break
+            }
+            result = sampleCoordinates(result, maximumInputPoints)
         }
         result = chaikinPass(result)
     }
@@ -589,8 +604,7 @@ export const getTrackRenderContent = (track, options = {}) => {
             )
             renderContent.geometry.coordinates = smoothed.coordinates
             preservedIndexesBySegment = new Map([[0, smoothed.anchorIndexes]])
-        }
-        else {
+        } else {
             preservedIndexesBySegment = new Map()
             renderContent.geometry.coordinates = (geometry.coordinates ?? []).map((segment, segmentIndex) => {
                 const smoothed = smoothCoordinateSegmentAtAnchors(
