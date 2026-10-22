@@ -71,7 +71,7 @@
 
 .fix-path-selection-rectangle,
 .fix-path-selection-lasso {
-    fill: rgb(25 33 43 / 12%);
+    fill: rgb(25 33 43 / 24%);
     stroke: var(--wa-color-orange-60);
     stroke-width: 2px;
     stroke-dasharray: 7 5;
