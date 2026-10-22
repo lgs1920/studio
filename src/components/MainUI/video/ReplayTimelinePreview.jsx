@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-10-18
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,7 @@ import {
     groupWidgetEntries,
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
 import {WidgetDynamicRenderer} from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import {resolveWidgetCatalogGroup} from '@Core/ui/widget-manager/resolveWidgetCatalogGroup'
 import {filterReplayVideoWidgetKeys, getReplayVideoWidgetTypes} from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {
     isReplayTimelineSourceUnchanged,
@@ -844,8 +845,17 @@ export const ReplayTimelinePreview = forwardRef(({
 
         const renderer = WidgetDynamicRenderer.instance
         const basicReplay = replay.basicPreparationActive === true
+        const currentWidgetIds = new Set(Array.from(widgetList.entries())
+            .filter(([, entry]) => entry?.widgetsBoard === VIDEO_WIDGETS_BOARD)
+            .map(([id]) => id))
+        const currentWidgetTypes = new Set([...currentWidgetIds].map(id => id.split('#')[0]))
         for (const widgetType of getReplayVideoWidgetTypes({basicReplay})) {
-            void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetType, {
+            if (currentWidgetTypes.has(widgetType)) {
+                continue
+            }
+
+            const widgetId = widgetManifest.find(id => id.split('#')[0] === widgetType) ?? widgetType
+            void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetId, {
                 widgetsBoard: VIDEO_WIDGETS_BOARD,
                 forceRefresh: true,
             }).catch(error => {
@@ -853,17 +863,18 @@ export const ReplayTimelinePreview = forwardRef(({
             })
         }
 
-        const currentWidgetIds = new Set(Array.from(widgetList.entries())
-            .filter(([, entry]) => entry?.widgetsBoard === VIDEO_WIDGETS_BOARD)
-            .map(([id]) => id))
-        const currentWidgetTypes = new Set([...currentWidgetIds].map(id => id.split('#')[0]))
         for (const widgetId of filterReplayVideoWidgetKeys(widgetManifest, {basicReplay})) {
             if (currentWidgetIds.has(widgetId)
                 || (widgetId === widgetId.split('#')[0] && currentWidgetTypes.has(widgetId))) {
                 continue
             }
 
-            void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetId, {
+            const group = resolveWidgetCatalogGroup(widgetId, {widgetsBoard: VIDEO_WIDGETS_BOARD})
+            if (!group) {
+                console.error(`[LGS1920][ReplayWidgets] No catalogue group found for ${widgetId}`)
+                continue
+            }
+            void renderer.renderWidget(group, widgetId, {
                 widgetsBoard: VIDEO_WIDGETS_BOARD,
                 forceRefresh: true,
             }).catch(error => {

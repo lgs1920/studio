@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -393,6 +393,39 @@ describe('Replay video widget capture canvas resolution', () => {
                 h: 90,
             }),
         )
+    })
+
+    it('waits for mounting before a delayed clip and for a bitmap only when that clip becomes visible', () => {
+        const widgetId = 'text-widget#later'
+        const container = document.createElement('div')
+        const element = document.createElement('div')
+        container.append(element)
+        let mounted = false
+        const replay = {
+            recordingSync: true,
+            timeline: {currentTimeMillis: 0},
+            preparationTimeline: {tracks: [{
+                id: widgetId,
+                clips: [{start: 5, end: 10, metadata: {widgetId}}],
+            }]},
+        }
+        globalThis.lgs = {stores: {replay}}
+        globalThis.__ = {ui: {
+            widgetCache: {isMounted: () => mounted},
+            widgetManager: {getElementById: () => element},
+        }}
+
+        expect(isReplayVideoWidgetReady(widgetId)).toBe(false)
+        mounted = true
+        expect(isReplayVideoWidgetReady(widgetId)).toBe(true)
+        replay.timeline.currentTimeMillis = 5000
+        expect(isReplayVideoWidgetReady(widgetId)).toBe(false)
+        const canvas = document.createElement('canvas')
+        canvas.className = 'lgs-widget-canvas'
+        canvas.width = 160
+        canvas.height = 90
+        container.prepend(canvas)
+        expect(isReplayVideoWidgetReady(widgetId)).toBe(true)
     })
 })
 

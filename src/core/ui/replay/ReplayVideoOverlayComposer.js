@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -470,6 +470,12 @@ export const buildReplayVideoComposerOverlays = ({
     composer.endUpdate()
 }
 
+/**
+ * Require a mounted widget and a capture surface only when it is currently visible.
+ * Hidden timeline widgets create their first bitmap when capture reaches their clip.
+ * @param {string} widgetId - Concrete video widget identifier.
+ * @returns {boolean} Whether the widget can participate in the current frame.
+ */
 export const isReplayVideoWidgetReady = widgetId => {
     const element = globalThis.__?.ui?.widgetManager?.getElementById?.(widgetId)
     const isMounted = typeof globalThis.__?.ui?.widgetCache?.isMounted === 'function'
@@ -477,6 +483,10 @@ export const isReplayVideoWidgetReady = widgetId => {
                       : Boolean(element)
     if (!element || !isMounted) {
         return false
+    }
+
+    if (!resolveVideoOverlayVisibility({widgetId, widgetEl: element})) {
+        return true
     }
 
     return Boolean(resolveWidgetCaptureCanvas(element))

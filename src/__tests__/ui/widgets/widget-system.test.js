@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-30
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -787,6 +787,26 @@ describe('Widget registry runtime cleanup', () => {
 describe('Widget dynamic renderer bootstrap', () => {
     beforeEach(() => {
         installGlobals()
+    })
+
+    it('preserves mounted state and stacking order when refreshing an existing component', async () => {
+        const widgetId = `${DYNAMIC_TEST_WIDGET}#mounted`
+        const component = () => null
+        const renderer = WidgetDynamicRenderer.instance
+        renderer.registry = {getLazyComponent: vi.fn(async () => component)}
+        await renderer.renderWidget(SCENE_WIDGETS, widgetId, {
+            widgetsBoard: SCENE_WIDGETS_BOARD,
+            zIndex: 4567,
+        })
+        widgetCacheStore.get(widgetId).mounted = true
+
+        await renderer.renderWidget(SCENE_WIDGETS, widgetId, {
+            widgetsBoard: SCENE_WIDGETS_BOARD,
+            forceRefresh: true,
+        })
+
+        expect(widgetCacheStore.get(widgetId).mounted).toBe(true)
+        expect(widgetListStore.get(widgetId).zIndex).toBe(4567)
     })
 
     it('assigns a visible default zIndex when a widget is rendered without one', async () => {

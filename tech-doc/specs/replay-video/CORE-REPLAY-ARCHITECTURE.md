@@ -368,6 +368,16 @@ Standalone frame sessions retain their default seek-before-render behavior.
 physical output surface. Mediabunny encodes the product frame timeline and must
 not become a replay clock.
 
+`ToolsUI` owns one persistent video widget portal through preparation and capture.
+Crop controls and recording controls replace only the board surface. Widget hosts
+reattach to the current board DOM while retaining their content instances. Restored
+timeline instances resolve their registration group from the widget catalogue,
+including Journey-only Text, Profile, and Stats widgets. Registration refreshes do
+not clear live mount state or reset stacking order. The timeline keeps every known
+instance mounted and controls visibility independently of component loading.
+Before capture, the exporter registers and waits for the union of the saved
+manifest and current track references, including clips that start later.
+
 Export commits synchronous Valtio widget consumers through
 `ReplayWidgetFrameRenderers` before reading DOM pixels. Mounted widgets register
 imperative preparation with lifecycle-owned teardown: Stats settles its bounds,

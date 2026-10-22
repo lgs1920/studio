@@ -38,6 +38,12 @@ Do not put instance-specific state into shared defaults.
 
 The host owns mounting, selection, dragging, resizing, scaling, locking, z-index, persistence, crop bounds, and capture preparation. A widget component should render content and react to its configuration and application state. It should not reimplement host transforms or persistence.
 
+`ToolsUI` owns the single video widget portal across preparation, capture, and return to preparation. Crop controls and recording controls do not own separate widget trees. Replacing the crop board updates each host's current container without replacing its content instance. Board hosts resolve the current board element instead of retaining a widget component's older memoized container.
+
+Restored widget instances resolve their registration group through `resolveWidgetCatalogGroup` and the loaded catalogue. Text, Profile, and Stats belong to Journey groups on the video board; the shared group used for Logo and Credits is not a universal registration group. Registration refreshes preserve mounted state and stacking order. Only the host lifecycle or an explicit runtime invalidation changes whether an instance is mounted.
+
+`DynamicWidget` keeps component loading tied to widget identity and board. Presentation changes during an import do not cancel the pending load. Timeline visibility masks mounted widgets, including instances whose first clip starts later. Capture prepares the union of the timeline manifest and referenced track instances before reading widget pixels.
+
 For widgets with both stable and live content, mark or structure the two parts so the dynamic renderer can update the live part without invalidating the static composition. Dynamic replay data must tolerate the initial empty state and the end-of-replay cleanup state.
 
 ## Layout contract

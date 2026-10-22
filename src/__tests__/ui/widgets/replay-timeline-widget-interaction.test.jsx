@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-08
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -305,6 +305,35 @@ describe('Replay timeline widget interaction isolation', () => {
 
         lgs.stores.replay.preparationTimeline.timeline.currentTimeMillis = 5000
         await waitFor(() => expect(widgetElement.classList.contains('lgs-widget-user-hidden')).toBe(false))
+        expect(container.querySelector('.lgs-widget')).toBe(widgetElement)
+    })
+
+    it('keeps the widget DOM while its video board is replaced', async () => {
+        const firstBoard = document.createElement('div')
+        firstBoard.getBoundingClientRect = () => rect
+        document.body.append(firstBoard)
+        let activeBoard = firstBoard
+        const manager = __.ui.widgetManager
+        manager.resolveWidgetsBoardContainer.mockImplementation(() => activeBoard)
+        const {container} = renderWidget(<div data-testid="stable-content"/>, {
+            id: 'text-widget#stable',
+            container: firstBoard,
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+        })
+        await waitFor(() => expect(manager.setupElement).toHaveBeenCalled())
+        const element = container.querySelector('.lgs-widget')
+
+        const nextBoard = document.createElement('div')
+        nextBoard.getBoundingClientRect = () => rect
+        activeBoard = nextBoard
+        firstBoard.replaceWith(nextBoard)
+
+        await waitFor(() => expect(manager.setupElement).toHaveBeenCalledWith(
+            element, expect.objectContaining({container: nextBoard, boundsContainer: nextBoard}),
+            expect.any(Function), expect.any(Function), expect.anything(),
+        ))
+        expect(container.querySelector('.lgs-widget')).toBe(element)
+        expect(container.querySelector('[data-testid="stable-content"]')).not.toBeNull()
     })
 
     it('follows the canonical manual timeline time while an older Replay frame is active', async () => {

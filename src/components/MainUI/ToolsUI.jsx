@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-19
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ import { DetachedWidgetPortal } from '@Components/MainUI/widgets/DetachedWidgetP
 import { WidgetContextMenu }    from '@Components/MainUI/widgets/WidgetContextMenu'
 import { Cropper }           from '@Components/ToolsUI/cropper/Cropper'
 import { VideoRecordingScreenArea } from '@Components/MainUI/video/VideoRecordingScreenArea'
+import {VideoSceneWidgetsPortal} from '@Components/MainUI/video/VideoSceneWidgetsPortal'
 import {
     JOURNEY_TOOLBAR_WIDGET, JOURNEY_WIDGETS, REPLAY_TIMELINE_WIDGET, SCENE_WIDGETS_BOARD,
 } from '@Core/constants'
@@ -40,6 +41,8 @@ export const ToolsUI = () => {
     const $cropper = lgs.stores.ui.video.cropper
     const _journeyToolbarHiddenByVideoCapture = useRef(false)
     const _replayPreparationActive = useRef(false)
+    const videoWidgetsActive = video.editing || video.preRecording || video.exporting
+        || video.snapshot || video.finalizing
 
     const renderLinkedTimeline = video.editing === true
         && video.timelinePreviewActive === true
@@ -118,7 +121,6 @@ export const ToolsUI = () => {
                 <>
                     <Cropper overlay source={lgs.canvas}
                              context={$cropper} className="video-cropper"
-                             hideVideoWidgets={false}
                              hideWidgetPanel={replay.basicPreparationActive === true}
                              basicPreparationActive={replay.basicPreparationActive === true}
                              renderRatioWidget={false}
@@ -147,6 +149,7 @@ export const ToolsUI = () => {
                  </>
              )}
 
+            {videoWidgetsActive && <VideoSceneWidgetsPortal context={$cropper}/>}
             <SceneWidgetsRenderer/>
             <DockedWidgetDrawer/>
             <DetachedWidgetPortal/>

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-12-11
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -191,26 +191,35 @@ export class WidgetDynamicRenderer {
 
         return new Promise((resolve) => {
             const commitUpdate = () => {
-                const zIndex = this.#resolveZIndex(props.zIndex)
                 const currentEntry = $widget.list.get(widgetId) ?? {}
+                const cachedEntry = __.ui.widgetCache.get(widgetId)
+                const zIndex = this.#resolveZIndex(props.zIndex ?? currentEntry.zIndex ?? cachedEntry?.zIndex)
+                const widgetsBoard = props.widgetsBoard ?? currentEntry.widgetsBoard ?? cachedEntry?.widgetsBoard
+                const sameRuntime = cachedEntry?.widgetsBoard === widgetsBoard
 
-                // Registering in cache with the resolved reference
+                // Refreshing registration must not revoke a live component's mount state.
                 __.ui.widgetCache.set(widgetId, {
                     group,
                     widgetGroup:  props.widgetGroup ?? currentEntry.widgetGroup ?? null,
                     component:    ResolvedComponent,
-                    widgetsBoard: props.widgetsBoard,
+                    mounted: sameRuntime && cachedEntry?.mounted === true,
+                    widgetsBoard,
                     zIndex,
                 })
 
                 // Only update the Valtio store once everything is ready in cache
-                $widget.list.set(widgetId, {
+                const nextEntry = {
                     ...currentEntry,
                     ...props,
                     group,
                     widgetGroup: props.widgetGroup ?? currentEntry.widgetGroup ?? null,
+                    widgetsBoard,
                     zIndex,
-                })
+                }
+                if (!$widget.list.has(widgetId)
+                    || Object.keys(nextEntry).some(key => nextEntry[key] !== currentEntry[key])) {
+                    $widget.list.set(widgetId, nextEntry)
+                }
 
                 resolve(ResolvedComponent ?? widgetId)
             }

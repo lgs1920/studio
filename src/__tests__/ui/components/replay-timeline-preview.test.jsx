@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-10-18
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, render, waitFor} from '@testing-library/react'
+import {act, cleanup, render, waitFor} from '@testing-library/react'
 import {createRef, Profiler} from 'react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
@@ -62,9 +62,17 @@ describe('ReplayTimelinePreview', () => {
     beforeEach(() => {
         widgetRendererHarness.renderWidget.mockClear()
         globalThis.__ = {
-            widgets: {
-                get: vi.fn(() => ({widgets: new Map()})),
-            },
+            widgets: new Map([
+                ['multi-purpose-widgets', {widgets: new Map([
+                    ['credits-widget', {component: 'CreditsWidget'}],
+                    ['logo-widget', {component: 'LogoWidget'}],
+                ])}],
+                ['journey-widgets', {widgets: new Map([
+                    ['text-widget', {component: 'TextWidget'}],
+                    ['dynamic-stats-widget', {component: 'DynamicStatsWidget'}],
+                    ['journey-stats-widget', {component: 'JourneyStatsWidget'}],
+                ])}],
+            ]),
             ui: {
                 replay: {
                     enterReplayPreparation: vi.fn(async () => true),
@@ -223,6 +231,45 @@ describe('ReplayTimelinePreview', () => {
                 },
             )
         })
+    })
+
+    it('keeps registered mandatory widgets intact when another widget changes', async () => {
+        const $list = lgs.stores.ui.widget.list
+        $list.set('credits-widget#video', {widgetsBoard: 'video-crop-zone', zIndex: 10000})
+        $list.set('logo-widget#video', {widgetsBoard: 'video-crop-zone', zIndex: 10001})
+        render(<ReplayTimelinePreview/>)
+
+        await act(async () => {
+            $list.set('dynamic-stats-widget', {...$list.get('dynamic-stats-widget'), zIndex: 4500})
+        })
+
+        expect(widgetRendererHarness.renderWidget).not.toHaveBeenCalledWith(
+            'multi-purpose-widgets', 'credits-widget', expect.anything(),
+        )
+        expect(widgetRendererHarness.renderWidget).not.toHaveBeenCalledWith(
+            'multi-purpose-widgets', 'logo-widget', expect.anything(),
+        )
+    })
+
+    it('restores saved mandatory identities before generating new singleton instances', async () => {
+        setCurrentJourney({videoTimeline: {
+            version: 1,
+            journeySlug: 'journey-1',
+            sourceSignature: 'saved',
+            widgetManifest: ['logo-widget#saved', 'credits-widget#saved'],
+            tracks: [],
+        }})
+        render(<ReplayTimelinePreview/>)
+
+        await waitFor(() => expect(widgetRendererHarness.renderWidget).toHaveBeenCalledWith(
+            'multi-purpose-widgets', 'logo-widget#saved', expect.anything(),
+        ))
+        expect(widgetRendererHarness.renderWidget).not.toHaveBeenCalledWith(
+            'multi-purpose-widgets', 'logo-widget', expect.anything(),
+        )
+        expect(widgetRendererHarness.renderWidget).not.toHaveBeenCalledWith(
+            'multi-purpose-widgets', 'credits-widget', expect.anything(),
+        )
     })
 
     it('persists timeline seek events from the timeline time slider', async () => {
@@ -628,7 +675,7 @@ describe('ReplayTimelinePreview', () => {
         render(<ReplayTimelinePreview/>)
 
         await waitFor(() => expect(widgetRendererHarness.renderWidget).toHaveBeenCalledWith(
-            'multi-purpose-widgets',
+            'journey-widgets',
             'text-widget#journey-title',
             {
                 widgetsBoard: 'video-crop-zone',

@@ -24,6 +24,7 @@ import {
     prepareReplayDeferredExportPlan,
     resolveReplayDeferredExportPlan,
     waitForReplayWidgetsReady,
+    prepareReplayTimelineWidgets,
     runReplayDeferredMp4Export,
     exportReplayDeferredDryRun,
     isReplayExportFrameSettled,
@@ -31,6 +32,7 @@ import {
 import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import {WidgetDynamicRenderer} from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import {REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModeConstants'
 import {createReplayRecordingPerformance} from '@Core/ui/replay/ReplayRecordingPerformance'
 import * as replayOverlayComposer from '@Core/ui/replay/ReplayVideoOverlayComposer'
@@ -201,6 +203,61 @@ afterEach(() => {
 })
 
 describe('ReplayDeferredExporter', () => {
+    it('registers every timeline instance through its actual catalogue group before capture', async () => {
+        const list = new Map()
+        const cache = new Map()
+        const textComponent = () => null
+        const statsComponent = () => null
+        const renderer = WidgetDynamicRenderer.instance
+        const previousRegistry = renderer.registry
+        renderer.registry = {
+            getLazyComponent: identifier => identifier === 'TextWidget' ? textComponent : statsComponent,
+        }
+        globalThis.lgs = {stores: {ui: {widget: {list}}}}
+        globalThis.__ = {
+            widgets: new Map([
+                ['multi-purpose-widgets', {widgets: new Map()}],
+                ['journey-widgets', {widgets: new Map([
+                    ['text-widget', {component: 'TextWidget', max: 50}],
+                    ['journey-stats-widget', {component: 'JourneyStatsWidget', max: 50}],
+                ])}],
+            ]),
+            ui: {
+                widgetCache: {
+                    get: id => cache.get(id),
+                    set: (id, entry) => cache.set(id, entry),
+                    getAll: () => cache,
+                },
+                widgetManager: {
+                    maxWidgets: () => 50,
+                    isMaxWidgetsReached: () => false,
+                },
+            },
+        }
+        try {
+            const keys = await prepareReplayTimelineWidgets({
+                basicReplay: false,
+                replay: {preparationTimeline: {
+                    widgetManifest: ['text-widget#title'],
+                    tracks: [
+                        {id: 'text-widget#title', clips: [{start: 0, end: 10}]},
+                        {id: 'text-widget#later', clips: [{start: 5, end: 10}]},
+                        {id: 'journey-stats-widget#stats', clips: [{start: 0, end: 10}]},
+                    ],
+                }},
+            })
+
+            expect(keys).toEqual(['text-widget#title', 'text-widget#later', 'journey-stats-widget#stats'])
+            for (const id of keys) {
+                expect(list.get(id)?.group).toBe('journey-widgets')
+                expect(cache.get(id)?.component).toBeTruthy()
+            }
+        }
+        finally {
+            renderer.registry = previousRegistry
+        }
+    })
+
     it('exports rendered frames with a manifest', async () => {
         const onFrame = vi.fn(async () => undefined)
         const exporter = new ReplayDeferredExporter({

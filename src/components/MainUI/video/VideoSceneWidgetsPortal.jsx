@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-28
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@ import {
     getReplayVideoWidgetTypes,
 } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
+import {resolveReplayTimelineWidgetIds} from '@Core/ui/replay/ReplayTimelinePersistence'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { memo, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -50,8 +51,12 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     const allWidgetEntries = Array.from(list.entries())
         .filter(([, props]) => props?.widgetsBoard === VIDEO_WIDGETS_BOARD)
         .sort(([, a], [, b]) => (b.zIndex || 0) - (a.zIndex || 0))
+    const allowedWidgetIds = new Set(filterReplayVideoWidgetKeys(
+        allWidgetEntries.map(([widgetId]) => widgetId),
+        {basicReplay},
+    ))
     const widgetEntries = allWidgetEntries
-        .filter(([key]) => filterReplayVideoWidgetKeys([key], {basicReplay}).length > 0)
+        .filter(([key]) => allowedWidgetIds.has(key))
     const widgetIds = widgetEntries.map(([key]) => key).join('|')
 
     const [boardElement, setBoardElement] = useState(null)
@@ -147,10 +152,16 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
         const registeredWidgetTypes = new Set(
             widgetIds.split('|').filter(Boolean).map(widgetId => widgetId.split('#')[0]),
         )
+        const timeline = lgs.stores.replay.preparationTimeline ?? lgs.theJourney?.replay?.videoTimeline
+        const timelineWidgetIds = [
+            ...(timeline?.widgetManifest ?? []),
+            ...resolveReplayTimelineWidgetIds(timeline?.tracks),
+        ]
         for (const widgetType of getReplayVideoWidgetTypes({basicReplay})) {
             const alreadyRegistered = registeredWidgetTypes.has(widgetType)
             if (!alreadyRegistered) {
-                void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetType, {
+                const widgetId = timelineWidgetIds.find(id => id.split('#')[0] === widgetType) ?? widgetType
+                void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetId, {
                     widgetsBoard: VIDEO_WIDGETS_BOARD,
                     forceRefresh: true,
                 }).catch(error => {
@@ -165,27 +176,18 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
             return
         }
 
-        // Une session de capture possède un seul cycle de vie du tableau.
-        // Les étapes d'enregistrement et de finalisation ne doivent pas
-        // reconstruire les mêmes widgets.
-        const key = `${videoCaptureActive}-${boardReady}-${widgetIds}`
-        if (_rehydrateKey.current === key) {
+        // Keep mounted widget runtimes intact while refreshing persisted positions once per capture.
+        if (_rehydrateKey.current) {
             return
         }
-        _rehydrateKey.current = key
+        _rehydrateKey.current = 'active'
 
-        __.ui.widgetManager.invalidateRuntimeByBoard(VIDEO_WIDGETS_BOARD)
         void __.ui.widgetManager.rehydrateWidgetsByBoard(VIDEO_WIDGETS_BOARD)
-    }, [boardReady, hidden, basicReplay, videoCaptureActive, widgetIds])
+    }, [boardReady, hidden, videoCaptureActive, widgetIds])
 
     useEffect(() => {
         if (!videoCaptureActive) {
             _rehydrateKey.current = ''
-            return undefined
-        }
-
-        return () => {
-            __.ui.widgetManager.invalidateRuntimeByBoard(VIDEO_WIDGETS_BOARD)
         }
     }, [videoCaptureActive])
 

@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, render, screen, waitFor} from '@testing-library/react'
+import {act, cleanup, render, screen, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxyMap} from 'valtio/utils'
 
@@ -80,6 +80,25 @@ describe('DynamicWidget instance identity', () => {
         await waitFor(() => {
             expect(screen.getByTestId('dynamic-widget').getAttribute('data-widget-id')).toBe('replay-timeline-widget#instance')
         })
+    })
+
+    it('finishes mounting when presentation props change during component loading', async () => {
+        let completeLoad
+        rendererMock.renderWidget.mockImplementation(() => new Promise(resolve => {
+            completeLoad ??= resolve
+        }))
+        const {rerender} = render(<DynamicWidget id="text-widget#title"
+            props={{group: 'multi-purpose-widgets', widgetsBoard: 'video-crop-zone', zIndex: 4000}}/>)
+        rerender(<DynamicWidget id="text-widget#title"
+            props={{group: 'multi-purpose-widgets', widgetsBoard: 'video-crop-zone', zIndex: 4500}}/>)
+
+        await act(async () => {
+            completeLoad(({id, zIndex}) => <div data-testid="loaded-widget" data-widget-id={id} data-z-index={zIndex}/>)
+        })
+
+        expect(screen.getByTestId('loaded-widget').dataset.widgetId).toBe('text-widget#title')
+        expect(screen.getByTestId('loaded-widget').dataset.zIndex).toBe('4500')
+        expect(rendererMock.renderWidget).toHaveBeenCalledTimes(1)
     })
 
     it('reselects a reattached widget after the concrete instance is mounted', async () => {

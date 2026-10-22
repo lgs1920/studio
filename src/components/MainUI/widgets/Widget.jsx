@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -1594,10 +1594,9 @@ const WidgetHost = ({
                 animationWhenDragging: config.animationWhenDragging ?? config.type === LGS_TOOLBAR,
                 anchorOnScale:  config.anchorOnScale ?? null,
                 attachTo:       config.attachTo ?? 'top-left',
-                container:      config.container
-                                ?? __.ui.widgetManager.resolveWidgetsBoardReferenceContainer(config.widgetsBoard)
-                                ?? actualContainer,
-                boundsContainer: config.boundsContainer ?? actualContainer,
+                // A board can replace its crop DOM without replacing the widget instance.
+                container: isTargetingBoard ? actualContainer : (config.container ?? actualContainer),
+                boundsContainer: isTargetingBoard ? actualContainer : (config.boundsContainer ?? actualContainer),
                 canHide:        canHide,
                 canLock:        config.canLock ?? true,
                 canReduce:      isVisualWidget ? false : (config.canReduce ?? true),

@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-27
- * Last modified: 2026-10-18
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -212,6 +212,33 @@ describe('VideoSceneWidgetsPortal', () => {
         expect(document.querySelector('.video-scene-widgets-portal-input-blocked')).not.toBeNull()
     })
 
+    it('keeps hidden and visible widgets mounted through capture and board replacement', async () => {
+        render(<VideoSceneWidgetsPortal context={proxy({})}/>)
+        const titleSelector = '[data-widget-id="text-widget#title"]'
+        await waitFor(() => expect(document.querySelector(titleSelector)).not.toBeNull())
+        const title = document.querySelector(titleSelector)
+        const credits = document.querySelector('[data-widget-id="credits-widget#video"]')
+
+        await act(async () => {
+            Object.assign(lgs.stores.ui.video, {editing: false, exporting: true})
+        })
+        const nextBoard = board.cloneNode()
+        nextBoard.getBoundingClientRect = board.getBoundingClientRect
+        __.ui.widgetManager.resolveWidgetsBoardBoundsContainer.mockReturnValue(nextBoard)
+        await act(async () => {
+            board.replaceWith(nextBoard)
+        })
+        board = nextBoard
+        await act(async () => {
+            Object.assign(lgs.stores.ui.video, {editing: true, exporting: false})
+        })
+
+        expect(document.querySelector(titleSelector)).toBe(title)
+        expect(document.querySelector('[data-widget-id="credits-widget#video"]')).toBe(credits)
+        expect(__.ui.widgetManager.rehydrateWidgetsByBoard).toHaveBeenCalledTimes(1)
+        expect(__.ui.widgetManager.invalidateRuntimeByBoard).not.toHaveBeenCalled()
+    })
+
     it.each(['active', 'playing', 'paused'])('keeps video widget input available while Replay is %s', async replayState => {
         globalThis.lgs.stores.replay[replayState] = true
 
@@ -245,6 +272,21 @@ describe('VideoSceneWidgetsPortal', () => {
             'multi-purpose-widgets',
             'compass-widget',
             expect.anything(),
+        )
+    })
+
+    it('uses the saved mandatory instance instead of racing the timeline with a new singleton', async () => {
+        lgs.stores.ui.widget.list.clear()
+        lgs.theJourney = {replay: {videoTimeline: {
+            widgetManifest: ['credits-widget#saved', 'logo-widget#saved'],
+        }}}
+        render(<VideoSceneWidgetsPortal context={proxy({})}/>)
+
+        await waitFor(() => expect(portalHarness.renderWidget).toHaveBeenCalledWith(
+            'multi-purpose-widgets', 'logo-widget#saved', expect.anything(),
+        ))
+        expect(portalHarness.renderWidget).not.toHaveBeenCalledWith(
+            'multi-purpose-widgets', 'logo-widget', expect.anything(),
         )
     })
 

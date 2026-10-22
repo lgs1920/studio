@@ -8,17 +8,18 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-07
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WidgetDynamicRenderer }         from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import {resolveWidgetCatalogGroup} from '@Core/ui/widget-manager/resolveWidgetCatalogGroup'
 import { WidgetContentOnlyContext } from '@Components/MainUI/widgets/WidgetContexts'
 import { WaSpinner } from '@awesome.me/webawesome/dist/react'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 
 /**
  * Resolves the concrete widget instance associated with a requested widget key.
@@ -49,8 +50,20 @@ const resolveWidgetInstanceId = (id, widgetsBoard = null) => {
  * @param {Object} [props.props={}] - Additional props forwarded to the widget
  * @returns {JSX.Element|null} Suspense-wrapped widget or null if not registered
  */
-export const DynamicWidget = ({id, context, props = {}}) => {
+export const DynamicWidget = ({id, context, props = {}}) => (
+    <DynamicWidgetInstance key={`${id}:${props.widgetsBoard ?? ''}`}
+        id={id} context={context} props={props}/>
+)
+
+/**
+ * Load one widget identity while allowing its presentation props to keep changing.
+ * @param {Object} options - Widget identity, context, and current presentation props.
+ * @returns {JSX.Element|null} Resolved widget instance.
+ */
+const DynamicWidgetInstance = ({id, context, props}) => {
     const widgetStore = useOptionalSnapshot(lgs.stores.ui.widget)
+    const _loadOptions = useRef(props)
+    _loadOptions.current = props
     const resolvedWidgetId = resolveWidgetInstanceId(id, props.widgetsBoard)
     const [widgetState, setWidgetState] = useState(() => ({
         component: __.ui.widgetCache.get(id)?.component ?? null,
@@ -63,7 +76,7 @@ export const DynamicWidget = ({id, context, props = {}}) => {
         let cancelled = false
 
         if (!LazyWidget) {
-            ensureWidget(id, props)
+            ensureWidget(id, _loadOptions.current)
                 .then(result => {
                     if (!cancelled) {
                         setWidgetState(result)
@@ -80,7 +93,7 @@ export const DynamicWidget = ({id, context, props = {}}) => {
         return () => {
             cancelled = true
         }
-    }, [id, LazyWidget, props])
+    }, [id, LazyWidget])
 
     useEffect(() => {
         const requestMatches = reattachSelection?.id === widgetState.widgetId
@@ -139,7 +152,7 @@ export const DynamicWidget = ({id, context, props = {}}) => {
  * @param {Object} props - Widget rendering properties.
  * @returns {Promise<{component: Function|null, widgetId: string}>} Loaded widget state.
  */
-async function ensureWidget(id, props = {}) {
+const ensureWidget = async (id, props = {}) => {
     const cache = __.ui.widgetCache.get(id)
     if (cache?.component) {
         return {
@@ -149,7 +162,10 @@ async function ensureWidget(id, props = {}) {
     }
 
     const entity = lgs.stores.ui.widget.list.get(id) ?? {}
-    const group = cache?.group ?? entity.group ?? props.group
+    const group = resolveWidgetCatalogGroup(id, {
+        widgetsBoard: entity.widgetsBoard ?? props.widgetsBoard ?? cache?.widgetsBoard,
+        group: cache?.group ?? entity.group ?? props.group,
+    }) ?? cache?.group ?? entity.group ?? props.group
     if (!group) {
         // Some imperative widgets own their DOM through a regular Widget host
         // and only appear in the reactive list for selection or positioning.
@@ -163,13 +179,6 @@ async function ensureWidget(id, props = {}) {
     const LazyWidget = await renderer.renderWidget(group, id, {widgetsBoard, forceRefresh: true, zIndex})
     if (LazyWidget) {
         const widgetId = resolveWidgetInstanceId(id, widgetsBoard)
-        __.ui.widgetCache.set(widgetId, {
-            component: LazyWidget,
-            group,
-            mounted: cache?.mounted,
-            widgetsBoard,
-            zIndex,
-        })
         return {component: LazyWidget, widgetId}
     }
 

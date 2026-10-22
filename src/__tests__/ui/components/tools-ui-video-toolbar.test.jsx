@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { ToolsUI } from '@Components/MainUI/ToolsUI'
-import { cleanup, render, waitFor } from '@testing-library/react'
+import { act, cleanup, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
@@ -45,6 +45,10 @@ vi.mock('@Components/MainUI/widgets/DetachedWidgetPortal', () => ({
 
 vi.mock('@Components/MainUI/video/VideoSettingsInfo', () => ({
     VideoSettingsInfo: () => null,
+}))
+
+vi.mock('@Components/MainUI/video/VideoSceneWidgetsPortal', () => ({
+    VideoSceneWidgetsPortal: ({hidden}) => hidden ? null : <div data-testid="video-widget-host"/>,
 }))
 
 vi.mock('@Components/MainUI/video/VideoRecordingScreenArea', () => ({
@@ -155,6 +159,25 @@ describe('ToolsUI linked replay video editing', () => {
         const {getByTestId} = render(<ToolsUI/>)
 
         expect(getByTestId('video-recording-screen-area')).toBeTruthy()
+    })
+
+    it('keeps one widget host across preparation, capture, and return to preparation', async () => {
+        lgs.stores.ui.video.editing = true
+        const {getByTestId, queryAllByTestId} = render(<ToolsUI/>)
+        const host = getByTestId('video-widget-host')
+
+        await act(async () => {
+            Object.assign(lgs.stores.ui.video, {editing: false, preRecording: true})
+        })
+        expect(getByTestId('video-widget-host')).toBe(host)
+        await act(async () => {
+            Object.assign(lgs.stores.ui.video, {preRecording: false, exporting: true})
+        })
+        expect(getByTestId('video-widget-host')).toBe(host)
+        await act(async () => {
+            Object.assign(lgs.stores.ui.video, {exporting: false, editing: true})
+        })
+        expect(queryAllByTestId('video-widget-host')).toEqual([host])
     })
 
     it('returns an interrupted linked recording to the canonical Replay preparation state', async () => {

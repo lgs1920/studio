@@ -8,13 +8,12 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { VideoSceneWidgetsPortal } from '@Components/MainUI/video/VideoSceneWidgetsPortal'
 import { WidgetsPanel } from '@Components/MainUI/widgets/WidgetsPanel'
 import { CropRatioEditorWidget } from '@Components/ToolsUI/cropper/widgets/CropRatioEditorWidget'
 /**
@@ -40,7 +39,7 @@ import { CropZoneWidget }        from './widgets/CropZoneWidget'
 import { CropZoneInfoPopup }     from './widgets/CropZoneInfoPopup'
 import './style.css'
 
-export const Cropper = memo(({overlay = false, hideVideoWidgets = false, hideWidgetPanel = false, basicPreparationActive = false, className = '', context, options = {}, children, renderRatioWidget = true}) => {
+export const Cropper = memo(({overlay = false, hideWidgetPanel = false, basicPreparationActive = false, className = '', context, options = {}, children, renderRatioWidget = true}) => {
 
     const _cropperContainer = useRef(null)
     const _overlay = useRef(null)
@@ -154,8 +153,6 @@ export const Cropper = memo(({overlay = false, hideVideoWidgets = false, hideWid
             {(options.infoPosition || options.infoComponent) && (
                 <CropZoneInfoPopup id={context.id} infoComponent={options.infoComponent} showDimensions={options.infoPosition}/>
             )}
-            {/* Crop and video widgets remain mounted together during composition. */}
-            <VideoSceneWidgetsPortal context={context} hidden={hideVideoWidgets}/>
         </>
     )
 })

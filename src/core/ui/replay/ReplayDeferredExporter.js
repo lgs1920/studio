@@ -15,7 +15,10 @@
  ******************************************************************************/
 
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import {WidgetDynamicRenderer} from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import {resolveWidgetCatalogGroup} from '@Core/ui/widget-manager/resolveWidgetCatalogGroup'
 import { getReplayVideoWidgetKeys } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
+import {resolveReplayTimelineWidgetIds} from '@Core/ui/replay/ReplayTimelinePersistence'
 import {
     normalizeJourneyReplayClips, REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP,
 }                              from '@Core/ui/replay/JourneyReplayClips'
@@ -35,7 +38,7 @@ import {
     buildReplayVideoTimeline, replayClipSignature, resolveReplayVideoFramePhase,
 }                              from '@Core/ui/replay/ReplayVideoTimeline'
 import {
-    buildReplayVideoComposerOverlays, flushReplayVideoOverlayCanvases, getVisibleReplayVideoWidgetKeys, isReplayVideoWidgetReady,
+    buildReplayVideoComposerOverlays, flushReplayVideoOverlayCanvases, isReplayVideoWidgetReady,
 }                              from '@Core/ui/replay/ReplayVideoOverlayComposer'
 import { commitReplayWidgetFrame } from '@Core/ui/replay/ReplayWidgetFrameRenderers'
 import {
@@ -1007,6 +1010,52 @@ export const waitForReplayWidgetsReady = async ({
         maxMillis: safeMaxMillis,
     })
     return missingWidgetKeys.length === 0
+}
+
+/**
+ * Register every widget referenced by the prepared timeline before capture.
+ * Delayed timeline clips still need mounted widgets so their first visible
+ * frame does not race React or widget registration.
+ *
+ * @param {Object} options - Replay widget preparation options.
+ * @param {Object|null} [options.replay=null] - Replay state containing the timeline manifest.
+ * @param {boolean} [options.basicReplay] - Whether Basic Replay restrictions apply.
+ * @returns {Promise<string[]>} Registered widget IDs to await before capture.
+ */
+export const prepareReplayTimelineWidgets = async ({replay = null, basicReplay} = {}) => {
+    const timeline = replay?.preparationTimeline
+    const manifest = [...new Set([
+        ...(timeline?.widgetManifest ?? []),
+        ...resolveReplayTimelineWidgetIds(timeline?.tracks),
+    ])]
+    const widgetKeys = getReplayVideoWidgetKeys({
+        widgetKeys: manifest,
+        widgetsBoard: VIDEO_WIDGETS_BOARD,
+        basicReplay,
+    })
+    const widgetList = globalThis.lgs?.stores?.ui?.widget?.list
+    const registeredKeys = getReplayVideoWidgetKeys({widgetsBoard: VIDEO_WIDGETS_BOARD, basicReplay})
+    const registeredTypes = new Set(registeredKeys.map(widgetId => widgetId.split('#')[0]))
+    const renderer = WidgetDynamicRenderer.instance
+
+    await Promise.all(widgetKeys.map(widgetId => {
+        const isRegistered = widgetList?.has?.(widgetId)
+            || (!widgetId.includes('#') && registeredTypes.has(widgetId.split('#')[0]))
+        if (isRegistered) {
+            return Promise.resolve()
+        }
+
+        const group = resolveWidgetCatalogGroup(widgetId, {widgetsBoard: VIDEO_WIDGETS_BOARD})
+        if (!group) {
+            throw new Error(`No widget catalogue group found for ${widgetId}.`)
+        }
+        return renderer.renderWidget(group, widgetId, {
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+            forceRefresh: true,
+        })
+    }))
+
+    return [...new Set([...registeredKeys, ...widgetKeys])]
 }
 
 /**
@@ -2756,8 +2805,14 @@ export const runReplayDeferredMp4Export = async ({
         })
 
         if (!isDryRun) {
-            const widgetKeys = getVisibleReplayVideoWidgetKeys({replay, controller})
-            await waitForReplayWidgetsReady({widgetKeys})
+            const widgetKeys = await prepareReplayTimelineWidgets({
+                replay,
+                basicReplay: isJourneyReplayBasicMode({replay}),
+            })
+            const widgetsReady = await waitForReplayWidgetsReady({widgetKeys})
+            if (!widgetsReady) {
+                throw new Error('Replay timeline widgets did not become ready before capture.')
+            }
         }
         await prewarmReplayScenePrefix({
             plan,

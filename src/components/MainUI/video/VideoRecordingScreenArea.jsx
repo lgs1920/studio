@@ -8,13 +8,12 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-30
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { VideoSceneWidgetsPortal } from '@Components/MainUI/video/VideoSceneWidgetsPortal'
 import { VideoSettingsInfo }                                    from '@Components/MainUI/video/VideoSettingsInfo'
 import { CropOverlay }                                          from '@Components/ToolsUI/cropper/CropOverlay'
 import { DefinedCropZone }       from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
@@ -507,7 +506,6 @@ export const VideoRecordingScreenArea = memo(() => {
                 $video.dryRun = false
             }}/>
             <DefinedCropZone className="lgs-on-map-theme-vars" context={$video.cropper} infoComponent={<VideoSettingsInfo/>} ref={_cropZone}/>
-            <VideoSceneWidgetsPortal context={lgs.stores.ui.video.cropper}/>
         </>
     )
 })
