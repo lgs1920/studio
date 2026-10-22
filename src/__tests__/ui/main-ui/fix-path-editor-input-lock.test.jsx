@@ -309,6 +309,7 @@ describe('FixPathEditor map input ownership', () => {
             pointerType: 'mouse',
         })
         expect(journeyCursor.textContent).toBe('lasso')
+        expect(journeyCursor.classList.contains('is-area-selection-cursor')).toBe(true)
         expect(journeyCursor.classList.contains('is-visible')).toBe(true)
         expect(viewerContainer.classList.contains('fix-path-custom-cursor')).toBe(true)
         act(() => {
@@ -703,6 +704,7 @@ describe('FixPathEditor map input ownership', () => {
         })
         const journeyCursorDuringRectangle = document.querySelector('.fix-path-journey-cursor')
         expect(journeyCursorDuringRectangle.textContent).toBe('square-dashed')
+        expect(journeyCursorDuringRectangle.classList.contains('is-area-selection-cursor')).toBe(true)
         expect(journeyCursorDuringRectangle.classList.contains('is-visible')).toBe(true)
         expect(viewerContainer.classList.contains('fix-path-custom-cursor')).toBe(true)
         expect(document.querySelector('.fix-path-selection-rectangle')).not.toBeNull()
@@ -737,6 +739,7 @@ describe('FixPathEditor map input ownership', () => {
         })
         const journeyCursorDuringLasso = document.querySelector('.fix-path-journey-cursor')
         expect(journeyCursorDuringLasso.textContent).toBe('lasso')
+        expect(journeyCursorDuringLasso.classList.contains('is-area-selection-cursor')).toBe(true)
         expect(journeyCursorDuringLasso.classList.contains('is-visible')).toBe(true)
         expect(viewerContainer.classList.contains('fix-path-custom-cursor')).toBe(true)
         const renderedControlLasso = document.querySelector('.fix-path-selection-lasso')

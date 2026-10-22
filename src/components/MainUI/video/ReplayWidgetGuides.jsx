@@ -95,6 +95,7 @@ export const ReplayWidgetGuides = () => {
         && resolveJourneyReplayUserMode({replay, settings: lgs.settings?.ui?.replay}) === REPLAY_USER_MODE_EXPERT
     const [rect, setRect] = useState(null)
     const [menu, setMenu] = useState(null)
+    const [dragCursor, setDragCursor] = useState(null)
     const boardRef = useRef(null)
     const dragRef = useRef(null)
     const menuElementRef = useRef(null)
@@ -128,6 +129,7 @@ export const ReplayWidgetGuides = () => {
         if (!isActive) {
             setRect(null)
             boardRef.current = null
+            setDragCursor(null)
             return undefined
         }
 
@@ -288,11 +290,25 @@ export const ReplayWidgetGuides = () => {
     }
 
     /**
+     * Track the branded axis icon while a movable guide is under the pointer.
+     *
+     * @param {Object} guide - Guide currently under the pointer.
+     * @param {PointerEvent} event - Pointer event containing viewport coordinates.
+     */
+    const updateGuideDragCursor = (guide, event) => {
+        if (guide.blocked || event.pointerType === 'touch') {
+            return
+        }
+        setDragCursor({x: event.clientX, y: event.clientY, orientation: guide.orientation})
+    }
+
+    /**
      * Handles movement over a guide and updates its position when a drag is active.
      * @param {Object} guide - Guide currently under the pointer.
      * @param {PointerEvent} event - Pointer event from the guide hit area.
     */
     const handleGuidePointerMove = (guide, event) => {
+        updateGuideDragCursor(guide, event)
         if (dragRef.current?.id !== guide.id || dragRef.current.pointerId !== event.pointerId) {
             return
         }
@@ -311,6 +327,7 @@ export const ReplayWidgetGuides = () => {
         if (guide.blocked || event.button !== 0) {
             return
         }
+        updateGuideDragCursor(guide, event)
         dragRef.current = {id: guide.id, pointerId: event.pointerId}
         event.currentTarget.setPointerCapture?.(event.pointerId)
     }
@@ -338,6 +355,7 @@ export const ReplayWidgetGuides = () => {
     const handleGuideContextMenu = (guide, event) => {
         event.preventDefault()
         event.stopPropagation()
+        setDragCursor(null)
         setMenu({
             guideId: guide.id,
             left: Math.min(event.clientX, window.innerWidth - 170),
@@ -413,19 +431,19 @@ export const ReplayWidgetGuides = () => {
                     type="button"
                     className={`replay-widget-guide replay-widget-guide-${guide.orientation}${guide.blocked ? ' is-blocked' : ''}`}
                     style={guide.orientation === 'vertical'
-                        ? {
-                            left: `${guide.position * 100}%`,
-                            cursor: guide.blocked ? 'context-menu' : 'ew-resize',
-                        }
-                        : {
-                            top: `${guide.position * 100}%`,
-                            cursor: guide.blocked ? 'context-menu' : 'ns-resize',
-                        }}
+                        ? {left: `${guide.position * 100}%`}
+                        : {top: `${guide.position * 100}%`}}
                     aria-label={`${guide.orientation === 'horizontal' ? 'Horizontal' : 'Vertical'} guide${guide.blocked ? ', blocked' : ''}`}
                     aria-pressed={guide.blocked}
                     onClick={event => event.stopPropagation()}
+                    onPointerEnter={event => updateGuideDragCursor(guide, event)}
                     onPointerDown={event => handleGuidePointerDown(guide, event)}
                     onPointerMove={event => handleGuidePointerMove(guide, event)}
+                    onPointerLeave={() => {
+                        if (dragRef.current?.id !== guide.id) {
+                            setDragCursor(null)
+                        }
+                    }}
                     onPointerUp={event => handleGuidePointerUp(guide, event)}
                     onPointerCancel={event => handleGuidePointerUp(guide, event)}
                     onContextMenu={event => handleGuideContextMenu(guide, event)}
@@ -441,6 +459,22 @@ export const ReplayWidgetGuides = () => {
                     }}
                 />
             ))}
+            {dragCursor && (
+                <span
+                    className="replay-widget-guide-drag-cursor"
+                    style={{
+                        left: `${dragCursor.x}px`,
+                        top: `${dragCursor.y}px`,
+                        transform: 'translate(-50%, -50%)',
+                    }}
+                    aria-hidden="true"
+                >
+                    <WaIcon
+                        name={dragCursor.orientation === 'horizontal' ? 'arrows-up-down' : 'arrows-left-right'}
+                        variant="solid"
+                    />
+                </span>
+            )}
             {menu && (
                 <div
                     ref={menuElementRef}

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-27
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,11 +19,18 @@ import {resolve} from 'node:path'
 import {describe, expect, it} from 'vitest'
 
 const styleSource = readFileSync(resolve('src/assets/css/themes/wa-lgs1920-on-map.css'), 'utf8')
+const appStyleSource = readFileSync(resolve('src/assets/css/app.css'), 'utf8')
 const fixPathEditorStyleSource = readFileSync(resolve('src/components/MainUI/FixPathEditor.css'), 'utf8')
 
 describe('Fix Path map cursor branding', () => {
     it('uses the application brand token for its Font Awesome cursor icons', () => {
         expect(fixPathEditorStyleSource).toMatch(/\.fix-path-journey-cursor\s*\{[^}]*color:\s*var\(--wa-color-brand\);/s)
+    })
+
+    it('keeps substituted selection and guide cursors centered at native cursor scale', () => {
+        expect(fixPathEditorStyleSource).toMatch(/\.fix-path-journey-cursor\s*\{[^}]*transform:\s*translate\(-50%, -50%\);/s)
+        expect(fixPathEditorStyleSource).toMatch(/&\.is-area-selection-cursor\s*\{\s*font-size:\s*1\.5rem;/s)
+        expect(appStyleSource).toMatch(/\.replay-widget-guide-drag-cursor\s*\{[^}]*width:\s*1\.5rem;[^}]*height:\s*1\.5rem;/s)
     })
 })
 

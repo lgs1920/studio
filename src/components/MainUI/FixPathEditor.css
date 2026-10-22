@@ -50,6 +50,10 @@
         color: chartreuse;
     }
 
+    &.is-area-selection-cursor {
+        font-size: 1.5rem;
+    }
+
     &.is-visible {
         display: block;
     }

@@ -155,7 +155,7 @@ describe('ReplayWidgetGuides', () => {
         ])
     })
 
-    it('uses native resize cursors with centered axis-specific activation points', async () => {
+    it('uses a centered standard-size Font Awesome cursor icon for each guide axis', async () => {
         journey.replay.expert.alignmentGuides = [
             {id: 'movable-guide', orientation: 'horizontal', position: 0.4, blocked: false},
             {id: 'second-guide', orientation: 'vertical', position: 0.6, blocked: false},
@@ -165,13 +165,23 @@ describe('ReplayWidgetGuides', () => {
         render(<ReplayWidgetGuides/>)
 
         const horizontalGuide = await screen.findByRole('button', {name: 'Horizontal guide'})
-        const verticalGuide = screen.getByRole('button', {name: 'Vertical guide'})
-        const blockedGuide = screen.getByRole('button', {name: 'Horizontal guide, blocked'})
+        fireEvent.pointerEnter(horizontalGuide, {pointerType: 'mouse', clientX: 175, clientY: 130})
 
-        expect(horizontalGuide.style.cursor).toBe('ns-resize')
-        expect(verticalGuide.style.cursor).toBe('ew-resize')
-        expect(blockedGuide.style.cursor).toBe('context-menu')
-        expect(document.querySelector('.replay-widget-guide-drag-cursor')).toBeNull()
+        const cursor = document.querySelector('.replay-widget-guide-drag-cursor')
+        expect(cursor).not.toBeNull()
+        expect(cursor.style.left).toBe('175px')
+        expect(cursor.style.top).toBe('130px')
+        expect(cursor.style.transform).toBe('translate(-50%, -50%)')
+        expect(cursor.querySelector('[data-icon="arrows-up-down"]')).not.toBeNull()
+        expect(cursor.querySelectorAll('[data-icon]')).toHaveLength(1)
+
+        fireEvent.pointerEnter(screen.getByRole('button', {name: 'Vertical guide'}), {
+            pointerType: 'mouse',
+            clientX: 220,
+            clientY: 130,
+        })
+        expect(cursor.querySelector('[data-icon="arrows-left-right"]')).not.toBeNull()
+        expect(cursor.querySelectorAll('[data-icon]')).toHaveLength(1)
     })
 
     it('does not create another guide when its orientation has reached the limit', async () => {

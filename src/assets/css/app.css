@@ -1020,6 +1020,7 @@ body.lgs-app-booting #cesium-viewer {
     background: transparent;
     pointer-events: auto;
     touch-action: none;
+    cursor: none;
 }
 
 .replay-widget-guide::after {
@@ -1062,6 +1063,10 @@ body.lgs-app-booting #cesium-viewer {
     transform: translateX(-50%);
 }
 
+.replay-widget-guide.is-blocked {
+    cursor: context-menu;
+}
+
 .replay-widget-guide-context-menu {
     min-width: 9rem;
     pointer-events: auto;
@@ -1076,6 +1081,23 @@ body.lgs-app-booting #cesium-viewer {
 
     &:focus-visible {
         outline-color: var(--lgs-card-on-map-hover-outline-color);
+    }
+}
+
+.replay-widget-guide-drag-cursor {
+    position: fixed;
+    z-index: 1;
+    display: grid;
+    width: 1.5rem;
+    height: 1.5rem;
+    place-items: center;
+    color: var(--wa-color-brand);
+    pointer-events: none;
+    filter: drop-shadow(0 1px 2px var(--wa-color-neutral-05));
+
+    & wa-icon {
+        width: 100%;
+        height: 100%;
     }
 }
 

@@ -2941,6 +2941,7 @@ export const FixPathEditor = () => {
             <div
                 ref={journeyCursorRef}
                 className={'fix-path-journey-cursor'
+                    + (journeyCursorIcon === 'lasso' || journeyCursorIcon === 'square-dashed' ? ' is-area-selection-cursor' : '')
                     + (journeyCursorVisible ? ' is-visible' : '')
                     + (journeyCursorSelectionColor ? ' is-' + journeyCursorSelectionColor + '-selection' : '')}
                 aria-hidden="true"
