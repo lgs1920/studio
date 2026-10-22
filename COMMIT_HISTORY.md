@@ -3835,3 +3835,51 @@
 ## 2026-10-21 — [`docs: remove completed Fix Path backlog`](https://github.com/lgs1920/studio/commit/5e25d2758a1cd9cd5b17c59f764dbd8256913f81)
 
 - Recorded automatically from Git history.
+
+## 2026-10-21 — [`fix: hide other journey POIs consistently`](https://github.com/lgs1920/studio/commit/611dc7f852dbd4e73da1ae8764e1b1badbeed2bb)
+
+- Recorded automatically from Git history.
+
+## 2026-10-21 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/b07e9f890cf1eb941bc4ed61d8fce8b5eab61fd2)
+
+- Recorded automatically from Git history.
+
+## 2026-10-22 — [`fix: improve Fix Path lasso selection and scan progress`](https://github.com/lgs1920/studio/commit/20d0b7c90a6c61547efc3e5eca17cdedbe07da99)
+
+- Recorded automatically from Git history.
+
+## 2026-10-22 — [`feat: smooth Replay camera with Bezier spline`](https://github.com/lgs1920/studio/commit/eae58921d7da2fc0ee1e11254fb2e5c76e55befb)
+
+- Recorded automatically from Git history.
+
+## 2026-10-22 — [`fix: redraw only affected Fix Path tracks`](https://github.com/lgs1920/studio/commit/29b21fc183ca44d02adfb4c701e32c7f35eb2d16)
+
+- Recorded automatically from Git history.
+
+## 2026-10-22 — [`fix: serialize Cesium rendering during Replay export`](https://github.com/lgs1920/studio/commit/2c91a1a677a07c3770d6f239457444687729a08d)
+
+- Recorded automatically from Git history.
+
+## 2026-10-22 — [`fix: mount replay timeline widgets before capture`](https://github.com/lgs1920/studio/commit/df6025ce8ecb4f2a11bc0b0213efbdee54fce326)
+
+- Recorded automatically from Git history.
+
+## 2026-10-22 — [`feat: support multiple Replay widget instances`](https://github.com/lgs1920/studio/commit/c5d8a6816bbb6d0450d7f7d80374e0b7c0a0c59d)
+
+- Closes #538
+
+## 2026-10-22 — [`fix: smooth and bound Replay trace geometry`](https://github.com/lgs1920/studio/commit/fb51f7f77394bb965d6f7f97651ea858b05396b3)
+
+- Recorded automatically from Git history.
+
+## 2026-10-22 — [`feat: add alignment guides to Replay widgets`](https://github.com/lgs1920/studio/commit/4714879df970df3d5d141d47626a3f8beb35541b)
+
+- Recorded automatically from Git history.
+
+## 2026-10-22 — [`docs: track Replay export duration regression`](https://github.com/lgs1920/studio/commit/1ae09b1b2773f4445d22ec4de5bad848a4369fe1)
+
+- Recorded automatically from Git history.
+
+## 2026-10-22 — [`fix: size and center substituted cursors`](https://github.com/lgs1920/studio/commit/a7b79b34442faeffe1da09375beea3a1738cf546)
+
+- Recorded automatically from Git history.
