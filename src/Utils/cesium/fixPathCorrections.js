@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -1218,3 +1218,11 @@ export const getCorrectedTrackContent = track => {
 export const fixPathRevisionKey = journey => (
     `${journey?.fixPathEnabled === true ? 1 : 0}:${Number(journey?.fixPathCorrectionData?.revision) || 0}`
 )
+
+/** Return the track slugs whose persisted correction lists changed. */
+export const getChangedFixPathTrackSlugs = (previousTracks = {}, nextTracks = {}) => {
+    const previous = previousTracks && typeof previousTracks === 'object' ? previousTracks : {}
+    const next = nextTracks && typeof nextTracks === 'object' ? nextTracks : {}
+    return [...new Set([...Object.keys(previous), ...Object.keys(next)])]
+        .filter(trackSlug => JSON.stringify(previous[trackSlug] ?? []) !== JSON.stringify(next[trackSlug] ?? []))
+}

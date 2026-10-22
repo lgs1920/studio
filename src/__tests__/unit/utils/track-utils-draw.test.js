@@ -8,15 +8,16 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { DRAWING_FROM_UI } from '@Core/constants'
+import {DRAWING_FROM_UI} from '@Core/constants'
 import { TrackUtils } from '@Utils/cesium/TrackUtils'
+import {getFixPathSourceFingerprint} from '@Utils/cesium/fixPathCorrections'
 
 describe('TrackUtils draw scheduling', () => {
     const previousLgs = globalThis.lgs
@@ -123,5 +124,74 @@ describe('TrackUtils draw scheduling', () => {
         expect(source.load.mock.calls[0][0].geometry.coordinates).toEqual(displayContent.geometry.coordinates)
         expect(track.content).toEqual(originalContent)
         expect(source.__lgsTrackPathContent.geometry.coordinates).toEqual(displayContent.geometry.coordinates)
+    })
+
+    it('redraws the source route after the final correction section is deleted', async () => {
+        const source = {
+            name: 'track-fix-path-delete-section',
+            entities: {values: []},
+            load: vi.fn(async () => {}),
+            show: true,
+        }
+        const originalContent = {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+                type: 'LineString',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.001, 0, 0],
+                    [0.002, 0, 0],
+                    [0.003, 0, 0],
+                ],
+            },
+        }
+        const correction = {
+            id: 'section-to-delete',
+            segmentIndex: 0,
+            startIndex: 1,
+            endIndex: 2,
+            sourceFingerprint: getFixPathSourceFingerprint(originalContent, 0, 1, 2),
+            controlPoints: [{
+                id: 'correction-point',
+                progress: 0.5,
+                coordinate: [0.0015, 0.001, 10],
+                fixed: true,
+            }],
+        }
+        const journey = {
+            fixPathEnabled: true,
+            fixPathCorrectionData: {revision: 1, tracks: {'track-fix-path-delete-section': [correction]}},
+        }
+        const track = {
+            content: originalContent,
+            parent: 'journey-fix-path-delete-section',
+            slug: source.name,
+            title: 'Delete correction section test',
+            visible: true,
+        }
+        globalThis.lgs = {
+            getJourneyBySlug: () => journey,
+            viewer: {
+                dataSources: {
+                    contains: candidate => candidate === source,
+                    getByName: name => name === source.name ? [source] : [],
+                },
+                scene: {requestRender: vi.fn()},
+            },
+        }
+        vi.spyOn(TrackUtils, 'applyTrackRenderStyle').mockImplementation(() => {})
+
+        await TrackUtils.drawOnce(track, {action: DRAWING_FROM_UI, renderMode: 'entities'})
+        expect(source.load).toHaveBeenCalledOnce()
+        expect(source.load.mock.calls[0][0].geometry.coordinates).not.toEqual(originalContent.geometry.coordinates)
+
+        journey.fixPathEnabled = false
+        journey.fixPathCorrectionData = {revision: 2, tracks: {}}
+        await TrackUtils.drawOnce(track, {action: DRAWING_FROM_UI, renderMode: 'entities'})
+
+        expect(source.load).toHaveBeenCalledTimes(2)
+        expect(source.load.mock.calls[1][0].geometry.coordinates).toEqual(originalContent.geometry.coordinates)
+        expect(source.__lgsTrackPathContent).toBe(originalContent)
     })
 })

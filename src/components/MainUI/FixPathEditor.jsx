@@ -21,6 +21,7 @@ import {
     applyFixPathCorrections,
     getFixPathSourcePosition,
     getFixPathSourceFingerprint,
+    getChangedFixPathTrackSlugs,
     hasFixPathRouteEdits,
     normalizeFixPathActiveSection,
     normalizeFixPathCorrectionData,
@@ -2818,6 +2819,7 @@ export const FixPathEditor = () => {
                 })
                 return false
             }
+            const changedTrackSlugs = getChangedFixPathTrackSlugs(currentData.tracks, nextData.tracks)
 
             const contextualJourney = lgs.getJourneyBySlug?.(journeySlug)
             const previousData = journey.fixPathCorrectionData
@@ -2853,7 +2855,19 @@ export const FixPathEditor = () => {
             }
 
             try {
-                await (updated ?? contextualJourney ?? journey).draw?.({action: DRAWING_FROM_UI, mode: NO_FOCUS})
+                const updatedJourney = updated ?? contextualJourney ?? journey
+                const affectedTracks = changedTrackSlugs
+                    .map(trackSlug => updatedJourney.tracks?.get?.(trackSlug))
+                    .filter(track => typeof track?.draw === 'function')
+                if (affectedTracks.length > 0) {
+                    await Promise.all(affectedTracks.map(track => (
+                        track.draw({action: DRAWING_FROM_UI, mode: NO_FOCUS})
+                    )))
+                }
+                else if (changedTrackSlugs.length > 0 && typeof updatedJourney.draw === 'function') {
+                    // Keep compatibility with lightweight Journey doubles and legacy adapters.
+                    await updatedJourney.draw({action: DRAWING_FROM_UI, mode: NO_FOCUS})
+                }
             }
             catch (error) {
                 console.error('[FixPathEditor] Could not redraw path corrections:', error)

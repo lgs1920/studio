@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-21
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,6 +20,7 @@ import {Cartesian3, Cartographic, Math as CesiumMath} from 'cesium'
 import {proxy} from 'valtio'
 import {proxyMap} from 'valtio/utils'
 import {afterEach, describe, expect, it, vi} from 'vitest'
+import {DRAWING_FROM_UI, NO_FOCUS} from '@Core/constants'
 import {Utils} from '@Editor/Utils'
 import {getFixPathSourceFingerprint} from '@Utils/cesium/fixPathCorrections'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
@@ -374,5 +375,29 @@ describe('FixPathEditor replacement selection', () => {
             fireEvent.pointerUp(window, dragPointer({buttons: 0}))
             expectUnchanged()
         }
+
+        const drawCallsBeforeDelete = TrackUtils.draw.mock.calls.length
+        const overrideCallsBeforeDelete = TrackUtils.setDisplayContentOverride.mock.calls.length
+        const updateCallsBeforeDelete = updateJourney.mock.calls.length
+        const drawUpdatedTrack = vi.fn(options => TrackUtils.draw(journey.tracks.get('track-a'), options))
+        updateJourney.mockResolvedValue({
+            tracks: new Map([['track-a', {draw: drawUpdatedTrack}]]),
+            draw: vi.fn(),
+        })
+        fireEvent.click(document.querySelector('button[aria-label="Delete entire section"]'))
+
+        await waitFor(() => expect(journey.fixPathCorrectionData.tracks['track-a'] ?? []).toEqual([]))
+        await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeDelete + 1))
+        await waitFor(() => expect(drawUpdatedTrack).toHaveBeenCalledWith({
+            action: DRAWING_FROM_UI,
+            mode: NO_FOCUS,
+        }))
+        expect(TrackUtils.draw.mock.calls.slice(drawCallsBeforeDelete)
+            .some(([track, options]) => track === journey.tracks.get('track-a')
+                && options?.mode === NO_FOCUS)).toBe(true)
+        expect(TrackUtils.setDisplayContentOverride.mock.calls.slice(overrideCallsBeforeDelete)
+            .some(([track, content]) => track === journey.tracks.get('track-a') && content === null)).toBe(true)
+        expect(journey.fixPathEnabled).toBe(false)
+        expect(journey.fixPathCorrectionData.tracks).toEqual({})
     }, 20000)
 })

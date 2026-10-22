@@ -17,6 +17,7 @@
 import {afterEach, describe, expect, it} from 'vitest'
 import {
     applyFixPathCorrections,
+    getChangedFixPathTrackSlugs,
     getFixPathSourcePosition,
     getFixPathSegmentDistanceMeters,
     getFixPathSourceFingerprint,
@@ -55,6 +56,22 @@ describe('Fix Path correction editing', () => {
 
     afterEach(() => {
         globalThis.lgs = previousLgs
+    })
+
+    it('identifies only tracks whose correction lists changed', () => {
+        expect(getChangedFixPathTrackSlugs(
+            {
+                'track-a': [{id: 'section-a', startIndex: 1}],
+                'track-b': [{id: 'section-b', startIndex: 3}],
+            },
+            {
+                'track-a': [{id: 'section-a', startIndex: 2}],
+                'track-c': [{id: 'section-c', startIndex: 5}],
+            },
+        )).toEqual(['track-a', 'track-b', 'track-c'])
+        expect(getChangedFixPathTrackSlugs({'track-a': [{id: 'section-a'}]}, {
+            'track-a': [{id: 'section-a'}],
+        })).toEqual([])
     })
 
     it('creates and applies a section longer than the previous 500 m limit', () => {
