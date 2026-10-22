@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -85,8 +85,21 @@ export const isReplayVideoWidgetAllowed = (widgetId, {basicReplay = isBasicRepla
 
 export const filterReplayVideoWidgetKeys = (widgetKeys, options = {}) => {
     const basicReplay = options.basicReplay ?? isBasicReplayActive()
-    return [...new Set(widgetKeys ?? [])]
-        .filter(widgetId => isReplayVideoWidgetAllowed(widgetId, {basicReplay}))
+    const seenBasicCompass = new Set()
+    return [...new Set(widgetKeys ?? [])].filter(widgetId => {
+        if (!isReplayVideoWidgetAllowed(widgetId, {basicReplay})) {
+            return false
+        }
+
+        if (basicReplay && getReplayVideoWidgetType(widgetId) === COMPASS_WIDGET) {
+            if (seenBasicCompass.has(COMPASS_WIDGET)) {
+                return false
+            }
+            seenBasicCompass.add(COMPASS_WIDGET)
+        }
+
+        return true
+    })
 }
 
 /**
@@ -115,9 +128,10 @@ export const getReplayVideoWidgetKeys = ({
         entries.set(widgetId, {...entries.get(widgetId), ...entry})
     }
 
-    return [...entries.entries()]
+    const orderedWidgetIds = [...entries.entries()]
         .filter(([widgetId, entry]) => entry?.widgetsBoard === widgetsBoard
             && isReplayVideoWidgetAllowed(widgetId, {basicReplay}))
         .sort(([, left], [, right]) => (left?.zIndex || 0) - (right?.zIndex || 0))
         .map(([widgetId]) => widgetId)
+    return filterReplayVideoWidgetKeys(orderedWidgetIds, {basicReplay})
 }

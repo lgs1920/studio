@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-07
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,6 +33,7 @@ import {
     WIDGET_GRID_SIZE_STEP,
 }                                from '@Core/ui/widget-manager/widgetGridUtils'
 import { isWidgetAvailable }     from '@Core/ui/widget-manager/widgetAvailability'
+import { getWidgetInstanceStats } from '@Core/ui/widget-manager/widgetInstancePolicy'
 import { useOptionalSnapshot }    from '@Utils/ValtioUtils'
 import { WaDivider, WaIcon, WaNumberInput, WaSwitch } from '@awesome.me/webawesome/dist/react'
 import classNames                from 'classnames'
@@ -173,27 +174,22 @@ export const WidgetsPanelContent = ({groups, themeClassName = 'wa-theme-lgs1920-
         action()
     }
 
+    /**
+     * Resolve board-aware instance availability from the shared widget policy.
+     * @param {string} groupKey - Catalog group containing the widget.
+     * @param {string} widgetKey - Catalog widget ID or concrete instance ID.
+     * @param {Object|null} [widgetDef=null] - Optional resolved catalog definition.
+     * @returns {{count: number, max: number, remaining: number, maxReached: boolean}} Instance statistics.
+     */
     const getWidgetStats = (groupKey, widgetKey, widgetDef = null) => {
         const baseKey = widgetKey.split('#')[0]
         const definition = widgetDef ?? __.widgets.get(groupKey)?.widgets?.get(baseKey)
-        const max = definition?.max ?? 1
-        let count = 0
-
-        for (const [id, entry] of widget.cache.entries()) {
-            if (entry?.group !== groupKey || entry?.widgetsBoard !== widgetsBoard) {
-                continue
-            }
-            if (id.split('#')[0] === baseKey) {
-                count++
-            }
-        }
-
-        return {
-            count,
-            max,
-            remaining:  Math.max(0, max - count),
-            maxReached: count >= max,
-        }
+        return getWidgetInstanceStats({
+            widgetId: baseKey,
+            widgetDefinition: definition,
+            widgetCache: widget.cache,
+            widgetsBoard,
+        })
     }
 
     const getRemainingLabel = stats =>

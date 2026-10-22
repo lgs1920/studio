@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,6 +42,41 @@ describe('Replay video widget policy', () => {
         ])
         expect(getReplayVideoWidgetTypes({basicReplay: false})).toBe(REPLAY_VIDEO_WIDGET_TYPES)
         expect(getReplayVideoWidgetTypes({basicReplay: true})).toBe(REPLAY_VIDEO_BASIC_WIDGET_TYPES)
+    })
+
+    it('keeps only one Compass instance visible in Basic Replay', () => {
+        expect(filterReplayVideoWidgetKeys([
+            'compass-widget#top',
+            'journey-stats-widget#expert',
+            'compass-widget#bottom',
+            'credits-widget#video',
+        ], {basicReplay: true})).toEqual([
+            'compass-widget#top',
+            'credits-widget#video',
+        ])
+    })
+
+    it('selects the same lowest-layer Compass instance used for Replay capture', () => {
+        globalThis.lgs = {
+            settings: {ui: {replay: {userMode: 'basic'}}},
+            stores: {
+                replay: {userMode: 'basic', basicPreparationActive: false},
+                ui: {
+                    widget: {
+                        list: new Map([
+                            ['compass-widget#top', {widgetsBoard: 'video-crop-zone', zIndex: 6000}],
+                            ['compass-widget#bottom', {widgetsBoard: 'video-crop-zone', zIndex: 5000}],
+                            ['credits-widget#video', {widgetsBoard: 'video-crop-zone', zIndex: 10000}],
+                        ]),
+                    },
+                },
+            },
+        }
+
+        expect(getReplayVideoWidgetKeys({basicReplay: true})).toEqual([
+            'compass-widget#bottom',
+            'credits-widget#video',
+        ])
     })
 
     it('allows every content widget and excludes capture infrastructure', () => {

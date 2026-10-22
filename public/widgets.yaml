@@ -29,7 +29,7 @@ widgets:
     timelineColor: "green"
     mandatory: false
     canHide: true
-    max: 1
+    max: 20
     component: "CompassWidget"
     type: "lgs-visual-widget"
     path: "@Components/Compass"
@@ -82,6 +82,7 @@ widgets:
     icon: "user"
     timelineColor: "gray"
     mandatory: true
+    max: 1
     component: "CreditsWidget"
     type: "lgs-visual-widget"
     alwaysOnTop: true
@@ -112,7 +113,7 @@ widgets:
     timelineColor: "indigo"
     mandatory: false
     canHide: true
-    max: 1
+    max: 20
     component: "ProfileWidget"
     type: "lgs-visual-widget"
     path: "@Components/Profile"
@@ -220,7 +221,7 @@ widgets:
     component: "TextWidget"
     type: "lgs-visual-widget"
     path: "@Components/Text"
-    max: 50
+    max: 200
     groups:
       - "journey-widgets"
       - "scene-widgets"
@@ -281,7 +282,7 @@ widgets:
     timelineColor: "pink"
     mandatory: false
     canHide: true
-    max: 1
+    max: 20
     component: "JourneyStatsWidget"
     type: "lgs-visual-widget"
     path: "@Components/Stats"
@@ -354,7 +355,7 @@ widgets:
     timelineColor: "indigo"
     mandatory: false
     canHide: true
-    max: 1
+    max: 20
     component: "DynamicStatsWidget"
     type: "lgs-visual-widget"
     path: "@Components/Stats"

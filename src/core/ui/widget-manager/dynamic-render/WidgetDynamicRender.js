@@ -30,6 +30,7 @@ export class WidgetDynamicRenderer {
     // Memory cache for pre-resolved components
     #resolvedComponents = new Map()
     #pendingRenders = new Map()
+    #pendingInstanceReservations = new Map()
 
     constructor() {
         if (WidgetDynamicRenderer.#instance) {
@@ -87,6 +88,49 @@ export class WidgetDynamicRenderer {
 
     #resolveZIndex = value => Number(value) > 0 ? Number(value) : WIDGET_LAYER_START
 
+    /**
+     * Resolve the shared reservation key for a widget type on one board.
+     * @param {string} widgetId - Catalog widget ID or concrete instance ID.
+     * @param {string|null|undefined} widgetsBoard - Target widget board.
+     * @returns {string} Reservation key shared across catalog groups.
+     */
+    #instanceReservationKey = (widgetId, widgetsBoard) => `${this.#getBaseKey(widgetId)}:${widgetsBoard ?? ''}`
+
+    /**
+     * Count widget creations that have passed admission but are not registered yet.
+     * @param {string} widgetId - Catalog widget ID or concrete instance ID.
+     * @param {string|null|undefined} widgetsBoard - Target widget board.
+     * @returns {number} Number of active reservations.
+     */
+    #pendingInstanceCount = (widgetId, widgetsBoard) => (
+        this.#pendingInstanceReservations.get(this.#instanceReservationKey(widgetId, widgetsBoard)) ?? 0
+    )
+
+    /**
+     * Reserve one instance slot while its component is loading.
+     * @param {string} widgetId - Catalog widget ID or concrete instance ID.
+     * @param {string|null|undefined} widgetsBoard - Target widget board.
+     * @returns {string} Reservation key to release after registration.
+     */
+    #reserveWidgetInstance = (widgetId, widgetsBoard) => {
+        const key = this.#instanceReservationKey(widgetId, widgetsBoard)
+        this.#pendingInstanceReservations.set(key, this.#pendingInstanceCount(widgetId, widgetsBoard) + 1)
+        return key
+    }
+
+    /**
+     * Release a pending widget instance slot.
+     * @param {string} reservationKey - Reservation key returned by the reserve method.
+     */
+    #releaseWidgetInstance = reservationKey => {
+        const count = this.#pendingInstanceReservations.get(reservationKey) ?? 0
+        if (count <= 1) {
+            this.#pendingInstanceReservations.delete(reservationKey)
+            return
+        }
+        this.#pendingInstanceReservations.set(reservationKey, count - 1)
+    }
+
     #isSingletonWidget(group, key) {
         return __.ui.widgetManager.maxWidgets(group, this.#getBaseKey(key)) === 1
     }
@@ -121,17 +165,22 @@ export class WidgetDynamicRenderer {
             return {canRender: false, widgetId: null, existingInList: null}
         }
 
-        const isMaxReached = __.ui.widgetManager.isMaxWidgetsReached(group, baseKey, widgetsBoard)
         const existingInList = this.findExistingInList(lookupKey, widgetsBoard)
         if (existingInList && forceRefresh) {
             return {canRender: true, widgetId: existingInList, existingInList}
         }
 
+        const widgetManager = __.ui.widgetManager
+        const isMaxReached = widgetManager.isMaxWidgetsReached(group, baseKey, widgetsBoard)
+        const remainingSlots = widgetManager.remainingWidgets?.(group, baseKey, widgetsBoard)
+        const pendingMaxReached = Number.isFinite(remainingSlots)
+            && this.#pendingInstanceCount(baseKey, widgetsBoard) >= remainingSlots
+
         if (!isConcreteInstance && this.#isSingletonWidget(group, baseKey) && existingInList) {
             return {canRender: false, widgetId: null, existingInList}
         }
 
-        if (!isMaxReached) {
+        if (!isMaxReached && !pendingMaxReached) {
             const widgetId = isConcreteInstance ? key : __.ui.widgetManager.defineElementId(group, baseKey)
             return {canRender: true, widgetId, existingInList: null}
         }
@@ -148,10 +197,24 @@ export class WidgetDynamicRenderer {
             return this.#pendingRenders.get(pendingRenderKey)
         }
 
-        const renderPromise = this.#renderWidget(group, key, props)
+        const admission = this.canRenderWidget(group, key, props)
+        if (!admission.canRender) {
+            return null
+        }
+        const reservationKey = admission.existingInList
+            ? null
+            : this.#reserveWidgetInstance(admission.widgetId, props.widgetsBoard)
+        const renderPromise = this.#renderWidget(group, key, props, admission)
 
         if (!pendingRenderKey) {
-            return renderPromise
+            try {
+                return await renderPromise
+            }
+            finally {
+                if (reservationKey) {
+                    this.#releaseWidgetInstance(reservationKey)
+                }
+            }
         }
 
         this.#pendingRenders.set(pendingRenderKey, renderPromise)
@@ -160,16 +223,19 @@ export class WidgetDynamicRenderer {
             return await renderPromise
         }
         finally {
+            if (reservationKey) {
+                this.#releaseWidgetInstance(reservationKey)
+            }
             if (this.#pendingRenders.get(pendingRenderKey) === renderPromise) {
                 this.#pendingRenders.delete(pendingRenderKey)
             }
         }
     }
 
-    async #renderWidget(group, key, props = {}) {
+    async #renderWidget(group, key, props = {}, admission = {}) {
         const $widget = lgs.stores.ui.widget
 
-        const {canRender, widgetId} = this.canRenderWidget(group, key, props)
+        const {canRender, widgetId} = admission
         if (!canRender) {
             return null
         }

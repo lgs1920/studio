@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-02
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -303,12 +303,13 @@ export class Profiler {
      * @param index {number}
      */
     updateChartMarker = (serie, index) => {
-        const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
-        chart.dispatchAction({
-                                 type:        'showTip',
-                                 seriesIndex: serie,
-                                 dataIndex:   index, // Index du point marqué
-                             })
+        getRegisteredProfileCharts(__.ui.profiler.charts).forEach(([, chart]) => {
+            chart.dispatchAction({
+                type:        'showTip',
+                seriesIndex: serie,
+                dataIndex:   index,
+            })
+        })
     }
 
 
@@ -316,7 +317,6 @@ export class Profiler {
      * Update Color of tracks
      */
     updateColor = () => {
-        const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
         const options = {series: []}
 
         Array.from(lgs.theJourney.tracks).forEach(([slug, track]) => {
@@ -339,9 +339,8 @@ export class Profiler {
                                 })
         })
 
-        chart.setOption(options)
+        getRegisteredProfileCharts(__.ui.profiler.charts).forEach(([, chart]) => chart.setOption(options))
         this.draw().then(() => {
-            __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
             lgs.theTrack.marker.update()
         })
 
@@ -352,16 +351,13 @@ export class Profiler {
      */
     updateTitle = () => {
         const options = {legend: {data: []}, series: []}
-        const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
         Array.from(lgs.theJourney.tracks).forEach(([slug, track]) => {
             options.series.push({name: track.title})
             options.legend.data.push({name: track.title})
         })
 
-        chart.setOption(options)
-        this.draw().then(() => {
-            __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
-        })
+        getRegisteredProfileCharts(__.ui.profiler.charts).forEach(([, chart]) => chart.setOption(options))
+        this.draw()
     }
 
     /**
@@ -370,7 +366,6 @@ export class Profiler {
      * We draw all
      */
     updateTrackVisibility = (event = null) => {
-        const chart = __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE)
         if (event) {
             // We come from chart legend selection
             const [slug, track] = Array.from(lgs.theJourney.tracks).find(([slug, track]) => track.title === event.name)
@@ -383,12 +378,10 @@ export class Profiler {
             Array.from(lgs.theJourney.tracks).forEach(([slug, track]) => {
                 selected[track.title] = track.visible
             })
-            chart.setOption({selected: selected})
+            getRegisteredProfileCharts(__.ui.profiler.charts).forEach(([, chart]) => chart.setOption({selected}))
             this.prepareData()
         }
-        this.draw().then(() => {
-            __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
-        })
+        this.draw()
     }
 
 
@@ -456,3 +449,51 @@ export const TIME = 'Time'
 export const POINT = 'point'
 export const UNIT_SYSTEM = 'UnitSystem'
 export const CHART_ELEVATION_VS_DISTANCE = `${ELEVATION}-${DISTANCE}`
+
+/**
+ * Resolve a unique registry key for one profile widget instance.
+ * @param {string} instanceId - Concrete profile widget or chart ID.
+ * @returns {string} Instance-specific profile chart registry key.
+ */
+export const getProfileChartRegistryKey = instanceId => (
+    `${CHART_ELEVATION_VS_DISTANCE}:${instanceId || 'default'}`
+)
+
+/**
+ * Register a profile chart without replacing another widget instance.
+ * @param {Map<string, Object>} charts - Profiler chart registry.
+ * @param {string} instanceId - Concrete profile widget or chart ID.
+ * @param {Object} chart - ECharts chart instance.
+ * @returns {string} Registry key used for the chart.
+ */
+export const registerProfileChart = (charts, instanceId, chart) => {
+    const key = getProfileChartRegistryKey(instanceId)
+    charts.set(key, chart)
+    return key
+}
+
+/**
+ * Remove a profile chart only when the key still belongs to that instance.
+ * @param {Map<string, Object>} charts - Profiler chart registry.
+ * @param {string} instanceId - Concrete profile widget or chart ID.
+ * @param {Object} chart - ECharts chart instance being disposed.
+ * @returns {boolean} Whether the chart was removed.
+ */
+export const unregisterProfileChart = (charts, instanceId, chart) => {
+    const key = getProfileChartRegistryKey(instanceId)
+    if (charts.get(key) !== chart) {
+        return false
+    }
+    return charts.delete(key)
+}
+
+/**
+ * Return the currently registered elevation-versus-distance profile charts.
+ * @param {Map<string, Object>} charts - Profiler chart registry.
+ * @returns {Array<[string, Object]>} Profile chart registry entries.
+ */
+export const getRegisteredProfileCharts = charts => {
+    const prefix = `${CHART_ELEVATION_VS_DISTANCE}:`
+    return [...(charts?.entries?.() ?? [])]
+        .filter(([key, chart]) => chart && (key === CHART_ELEVATION_VS_DISTANCE || key.startsWith(prefix)))
+}

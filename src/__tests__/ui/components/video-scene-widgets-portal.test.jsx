@@ -158,6 +158,35 @@ describe('VideoSceneWidgetsPortal', () => {
         )
     })
 
+    it('shows one Compass in Basic Replay without deleting Expert instances', async () => {
+        globalThis.lgs.stores.replay.basicPreparationActive = true
+        globalThis.lgs.stores.ui.widget.list.set('compass-widget#top', {
+            widgetsBoard: 'video-crop-zone',
+            zIndex: 6000,
+        })
+        globalThis.lgs.stores.ui.widget.list.set('compass-widget#bottom', {
+            widgetsBoard: 'video-crop-zone',
+            zIndex: 5000,
+        })
+
+        render(<VideoSceneWidgetsPortal context={proxy({})}/>)
+
+        await waitFor(() => {
+            expect(Array.from(document.querySelectorAll('[data-testid="dynamic-widget"]'))
+                .map(element => element.dataset.widgetId)
+                .sort((left, right) => left.localeCompare(right)))
+                .toEqual(['compass-widget#bottom', 'credits-widget#video'])
+        })
+
+        expect(globalThis.lgs.stores.ui.widget.list.has('compass-widget#top')).toBe(true)
+        expect(globalThis.lgs.stores.ui.widget.list.has('compass-widget#bottom')).toBe(true)
+        expect(portalHarness.renderWidget).not.toHaveBeenCalledWith(
+            'multi-purpose-widgets',
+            'compass-widget',
+            expect.anything(),
+        )
+    })
+
     it('hides crop-board widgets while the crop zone is resizing', async () => {
         const cropperContext = lgs.stores.ui.video.cropper
         cropperContext.resizing = true

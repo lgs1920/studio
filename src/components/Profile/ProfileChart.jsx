@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-02
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,15 @@ import {
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { resolveReplayVisibilityState } from '@Core/ui/replay/ReplayOverlayResolver'
 import { registerReplayWidgetFrameRenderer } from '@Core/ui/replay/ReplayWidgetFrameRenderers'
-import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION, POINT, TIME } from '@Core/ui/Profiler'
+import {
+    DISTANCE,
+    ELEVATION,
+    getProfileChartRegistryKey,
+    POINT,
+    registerProfileChart,
+    TIME,
+    unregisterProfileChart,
+} from '@Core/ui/Profiler'
 import { echarts } from '@Core/ui/ECharts'
 import { INTERNATIONAL } from '@Utils/UnitUtils'
 import { colord }        from 'colord'
@@ -1390,10 +1398,11 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         const renderer = preview ? 'svg' : 'canvas'
         const chart = echarts.getInstanceByDom(dom) ?? echarts.init(dom, null, {renderer})
         _chart.current = chart
+        const chartRegistryKey = getProfileChartRegistryKey(id)
 
         let onDataZoom = null
         if (!preview) {
-            __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
+            registerProfileChart(__.ui.profiler.charts, id, chart)
             onDataZoom = () => {
                 clearJourneyReplayProfileGraphicsCache()
                 lgs.stores.main.components.profile.zoom = true
@@ -1407,8 +1416,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                 chart.off('dataZoom', onDataZoom)
             }
             window.removeEventListener('resize', handleResize)
-            if (!preview && __.ui.profiler.charts.get(CHART_ELEVATION_VS_DISTANCE) === chart) {
-                __.ui.profiler.charts.delete(CHART_ELEVATION_VS_DISTANCE)
+            if (!preview && __.ui.profiler.charts.get(chartRegistryKey) === chart) {
+                unregisterProfileChart(__.ui.profiler.charts, id, chart)
             }
             _chart.current = null
             chart.dispose()

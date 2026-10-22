@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-26
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGS_VISUAL_WIDGET, LGS_WIDGET, SCENE_WIDGETS_BOARD, SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
+import { getWidgetInstanceStats } from './widgetInstancePolicy'
 import { isNonDistortingWidget } from './widgetResizeUtils'
 import { v4 as uuid }                                      from 'uuid'
 
@@ -1018,22 +1019,12 @@ export class WidgetCoreRegistry {
         const group = __.widgets.get(groupId)
         const base = widgetId.split('#')[0]
         const widget = group?.widgets?.get(base)
-        const max = widget?.max ?? 1
-        // we scan the cache to count widgets
-        const count = [...$widget.cache.entries()].reduce((acc, [id, w]) => {
-            if (id && w.group === groupId) {
-                if (widgetsBoard !== undefined && w.widgetsBoard !== widgetsBoard) {
-                    return acc
-                }
-                const baseId = id.split('#')[0]
-                if (baseId === base) {
-                    acc++
-                }
-            }
-            return acc
-        }, 0)
-        const maxReached = count >= max
-        return {max, maxReached, count}
+        return getWidgetInstanceStats({
+            widgetId: base,
+            widgetDefinition: widget,
+            widgetCache: $widget.cache,
+            widgetsBoard,
+        })
     }
     /**
      * Counts the instances of a widget that are present for a given group.
@@ -1081,7 +1072,7 @@ export class WidgetCoreRegistry {
      * @returns {number} The remaining number of instances.
      */
     remainingWidgets = (group, widget, widgetsBoard = undefined) => {
-        const {max, count} = this.#widgetsStats(group, widget, widgetsBoard)
-        return max - count
+        const {remaining} = this.#widgetsStats(group, widget, widgetsBoard)
+        return remaining
     }
 }

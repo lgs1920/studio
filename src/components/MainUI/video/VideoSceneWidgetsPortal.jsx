@@ -51,8 +51,11 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     const allWidgetEntries = Array.from(list.entries())
         .filter(([, props]) => props?.widgetsBoard === VIDEO_WIDGETS_BOARD)
         .sort(([, a], [, b]) => (b.zIndex || 0) - (a.zIndex || 0))
+    const widgetIdsForPolicy = [...allWidgetEntries]
+        .sort(([, a], [, b]) => (a.zIndex || 0) - (b.zIndex || 0))
+        .map(([widgetId]) => widgetId)
     const allowedWidgetIds = new Set(filterReplayVideoWidgetKeys(
-        allWidgetEntries.map(([widgetId]) => widgetId),
+        widgetIdsForPolicy,
         {basicReplay},
     ))
     const widgetEntries = allWidgetEntries
