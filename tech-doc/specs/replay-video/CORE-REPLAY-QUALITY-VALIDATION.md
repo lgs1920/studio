@@ -3,7 +3,7 @@
 Status: validation contract for interactive Replay and deterministic Replay
 video export
 
-Date: 2026-10-18
+Date: 2026-10-22
 
 ## Purpose
 
@@ -131,6 +131,12 @@ narrow crop, and at least one high-resolution output profile.
   the same Replay frames used by the encoded video.
 - The canvas copied to each encoded frame is the main Cesium canvas after its
   synchronous render boundary.
+- Basic and Expert recording suspend the main viewer's default render loop and explicitly
+  updates the viewer before each capture. Dynamic entity positions must reach
+  that same frame without relying on a browser animation callback. Success,
+  cancellation, and encoder failure restore the original loop setting. Pending
+  tile waits must advance through bounded explicit renders with browser-task
+  yields; cancellation removes pending render timers and event listeners.
 - Product recording does not allocate an isolated host or redirect the main
   Replay renderer.
 - The recording monitor copies each composed frame before the exporter reuses
@@ -210,26 +216,30 @@ substitute for visual evidence.
   output FPS, quality, codec, widgets, render host, and browser. The context records
   encoder configuration and output characteristics. Open DevTools after recording
   when collecting an unprofiled baseline, so debugging does not affect the run.
-- Timing rows cover composition-canvas initialization, widget synchronous frame publication, bitmap capture/waits,
+- Timing rows distinguish route sample/intent resolution, Replay camera/trace updates,
+  scene-tile readiness waits, synchronous Cesium rendering, whole-frame rendering
+  before encoding, composition-canvas initialization, widget synchronous frame publication, bitmap capture/waits,
   overlay layout, source layout, canvas composition, backdrop blur, frame transfers,
   monitor snapshot/preview copies and synchronous notifications, the encoder-canvas
   copy, submission queue/backpressure waits, progress/file-size publication,
   encoder close/drain, MP4 finalization, and Blob creation.
 - `wallMillis` starts at encoder setup after scene preparation and ends after
-  encoder cleanup. It includes upstream frame rendering and tile waits, which are
-  outside the measured recording-stage breakdown. `activeMillis` subtracts user
+  encoder cleanup. It includes frame resolution, rendering, and tile waits, with
+  separate rows for these operations. `activeMillis` subtracts user
   pause waits. `frameProductionFps` measures actual completed timeline frames per
   active frame-loop second, rather than the output video's playback FPS. Keep-alive
   submissions and encoded packets are counted separately.
+- The report context also includes the sampled-route point count, source-canvas
+  dimensions, and active smoothing settings for comparisons at identical quality.
 - Read `scope` rows as the measured recording operations. `detail` rows overlap
   enclosing spans: blur is inside composition, preview copies/notifications are
-  inside publication, and packet-driven file-size updates can occur during encoder
-  submission or drain. `context` rows include the whole frame loop and pause or
+  inside publication, Cesium renders can occur during tile readiness, and packet-driven file-size updates can occur during encoder
+  submission or drain. `context` rows include whole-frame rendering before encoding, the whole frame loop, and pause or
   cancellation waits. Do not add all row totals or percentages.
 - `CanvasSource.add()` timings describe submission and writer/encoder backpressure,
   not isolated codec CPU time. Background encoding finishes during close/drain.
-  Canvas timings measure browser command duration, not deferred GPU completion,
-  and exclude the composite renderer's Cesium flush callback. Notification timings
+  Canvas and Cesium timings measure browser command duration, not deferred GPU completion.
+  Composition timing excludes the separately measured Cesium flush callback. Notification timings
   include synchronous listeners, not later asynchronous React commits.
 - Reports include totals, counts, means, maxima, and approximate P50/P95 histogram
   upper bounds with about 1% precision in `(1 + durationMillis)`. Timing storage is

@@ -2,7 +2,7 @@
 
 Status: current implementation inventory
 
-Date: 2026-10-18
+Date: 2026-10-22
 
 ## Purpose
 
@@ -115,8 +115,15 @@ Basic/Expert support is present but incomplete:
 - Optional isolated no-loop `CesiumWidget` implementation with scene descriptor
   replication for explicit off-screen render targets.
 - Basic and Expert product MP4 recording keeps the main Cesium scene visible,
-  synchronously renders each export frame during tile readiness, and copies the
-  main canvas into the video composer.
+  temporarily suspends its default render loop, and updates the viewer's entity
+  visualizers before explicitly rendering each capture. Pending terrain/3D Tiles
+  waits advance the same driver on bounded browser tasks. Success, cancellation,
+  and encoding failure restore the original render-loop setting. The video
+  composer copies this main canvas. A real Chromium WebGL regression exports a
+  six-frame, 320-by-180 MP4 with a 4,096-point ground polyline and moving marker;
+  inspected first/final captures retain the expected progression. This synthetic
+  ellipsoid scene does not establish hardware export throughput or replace the
+  pending fixed-provider reference-journey and covered-window validations.
 - Deterministic Replay MP4 export at fixed frame timestamps, with monitor
   pause/cancel controls and preview/share handoff.
 - Deferred MP4 export follows the Replay preparation timeline's selected start

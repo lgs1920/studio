@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -912,7 +912,7 @@ describe('ReplayDeferredExporter', () => {
         }
     })
 
-    it('runs the deferred mp4 export and downloads the file', async () => {
+    it.each(['basic', 'expert'])('runs %s MP4 export with exclusive viewer rendering and restores its loop', async userMode => {
         const sourceCanvas = document.createElement('canvas')
         sourceCanvas.width = 640
         sourceCanvas.height = 360
@@ -993,10 +993,12 @@ describe('ReplayDeferredExporter', () => {
             },
         }
         const replay = {
+            userMode,
             journeySlug: 'journey-a',
             trackSlug: 'track-a',
             progress: 0.25,
             durationMillis: 1000,
+            readiness: {enabled: userMode === 'expert'},
             videoCropRect: {left: 0, top: 0, width: 640, height: 360},
         }
         prepareReplayDeferredExportPlan({
@@ -1019,6 +1021,16 @@ describe('ReplayDeferredExporter', () => {
             height: dimensions.height,
             getContext: () => exportContext,
         }))
+        const exportViewer = {
+            scene: globalThis.lgs.scene,
+            useDefaultRenderLoop: true,
+            resize: vi.fn(),
+            render: vi.fn(() => {
+                expect(exportViewer.useDefaultRenderLoop).toBe(false)
+                globalThis.lgs.scene.render()
+            }),
+        }
+        globalThis.lgs.viewer = exportViewer
 
         const result = await runReplayDeferredMp4Export({
             replay,
@@ -1055,7 +1067,10 @@ describe('ReplayDeferredExporter', () => {
         expect(download).toHaveBeenCalledOnce()
         expect(download.mock.calls[0][1]).toMatch(/journey-a-master-export\.mp4$/)
         expect(seek).toHaveBeenCalledTimes(result.plan.manifest.frameCount + 1)
-        expect(globalThis.lgs.scene.requestRender).toHaveBeenCalledTimes(1)
+        expect(globalThis.lgs.scene.requestRender).toHaveBeenCalledTimes(result.frameCount + 1)
+        expect(exportViewer.render).toHaveBeenCalledTimes(result.frameCount)
+        expect(exportViewer.resize).toHaveBeenCalledTimes(result.frameCount)
+        expect(exportViewer.useDefaultRenderLoop).toBe(true)
         expect(globalThis.__.ui.replay.refresh).toHaveBeenCalled()
         expect(result.plan.runtime.exportProgress).toBe(1)
         expect(result.plan.runtime.exportProcessedFrames).toBe(result.plan.manifest.frameCount)
@@ -1067,9 +1082,40 @@ describe('ReplayDeferredExporter', () => {
             status: 'completed', frameCount: result.frameCount, outputBytes: result.blob.size,
             context: {dimensions: {width: 1280, height: 720}, renderHostMode: 'visible'},
         })
-        for (const key of ['widgetStatePublication', 'overlayCapture', 'overlayLayout', 'encoderSubmission']) {
+        for (const key of ['frameResolution', 'frameRendering', 'replayFrameUpdate', 'sceneTileReadiness', 'cesiumRender', 'widgetStatePublication', 'overlayCapture', 'overlayLayout', 'encoderSubmission']) {
             expect(result.recordingPerformance.stages.find(stage => stage.key === key)).toMatchObject({count: result.frameCount})
         }
+    })
+
+    it('restores the main viewer render loop after an encoder failure', async () => {
+        const sourceCanvas = document.createElement('canvas')
+        sourceCanvas.width = 320
+        sourceCanvas.height = 180
+        const scene = {render: vi.fn(), requestRender: vi.fn()}
+        const viewer = {scene, useDefaultRenderLoop: true, render: vi.fn()}
+        const replay = {durationMillis: 1000, progress: 0, readiness: {enabled: false}, clips: {catalog: {}, start: [], stop: []}}
+        globalThis.lgs = {
+            scene,
+            viewer,
+            canvas: sourceCanvas,
+            stores: {ui: {video: {fps: 0, quality: 0}}},
+        }
+        globalThis.__ = {device: {browser: 'chromium'}, ui: {widgetCache: {getAll: () => new Map()}}}
+        mediabunnyMocks.failNextCanvasAdd = true
+
+        await expect(runReplayDeferredMp4Export({
+            replay,
+            journey: {slug: 'journey-a'},
+            controller: {duration: 1, progress: 0, seek: vi.fn(), currentSample: () => ({progress: 0})},
+            replayMode: null,
+            sourceCanvas,
+            dimensions: {width: 320, height: 180},
+            buildCanvas: dimensions => ({...dimensions, getContext: () => ({clearRect: vi.fn(), drawImage: vi.fn()})}),
+            download: vi.fn(),
+        })).rejects.toThrow('Codec reclaimed due to inactivity.')
+
+        expect(viewer.render).toHaveBeenCalled()
+        expect(viewer.useDefaultRenderLoop).toBe(true)
     })
 
     it('keeps the export composer canvas at the exact MP4 dimensions when crop and output ratios differ', async () => {
@@ -1859,7 +1905,7 @@ describe('Record performance diagnostics', () => {
         table.mockRestore()
     })
 
-    it('measures encoder copy, backpressure, progress, drain, and finalization without changing output frames', async () => {
+    it('measures rendering and encoding without adding a redundant encoder canvas copy', async () => {
         let now = 0
         const performance = createReplayRecordingPerformance({now: () => now})
         const onPerformance = vi.fn()
@@ -1901,11 +1947,12 @@ describe('Record performance diagnostics', () => {
         const report = result.recordingPerformance
         expect(report).toMatchObject({
             status: 'completed', frameCount: 3, keepAliveFrameCount: 0,
-            encodedPacketCount: 3, outputBytes: 768, wallMillis: 105,
-            frameProductionFps: 41.667,
+            encodedPacketCount: 3, outputBytes: 768, wallMillis: 99,
+            frameProductionFps: 45.455,
             context: {browser: 'chromium', fps: 10, codec: 'avc', latencyMode: 'quality'},
         })
-        expect(report.stages.find(stage => stage.key === 'encoderCopy')).toMatchObject({count: 3, totalMillis: 6})
+        expect(report.stages.find(stage => stage.key === 'encoderCopy')).toBeUndefined()
+        expect(report.stages.find(stage => stage.key === 'frameRendering')).toMatchObject({count: 3, totalMillis: 33})
         expect(report.stages.find(stage => stage.key === 'encoderSubmission')).toMatchObject({count: 3, totalMillis: 24})
         expect(report.stages.find(stage => stage.key === 'progressPublication')).toMatchObject({count: 3, totalMillis: 9})
         expect(report.stages.find(stage => stage.key === 'fileSizePublication')).toMatchObject({kind: 'detail', totalMillis: 6})

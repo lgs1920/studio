@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-14
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,11 @@ const STAGES = {
     codecSetup: ['Codec configuration', 'scope'],
     outputSetup: ['Output initialization', 'scope'],
     compositionSetup: ['Composition canvas initialization', 'scope'],
+    frameResolution: ['Frame sample / intent resolution', 'scope'],
+    frameRendering: ['Whole frame rendering (before encoding)', 'context'],
+    replayFrameUpdate: ['Replay camera / trace update', 'scope'],
+    sceneTileReadiness: ['Scene tile readiness / render wait', 'scope'],
+    cesiumRender: ['Cesium synchronous scene render', 'detail'],
     widgetStatePublication: ['Widget frame publication / synchronous commit', 'scope'],
     overlayCapture: ['Widget canvas capture / wait', 'scope'],
     overlayLayout: ['Overlay discovery and layout', 'scope'],
@@ -176,8 +181,9 @@ export const createReplayRecordingPerformance = ({now = defaultNow} = {}) => {
             frameProductionFps: activeFrameLoopMillis > 0 ? rounded(frameCount * 1000 / activeFrameLoopMillis) : null,
             error: error ? {name: error.name, message: error.message} : null,
             notes: [
-                'The session starts at encoding setup. Active wall time also includes upstream frame rendering, which is not profiled here.',
+                'The session starts at encoding setup. Whole-frame rendering includes Replay updates, tile readiness, scene renders, widgets, composition, and monitor publication.',
                 'Scope rows identify recording operations. Detail and context rows overlap enclosing spans. Packet callbacks may overlap pending asynchronous waits. Do not sum all rows.',
+                'Cesium renders overlap tile readiness or frame rendering. They measure synchronous browser calls, not isolated GPU execution.',
                 'CanvasSource.add measures submission and writer/encoder backpressure. Background encoding continues until close/drain.',
                 'Canvas drawing measures browser call duration, not deferred GPU completion. Composition excludes the Cesium flush callback.',
                 'Monitor notifications measure synchronous listeners, not subsequent asynchronous React commits.',

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-17
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -516,9 +516,10 @@ const waitForReplayPostRender = async (scene, timeoutMs, signal, renderNow = nul
  * @param {Array<object>} imageryLayers - Visible imagery layers.
  * @param {number} timeoutMs - Maximum wait duration.
  * @param {AbortSignal|null} signal - Optional cancellation signal.
+ * @param {Function|null} renderNow - Optional explicit render while loading progresses.
  * @returns {Promise<void>} Promise resolved after a readiness opportunity.
  */
-const waitForReplayTileSignal = async (scene, tilesets, imageryLayers, timeoutMs, signal) => {
+const waitForReplayTileSignal = async (scene, tilesets, imageryLayers, timeoutMs, signal, renderNow = null) => {
     if (signal?.aborted) {
         throw createAbortError()
     }
@@ -573,7 +574,17 @@ const waitForReplayTileSignal = async (scene, tilesets, imageryLayers, timeoutMs
             cleanup.push(() => signal.removeEventListener?.('abort', abortListener))
         }
 
-        timeoutId = setTimeout(resolveOnce, Math.min(DEFAULT_POLL_INTERVAL_MS, safeTimeoutMs))
+        // Pump manual render targets on a browser task, allowing network and
+        // worker completions to run between draws instead of spinning microtasks.
+        timeoutId = setTimeout(() => {
+            try {
+                renderNow?.()
+                resolveOnce()
+            }
+            catch (error) {
+                rejectOnce(error)
+            }
+        }, Math.min(DEFAULT_POLL_INTERVAL_MS, safeTimeoutMs))
         requestReplaySceneRender(scene)
     })
 }
@@ -639,7 +650,7 @@ export const waitForReplaySceneTilesReady = async ({
         }
 
         const remainingMs = Math.max(0, deadline - Date.now())
-        await waitForReplayTileSignal(scene, tilesets, imageryLayers, remainingMs, signal)
+        await waitForReplayTileSignal(scene, tilesets, imageryLayers, remainingMs, signal, renderNow)
     }
 
     return false

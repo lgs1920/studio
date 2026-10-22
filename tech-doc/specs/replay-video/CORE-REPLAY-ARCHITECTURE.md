@@ -2,7 +2,7 @@
 
 Status: current implementation inventory; see the implementation status for known gaps
 
-Date: 2026-10-15
+Date: 2026-10-22
 
 ## Purpose
 
@@ -49,6 +49,16 @@ and in the application defaults. Product dimensions remain unscaled in the
 normalized progression; the Basic renderer applies the factor at rendering
 time, after projection limits for the marker. Color inputs update every choice
 preview and the active Replay immediately. Expert appearance remains independent.
+
+Basic and Expert MP4 recording temporarily suspend the main viewer's default render loop.
+Each capture flush calls `Viewer.render()` after resizing and requesting the
+scene, so Cesium updates entity visualizers before drawing that video frame.
+This prevents repeated reconstruction of dynamic ground polylines by competing
+animation frames. The original loop setting is restored before terminal scene
+cleanup, including encoder failure and cancellation. Pending terrain and 3D Tiles
+waits advance this same render driver on bounded browser tasks, preserving network
+and worker progress without a competing render loop. Dry run retains its normal
+render scheduling.
 
 Basic Replay offers an opt-in Dry run preference in the video settings popup.
 It traverses the same fixed-timestamp timeline, including start and stop clips,

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-14
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -91,6 +91,29 @@ describe('Replay recording performance', () => {
         performance.record('encoderCopy', 0)
         expect(performance.finish({status: 'failed'})).toBe(report)
         expect(report.status).toBe('completed')
+    })
+
+    it('distinguishes Replay updates, readiness waits, and scene renders inside frame work', () => {
+        let now = 0
+        const performance = createReplayRecordingPerformance({now: () => now})
+        performance.start({routeSampleCount: 4096})
+        now = 7
+        performance.record('replayFrameUpdate', 0)
+        now = 27
+        performance.record('cesiumRender', 7)
+        now = 32
+        performance.record('sceneTileReadiness', 7)
+        now = 42
+        performance.record('frameRendering', 0)
+        const report = performance.finish()
+
+        expect(report.context.routeSampleCount).toBe(4096)
+        expect(report.stages).toEqual(expect.arrayContaining([
+            expect.objectContaining({key: 'frameRendering', kind: 'context', totalMillis: 42}),
+            expect.objectContaining({key: 'replayFrameUpdate', kind: 'scope', totalMillis: 7}),
+            expect.objectContaining({key: 'sceneTileReadiness', kind: 'scope', totalMillis: 25}),
+            expect.objectContaining({key: 'cesiumRender', kind: 'detail', totalMillis: 20}),
+        ]))
     })
 
     it('keeps partial diagnostics for an unsuccessful recording', () => {

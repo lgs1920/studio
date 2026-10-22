@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -81,6 +81,7 @@ import {
     CanvasOverlayComposer,
 }                              from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import {createReplayRecordingPerformance} from '@Core/ui/replay/ReplayRecordingPerformance'
+import {acquireReplayExportRenderLoop} from '@Core/ui/replay/ReplayExportRenderLoop'
 import {REPLAY_VIDEO_FPS} from '@Core/ui/replay/ReplayVideoSettings'
 import {isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
 import {createBasicReplayTraceFocusClips} from '@Core/ui/replay/JourneyReplayBasicFocus'
@@ -1899,20 +1900,29 @@ export class ReplayDeferredExporter {
             const renderedFrames = []
             let frames = null
             const frameLoopStartedAt = recordingPerformance.now()
+            let frameResolutionStartedAt = frameLoopStartedAt
             try {
                 frames = await this.#session.renderAll({
                     signal,
                     shouldStop,
                     seekBeforeRender,
                     onFrame: async rendered => {
+                        recordingPerformance.record('frameResolution', frameResolutionStartedAt)
                         nextFrameTimestamp = rendered.frameTimeMs / 1000
-                        const renderResult = await renderFrame({
-                            canvas,
-                            context: ctx,
-                            frame: rendered,
-                            manifest,
-                            metadata,
-                        })
+                        const renderingStartedAt = recordingPerformance.now()
+                        let renderResult = null
+                        try {
+                            renderResult = await renderFrame({
+                                canvas,
+                                context: ctx,
+                                frame: rendered,
+                                manifest,
+                                metadata,
+                            })
+                        }
+                        finally {
+                            recordingPerformance.record('frameRendering', renderingStartedAt)
+                        }
                         renderedFrames.push(renderResult ?? rendered)
                         await enqueueSourceAdd({
                             timestamp: rendered.frameTimeMs / 1000,
@@ -1929,6 +1939,7 @@ export class ReplayDeferredExporter {
                                 recordingPerformance.record('progressPublication', progressStartedAt)
                             }
                         }
+                        frameResolutionStartedAt = recordingPerformance.now()
                     },
                 })
             }
@@ -2511,12 +2522,25 @@ export const runReplayDeferredMp4Export = async ({
     const monitorMode = isDryRun ? 'dry-run' : 'export'
     const dryRunTimings = {cameraTraceMillis: 0, widgetStateMillis: 0, tileReadinessMillis: 0}
     let replayFrameSampleWorkerMillis = 0
+    let recordingPerformance = null
+    let exportRenderLoop = null
     const flushReplayRenderTarget = () => {
         const scene = replayMode?.cesiumScene?.()
                       ?? globalThis.lgs?.scene
                       ?? globalThis.lgs?.viewer?.scene
                       ?? null
-        scene?.render?.()
+        const renderStartedAt = recordingPerformance?.now()
+        try {
+            if (exportRenderLoop) {
+                exportRenderLoop.render()
+            }
+            else {
+                scene?.render?.()
+            }
+        }
+        finally {
+            recordingPerformance?.record('cesiumRender', renderStartedAt)
+        }
     }
     const exportRuntimeStatus = () => {
         if (signal?.aborted) {
@@ -2685,6 +2709,14 @@ export const runReplayDeferredMp4Export = async ({
                 replay?.readiness
                 ?? globalThis.lgs?.settings?.ui?.replay?.readiness,
             )
+            // Capture owns entity updates and scene draws. Pending tile waits
+            // pump this same driver without a competing animation-frame loop.
+            if (!isDryRun) {
+                exportRenderLoop = acquireReplayExportRenderLoop({
+                    viewer: replayMode?.cesiumViewer?.() ?? globalThis.lgs?.viewer ?? null,
+                    scene: replayScene,
+                })
+            }
             const replayCamera = currentJourneyReplayCameraSettings()
             restoreReplaySceneTileCache = prepareReplaySceneTileCache(replayScene)
             replaySceneTileReadinessCoordinator = isolatedRenderHost
@@ -2746,13 +2778,17 @@ export const runReplayDeferredMp4Export = async ({
             exporter.session?.setPreparedFrameSampleResolver?.(replayFrameSampleWorker.resolveSampleForFrame)
         }
 
-        const recordingPerformance = isDryRun ? null : createReplayRecordingPerformance()
+        recordingPerformance = isDryRun ? null : createReplayRecordingPerformance()
         recordingPerformance?.configure({
             qualityIndex: outputRenderSpec?.qualityIndex ?? null,
             renderHostMode,
             captureMode,
             cropRect: outputRenderSpec?.cropRect ? {...outputRenderSpec.cropRect} : null,
             visibleOverlayIds: [...(plan.runtime?.context?.visibleOverlayIds ?? [])],
+            routeSampleCount: controller?.sampler?.samples?.length ?? null,
+            sourceDimensions: {width: sourceCanvas?.width ?? null, height: sourceCanvas?.height ?? null},
+            smoothing: replay?.smoothing ? {...replay.smoothing} : null,
+            renderLoopMode: exportRenderLoop ? 'manual' : 'default',
         })
         const result = await exporter.exportMp4({
             signal,
@@ -2790,7 +2826,7 @@ export const runReplayDeferredMp4Export = async ({
                 if (signal?.aborted) {
                     throw new DOMException('The Replay export was aborted.', 'AbortError')
                 }
-                const frameUpdateStartedAt = isDryRun ? runtimeNow() : 0
+                const frameUpdateStartedAt = recordingPerformance?.now() ?? (isDryRun ? runtimeNow() : 0)
 
                 const phase = resolveReplayExportFramePhase({plan, frame})
                 const sourceFrame = resolveReplayExportSourceFrame(frame, phase)
@@ -2804,25 +2840,30 @@ export const runReplayDeferredMp4Export = async ({
                     fps:            plan.videoTimeline?.fps ?? null,
                 })
                 let frameSample = frame?.sample ?? null
-                if (typeof replayMode?.renderReplayExportFrame === 'function') {
-                    frameSample = await replayMode.renderReplayExportFrame({
-                        phase,
-                        frame: sourceFrame,
-                        plan,
-                        replay,
-                        controller,
-                        resolvedSample: frame.sample,
-                        dryRun: isDryRun,
-                    }) ?? frameSample
+                try {
+                    if (typeof replayMode?.renderReplayExportFrame === 'function') {
+                        frameSample = await replayMode.renderReplayExportFrame({
+                            phase,
+                            frame: sourceFrame,
+                            plan,
+                            replay,
+                            controller,
+                            resolvedSample: frame.sample,
+                            dryRun: isDryRun,
+                        }) ?? frameSample
+                    }
+                    else {
+                        if (controller?.seek) {
+                            frameSample = controller.seek(phase.progress) ?? frameSample
+                        }
+                        else if (typeof replay?.progress === 'number') {
+                            replay.progress = phase.progress
+                        }
+                        globalThis.__?.ui?.replay?.refresh?.({camera: true, suppressMoveEvents: true})
+                    }
                 }
-                else {
-                    if (controller?.seek) {
-                        frameSample = controller.seek(phase.progress) ?? frameSample
-                    }
-                    else if (typeof replay?.progress === 'number') {
-                        replay.progress = phase.progress
-                    }
-                    globalThis.__?.ui?.replay?.refresh?.({camera: true, suppressMoveEvents: true})
+                finally {
+                    recordingPerformance?.record('replayFrameUpdate', frameUpdateStartedAt)
                 }
                 const widgetStateStartedAt = recordingPerformance?.now() ?? (isDryRun ? runtimeNow() : 0)
                 if (isDryRun) {
@@ -2850,7 +2891,7 @@ export const runReplayDeferredMp4Export = async ({
                 finally {
                     recordingPerformance?.record('widgetStatePublication', widgetStateStartedAt)
                 }
-                const tileReadinessStartedAt = isDryRun ? runtimeNow() : 0
+                const tileReadinessStartedAt = recordingPerformance?.now() ?? (isDryRun ? runtimeNow() : 0)
                 if (isDryRun) {
                     dryRunTimings.widgetStateMillis += tileReadinessStartedAt - widgetStateStartedAt
                 }
@@ -2865,29 +2906,34 @@ export const runReplayDeferredMp4Export = async ({
                 previousReplayExportFrame = frame
                 previousReplayExportSample = frameSample
                 // Intermediate dry-run frames rely on requestRender and browser yields without blocking.
-                if (!isDryRun || isReadinessCheckpoint) {
-                    const maxMillis = isDryRun
-                        ? Math.min(tileReadinessTimeoutMs, REPLAY_DRY_RUN_TILE_READINESS_CHECK_TIMEOUT_MS)
-                        : tileReadinessTimeoutMs
-                    if (replaySceneTileReadinessCoordinator) {
-                        await replaySceneTileReadinessCoordinator.prepareForCapture({
-                            maxMillis,
-                            signal,
-                            speedLevel,
-                            settled: isReplayExportFrameSettled({frame, phase}),
-                        })
+                try {
+                    if (!isDryRun || isReadinessCheckpoint) {
+                        const maxMillis = isDryRun
+                            ? Math.min(tileReadinessTimeoutMs, REPLAY_DRY_RUN_TILE_READINESS_CHECK_TIMEOUT_MS)
+                            : tileReadinessTimeoutMs
+                        if (replaySceneTileReadinessCoordinator) {
+                            await replaySceneTileReadinessCoordinator.prepareForCapture({
+                                maxMillis,
+                                signal,
+                                speedLevel,
+                                settled: isReplayExportFrameSettled({frame, phase}),
+                            })
+                        }
+                        else {
+                            await prepareReplaySceneTilesForCapture({
+                                scene: replayMode?.cesiumScene?.()
+                                       ?? globalThis.lgs?.scene
+                                       ?? globalThis.lgs?.viewer?.scene
+                                       ?? null,
+                                maxMillis,
+                                signal,
+                                renderNow: flushReplayRenderTarget,
+                            })
+                        }
                     }
-                    else {
-                        await prepareReplaySceneTilesForCapture({
-                            scene: replayMode?.cesiumScene?.()
-                                   ?? globalThis.lgs?.scene
-                                   ?? globalThis.lgs?.viewer?.scene
-                                   ?? null,
-                            maxMillis,
-                            signal,
-                            renderNow: flushReplayRenderTarget,
-                        })
-                    }
+                }
+                finally {
+                    recordingPerformance?.record('sceneTileReadiness', tileReadinessStartedAt)
                 }
                 // Dry run checks key scene boundaries, then skips widget capture and image composition.
                 if (isDryRun) {
@@ -3135,6 +3181,9 @@ export const runReplayDeferredMp4Export = async ({
         }
     }
     finally {
+        // Restore normal scene scheduling before any other teardown can fail.
+        exportRenderLoop?.release()
+        exportRenderLoop = null
         replayFrameSampleWorker?.dispose?.()
         stopReplayRecordingMonitor()
         for (const mirror of captureMirrors) {

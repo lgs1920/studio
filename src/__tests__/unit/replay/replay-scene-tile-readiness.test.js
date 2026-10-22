@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-17
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,6 +55,57 @@ const createCollection = values => ({
 })
 
 describe('ReplaySceneTileReadiness', () => {
+    it('advances pending tiles without the default viewer loop and releases polling resources', async () => {
+        vi.useFakeTimers()
+        const postRender = createEvent()
+        const progress = createEvent()
+        const scene = {
+            globe: {tilesLoaded: false, tileLoadProgressEvent: progress},
+            primitives: createCollection([]),
+            postRender,
+            requestRender: vi.fn(),
+        }
+        const renderNow = vi.fn(() => {
+            scene.globe.tilesLoaded = true
+            postRender.emit()
+        })
+        try {
+            const pending = prepareReplaySceneTilesForCapture({scene, maxMillis: 200, renderNow})
+            await vi.advanceTimersByTimeAsync(31)
+            expect(renderNow).not.toHaveBeenCalled()
+            await vi.advanceTimersByTimeAsync(1)
+            await expect(pending).resolves.toBe(true)
+            expect(renderNow).toHaveBeenCalledTimes(2)
+            expect(postRender.listenerCount()).toBe(0)
+            expect(progress.listenerCount()).toBe(0)
+            expect(vi.getTimerCount()).toBe(0)
+        }
+        finally {
+            vi.useRealTimers()
+        }
+    })
+
+    it('cancels a pending manual tile render without drawing or retaining timers', async () => {
+        vi.useFakeTimers()
+        const postRender = createEvent()
+        const scene = {globe: {tilesLoaded: false}, primitives: createCollection([]), postRender, requestRender: vi.fn()}
+        const renderNow = vi.fn()
+        const abortController = new AbortController()
+        try {
+            const pending = prepareReplaySceneTilesForCapture({scene, maxMillis: 200, renderNow, signal: abortController.signal})
+            const rejection = expect(pending).rejects.toMatchObject({name: 'AbortError'})
+            abortController.abort()
+            await rejection
+            await vi.advanceTimersByTimeAsync(32)
+            expect(renderNow).not.toHaveBeenCalled()
+            expect(postRender.listenerCount()).toBe(0)
+            expect(vi.getTimerCount()).toBe(0)
+        }
+        finally {
+            vi.useRealTimers()
+        }
+    })
+
     it('normalizes readiness runtime options and keeps the policy bounded', () => {
         expect(normalizeReplaySceneTileReadinessOptions({
                                                             enabled: false,
