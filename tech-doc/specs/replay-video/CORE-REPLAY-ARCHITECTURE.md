@@ -226,12 +226,15 @@ clip boundaries.
 `ReplayCesiumCameraAdapter` is the deterministic Cesium application boundary.
 
 Camera motion uses Replay duration to scale route-heading anticipation and a
-short spatial smoothing window for the camera-only anchor. That smoothing pass
-caps its offset at one quarter of the currently projected crop width. It does
-not change the canonical route sample used by the trace, marker, visibility
-checks, or crop progression. Tight-zigzag chord simplification remains a
-separate camera-only rule and applies only when the section's cross-track
-amplitude is below half of the projected crop width.
+short spatial smoothing window for the camera-only anchor. The anchor follows a
+deterministic uniform cubic Bezier B-spline evaluated on a route-distance grid.
+The grid restarts at every track segment and extrapolates endpoint knots so the
+camera path starts and ends at the original route samples. The smoothing pass
+caps its horizontal offset at one quarter of the currently projected crop
+width. It does not change the canonical route sample used by the trace, marker,
+visibility checks, or crop progression. Tight-zigzag chord simplification
+remains a separate camera-only rule and applies only when the section's
+cross-track amplitude is below half the projected crop width.
 
 Live Dynamic tracking predicts a sustained exit from its trigger zone using two
 future route projections, then begins the correction before the marker reaches

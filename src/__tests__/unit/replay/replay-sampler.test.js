@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,6 +38,7 @@ import {
     getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplaySettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {cameraMotionAtProgress}                                          from '@Core/ui/replay/JourneyReplayCameraGuide'
+import {smoothReplayCameraAnchorSample}                                  from '@Core/ui/replay/JourneyReplayCameraAnchorSmoothing'
 import {
     replayCameraCropWidthMeters,
     replayCameraHeadingWindowMeters,
@@ -539,6 +540,76 @@ describe('replay phase 1 sampler', () => {
         expect(endMotion.cameraAnchorAdjusted).toBe(false)
         expect(endMotion.sample.longitude).toBeCloseTo(endSample.longitude, 8)
         expect(sampler.atProgress(progress).longitude).toBeCloseTo(routeSample.longitude, 8)
+    })
+
+    it('keeps the cubic Bezier camera anchor continuous at a fixed route knot', () => {
+        const sampleAtDistance = distance => {
+            const eastMeters = Math.min(distance, 2000)
+            const northMeters = Math.max(0, distance - 2000)
+
+            return {
+                longitude: eastMeters / 111320,
+                latitude: northMeters / 111320,
+                altitude: 120,
+                distanceFromStart: distance,
+            }
+        }
+        const smoothAtDistance = distance => {
+            const sample = sampleAtDistance(distance)
+            return smoothReplayCameraAnchorSample({
+                sample,
+                smoothingWindowMeters: 200,
+                maximumOffsetMeters: 250,
+                segmentStartDistance: 0,
+                segmentEndDistance: 4000,
+                cameraZigzagSections: [],
+                sampleAtDistance,
+                fallbackCropWidthMeters: 1000,
+            }).sample
+        }
+        const beforeKnot = smoothAtDistance(1999.99)
+        const afterKnot = smoothAtDistance(2000.01)
+        const outputDistance = Math.hypot(
+            (afterKnot.longitude - beforeKnot.longitude) * 111320,
+            (afterKnot.latitude - beforeKnot.latitude) * 111320,
+        )
+
+        expect(outputDistance).toBeLessThan(1)
+    })
+
+    it('keeps Bezier camera spline samples within their source track segment', () => {
+        const segmentStartDistance = 2000
+        const segmentEndDistance = 4000
+        const sampledDistances = []
+        const sampleAtDistance = distance => {
+            sampledDistances.push(distance)
+            if (distance < segmentStartDistance || distance > segmentEndDistance) {
+                throw new Error('Camera smoothing crossed a track segment boundary')
+            }
+
+            return {
+                longitude: (distance - segmentStartDistance) / 111320,
+                latitude: 1,
+                altitude: 120,
+                distanceFromStart: distance,
+            }
+        }
+
+        smoothReplayCameraAnchorSample({
+            sample: sampleAtDistance(3000),
+            smoothingWindowMeters: 200,
+            maximumOffsetMeters: 250,
+            segmentStartDistance,
+            segmentEndDistance,
+            cameraZigzagSections: [],
+            sampleAtDistance,
+            fallbackCropWidthMeters: 1000,
+        })
+
+        expect(sampledDistances.length).toBeGreaterThan(0)
+        expect(sampledDistances.every(distance => (
+            distance >= segmentStartDistance && distance <= segmentEndDistance
+        ))).toBe(true)
     })
 
     it('keeps a zigzag width decision stable across altitude changes within the section', () => {
