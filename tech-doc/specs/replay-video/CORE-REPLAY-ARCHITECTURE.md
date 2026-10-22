@@ -244,7 +244,7 @@ caps its horizontal offset at one quarter of the currently projected crop
 width. It does not change the canonical route sample used by the trace, marker,
 visibility checks, or crop progression. Tight-zigzag chord simplification
 remains a separate camera-only rule and applies only when the section's
-cross-track amplitude is below half the projected crop width.
+cross-track amplitude is below half of the projected crop width.
 
 Live Dynamic tracking predicts a sustained exit from its trigger zone using two
 future route projections, then begins the correction before the marker reaches
