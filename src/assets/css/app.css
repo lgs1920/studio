@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -586,6 +586,11 @@ body.lgs-app-booting #cesium-viewer {
     background: var(--wa-color-brand) !important;
 }
 
+.lgs-widget-control-box .moveable-guideline.lgs-widget-snap-alignment-guideline {
+    background: var(--wa-color-brand) !important;
+    opacity: 1 !important;
+}
+
 .lgs-widget-control-box .moveable-guideline.lgs-widget-snap-center-guideline {
     background: var(--wa-color-warning) !important;
     opacity: var(--lgs-widget-snap-center-opacity);
@@ -991,6 +996,111 @@ body.lgs-app-booting #cesium-viewer {
     right: 0;
     left: 0;
     height: 1px;
+}
+
+.replay-widget-guides-overlay {
+    position: fixed;
+    overflow: visible;
+    user-select: none;
+    touch-action: none;
+}
+
+.replay-widget-guides-overlay.is-placing {
+    cursor: crosshair;
+}
+
+.replay-widget-guide {
+    position: absolute;
+    z-index: 1;
+    display: block;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    pointer-events: auto;
+    touch-action: none;
+}
+
+.replay-widget-guide::after {
+    position: absolute;
+    display: block;
+    content: '';
+    border-width: 0;
+    border-color: var(--wa-color-brand);
+    border-style: dashed;
+    opacity: 1;
+}
+
+.replay-widget-guide-horizontal {
+    right: 0;
+    left: 0;
+    height: 14px;
+    transform: translateY(-50%);
+}
+
+.replay-widget-guide-horizontal::after {
+    top: 50%;
+    right: 0;
+    left: 0;
+    border-top: 2px dashed var(--wa-color-brand);
+    transform: translateY(-50%);
+}
+
+.replay-widget-guide-vertical {
+    top: 0;
+    bottom: 0;
+    width: 14px;
+    transform: translateX(-50%);
+}
+
+.replay-widget-guide-vertical::after {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    border-left: 2px dashed var(--wa-color-brand);
+    transform: translateX(-50%);
+}
+
+.replay-widget-guide-context-menu {
+    min-width: 9rem;
+    pointer-events: auto;
+}
+
+.replay-widget-guide-context-menu-item {
+    font-size: var(--wa-font-size-s);
+
+    & wa-icon {
+        font-size: var(--wa-font-size-s);
+    }
+
+    &:focus-visible {
+        outline-color: var(--lgs-card-on-map-hover-outline-color);
+    }
+}
+
+.replay-guide-menu-entry {
+    width: 100%;
+    padding: 0;
+}
+
+.replay-guide-dropdown {
+    display: block;
+    width: 100%;
+}
+
+.replay-guide-menu-trigger {
+    width: 100%;
+    appearance: none;
+    color: inherit;
+    font-family: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    text-align: left;
+
+    &:focus-visible {
+        outline-color: var(--lgs-card-on-map-hover-outline-color);
+    }
 }
 
 .widget-deck-entry wa-icon {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-06
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -52,4 +52,6 @@ export const replay = {
     readiness:      {...defaults.readiness},
     orbitAllowed:   true,
     basicPreparationActive: false,
+    alignmentGuides: [],
+    guidePlacementOrientation: null,
 }

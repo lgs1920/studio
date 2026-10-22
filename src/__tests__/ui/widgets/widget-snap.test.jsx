@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { proxyMap } from 'valtio/utils'
-import { LGS_TOOLBAR, LGS_VISUAL_WIDGET } from '@Core/constants'
+import { LGS_TOOLBAR, LGS_VISUAL_WIDGET, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 
 const moveableState = vi.hoisted(() => ({
@@ -511,6 +511,28 @@ describe('Widget snap behavior', () => {
             expect(latestMoveableProps().horizontalGuidelines.map(guideline => guideline.pos)).toEqual([20, 70, 120])
         })
         expect(latestMoveableProps().snappable).toBe(true)
+    })
+
+    it('adds Replay Expert alignment guides as snap targets for widgets', async () => {
+        installGlobals()
+        Object.defineProperty(lgs.canvas, 'clientLeft', {value: 1})
+        Object.defineProperty(lgs.canvas, 'clientTop', {value: 1})
+        lgs.settings.ui.replay = proxy({userMode: 'expert'})
+        lgs.stores.replay.recordingSync = true
+        lgs.stores.replay.alignmentGuides = [
+            {id: 'vertical-guide', orientation: 'vertical', position: 0.25},
+            {id: 'horizontal-guide', orientation: 'horizontal', position: 0.75},
+        ]
+        lgs.stores.ui.video.editing = true
+
+        renderWidget({type: LGS_VISUAL_WIDGET, widgetsBoard: VIDEO_WIDGETS_BOARD})
+
+        await waitFor(() => {
+            expect(latestMoveableProps().verticalGuidelines.map(guideline => guideline.pos)).toEqual([51, 101])
+            expect(latestMoveableProps().horizontalGuidelines.map(guideline => guideline.pos)).toEqual([51, 76])
+        })
+        expect(latestMoveableProps().verticalGuidelines[0].className).toBe('lgs-widget-snap-alignment-guideline')
+        expect(latestMoveableProps().horizontalGuidelines[1].className).toBe('lgs-widget-snap-alignment-guideline')
     })
 
     it('snaps video widgets to other widgets on the same board', async () => {

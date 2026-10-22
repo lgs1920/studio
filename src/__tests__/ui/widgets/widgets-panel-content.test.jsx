@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -43,7 +43,32 @@ vi.mock('@Components/MainUI/widgets/openWidgetManagementDrawer', () => ({
 
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaDivider:     props => <hr {...props}/>,
-    WaIcon:        ({name}) => <span data-icon={name}/>,
+    WaDropdown:    ({children, className, onWaSelect, placement}) => {
+        const childList = Array.isArray(children) ? children : [children]
+        const trigger = childList.find(child => child?.props?.slot === 'trigger')
+        const options = childList.filter(child => child?.props?.value)
+
+        return (
+            <details className={className} data-testid="replay-guide-dropdown" data-placement={placement}>
+                <summary>{trigger?.props.children}</summary>
+                {options.map(option => (
+                    <button
+                        key={option.props.value}
+                        type="button"
+                        disabled={option.props.disabled}
+                        onClick={event => {
+                            onWaSelect?.({detail: {item: {value: option.props.value}}})
+                            event.currentTarget.closest('details').open = false
+                        }}
+                    >
+                        {option.props.children}
+                    </button>
+                ))}
+            </details>
+        )
+    },
+    WaDropdownItem: ({children}) => children,
+    WaIcon:        ({name, ...props}) => <span data-icon={name} {...props}/>,
     WaNumberInput: ({children, onInput, ...props}) => (
         <wa-number-input {...props} onInput={onInput}>
             {children}
@@ -97,6 +122,7 @@ describe('WidgetsPanelContent', () => {
                 }),
             },
             stores: {
+                replay: proxy({recordingSync: false, basicPreparationActive: false, alignmentGuides: [], guidePlacementOrientation: null}),
                 ui: proxy({
                     widget: {
                         list:  new Map(),
@@ -230,5 +256,49 @@ describe('WidgetsPanelContent', () => {
             'text-widget#new',
             expect.objectContaining({zIndex: 4101}),
         )
+    })
+
+    it('opens the right-side guide menu and offers both orientations only during Expert Replay preparation', async () => {
+        globalThis.lgs.settings.ui.replay = proxy({userMode: 'expert'})
+        globalThis.lgs.stores.replay.recordingSync = true
+        globalThis.lgs.stores.ui.video.editing = true
+
+        render(<WidgetsPanelContent groups={[]}/>)
+
+        const guideDropdown = await screen.findByTestId('replay-guide-dropdown')
+        expect(guideDropdown.getAttribute('data-placement')).toBe('right-start')
+        expect(guideDropdown.open).toBe(false)
+        fireEvent.click(screen.getByText('Add Guide'))
+        expect(guideDropdown.open).toBe(true)
+        expect(screen.getByText('Horizontal')).not.toBeNull()
+        expect(guideDropdown.querySelector('[data-icon="grip-lines"]')).not.toBeNull()
+        expect(guideDropdown.querySelector('[data-icon="grip-lines-vertical"]')).not.toBeNull()
+        fireEvent.click(screen.getByText('Horizontal'))
+
+        expect(lgs.stores.replay.guidePlacementOrientation).toBe('horizontal')
+        expect(guideDropdown.open).toBe(false)
+
+        lgs.settings.ui.replay.userMode = 'basic'
+        await waitFor(() => expect(screen.queryByText('Add Guide')).toBeNull())
+    })
+
+    it('disables an orientation when it already has twenty guides', async () => {
+        globalThis.lgs.settings.ui.replay = proxy({userMode: 'expert'})
+        globalThis.lgs.stores.replay.recordingSync = true
+        globalThis.lgs.stores.ui.video.editing = true
+        globalThis.lgs.stores.replay.alignmentGuides = Array.from({length: 20}, (_, index) => ({
+            id: `horizontal-${index}`,
+            orientation: 'horizontal',
+            position: index / 20,
+            blocked: false,
+        }))
+
+        render(<WidgetsPanelContent groups={[]}/>)
+
+        await screen.findByTestId('replay-guide-dropdown')
+        fireEvent.click(screen.getByText('Add Guide'))
+
+        expect(screen.getByText('Horizontal').closest('button').disabled).toBe(true)
+        expect(screen.getByText('Vertical').closest('button').disabled).toBe(false)
     })
 })

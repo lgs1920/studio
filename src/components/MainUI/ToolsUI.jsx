@@ -25,6 +25,7 @@ import { WidgetContextMenu }    from '@Components/MainUI/widgets/WidgetContextMe
 import { Cropper }           from '@Components/ToolsUI/cropper/Cropper'
 import { VideoRecordingScreenArea } from '@Components/MainUI/video/VideoRecordingScreenArea'
 import {VideoSceneWidgetsPortal} from '@Components/MainUI/video/VideoSceneWidgetsPortal'
+import {ReplayWidgetGuides} from '@Components/MainUI/video/ReplayWidgetGuides'
 import {
     JOURNEY_TOOLBAR_WIDGET, JOURNEY_WIDGETS, REPLAY_TIMELINE_WIDGET, SCENE_WIDGETS_BOARD,
 } from '@Core/constants'
@@ -125,6 +126,7 @@ export const ToolsUI = () => {
                              basicPreparationActive={replay.basicPreparationActive === true}
                              renderRatioWidget={false}
                              options={{infoComponent: <VideoSettingsInfo/>}}/>
+                    <ReplayWidgetGuides/>
                     {!(video.timelinePreviewActive === true && replay.recordingSync === true) && (
                         <VideoRecordingSettingsWidget id="video-recording-settings-widget"/>
                     )}

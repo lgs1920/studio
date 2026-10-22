@@ -34,8 +34,10 @@ import {
 }                                from '@Core/ui/widget-manager/widgetGridUtils'
 import { isWidgetAvailable }     from '@Core/ui/widget-manager/widgetAvailability'
 import { getWidgetInstanceStats } from '@Core/ui/widget-manager/widgetInstancePolicy'
+import { REPLAY_USER_MODE_EXPERT, resolveJourneyReplayUserMode } from '@Core/ui/replay/ReplayUserModeConstants'
+import { nextReplayWidgetGuidePosition, setReplayWidgetGuidePlacement } from '@Core/ui/replay/ReplayWidgetGuideUtils'
 import { useOptionalSnapshot }    from '@Utils/ValtioUtils'
-import { WaDivider, WaIcon, WaNumberInput, WaSwitch } from '@awesome.me/webawesome/dist/react'
+import { WaDivider, WaDropdown, WaDropdownItem, WaIcon, WaNumberInput, WaSwitch } from '@awesome.me/webawesome/dist/react'
 import classNames                from 'classnames'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }           from 'valtio'
@@ -54,6 +56,8 @@ export const WidgetsPanelContent = ({groups, themeClassName = 'wa-theme-lgs1920-
     const widgetDynamicRenderer = WidgetDynamicRenderer.instance
     const widget = useSnapshot(lgs.stores.ui.widget)
     const video = useSnapshot(lgs.stores.ui.video)
+    const replay = useOptionalSnapshot(lgs.stores?.replay, {recordingSync: false, basicPreparationActive: false})
+    const replaySettings = useOptionalSnapshot(lgs.settings?.ui?.replay, {userMode: 'basic'})
     const gridSnapshot = useOptionalSnapshot(lgs.settings?.ui?.widgets?.grid, DEFAULT_WIDGET_GRID_SETTINGS)
     const grid = useMemo(
         () => getWidgetGridSettings(gridSnapshot),
@@ -68,6 +72,12 @@ export const WidgetsPanelContent = ({groups, themeClassName = 'wa-theme-lgs1920-
         || video.cropper?.widgetEditor === true
         || video.cropper?.ratioEditor === true
     const widgetsBoard = isVideoBoardContext ? VIDEO_WIDGETS_BOARD : SCENE_WIDGETS_BOARD
+    const canAddReplayGuide = video.editing === true
+        && replay.recordingSync === true
+        && replay.basicPreparationActive !== true
+        && resolveJourneyReplayUserMode({replay, settings: replaySettings}) === REPLAY_USER_MODE_EXPERT
+    const canAddHorizontalGuide = nextReplayWidgetGuidePosition('horizontal', replay.alignmentGuides) !== null
+    const canAddVerticalGuide = nextReplayWidgetGuidePosition('vertical', replay.alignmentGuides) !== null
 
     // Counter to ensure new widgets are placed on top of the stack
     const _widgetIndex = useRef(WIDGET_LAYER_START)
@@ -172,6 +182,25 @@ export const WidgetsPanelContent = ({groups, themeClassName = 'wa-theme-lgs1920-
         event.preventDefault()
         event.stopPropagation()
         action()
+    }
+
+    /**
+     * Starts placement for a guide with the selected orientation.
+     * @param {'horizontal'|'vertical'} orientation - Guide axis selected from the menu.
+     */
+    const chooseGuideOrientation = orientation => {
+        setReplayWidgetGuidePlacement(orientation)
+    }
+
+    /**
+     * Applies the orientation selected in the Web Awesome dropdown.
+     * @param {CustomEvent} event - Dropdown selection event containing its selected item.
+     */
+    const handleGuideOrientationSelection = event => {
+        const orientation = event.detail?.item?.value
+        if (orientation === 'horizontal' || orientation === 'vertical') {
+            chooseGuideOrientation(orientation)
+        }
     }
 
     /**
@@ -332,6 +361,40 @@ export const WidgetsPanelContent = ({groups, themeClassName = 'wa-theme-lgs1920-
                     )}
                 </li>
             </ul>
+
+            {canAddReplayGuide && (
+                <ul className="widget-group replay-guide-menu">
+                    <li className="replay-guide-menu-entry">
+                        <WaDropdown
+                            className="replay-guide-dropdown"
+                            placement="right-start"
+                            distance={4}
+                            onWaSelect={handleGuideOrientationSelection}
+                        >
+                            <button
+                                type="button"
+                                slot="trigger"
+                                aria-haspopup="menu"
+                                className="widget-deck-entry widget-deck-item small replay-guide-menu-trigger"
+                                onMouseDown={handleInteraction}
+                                onTouchStart={handleInteraction}
+                            >
+                                <WaIcon name="ruler" variant="regular"/>
+                                <span className="widget-name">Add Guide</span>
+                                <WaIcon name="chevron-right" variant="regular"/>
+                            </button>
+                            <WaDropdownItem value="horizontal" disabled={!canAddHorizontalGuide}>
+                                <WaIcon slot="icon" name="grip-lines" variant="regular"/>
+                                Horizontal
+                            </WaDropdownItem>
+                            <WaDropdownItem value="vertical" disabled={!canAddVerticalGuide}>
+                                <WaIcon slot="icon" name="grip-lines-vertical" variant="regular"/>
+                                Vertical
+                            </WaDropdownItem>
+                        </WaDropdown>
+                    </li>
+                </ul>
+            )}
 
             {[...availableGroups.entries()].map(([groupKey, groupValue]) => (
                 <ul key={groupKey} className="widget-group">

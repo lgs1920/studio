@@ -31,6 +31,7 @@ import {
     resolveReplayTimelineWidgetVisibility,
     resolveVideoOverlayVisibility,
 } from '@Core/ui/replay/ReplayOverlayResolver'
+import {REPLAY_USER_MODE_EXPERT, resolveJourneyReplayUserMode} from '@Core/ui/replay/ReplayUserModeConstants'
 import {
     buildCenteredGridLines,
     DEFAULT_WIDGET_GRID_SETTINGS,
@@ -59,8 +60,10 @@ const SNAPSHOT_MIN_SIZE = 240
 const SNAPSHOT_MIN_PADDING = 80
 const SNAPSHOT_MAX_PADDING = 220
 const WIDGET_SNAP_GRID_GUIDELINE_CLASS = 'lgs-widget-snap-grid-guideline'
+const WIDGET_SNAP_ALIGNMENT_GUIDELINE_CLASS = 'lgs-widget-snap-alignment-guideline'
 const WIDGET_SNAP_CENTER_GUIDELINE_CLASS = 'lgs-widget-snap-center-guideline'
 const WIDGET_SNAP_ELEMENT_GUIDELINE_CLASS = 'lgs-widget-snap-element-guideline'
+const EMPTY_REPLAY_ALIGNMENT_GUIDES = []
 const CROP_RESIZE_DIRECTIONS = Object.freeze(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'])
 
 /**
@@ -646,6 +649,13 @@ const WidgetHost = ({
     const canSnapWidget = isVisualWidget && (config?.snappable ?? true)
     const canSnapCenter = canSnapWidget && !config.isCropper
     const gridSnapEnabled = canSnapWidget && widgetGrid.enabled && widgetGrid.snap
+    const replayAlignmentGuides = Array.isArray(replay.alignmentGuides) ? replay.alignmentGuides : EMPTY_REPLAY_ALIGNMENT_GUIDES
+    const replayAlignmentGuidesActive = config.widgetsBoard === VIDEO_WIDGETS_BOARD
+        && !config.isCropper
+        && video.editing === true
+        && replay.recordingSync === true
+        && replay.basicPreparationActive !== true
+        && resolveJourneyReplayUserMode({replay, settings: lgs.settings?.ui?.replay}) === REPLAY_USER_MODE_EXPERT
 
     const elementGuidelines = useMemo(() => {
         if (!canSnapWidget) {
@@ -696,21 +706,50 @@ const WidgetHost = ({
         const localGridGuidelines = canSnapWidget && !config.isCropper && config?.snapGrid
                                     ? buildCenteredGridLines(rect, config.snapGrid)
                                     : {verticalGuidelines: [], horizontalGuidelines: []}
-        return {
-            verticalGuidelines:   mergeStyledGuidelines(
+        const alignmentGuidelines = (replayAlignmentGuidesActive ? replayAlignmentGuides : []).reduce((result, guide) => {
+            const position = Number(guide?.position)
+            if (!Number.isFinite(position)) {
+                return result
+            }
+            if (guide.orientation === 'vertical') {
+                result.verticalGuidelines.push(rect.left + (Math.min(1, Math.max(0, position)) * rect.width))
+            }
+            else if (guide.orientation === 'horizontal') {
+                result.horizontalGuidelines.push(rect.top + (Math.min(1, Math.max(0, position)) * rect.height))
+            }
+            return result
+        }, {verticalGuidelines: [], horizontalGuidelines: []})
+        const verticalGuidelines = mergeStyledGuidelines(
                 centerGuidelines.verticalGuidelines,
                 peerCenterGuidelines.verticalGuidelines,
+                createStyledGuidelines(alignmentGuidelines.verticalGuidelines, WIDGET_SNAP_ALIGNMENT_GUIDELINE_CLASS),
                 createStyledGuidelines(gridGuidelines.verticalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
                 createStyledGuidelines(localGridGuidelines.verticalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
-            ),
-            horizontalGuidelines: mergeStyledGuidelines(
+            )
+        const horizontalGuidelines = mergeStyledGuidelines(
                 centerGuidelines.horizontalGuidelines,
                 peerCenterGuidelines.horizontalGuidelines,
+                createStyledGuidelines(alignmentGuidelines.horizontalGuidelines, WIDGET_SNAP_ALIGNMENT_GUIDELINE_CLASS),
                 createStyledGuidelines(gridGuidelines.horizontalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
                 createStyledGuidelines(localGridGuidelines.horizontalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
-            ),
+            )
+
+        // Replay widgets are portaled into a fixed viewport layer. Moveable adds the crop board's
+        // viewport offset to fixed-target guidelines, so pass crop-relative values here.
+        if (config.widgetsBoard === VIDEO_WIDGETS_BOARD) {
+            const leftOffset = rect.left - (container.clientLeft || 0)
+            const topOffset = rect.top - (container.clientTop || 0)
+            return {
+                verticalGuidelines: verticalGuidelines.map(guideline => ({...guideline, pos: guideline.pos - leftOffset})),
+                horizontalGuidelines: horizontalGuidelines.map(guideline => ({...guideline, pos: guideline.pos - topOffset})),
+            }
         }
-    }, [actualContainer, canSnapCenter, canSnapWidget, config.isCropper, config.snapGrid, config.widgetsBoard, gridSnapEnabled, widgetGrid.size, widgetId, widgetListSnapshot])
+
+        return {
+            verticalGuidelines,
+            horizontalGuidelines,
+        }
+    }, [actualContainer, canSnapCenter, canSnapWidget, config.isCropper, config.snapGrid, config.widgetsBoard, gridSnapEnabled, replayAlignmentGuides, replayAlignmentGuidesActive, widgetGrid.size, widgetId, widgetListSnapshot])
 
     useEffect(() => {
         const update = () => {
