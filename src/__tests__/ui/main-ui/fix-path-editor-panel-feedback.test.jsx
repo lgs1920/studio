@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-20
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -43,6 +43,16 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
     ),
     WaInput: () => <input/>,
     WaNumberInput: () => <input type="number"/>,
+    WaProgressBar: ({children, className, value, label}) => (
+        <div
+            className={className}
+            role="progressbar"
+            aria-valuenow={value}
+            aria-label={label}
+        >
+            {children}
+        </div>
+    ),
     WaTooltip: ({children, for: target, placement}) => <wa-tooltip for={target} placement={placement}>{children}</wa-tooltip>,
 }))
 
@@ -324,17 +334,18 @@ describe('FixPathEditorPanel feedback callouts', () => {
         expect(screen.getByRole('button', {name: 'Dismiss selection instruction'})).toBeTruthy()
     })
 
-    it('shows scan and save progress messages in small callouts', () => {
+    it('shows scan progress in a branded bar and save progress in a small callout', () => {
         render(<FixPathEditorPanel
             {...createPanelProps(null)}
             scanProgress={{phase: 'project', value: 40}}
             saving
         />)
 
-        const scanCallout = findCalloutFor('Scanning Journey points: 40%')
         const saveCallout = findCalloutFor('Validating and applying Journey changes…')
-        expect(scanCallout.getAttribute('data-size')).toBe('s')
-        expect(scanCallout.querySelector('[data-slot="icon"]')?.getAttribute('data-icon')).toBe('magnifying-glass')
+        const scanProgress = screen.getByRole('progressbar', {name: 'Scanning Journey points: 40%'})
+        expect(screen.queryByText('Scanning Journey points: 40%', {selector: '.fix-path-status-callout'})).toBeNull()
+        expect(scanProgress.getAttribute('aria-valuenow')).toBe('40')
+        expect(scanProgress.classList.contains('fix-path-scan-progress')).toBe(true)
         expect(saveCallout.getAttribute('data-size')).toBe('s')
         expect(saveCallout.querySelector('[data-slot="icon"]')?.getAttribute('data-icon')).toBe('arrows-rotate')
     })

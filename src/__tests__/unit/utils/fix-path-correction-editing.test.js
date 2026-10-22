@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -445,16 +445,50 @@ describe('Fix Path correction editing', () => {
         expect(result.corrections.some(section => section.startIndex <= 3 && section.endIndex >= 5)).toBe(false)
     })
 
-    it('creates one section per disjoint selected route interval', () => {
+    it('creates one continuous section for one lasso intersection', () => {
         const content = makeFeature()
 
-        const result = buildFixPathSectionsFromSourceIndexes(content, [], 0, new Set([1, 2, 6, 7]))
+        const result = buildFixPathSectionsFromSourceIndexes(content, [], 0, new Set([1, 7]))
 
         expect(result.errors).toEqual([])
         expect(result.corrections.map(section => [section.startIndex, section.endIndex])).toEqual([
+            [1, 7],
+        ])
+        expect(result.sections).toHaveLength(1)
+        expect(result.sections[0].controlPoints.map(point => point.sourceIndex)).toEqual([1, 2, 3, 4, 5, 6, 7])
+        expect(result.sections[0].controlPoints.filter(point => [3, 4, 5].includes(point.sourceIndex))
+            .every(point => point.fixed === false)).toBe(true)
+    })
+
+    it('keeps two disjoint lasso intersections as two sections', () => {
+        const content = makeFeature()
+        const first = buildFixPathSectionsFromSourceIndexes(content, [], 0, new Set([1, 2]))
+        const second = buildFixPathSectionsFromSourceIndexes(content, first.corrections, 0, new Set([6, 7]))
+
+        expect(second.errors).toEqual([])
+        expect(second.corrections.map(section => [section.startIndex, section.endIndex])).toEqual([
             [1, 2],
             [6, 7],
         ])
+    })
+
+    it('merges existing sections bridged by one disjoint lasso selection', () => {
+        const content = makeFeature()
+        const corrections = [
+            makeCorrection(content, 'section-a', 0, 1, 'control-a', [0.000025, 0.0002, 10]),
+            makeCorrection(content, 'section-b', 6, 8, 'control-b', [0.00035, 0.0002, 70]),
+        ]
+
+        const result = buildFixPathSectionsFromSourceIndexes(content, corrections, 0, new Set([2, 5]))
+
+        expect(result.errors).toEqual([])
+        expect(result.corrections).toHaveLength(1)
+        expect(result.corrections[0]).toMatchObject({startIndex: 0, endIndex: 8})
+        expect(result.sections).toHaveLength(1)
+        expect(result.sections[0].controlPoints.map(point => point.id)).toEqual(expect.arrayContaining([
+            'control-a',
+            'control-b',
+        ]))
     })
 
     it('keeps erased source points hidden when the surrounding sections are extended again', () => {

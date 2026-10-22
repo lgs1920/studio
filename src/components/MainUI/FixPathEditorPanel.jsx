@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import {LGSScrollbars} from '@Components/MainUI/LGSScrollbars'
 import {applyPOIDuotoneIconStyles} from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import {ToggleStateIcon} from '@Components/ToggleStateIcon'
 import {UnitUtils} from '@Utils/UnitUtils'
-import {WaButton, WaCallout, WaIcon, WaInput, WaNumberInput, WaTooltip} from '@awesome.me/webawesome/dist/react'
+import {WaButton, WaCallout, WaIcon, WaInput, WaNumberInput, WaProgressBar, WaTooltip} from '@awesome.me/webawesome/dist/react'
 import {getControlPointCoordinate} from './FixPathEditorGeometry'
 
 const FIX_PATH_CALLOUT_PRESENTATION = {
@@ -161,15 +161,7 @@ export const FixPathEditorPanel = ({
         point.removed === true || point.fixed === true
     ))
     const canRemoveSelectedCorrectionPoints = selectedCorrectionPoints.some(point => point.removed !== true)
-    const statusMessage = scanProgress
-        ? {
-            type: 'progress',
-            icon: scanProgress.phase === 'project' ? 'magnifying-glass' : 'eye',
-            text: scanProgress.phase === 'project'
-                ? 'Scanning Journey points: ' + scanProgress.value + '%'
-                : 'Checking terrain visibility: ' + scanProgress.value + '%',
-        }
-        : !areaMode
+    const statusMessage = !scanProgress && !areaMode
             ? selection.phase === 'choose-start'
                 ? selectedControlPoints.length > 0
                     ? {
@@ -406,9 +398,15 @@ export const FixPathEditorPanel = ({
         )}
 
         {scanProgress && (
-            <progress className="fix-path-scan-progress" max="100" value={scanProgress.value}>
+            <WaProgressBar
+                className="fix-path-scan-progress"
+                value={scanProgress.value}
+                label={scanProgress.phase === 'project'
+                    ? 'Scanning Journey points: ' + scanProgress.value + '%'
+                    : 'Checking terrain visibility: ' + scanProgress.value + '%'}
+            >
                 {scanProgress.value + '%'}
-            </progress>
+            </WaProgressBar>
         )}
 
         {selection.phase === 'add-points' && (

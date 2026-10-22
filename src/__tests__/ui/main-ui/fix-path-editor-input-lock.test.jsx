@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -64,6 +64,9 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
     ),
     WaNumberInput: ({'aria-label': ariaLabel, value, onInput, onChange, disabled}) => (
         <input aria-label={ariaLabel} type="number" value={value} onInput={onInput} onChange={onChange} disabled={disabled}/>
+    ),
+    WaProgressBar: ({children, className, value, label}) => (
+        <div className={className} role="progressbar" aria-valuenow={value} aria-label={label}>{children}</div>
     ),
 }))
 
@@ -1656,7 +1659,7 @@ describe('FixPathEditor map input ownership', () => {
                         }
                     },
                     pickPositionSupported: true,
-                    pickPosition: () => Cartesian3.fromDegrees(-122.004, 37.002, 50),
+                    pickPosition: () => null,
                     postRender: {addEventListener: () => () => {}},
                 },
                 camera,
@@ -1683,8 +1686,8 @@ describe('FixPathEditor map input ownership', () => {
         const updateCallsBeforeLasso = updateJourney.mock.calls.length
         const removedPointLasso = [
             {x: 70, y: 46},
-            {x: 76, y: 46},
-            {x: 76, y: 54},
+            {x: 84, y: 46},
+            {x: 84, y: 54},
             {x: 70, y: 54},
         ]
         removedPointLasso.forEach(({x, y}, index) => {
@@ -1704,12 +1707,15 @@ describe('FixPathEditor map input ownership', () => {
             await Promise.resolve()
         })
 
-        expect(journey.fixPathCorrectionData.revision).toBe(1)
+        expect(journey.fixPathCorrectionData.revision).toBe(2)
         expect(journey.fixPathCorrectionData.tracks['track-a'][0].controlPoints.find(point => point.sourceIndex === 9))
             .toMatchObject({fixed: false, removed: true, erased: true})
         expect(document.querySelector('.fix-path-control-point[data-control-point-id="fix-point-0-9"]')).toBeNull()
         expect(document.querySelector('.fix-path-correction-point-row[data-control-point-id="fix-point-0-9"]'))
             .toBeNull()
-        expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeLasso)
+        await waitFor(() => expect(updateJourney).toHaveBeenCalledTimes(updateCallsBeforeLasso + 1))
+        expect(journey.fixPathCorrectionData.tracks['track-a'][0].controlPoints)
+            .toContainEqual(expect.objectContaining({sourceIndex: 10, fixed: false, removed: false}))
+        expect(document.querySelector('.fix-path-control-point[data-control-point-id="fix-point-0-10"]')).not.toBeNull()
     }, 20000)
 })

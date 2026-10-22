@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,10 @@ import {
     appendScreenSelectionVertex,
     buildSmoothClosedScreenSelectionGeometry,
     buildSourcePointSvgPath,
+    createScreenPolygonTester,
+    createScreenScanYieldClock,
     findClosestSourcePoint,
+    groupScreenSelectionPointsByRoute,
     isScreenPointInsideArea,
     isScreenPointInsidePolygon,
     normalizeScreenSelectionArea,
@@ -49,6 +52,61 @@ describe('Fix Path screen area selection', () => {
         expect(isScreenPointInsidePolygon({x: 30, y: 30}, polygon)).toBe(false)
         expect(isScreenPointInsidePolygon({x: 10, y: 25}, polygon)).toBe(true)
         expect(isScreenPointInsidePolygon({x: 30, y: 30}, polygon.slice(0, 2))).toBe(false)
+    })
+
+    it('reuses a prepared polygon test and rejects points outside its bounds', () => {
+        const polygon = [
+            {x: 0, y: 0},
+            {x: 40, y: 0},
+            {x: 40, y: 10},
+            {x: 10, y: 10},
+            {x: 10, y: 40},
+            {x: 0, y: 40},
+        ]
+        const containsPoint = createScreenPolygonTester(polygon)
+
+        expect(containsPoint).toBeTypeOf('function')
+        expect(containsPoint({x: 5, y: 30})).toBe(true)
+        expect(containsPoint({x: 10, y: 25})).toBe(true)
+        expect(containsPoint({x: 30, y: 30})).toBe(false)
+        expect(containsPoint({x: 50, y: 50})).toBe(false)
+        expect(createScreenPolygonTester([{x: 0, y: 0}, {x: Number.NaN, y: 1}, {x: 1, y: 0}])).toBeNull()
+    })
+
+    it('only requests a scan yield after its time slice is consumed', () => {
+        let currentTime = 10
+        const yieldClock = createScreenScanYieldClock(8, () => currentTime)
+
+        expect(yieldClock.shouldYield()).toBe(false)
+        currentTime += 7
+        expect(yieldClock.shouldYield()).toBe(false)
+        currentTime += 1
+        expect(yieldClock.shouldYield()).toBe(true)
+        yieldClock.reset()
+        expect(yieldClock.shouldYield()).toBe(false)
+    })
+
+    it('keeps separate route and segment intersections in separate lasso zones', () => {
+        const points = [
+            {trackSlug: 'track-a', segmentIndex: 0, index: 1},
+            {trackSlug: 'track-a', segmentIndex: 0, index: 2},
+            {trackSlug: 'track-a', segmentIndex: 0, index: 3},
+            {trackSlug: 'track-a', segmentIndex: 0, index: 7},
+            {trackSlug: 'track-a', segmentIndex: 0, index: 8},
+            {trackSlug: 'track-a', segmentIndex: 1, index: 0},
+            {trackSlug: 'track-b', segmentIndex: 0, index: 1},
+        ]
+
+        expect(groupScreenSelectionPointsByRoute(points).map(zone => zone.map(point => [
+            point.trackSlug,
+            point.segmentIndex,
+            point.index,
+        ]))).toEqual([
+            [['track-a', 0, 1], ['track-a', 0, 2], ['track-a', 0, 3]],
+            [['track-a', 0, 7], ['track-a', 0, 8]],
+            [['track-a', 1, 0]],
+            [['track-b', 0, 1]],
+        ])
     })
 
     it('appends separated lasso vertices and ignores near-duplicates', () => {

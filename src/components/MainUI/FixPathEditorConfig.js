@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,7 +44,7 @@ export const FIX_PATH_WIDGET_CONFIG = {
     widgetsBoard: SCENE_WIDGETS_BOARD,
 }
 
-export const SOURCE_SCAN_BATCH_SIZE = 256
-export const OCCLUSION_SCAN_BATCH_SIZE = 12
+export const SCAN_TIME_BUDGET_MS = 8
+export const SOURCE_SCAN_YIELD_CHECK_INTERVAL = 64
 export const SOURCE_VISIBILITY_CELL_SIZE = 4
 export const EMPTY_CORRECTION_TRACKS = Object.freeze({})

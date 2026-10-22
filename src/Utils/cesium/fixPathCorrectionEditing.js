@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -548,35 +548,12 @@ export const buildFixPathControlPointAddition = (
 }
 
 /**
- * Split selected source vertices into independent contiguous route intervals.
- * @param {Iterable<number>} sourceIndexes - Selected source coordinate indexes.
- * @returns {Array<Array<number>>} Sorted contiguous index groups.
- */
-export const groupFixPathSourceIndexes = sourceIndexes => {
-    const indexes = [...new Set(Array.from(sourceIndexes ?? []).filter(index => (
-        Number.isInteger(index) && index >= 0
-    )))].sort((first, second) => first - second)
-    const groups = []
-
-    indexes.forEach(index => {
-        const currentGroup = groups.at(-1)
-        if (!currentGroup || index !== currentGroup.at(-1) + 1) {
-            groups.push([index])
-            return
-        }
-        currentGroup.push(index)
-    })
-
-    return groups
-}
-
-/**
- * Create or extend sections for selected, non-removed source vertices without filling disjoint gaps.
+ * Create or extend one continuous section for selected, non-removed source vertices.
  * @param {object} content - Track content.
  * @param {Array<object>} corrections - Existing track correction sections.
  * @param {number} segmentIndex - Geometry segment index.
  * @param {Iterable<number>} sourceIndexes - Selected source coordinate indexes.
- * @returns {{corrections: Array<object>, sections: Array<object>, errors: Array<string>}} Updated sections.
+ * @returns {{corrections: Array<object>, sections: Array<object>, errors: Array<string>}} Updated section.
  */
 export const buildFixPathSectionsFromSourceIndexes = (content, corrections, segmentIndex, sourceIndexes) => {
     let nextCorrections = corrections
@@ -595,25 +572,27 @@ export const buildFixPathSectionsFromSourceIndexes = (content, corrections, segm
     })
 
     const selectableSourceIndexes = Array.from(sourceIndexes ?? [])
-        .filter(index => !removedSourceIndexes.has(index))
+        .filter(index => Number.isInteger(index) && index >= 0 && !removedSourceIndexes.has(index))
+    const uniqueIndexes = [...new Set(selectableSourceIndexes)].sort((first, second) => first - second)
+    if (uniqueIndexes.length === 0) {
+        return {corrections: nextCorrections, sections: [], errors}
+    }
 
-    groupFixPathSourceIndexes(selectableSourceIndexes).forEach(indexes => {
-        const result = buildFixPathSection(
-            content,
-            nextCorrections,
-            segmentIndex,
-            indexes[0],
-            indexes.at(-1),
-        )
-        if (result.error || !result.correction) {
-            errors.push(result.error ?? 'The selected Journey points could not form a correction section.')
-            return
-        }
-
+    const result = buildFixPathSection(
+        content,
+        nextCorrections,
+        segmentIndex,
+        uniqueIndexes[0],
+        uniqueIndexes.at(-1),
+    )
+    if (result.error || !result.correction) {
+        errors.push(result.error ?? 'The selected Journey points could not form a correction section.')
+    }
+    else {
         nextCorrections = result.corrections
         const section = nextCorrections.find(item => item.id === result.correction.id)
         if (section) sectionsById.set(section.id, section)
-    })
+    }
 
     return {corrections: nextCorrections, sections: [...sectionsById.values()], errors}
 }

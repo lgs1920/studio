@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,7 +36,9 @@ import {
 import {
     appendScreenSelectionVertex,
     buildSmoothClosedScreenSelectionGeometry,
-    isScreenPointInsidePolygon,
+    createScreenPolygonTester,
+    createScreenScanYieldClock,
+    groupScreenSelectionPointsByRoute,
     normalizeScreenSelectionArea,
 } from '@Utils/cesium/fixPathScreenSelection'
 import {ELEVATION_UNITS, INTERNATIONAL, UnitUtils} from '@Utils/UnitUtils'
@@ -52,8 +54,8 @@ import {FixPathCallout, FixPathEditorPanel} from './FixPathEditorPanel'
 import {
     EMPTY_CORRECTION_TRACKS,
     FIX_PATH_WIDGET_CONFIG,
-    OCCLUSION_SCAN_BATCH_SIZE,
-    SOURCE_SCAN_BATCH_SIZE,
+    SCAN_TIME_BUDGET_MS,
+    SOURCE_SCAN_YIELD_CHECK_INTERVAL,
     SOURCE_VISIBILITY_CELL_SIZE,
 } from './FixPathEditorConfig'
 import {
@@ -1245,6 +1247,10 @@ export const FixPathEditor = () => {
         if (!scene || !canvas || !overlay) {
             return []
         }
+        const containsPoint = createScreenPolygonTester(polygon)
+        if (!containsPoint) {
+            return []
+        }
         const generation = ++scanGenerationRef.current
         setPanelFeedback(null)
         const routeSegments = availableTracks
@@ -1257,6 +1263,7 @@ export const FixPathEditor = () => {
         const overlayRect = overlay.getBoundingClientRect()
         const canvasRect = canvas.getBoundingClientRect()
         const candidates = []
+        const yieldClock = createScreenScanYieldClock(SCAN_TIME_BUDGET_MS)
         let processed = 0
         setAreaMode(false)
         setSelection({phase: 'choose-start', startPoint: null, controlPoints: []})
@@ -1268,7 +1275,7 @@ export const FixPathEditor = () => {
                 const coordinate = segment.coordinates[index]
                 const worldPosition = worldPositionForCoordinate(scene, coordinate)
                 const screen = projectCoordinate(scene, overlayRect, canvasRect, canvas, coordinate, worldPosition)
-                if (screen && isScreenPointInsidePolygon({x: screen.x, y: screen.y}, polygon)) {
+                if (screen && containsPoint({x: screen.x, y: screen.y})) {
                     candidates.push({
                         trackSlug: segment.trackSlug,
                         segmentIndex: segment.segmentIndex,
@@ -1282,14 +1289,21 @@ export const FixPathEditor = () => {
                     })
                 }
                 processed += 1
-                if (processed % SOURCE_SCAN_BATCH_SIZE === 0) {
+                if (processed % SOURCE_SCAN_YIELD_CHECK_INTERVAL === 0) {
                     setScanProgress({
                         phase: 'project',
                         value: total > 0 ? Math.min(70, Math.round(processed / total * 70)) : 70,
                         processed,
                         total,
                     })
+                    if (!yieldClock.shouldYield()) {
+                        if (scanGenerationRef.current !== generation) {
+                            return
+                        }
+                        continue
+                    }
                     await nextAnimationFrame()
+                    yieldClock.reset()
                     if (scanGenerationRef.current !== generation) {
                         return
                     }
@@ -1297,12 +1311,22 @@ export const FixPathEditor = () => {
             }
         }
 
+        const candidateZones = groupScreenSelectionPointsByRoute(candidates)
         const visibilityCells = new Map()
-        candidates.forEach(point => {
-            const cell = Math.floor(point.x / SOURCE_VISIBILITY_CELL_SIZE) + ':' + Math.floor(point.y / SOURCE_VISIBILITY_CELL_SIZE)
-            const group = visibilityCells.get(cell) ?? []
-            group.push(point)
-            visibilityCells.set(cell, group)
+        candidateZones.forEach((zone, zoneIndex) => {
+            const firstPoint = zone[0]
+            const zoneId = firstPoint.trackSlug + ':' + firstPoint.segmentIndex + ':' + firstPoint.index + ':' + zoneIndex
+            const startIndex = firstPoint.index
+            const endIndex = zone.at(-1).index
+            zone.forEach(point => {
+                point.selectionZoneId = zoneId
+                point.selectionZoneStartIndex = startIndex
+                point.selectionZoneEndIndex = endIndex
+                const cell = zoneId + ':' + Math.floor(point.x / SOURCE_VISIBILITY_CELL_SIZE) + ':' + Math.floor(point.y / SOURCE_VISIBILITY_CELL_SIZE)
+                const group = visibilityCells.get(cell) ?? []
+                group.push(point)
+                visibilityCells.set(cell, group)
+            })
         })
         const groups = [...visibilityCells.values()]
         const visiblePoints = []
@@ -1318,7 +1342,7 @@ export const FixPathEditor = () => {
             if (visible) {
                 visiblePoints.push(...group)
             }
-            if (index % OCCLUSION_SCAN_BATCH_SIZE === OCCLUSION_SCAN_BATCH_SIZE - 1) {
+            if (yieldClock.shouldYield()) {
                 setScanProgress({
                     phase: 'visibility',
                     value: 70 + Math.round((index + 1) / Math.max(1, groups.length) * 30),
@@ -1326,6 +1350,7 @@ export const FixPathEditor = () => {
                     total,
                 })
                 await nextAnimationFrame()
+                yieldClock.reset()
                 if (scanGenerationRef.current !== generation) {
                     return
                 }
@@ -1353,18 +1378,19 @@ export const FixPathEditor = () => {
         }
         setPanelFeedback(null)
 
-        const selectedBySegment = new Map()
+        const selectedByZone = new Map()
         sourcePoints.forEach(point => {
             if (!trackBySlug.has(point.trackSlug) || !Number.isInteger(point.segmentIndex)
-                || !Number.isInteger(point.index)) return
-            const key = point.trackSlug + ':' + point.segmentIndex
-            const selected = selectedBySegment.get(key) ?? {
+                || !Number.isInteger(point.index) || !point.selectionZoneId
+                || !Number.isInteger(point.selectionZoneStartIndex)
+                || !Number.isInteger(point.selectionZoneEndIndex)) return
+            const selected = selectedByZone.get(point.selectionZoneId) ?? {
                 trackSlug: point.trackSlug,
                 segmentIndex: point.segmentIndex,
-                indexes: new Set(),
+                startIndex: point.selectionZoneStartIndex,
+                endIndex: point.selectionZoneEndIndex,
             }
-            selected.indexes.add(point.index)
-            selectedBySegment.set(key, selected)
+            selectedByZone.set(point.selectionZoneId, selected)
         })
 
         const previousSection = _activeSection.current
@@ -1372,10 +1398,14 @@ export const FixPathEditor = () => {
         const nextDraft = {...previousDraft}
         let activeSection = null
         const errors = []
-        selectedBySegment.forEach(({trackSlug, segmentIndex, indexes}) => {
+        selectedByZone.forEach(({trackSlug, segmentIndex, startIndex, endIndex}) => {
             const trackContent = trackBySlug.get(trackSlug)?.content
-            if (!trackContent || indexes.size === 0) return
+            if (!trackContent) return
             const corrections = nextDraft[trackSlug] ?? []
+            const indexes = new Set(Array.from(
+                {length: endIndex - startIndex + 1},
+                (_, offset) => startIndex + offset,
+            ))
             const result = buildFixPathSectionsFromSourceIndexes(
                 trackContent,
                 corrections,
@@ -1447,8 +1477,10 @@ export const FixPathEditor = () => {
 
         const sameSection = point => point.trackSlug === draft.trackSlug
             && point.correctionId === draft.correctionId
+        const containsPoint = createScreenPolygonTester(polygon)
+        if (!containsPoint) return true
         const enclosedPoints = projected.controlPoints
-            .filter(point => sameSection(point) && isScreenPointInsidePolygon(point, polygon))
+            .filter(point => sameSection(point) && containsPoint(point))
             .map(point => ({
                 trackSlug: point.trackSlug,
                 correctionId: point.correctionId,

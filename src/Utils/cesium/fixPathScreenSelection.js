@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,42 +34,103 @@ export const isScreenPointInsideArea = (point, area) => point.x >= area.left
     && point.y >= area.top
     && point.y <= area.bottom
 
-/** Test whether a projected point lies inside or on the edge of a screen polygon. */
-export const isScreenPointInsidePolygon = (point, polygon) => {
-    if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)
-        || !Array.isArray(polygon) || polygon.length < 3
+/** Prepare a reusable screen-polygon test with validated edges and fast bounds rejection. */
+export const createScreenPolygonTester = polygon => {
+    if (!Array.isArray(polygon) || polygon.length < 3
         || polygon.some(vertex => !Number.isFinite(vertex?.x) || !Number.isFinite(vertex?.y))) {
-        return false
+        return null
     }
 
-    let inside = false
-    for (let index = 0, previousIndex = polygon.length - 1; index < polygon.length; previousIndex = index, index += 1) {
-        const current = polygon[index]
-        const previous = polygon[previousIndex]
-        const edgeX = current.x - previous.x
-        const edgeY = current.y - previous.y
-        const edgeLengthSquared = edgeX * edgeX + edgeY * edgeY
-        const relativeX = point.x - previous.x
-        const relativeY = point.y - previous.y
+    const bounds = polygon.reduce((result, vertex) => ({
+        left: Math.min(result.left, vertex.x),
+        top: Math.min(result.top, vertex.y),
+        right: Math.max(result.right, vertex.x),
+        bottom: Math.max(result.bottom, vertex.y),
+    }), {left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity})
+    const edges = polygon.map((current, index) => {
+        const previous = polygon[(index - 1 + polygon.length) % polygon.length]
+        const x = current.x - previous.x
+        const y = current.y - previous.y
+        return {
+            current,
+            previous,
+            x,
+            y,
+            lengthSquared: x * x + y * y,
+            length: Math.hypot(x, y),
+        }
+    })
 
-        if (edgeLengthSquared > 0) {
-            const projection = (relativeX * edgeX + relativeY * edgeY) / edgeLengthSquared
-            const crossProduct = relativeX * edgeY - relativeY * edgeX
-            if (projection >= 0 && projection <= 1
-                && Math.abs(crossProduct) <= 0.75 * Math.sqrt(edgeLengthSquared)) {
-                return true
+    return point => {
+        if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)
+            || point.x < bounds.left || point.x > bounds.right
+            || point.y < bounds.top || point.y > bounds.bottom) {
+            return false
+        }
+
+        let inside = false
+        for (const edge of edges) {
+            const relativeX = point.x - edge.previous.x
+            const relativeY = point.y - edge.previous.y
+
+            if (edge.lengthSquared > 0) {
+                const projection = (relativeX * edge.x + relativeY * edge.y) / edge.lengthSquared
+                const crossProduct = relativeX * edge.y - relativeY * edge.x
+                if (projection >= 0 && projection <= 1
+                    && Math.abs(crossProduct) <= 0.75 * edge.length) {
+                    return true
+                }
+            }
+
+            const crossesRay = (edge.current.y > point.y) !== (edge.previous.y > point.y)
+            if (crossesRay) {
+                const intersectionX = edge.current.x
+                    + ((point.y - edge.current.y) * (edge.previous.x - edge.current.x))
+                        / (edge.previous.y - edge.current.y)
+                if (point.x < intersectionX) inside = !inside
             }
         }
 
-        const crossesRay = (current.y > point.y) !== (previous.y > point.y)
-        if (crossesRay) {
-            const intersectionX = current.x
-                + ((point.y - current.y) * (previous.x - current.x)) / (previous.y - current.y)
-            if (point.x < intersectionX) inside = !inside
+        return inside
+    }
+}
+
+/** Test whether a projected point lies inside or on the edge of a screen polygon. */
+export const isScreenPointInsidePolygon = (point, polygon) => createScreenPolygonTester(polygon)?.(point) ?? false
+
+/** Create a yield clock that only pauses scans after they exceed a time slice. */
+export const createScreenScanYieldClock = (timeBudgetMs = 8, now = () => performance.now()) => {
+    const budget = Number.isFinite(timeBudgetMs) && timeBudgetMs > 0 ? timeBudgetMs : 8
+    let sliceStartedAt = now()
+
+    return {
+        /** Return whether the current work slice has consumed its time budget. */
+        shouldYield: () => now() - sliceStartedAt >= budget,
+        /** Start a new work slice after yielding control to the browser. */
+        reset: () => {
+            sliceStartedAt = now()
+        },
+    }
+}
+
+/** Group lasso hits into route-contiguous intersection zones before visibility filtering. */
+export const groupScreenSelectionPointsByRoute = points => {
+    const zones = []
+    for (const point of points ?? []) {
+        const previousZone = zones.at(-1)
+        const previousPoint = previousZone?.at(-1)
+        if (!previousPoint
+            || previousPoint.trackSlug !== point.trackSlug
+            || previousPoint.segmentIndex !== point.segmentIndex
+            || previousPoint.index + 1 !== point.index) {
+            zones.push([point])
+            continue
         }
+
+        previousZone.push(point)
     }
 
-    return inside
+    return zones
 }
 
 /** Append a screen vertex unless it duplicates the preceding point. */
