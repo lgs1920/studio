@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-24
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
+import { CURRENT_JOURNEY } from '@Core/constants'
 import { precacheSnapdomAssets, runDeferredJourneyDataLoad } from '@Core/ui/deferredJourneyData'
 
 vi.hoisted(() => {
@@ -94,6 +95,108 @@ describe('deferred journey data loading', () => {
                                                               caption: 'Journeys loaded',
                                                               text:    'All journeys are ready.',
                                                           })
+    })
+
+    it('pauses the current Journey orbit while the remaining Journeys load, then resumes it in place', async () => {
+        const previousLgs = globalThis.lgs
+        const previousNamespace = globalThis.__
+        const events = []
+        let resolveJourneys
+        const loadedJourneys = new Promise(resolve => {
+            resolveJourneys = resolve
+        })
+        const rotate = {
+            direction: -1,
+            rpm: 0.75,
+            running: true,
+            target: {element: CURRENT_JOURNEY, id: 'journey-current'},
+        }
+        const cameraManager = {
+            rotateAround: vi.fn(async (_point, options) => {
+                events.push(['resume', options])
+                rotate.running = true
+            }),
+            stopRotate: vi.fn(async () => {
+                events.push(['stop'])
+                rotate.running = false
+            }),
+        }
+        const deps = dependencies()
+        deps.currentPOIsReady = true
+        deps.startupLoader = {
+            loadPOIs: vi.fn(async () => undefined),
+            loadRemainingJourneys: vi.fn(() => {
+                events.push(['load'])
+                return loadedJourneys
+            }),
+        }
+        globalThis.lgs = {
+            stores: {replay: {orbitAllowed: true}, ui: {mainUI: {rotate}}},
+            theJourney: {slug: 'journey-current'},
+        }
+        globalThis.__ = {ui: {cameraManager}}
+
+        try {
+            const loading = runDeferredJourneyDataLoad(deps)
+            await vi.waitFor(() => expect(deps.startupLoader.loadRemainingJourneys).toHaveBeenCalledOnce())
+
+            expect(cameraManager.stopRotate).toHaveBeenCalledOnce()
+            expect(rotate.running).toBe(false)
+            expect(cameraManager.rotateAround).not.toHaveBeenCalled()
+            expect(events.map(([event]) => event)).toEqual(['stop', 'load'])
+
+            resolveJourneys([{slug: 'journey-secondary'}])
+            await loading
+
+            expect(cameraManager.rotateAround).toHaveBeenCalledWith(null, {
+                direction: -1,
+                infinite: true,
+                preserveView: true,
+                rpm: 0.75,
+            })
+            expect(events.map(([event]) => event)).toEqual(['stop', 'load', 'resume'])
+            expect(rotate.running).toBe(true)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+            globalThis.__ = previousNamespace
+        }
+    })
+
+    it('does not pause an orbit that targets a different point during deferred loading', async () => {
+        const previousLgs = globalThis.lgs
+        const previousNamespace = globalThis.__
+        const cameraManager = {
+            rotateAround: vi.fn(),
+            stopRotate: vi.fn(),
+        }
+        const deps = dependencies()
+        deps.currentPOIsReady = true
+        deps.startupLoader = {
+            loadPOIs: vi.fn(async () => undefined),
+            loadRemainingJourneys: vi.fn(async () => []),
+        }
+        globalThis.lgs = {
+            stores: {replay: {orbitAllowed: true}, ui: {mainUI: {rotate: {
+                direction: 1,
+                rpm: 1,
+                running: true,
+                target: {element: 'poi', id: 'poi-current'},
+            }}}},
+            theJourney: {slug: 'journey-current'},
+        }
+        globalThis.__ = {ui: {cameraManager}}
+
+        try {
+            await runDeferredJourneyDataLoad(deps)
+
+            expect(cameraManager.stopRotate).not.toHaveBeenCalled()
+            expect(cameraManager.rotateAround).not.toHaveBeenCalled()
+        }
+        finally {
+            globalThis.lgs = previousLgs
+            globalThis.__ = previousNamespace
+        }
     })
 
     it('does not show a toast when there are no additional journeys', async () => {
