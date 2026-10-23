@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-17
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -141,5 +141,41 @@ describe('FileUtils.readFileAsTextAsync', () => {
             expect.objectContaining({strategy: 'file.arrayBuffer', name: 'NotFoundError'}),
             expect.objectContaining({strategy: 'FileReader.readAsArrayBuffer', name: 'NotFoundError'}),
         ])
+    })
+})
+
+describe('FileUtils.readFileAsArrayBufferAsync', () => {
+    afterEach(() => {
+        vi.unstubAllGlobals()
+    })
+
+    it('returns the original bytes without text decoding', async () => {
+        const sourceBytes = new Uint8Array([0, 46, 70, 73, 84, 255])
+        const file = {arrayBuffer: vi.fn().mockResolvedValue(sourceBytes.buffer)}
+
+        await expect(FileUtils.readFileAsArrayBufferAsync(file)).resolves.toBe(sourceBytes.buffer)
+        expect(file.arrayBuffer).toHaveBeenCalledTimes(1)
+    })
+
+    it('falls back to FileReader when the Blob API fails', async () => {
+        const sourceBytes = new Uint8Array([0, 46, 70, 73, 84, 255])
+        const file = {arrayBuffer: vi.fn().mockRejectedValue(new Error('Blob read failed'))}
+        const reader = {
+            onload: null,
+            onerror: null,
+            result: sourceBytes.buffer,
+            readAsArrayBuffer: vi.fn(() => reader.onload()),
+        }
+
+        vi.stubGlobal('URL', {})
+        vi.stubGlobal('FileReader', class {
+            constructor() {
+                return reader
+            }
+        })
+
+        const content = await FileUtils.readFileAsArrayBufferAsync(file)
+        expect(Array.from(new Uint8Array(content))).toEqual(Array.from(sourceBytes))
+        expect(reader.readAsArrayBuffer).toHaveBeenCalledWith(file)
     })
 })

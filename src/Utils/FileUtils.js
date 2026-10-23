@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -76,6 +76,43 @@ const readFileAsTextWithFileReaderBuffer = file => {
 
         reader.readAsArrayBuffer(file)
     })
+}
+
+/**
+ * Reads a file as an ArrayBuffer through FileReader.
+ * @param {File} file
+ * @returns {Promise<ArrayBuffer>}
+ */
+const readFileAsArrayBufferWithFileReader = file => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+
+        reader.onload = () => resolve(reader.result)
+        reader.onerror = () => reject(reader.error)
+
+        reader.readAsArrayBuffer(file)
+    })
+}
+
+/**
+ * Reads a file as an ArrayBuffer through a temporary object URL.
+ * @param {File} file
+ * @returns {Promise<ArrayBuffer>}
+ */
+const readFileAsArrayBufferWithObjectUrl = async file => {
+    const objectUrl = URL.createObjectURL(file)
+
+    try {
+        const response = await fetch(objectUrl)
+        if (!response.ok) {
+            throw new Error(`Unable to read file through object URL: ${response.status}`)
+        }
+
+        return await response.arrayBuffer()
+    }
+    finally {
+        URL.revokeObjectURL(objectUrl)
+    }
 }
 
 /**
@@ -208,6 +245,42 @@ export class FileUtils {
         if (!isAndroidPlatform() && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
             try {
                 return await readFileAsTextWithObjectUrl(file)
+            }
+            catch (error) {
+                attempts.push({strategy: 'blob URL + fetch', error})
+            }
+        }
+
+        throw createFileReadError(attempts)
+    }
+
+    /**
+     * Reads file bytes without decoding them as text.
+     * @param {File} file
+     * @returns {Promise<ArrayBuffer>}
+     */
+    static readFileAsArrayBufferAsync = async (file) => {
+        const attempts = []
+
+        if (typeof file?.arrayBuffer === 'function') {
+            try {
+                return await file.arrayBuffer()
+            }
+            catch (error) {
+                attempts.push({strategy: 'file.arrayBuffer', error})
+            }
+        }
+
+        try {
+            return await readFileAsArrayBufferWithFileReader(file)
+        }
+        catch (error) {
+            attempts.push({strategy: 'FileReader.readAsArrayBuffer', error})
+        }
+
+        if (!isAndroidPlatform() && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+            try {
+                return await readFileAsArrayBufferWithObjectUrl(file)
             }
             catch (error) {
                 attempts.push({strategy: 'blob URL + fetch', error})
