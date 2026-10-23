@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-12
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -43,10 +43,10 @@ describe('Replay camera crop constraint', () => {
         const corrected = constrainReplayCameraFrameToCrop(options)
         const point = projectReplayTargetInCameraFrame({...options, frame: corrected})
 
-        expect(point.x).toBeGreaterThanOrEqual(0)
-        expect(point.x).toBeLessThanOrEqual(viewport.width)
-        expect(point.y).toBeGreaterThanOrEqual(0)
-        expect(point.y).toBeLessThanOrEqual(viewport.height)
+        expect(point.x).toBeGreaterThanOrEqual(viewport.width * 0.2 - 1e-6)
+        expect(point.x).toBeLessThanOrEqual(viewport.width * 0.8 + 1e-6)
+        expect(point.y).toBeGreaterThanOrEqual(viewport.height * 0.2 - 1e-6)
+        expect(point.y).toBeLessThanOrEqual(viewport.height * 0.8 + 1e-6)
         expect(corrected.direction).toBe(frame.direction)
         expect(corrected.up).toBe(frame.up)
         expect(Cartesian3.distance(corrected.destination, target))

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -102,6 +102,7 @@ import {
 import {
     REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS,
     REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_LOOKAHEAD_SECONDS,
+    replayNavigationTransitionTiming,
 } from '@Core/ui/replay/JourneyReplayCameraShared'
 import {
     JOURNEY_REPLAY_INTERNAL_CALL,
@@ -193,6 +194,30 @@ const makeJourney = () => ({
 describe('Journey replay camera paths', () => {
     afterEach(() => {
         vi.unstubAllGlobals()
+    })
+
+    it.each([
+        [15, 1.5],
+        [30, 2.5],
+        [45, 3.75],
+        [48, 4],
+        [90, 4],
+    ])('scales Navigation timing for a %s-second route', (durationSeconds, expectedTransitionSeconds) => {
+        const timing = replayNavigationTransitionTiming(durationSeconds)
+
+        expect(timing.transitionSeconds).toBe(expectedTransitionSeconds)
+        expect(timing.confirmationLookaheadSeconds)
+            .toBeCloseTo(expectedTransitionSeconds / 4, 8)
+        expect(timing.confirmationMillis)
+            .toBeCloseTo(250 * expectedTransitionSeconds / 3, 8)
+    })
+
+    it('keeps the reference Navigation timing when route duration is unknown', () => {
+        expect(replayNavigationTransitionTiming(null)).toEqual({
+            transitionSeconds:             3,
+            confirmationLookaheadSeconds:  REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_LOOKAHEAD_SECONDS,
+            confirmationMillis:            250,
+        })
     })
 
     it('reapplies a camera view when only the configured Replay zoom changes', () => {
@@ -2336,7 +2361,7 @@ describe('Journey replay camera paths', () => {
         expect(call.recenterCameraToSample).not.toHaveBeenCalled()
     })
 
-    it('keeps the predictive Navigation target aligned with the three-second transition', () => {
+    it('keeps the predictive Navigation target aligned with the route-scaled transition', () => {
         vi.stubGlobal('lgs', {
             settings: {
                 ui: {
@@ -2359,6 +2384,7 @@ describe('Journey replay camera paths', () => {
         })
 
         const {mode, state, call} = makeMode()
+        const transitionTiming = replayNavigationTransitionTiming(30)
         const anchorSample = {
             progress:          0.5,
             distanceFromStart: 100,
@@ -2399,12 +2425,13 @@ describe('Journey replay camera paths', () => {
             sample:   anchorSample,
             progress: anchorSample.progress,
             source:   'playback',
+            duration: 30,
         })
 
         expect(lookaheadSeconds).toEqual([
-            3,
-            REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_LOOKAHEAD_SECONDS,
-            3,
+            2.5,
+            transitionTiming.confirmationLookaheadSeconds,
+            2.5,
         ])
         expect(lookaheadMinimumMeters).toEqual([
             REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS,
@@ -2414,8 +2441,64 @@ describe('Journey replay camera paths', () => {
         expect(REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS).toBe(0)
         expect(call.startDeterministicCameraTransition).toHaveBeenCalledWith(expect.objectContaining({
             sample: futureSample,
-            duration: 3,
+            duration: 2.5,
         }))
+    })
+
+    it('reserves the route-scaled transition duration for the final Navigation approach', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            positionMode: 'system',
+                            pitch:        -60,
+                            altitude:     1000,
+                        },
+                        marker: {mode: REPLAY_MARKER_MODE_NAVIGATION},
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    camera: {positionMode: 'system', pitch: -60, altitude: 1000},
+                },
+            },
+            viewer: {camera: {}},
+        })
+
+        const {mode, state, call} = makeMode()
+        const sample = {
+            progress:          0.92,
+            distanceFromStart: 900,
+            longitude:         2,
+            latitude:          48,
+            altitude:          120,
+            height:            120,
+        }
+        state.cameraMode = REPLAY_MARKER_MODE_NAVIGATION
+        state.controller = {duration: 30, direction: 1}
+        state.lastNavigationRecenterProgress = 0.8
+        call.cameraViewForSample = vi.fn(() => ({
+            sample,
+            heading:      0,
+            pitch:        -Math.PI / 3,
+            cameraHeight: 1000,
+        }))
+
+        updateCamera(mode, {
+            sample,
+            progress: sample.progress,
+            source: 'playback',
+            duration: 30,
+            logicalFrame: {durationMillis: 60000, frameTimeMs: 55200},
+        })
+
+        expect(call.startDeterministicCameraTransition).toHaveBeenCalledWith(expect.objectContaining({
+            finishAtReplayEnd: true,
+        }))
+        expect(call.startDeterministicCameraTransition.mock.calls[0][0].duration)
+            .toBeCloseTo(2.4, 8)
     })
 
     it('treats invalid Interactive projections as hard camera collisions', () => {

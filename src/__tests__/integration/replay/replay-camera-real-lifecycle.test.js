@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-10
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -194,10 +194,10 @@ describe('Replay with the real Cesium camera', () => {
                     aspectRatio: camera.frustum.aspectRatio,
                 })
                 expect(point).not.toBeNull()
-                expect(point.x).toBeGreaterThanOrEqual(0)
-                expect(point.x).toBeLessThanOrEqual(viewport.width)
-                expect(point.y).toBeGreaterThanOrEqual(0)
-                expect(point.y).toBeLessThanOrEqual(viewport.height)
+                expect(point.x).toBeGreaterThanOrEqual(viewport.width * 0.2 - 1e-6)
+                expect(point.x).toBeLessThanOrEqual(viewport.width * 0.8 + 1e-6)
+                expect(point.y).toBeGreaterThanOrEqual(viewport.height * 0.2 - 1e-6)
+                expect(point.y).toBeLessThanOrEqual(viewport.height * 0.8 + 1e-6)
             }
             expect(journey.replay.basic.camera.altitude).toBe(altitude)
             expect(journey.replay.basic.camera.pitch).toBe(-30)
@@ -790,6 +790,8 @@ describe('Replay with the real Cesium camera', () => {
             lgs.stores.ui.video.exporting = true
             await mode.preparePlaybackSceneForExport({journey, progress: 0})
             const guide = resolveJourneyReplayCameraAngleGuide({journey, camera: journey.replay.basic.camera})
+            const cameraCall = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+            const viewport = cameraCall.viewportRectForCesiumSurface()
             for (const progress of [0, 0.1, 0.5, 1]) {
                 await mode.renderReplayExportFrame({phase: {kind: 'replay', progress}, frame: {frameTimeMs: progress * controller.duration * 1000, frameIntervalMs: 1000 / 30}})
                 const sample = controller.currentSample()
@@ -797,16 +799,28 @@ describe('Replay with the real Cesium camera', () => {
                 const local = Matrix4.inverseTransformation(Transforms.eastNorthUpToFixedFrame(target), new Matrix4())
                 const direction = Matrix4.multiplyByPointAsVector(local, camera.directionWC, new Cartesian3())
                 const position = Matrix4.multiplyByPoint(local, camera.positionWC, new Cartesian3())
+                const markerPoint = projectReplayTargetInCameraFrame({
+                    frame: {destination: camera.positionWC, direction: camera.directionWC, up: camera.upWC},
+                    target: cameraCall.markerRenderCartesianForSample(sample),
+                    viewport,
+                    verticalFovRadians: camera.frustum.fovy,
+                    aspectRatio: camera.frustum.aspectRatio,
+                })
+                expect(markerPoint.x, `left margin at ${progress}`)
+                    .toBeGreaterThanOrEqual(viewport.width * 0.2 - 1e-6)
+                expect(markerPoint.x, `right margin at ${progress}`)
+                    .toBeLessThanOrEqual(viewport.width * 0.8 + 1e-6)
+                expect(markerPoint.y, `top margin at ${progress}`)
+                    .toBeGreaterThanOrEqual(viewport.height * 0.2 - 1e-6)
+                expect(markerPoint.y, `bottom margin at ${progress}`)
+                    .toBeLessThanOrEqual(viewport.height * 0.8 + 1e-6)
                 if (progress === 0) {
                     expect(Math.atan2(direction.x, direction.y)).toBeCloseTo(Math.atan2(Math.sin(guide.cameraHeading), Math.cos(guide.cameraHeading)), 4)
                 }
-                // The capture clock now eases hard Navigation corrections for
-                // three seconds; intermediate frames can still be settling.
+                // The duration-scaled capture transition may still be settling
+                // in intermediate frames.
                 expect(Math.asin(direction.z), `pitch at ${progress}`).toBeCloseTo(-23 * Math.PI / 180, progress === 1 ? 8 : 4)
-                if (progress > 0 && progress < 1) {
-                    expect(Math.abs(position.z - (3515 - terrainHeight)), `height at ${progress}`).toBeLessThan(1)
-                }
-                else {
+                if (progress === 0 || progress === 1) {
                     expect(position.z, `height at ${progress}`).toBeCloseTo(3515 - terrainHeight, 5)
                 }
                 expect(journey.replay.basic.camera).toMatchObject({pitch: -23, altitude: 3515, cameraAngle: -113})
@@ -922,7 +936,7 @@ describe('Replay with the real Cesium camera', () => {
         }
     })
 
-    it('anticipates an untimed Basic route and eases both position and orientation over three seconds', async () => {
+    it('anticipates an untimed Basic route and eases over its duration-scaled transition', async () => {
         const {camera, mode, journey, settings} = installScene({userMode: 'basic', altitude: 3515, pitch: -23})
         settings.basic.duration = 10
         settings.basic.camera.canFixHiddenMarker = false
@@ -942,27 +956,30 @@ describe('Replay with the real Cesium camera', () => {
             const initialPose = readPose(camera)
             await renderAt(2)
             expectPose(camera, initialPose)
-            const before = readPose(camera)
             await renderAt(2.3)
+            expectPose(camera, initialPose)
+            await renderAt(3.3)
+            const before = readPose(camera)
+            await renderAt(3.5)
             const transition = mode[JOURNEY_REPLAY_INTERNAL_STATE].deterministicCameraTransition
 
             expect(transition).not.toBeNull()
-            expect(transition.endAt - transition.startAt).toBe(3000)
-            expect(transition.sample.progress).toBeCloseTo(0.53, 6)
+            expect(transition.endAt - transition.startAt).toBe(1500)
+            expect(transition.sample.progress).toBeCloseTo(0.5, 6)
             // Starting a correction must not rotate immediately toward its future target.
             expect(Cartesian3.angleBetween(before.direction, camera.directionWC)).toBeLessThan(1e-8)
             expect(Cartesian3.distance(before.position, camera.positionWC)).toBeLessThan(0.0001)
 
             const poses = [readPose(camera)]
-            for (let frame = 1; frame <= 90; frame += 1) {
-                await renderAt(2.3 + frame / 30)
+            for (let frame = 1; frame <= 45; frame += 1) {
+                await renderAt(3.5 + frame / 30)
                 poses.push(readPose(camera))
             }
-            const totalTravel = Cartesian3.distance(poses[0].position, poses[90].position)
+            const totalTravel = Cartesian3.distance(poses[0].position, poses[45].position)
             const positionSteps = poses.slice(1).map((pose, index) => Cartesian3.distance(pose.position, poses[index].position))
             const angularSteps = poses.slice(1).map((pose, index) => Cartesian3.angleBetween(pose.direction, poses[index].direction))
             expect(totalTravel).toBeGreaterThan(100)
-            expect(Math.max(...positionSteps)).toBeLessThan(totalTravel * 0.03)
+            expect(Math.max(...positionSteps)).toBeLessThan(totalTravel * 0.04)
             expect(Math.max(...angularSteps)).toBeLessThan(Math.PI / 180)
         }
         finally {
@@ -988,11 +1005,11 @@ describe('Replay with the real Cesium camera', () => {
                     frame: {frameTimeMs: index * 1000 / 30, frameIntervalMs: 1000 / 30, isLast: index === 300},
                 })
                 poses.push(readPose(camera))
-                if (index === 210) {
+                if (index === 255) {
                     expect(mode[JOURNEY_REPLAY_INTERNAL_STATE].deterministicCameraTransition?.finishAtReplayEnd).toBe(true)
                 }
             }
-            const angularSteps = poses.slice(211).map((pose, index) => Cartesian3.angleBetween(pose.direction, poses[index + 210].direction))
+            const angularSteps = poses.slice(256).map((pose, index) => Cartesian3.angleBetween(pose.direction, poses[index + 255].direction))
             expect(Math.max(...angularSteps)).toBeLessThan(Math.PI / 180)
             const pose = mode.lastReplayLogicalFrame.cameraPose
             const frame = mode[JOURNEY_REPLAY_INTERNAL_CALL].cameraRecenterFrame({...pose, cameraSettings: journey.replay.basic.camera})

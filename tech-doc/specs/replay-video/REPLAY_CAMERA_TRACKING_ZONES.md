@@ -2,7 +2,7 @@
 
 Status: current implementation
 
-Date: 2026-08-03
+Date: 2026-10-23
 
 ## Scope
 
@@ -234,14 +234,28 @@ The current camera frame is tested against:
 
 - the current nominal marker sample;
 - a predicted sample at the adaptive Navigation horizon;
-- a 0.75-second confirmation sample when only the predicted sample is outside
-  Z1.
+- a shorter confirmation sample when only the predicted sample is outside Z1.
 
 A current hard violation is corrected immediately. A predictive-only violation
-must remain confirmed for 250 ms before correction. The predictive transition
-target is sampled at the adaptive Navigation transition horizon, whose normal
-value is 2 seconds. Navigation has no minimum distance floor, so the look-ahead
-remains time-based at low route speeds.
+must remain confirmed for a duration-scaled hold before correction. For route
+duration `D` in seconds, the Navigation transition duration is:
+
+```text
+clamp(D / 12, 1.5, 4) seconds
+```
+
+The route duration excludes start and stop clips. A 30-second route uses a
+2.5-second transition, and routes of 48 seconds or longer use the 4-second
+maximum. The predictive target horizon and final approach use the same
+transition duration. The confirmation sample horizon and hold scale in
+proportion to the transition, retaining the existing 0.75-second and 250 ms
+values when the transition is 3 seconds. Navigation has no minimum distance
+floor, so the look-ahead remains time-based at low route speeds.
+
+Where a frame can be corrected geometrically, the crop constraint keeps the
+marker at least 20% of the crop width and height from each edge, subject to the
+existing 25% maximum inset. Playback and export apply it every frame, including
+while a Navigation transition is active.
 
 Current hard violations, forced corrections, and immediate startup corrections
 apply one complete target-locked frame directly. A confirmed predictive-only

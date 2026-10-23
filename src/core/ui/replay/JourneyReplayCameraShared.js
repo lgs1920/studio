@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,7 +68,7 @@ export const REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS = 40
 export const REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES = 12
 // Navigation lookahead must stay time-based. A zero metric floor lets the
 // sampler use the route speed and the requested horizon instead of turning a
-// two-second export prediction into a much longer low-speed distance prediction.
+// requested duration-based prediction into a much longer low-speed distance prediction.
 export const REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS = 0
 // A predictive Navigation exit must remain stable before it becomes a camera
 // correction. Hard current exits do not use this confirmation window.
@@ -116,6 +116,31 @@ export const CAMERA_REDIRECT_CANDIDATES = Object.freeze([
                                                      {headingOffsetDeg: 0, pitchOffsetDeg: -30},
                                                      {headingOffsetDeg: 0, pitchOffsetDeg: -36},
                                                  ])
+
+const REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_REFERENCE_TRANSITION_SECONDS = 3
+
+/**
+ * Resolve Navigation transition and predictive-confirmation timing from the
+ * configured Replay duration.
+ *
+ * @param {number|null} durationSeconds - Route playback duration, excluding clips.
+ * @returns {{transitionSeconds: number, confirmationLookaheadSeconds: number, confirmationMillis: number}} Navigation timing.
+ */
+export const replayNavigationTransitionTiming = durationSeconds => {
+    const duration = finiteNumber(durationSeconds)
+    const transitionSeconds = duration !== null && duration > 0
+        ? clamp(duration / 12, 1.5, 4)
+        : REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_REFERENCE_TRANSITION_SECONDS
+    const confirmationScale = transitionSeconds
+                              / REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_REFERENCE_TRANSITION_SECONDS
+
+    return {
+        transitionSeconds,
+        confirmationLookaheadSeconds: REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_LOOKAHEAD_SECONDS
+                                      * confirmationScale,
+        confirmationMillis: REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_MILLIS * confirmationScale,
+    }
+}
 
 export const isUsableCartesian3 = value => Boolean(value)
     && [value.x, value.y, value.z].every(component => Number.isFinite(component))

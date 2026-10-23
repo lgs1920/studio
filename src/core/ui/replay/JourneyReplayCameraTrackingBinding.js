@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-03
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,8 +46,8 @@ import {
     REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS,
     REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES,
     REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_LOOKAHEAD_SECONDS,
-    REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_MILLIS,
     REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR,
+    replayNavigationTransitionTiming,
 } from './JourneyReplayCameraShared'
 import {
     JOURNEY_REPLAY_INTERNAL_CALL,
@@ -66,7 +66,6 @@ import {replayCameraFor} from './ReplayRenderTarget'
 import {constrainReplayCameraFrameToCrop} from './JourneyReplayCameraCropConstraint'
 import {replayCameraCropWidthMeters} from './JourneyReplayCameraMotionSmoothing'
 
-const REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS = 3
 const REPLAY_NAVIGATION_TARGET_LEAD_RATIO = 1
 const REPLAY_CAMERA_LIVE_RECENTER_MIN_DURATION_SECONDS = 3
 
@@ -634,6 +633,10 @@ const updateCameraTracking = (mode, {
         ? optionalReplayTimingNumber(logicalFrame?.durationMillis)
             ?? optionalReplayTimingNumber(sample?.journeyDurationMillis)
         : replayDurationSeconds * 1000
+    const navigationTransitionTiming = replayNavigationTransitionTiming(
+        replayDurationSeconds
+        ?? (logicalDurationMillis === null ? null : logicalDurationMillis / 1000),
+    )
     const logicalFrameTimeMillis = optionalReplayTimingNumber(logicalFrame?.frameTimeMs)
                                    ?? optionalReplayTimingNumber(frameTimeMs)
                                    ?? optionalReplayTimingNumber(sample?.journeyElapsedMillis)
@@ -758,7 +761,7 @@ const updateCameraTracking = (mode, {
     }
 
     const baseTrackingTransitionSeconds = markerSettings.mode === REPLAY_MARKER_MODE_NAVIGATION
-        ? REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS
+        ? navigationTransitionTiming.transitionSeconds
         : replayCameraLiveRecenterDuration(cameraSettings.hysteresis.easing)
     const trackingViewport = call.viewportRectForCesiumSurface()
     const targetHeight = call.markerRenderHeightForSample?.(nominalView.sample)
@@ -878,7 +881,7 @@ const updateCameraTracking = (mode, {
     const playbackDurationSeconds = finiteNumber(state.controller?.duration)
         ?? (logicalDurationMillis === null ? null : logicalDurationMillis / 1000)
     const finalApproachProgress = playbackDurationSeconds > 0
-        ? Math.max(0, 1 - REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS / playbackDurationSeconds)
+        ? Math.max(0, 1 - navigationTransitionTiming.transitionSeconds / playbackDurationSeconds)
         : null
     const lastNavigationProgress = finiteNumber(state.lastNavigationRecenterProgress)
     const lastNavigationPlaybackProgress = lastNavigationProgress === null
@@ -889,7 +892,7 @@ const updateCameraTracking = (mode, {
         && finalApproachProgress !== null
         && playbackProgress >= finalApproachProgress
         && lastNavigationPlaybackProgress < finalApproachProgress) {
-        // Reserve the final three Replay seconds for reaching the exact endpoint.
+        // Reserve one duration-scaled transition for reaching the exact endpoint.
         // Snapping an unfinished correction to the nominal final frame otherwise
         // creates a visible rotation regardless of the correction duration.
         const endProgress = playbackDirection < 0 ? 0 : 1
@@ -947,9 +950,9 @@ const updateCameraTracking = (mode, {
             : navigationCameraView
         const viewport = trackingViewport
         const navigationTransitionSeconds = Math.max(
-            REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS,
+            navigationTransitionTiming.transitionSeconds,
             runtimeTracking.timing?.minimumTransitionSeconds
-                ?? REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS,
+                ?? navigationTransitionTiming.transitionSeconds,
         )
         const navigationCameraSettings = normalizeJourneyReplayCamera({
             ...cameraSettings,
@@ -978,7 +981,7 @@ const updateCameraTracking = (mode, {
         const predictedCollision = collisionForSample(predictedSample)
         const confirmationSample = predictedCollision?.hard === true && currentCollision?.hard !== true
             ? call.cameraLookaheadSample?.(predictedSample, {
-                lookaheadSeconds: REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_LOOKAHEAD_SECONDS,
+                lookaheadSeconds: navigationTransitionTiming.confirmationLookaheadSeconds,
                 minimumMeters: REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS,
             }) ?? predictedSample
             : null
@@ -997,7 +1000,7 @@ const updateCameraTracking = (mode, {
         const predictiveConfirmed = predictiveCandidate
                                     && finiteNumber(state.navigationPredictiveViolationAt) !== null
                                     && logicalNow - state.navigationPredictiveViolationAt
-                                       >= REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_MILLIS
+                                       >= navigationTransitionTiming.confirmationMillis
         const currentViolation = currentCollision?.hard === true
                                  || forceToleranceRecenter
                                  || immediateToleranceRecenter
@@ -1037,7 +1040,7 @@ const updateCameraTracking = (mode, {
             minimumMeters: REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS,
         }) ?? predictedSample
         // Hard collisions are already visible when reported. Aim the correction
-        // at where the route will be after its three-second transition instead
+        // at where the route will be after its duration-scaled transition instead
         // of recentering on the sample that will be stale when the flight ends.
         const targetSample = forceToleranceRecenter ? nominalView.sample : predictiveTarget
         const targetNominalView = replayCameraViewForTrackingSample(mode, {

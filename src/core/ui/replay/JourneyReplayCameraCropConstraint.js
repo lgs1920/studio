@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-12
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,9 +18,9 @@ import {Cartesian3, Cartographic} from 'cesium'
 import {clamp, projectReplayTargetInCameraFrame} from './JourneyReplayCameraMath'
 
 /**
- * Keep the rendered marker inside the crop by translating a camera frame.
- * Rotation, frustum and camera-to-target range remain unchanged. When requested,
- * retain the marker's prepared crop-local screen position instead of centering it.
+ * Keep the rendered marker within the crop's central 60% by translating a
+ * camera frame. Rotation, frustum and camera-to-target range remain unchanged.
+ * When requested, retain the prepared crop-local screen position when it fits.
  *
  * @param {Object} options - Physical camera frame, current marker and projection.
  * @param {{x: number, y: number}|null} [options.desiredPoint=null] - Crop-local screen position to preserve.
@@ -44,8 +44,8 @@ export const constrainReplayCameraFrameToCrop = ({
     const canvasHeight = viewport.canvasHeight ?? viewport.height
     const cropLeft = (viewport.left ?? 0) - (viewport.canvasLeft ?? 0)
     const cropTop = (viewport.top ?? 0) - (viewport.canvasTop ?? 0)
-    const insetX = Math.min(viewport.width / 4, Math.max(markerRadius, viewport.width * 0.12))
-    const insetY = Math.min(viewport.height / 4, Math.max(markerRadius, viewport.height * 0.12))
+    const insetX = Math.min(viewport.width / 4, Math.max(markerRadius, viewport.width * 0.2))
+    const insetY = Math.min(viewport.height / 4, Math.max(markerRadius, viewport.height * 0.2))
     const projection = {target, viewport, verticalFovRadians, aspectRatio}
     const point = projectReplayTargetInCameraFrame({...projection, frame})
     const desiredX = Number.isFinite(Number(desiredPoint?.x))
