@@ -26,6 +26,14 @@ Workflow:
 6. Use FontAwesome icons through the existing integration and add shortcut documentation when introducing shortcuts.
 7. Test the component at narrow and wide layouts and in light or dark theme contexts when relevant.
 
+## Form controls and sizing
+
+Use `label-at-start` for every labeled Web Awesome form control by default, including inputs, number inputs, selects, switches, sliders, and groups. Supply the visible label through the component's `label` property or label slot. Choose another placement only when the component's established design requires it.
+
+For a compact `wa-switch[label-at-start]` whose toggle should sit directly beside its label, add the `width-auto` attribute. If the row still needs a fixed or half-width column, apply that width to a wrapper and keep the switch itself compact.
+
+Use the shared `half-width` class for a control intended to take half of its available row. To place two controls side by side at 50% each, use an equal two-column layout and apply `half-width` to both controls. Check the Web Awesome parts and component-scoped CSS so `label-at-start` does not accidentally shrink a control within its column.
+
 ## Icons
 
 Use the native Web Awesome icon component or its React wrapper for all UI icons. Use the
