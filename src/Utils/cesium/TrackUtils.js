@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -85,6 +85,57 @@ let trackWidthCanvas = null
 let trackWidthWheelHandler = null
 let trackLocatorMarkerTooltipElement = null
 let activeTrackLocatorMarkerTooltipEntityId = null
+
+/**
+ * Read the current positions from a static track polyline entity.
+ *
+ * @param {object} entity - Track entity whose polyline positions are resolved.
+ * @returns {Array<Cartesian3>} Polyline positions, or an empty array when unavailable.
+ */
+const getPolylinePositions = entity => {
+    const value = entity?.polyline?.positions
+    const positions = typeof value?.getValue === 'function' ? value.getValue() : value
+    return Array.isArray(positions) ? positions : []
+}
+
+/**
+ * Update a Cesium graphic property without replacing its ConstantProperty wrapper.
+ *
+ * @param {object} graphic - Cesium graphics object to update.
+ * @param {string} propertyName - Name of the graphic property to update.
+ * @param {*} value - New property value.
+ * @returns {void}
+ */
+const setGraphicValue = (graphic, propertyName, value) => {
+    const property = graphic?.[propertyName]
+    if (typeof property?.setValue === 'function') {
+        property.setValue(value)
+        return
+    }
+
+    if (graphic) {
+        graphic[propertyName] = value
+    }
+}
+
+/**
+ * Size an endpoint point so its fill and outline match a layered track line.
+ *
+ * @param {object} entity - Endpoint entity with a PointGraphics instance.
+ * @param {number} fillWidth - Screen width of the main track line.
+ * @param {number} underlayWidth - Screen width of the underlay line.
+ * @returns {void}
+ */
+const setUnderlayCapSize = (entity, fillWidth, underlayWidth) => {
+    const point = entity?.point
+    if (!point) {
+        return
+    }
+
+    const innerWidth = Math.min(fillWidth, underlayWidth)
+    setGraphicValue(point, 'pixelSize', innerWidth)
+    setGraphicValue(point, 'outlineWidth', Math.max(0, (underlayWidth - innerWidth) / 2))
+}
 
 const coordinateSignature = coordinate => Array.isArray(coordinate)
                                               ? coordinate.slice(0, 3).map(value => `${value}`).join(',')
@@ -1018,6 +1069,7 @@ export class TrackUtils {
                 const showFar = displayMode === TRACK_DISPLAY_MODES.FAR
                 entities.main.forEach(entity => TrackUtils.setPolylineVisibility(entity, showStyled))
                 entities.underlay.forEach(entity => TrackUtils.setPolylineVisibility(entity, showStyled))
+                entities.underlayCaps.forEach(entity => { entity.show = showStyled })
                 entities.far.forEach(entity => TrackUtils.setPolylineVisibility(entity, showFar))
 
                 if (displayMode === TRACK_DISPLAY_MODES.LOCATOR_MARKER) {
@@ -1032,15 +1084,27 @@ export class TrackUtils {
             }
 
             if (displayMode === TRACK_DISPLAY_MODES.STYLE) {
-                if (force || TrackUtils.hasTrackWidthChanged(state.mainWidth, mainStyledWidth)) {
+                const mainWidthChanged = force || TrackUtils.hasTrackWidthChanged(state.mainWidth, mainStyledWidth)
+                const underlayWidthChanged = force
+                    || TrackUtils.hasTrackWidthChanged(state.underlayWidth, underlayStyledWidth)
+                if (mainWidthChanged) {
                     entities.main.forEach(entity => TrackUtils.setPolylineWidth(entity, mainStyledWidth))
                     state.mainWidth = mainStyledWidth
                     changed = true
                 }
 
-                if (style.underlay.enabled && (force || TrackUtils.hasTrackWidthChanged(state.underlayWidth, underlayStyledWidth))) {
+                if (style.underlay.enabled && underlayWidthChanged) {
                     entities.underlay.forEach(entity => TrackUtils.setPolylineWidth(entity, underlayStyledWidth))
                     state.underlayWidth = underlayStyledWidth
+                    changed = true
+                }
+
+                if (style.underlay.enabled && (mainWidthChanged || underlayWidthChanged)) {
+                    entities.underlayCaps.forEach(entity => setUnderlayCapSize(
+                        entity,
+                        mainStyledWidth,
+                        underlayStyledWidth,
+                    ))
                     changed = true
                 }
             }
@@ -1165,9 +1229,10 @@ export class TrackUtils {
                                                                 }, style.underlay.color)
                                : null
         const entities = {
-            main:     [],
-            underlay: [],
-            far:      [],
+            main:         [],
+            underlay:     [],
+            underlayCaps: [],
+            far:          [],
         }
         const farMaterial = TrackUtils.createTrackMaterial({
             ...style,
@@ -1201,8 +1266,47 @@ export class TrackUtils {
                                       })
         }
 
+        /**
+         * Create or refresh a point cap at one end of an underlaid track.
+         *
+         * @param {string} entityId - Stable identifier for the cap entity.
+         * @param {Cartesian3} position - Track endpoint used by the cap.
+         * @returns {object} Updated endpoint cap entity.
+         */
+        const updateUnderlayCap = (entityId, position) => {
+            activeStyleEntityIds.add(entityId)
+            const point = {
+                pixelSize: style.farPixelWidth,
+                color: TrackUtils.cssColor(style.color),
+                outlineColor: TrackUtils.cssColor(style.underlay.color),
+                outlineWidth: Math.max(0, (style.underlay.pixelWidth - style.farPixelWidth) / 2),
+                heightReference: HeightReference.CLAMP_TO_GROUND,
+                disableDepthTestDistance: 0,
+            }
+            const existing = source.entities.getById(entityId)
+            if (existing?.point) {
+                existing.position = position
+                setGraphicValue(existing.point, 'pixelSize', point.pixelSize)
+                setGraphicValue(existing.point, 'color', point.color)
+                setGraphicValue(existing.point, 'outlineColor', point.outlineColor)
+                setGraphicValue(existing.point, 'outlineWidth', point.outlineWidth)
+                setGraphicValue(existing.point, 'heightReference', point.heightReference)
+                setGraphicValue(existing.point, 'disableDepthTestDistance', point.disableDepthTestDistance)
+                existing.show = true
+                return existing
+            }
+
+            return source.entities.add({
+                id: entityId,
+                position,
+                point,
+                show: true,
+            })
+        }
+
         baseEntities.forEach(entity => {
             const positions = entity.polyline.positions
+            const endpointPositions = getPolylinePositions(entity)
             TrackUtils.setPolylineVisibility(entity, false)
 
             if (style.underlay.enabled) {
@@ -1212,6 +1316,17 @@ export class TrackUtils {
                     underlayMaterial,
                     10,
                 ))
+
+                if (endpointPositions.length >= 2) {
+                    entities.underlayCaps.push(updateUnderlayCap(
+                        `${entity.id}${TRACK_STYLE_ENTITY_MARKER}underlay-cap#start`,
+                        endpointPositions[0],
+                    ))
+                    entities.underlayCaps.push(updateUnderlayCap(
+                        `${entity.id}${TRACK_STYLE_ENTITY_MARKER}underlay-cap#end`,
+                        endpointPositions.at(-1),
+                    ))
+                }
             }
 
             entities.far.push(updateStyleEntity(
