@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-02
- * Last modified: 2026-10-22
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -284,7 +284,7 @@ const replayProfileHiddenGraphics = () => [
  * @param {boolean} props.preview
  * @returns {React.JSX.Element}
  */
-export const ProfileChart = ({data, id, configId, width, height, preview = false, locked = false}) => {
+export const ProfileChart = ({data, id, configId, width, height, preview = false, locked = false, axisPreset = null}) => {
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
     const configuration = useSnapshot($configuration)
 
@@ -359,6 +359,17 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     const element = useMemo(() => {
         return configuration.elements?.[configKey] ?? configuration.user ?? configuration.default
     }, [configuration, configKey])
+    const styleElement = useMemo(() => {
+        if (!axisPreset) {
+            return element
+        }
+
+        return {
+            ...element,
+            xAxis: {...element?.xAxis, ...axisPreset.xAxis},
+            yAxis: {...element?.yAxis, ...axisPreset.yAxis},
+        }
+    }, [element, axisPreset])
     const borderCorrection = element?.border?.scaled === false ? scaleCorrection : 1
     const borderWidth = element?.border?.show ? scaleValue(element.border.thickness, borderCorrection) : 0
     const padding = resolvePadding(element, scaleCorrection)
@@ -588,7 +599,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                                                          renderStyle: data.options[index].renderStyle,
                                                                          dimensions:  data.dimensions,
                                                                      }, element))
-        const styles = getStyleOptions(element)
+        const styles = getStyleOptions(styleElement)
         const yFloor = unitSystem === INTERNATIONAL ? 100 : 300
         const xCeiling = 1
 
@@ -630,6 +641,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         data,
         buildSerie,
         element,
+        styleElement,
         getStyleOptions,
         unitSystem,
         processedDataset,

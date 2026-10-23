@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-15
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,7 +27,13 @@ const rendererMock = vi.hoisted(() => ({
 }))
 
 vi.mock('@Components/Profile/ProfileChart', () => ({
-    ProfileChart: ({data}) => <div data-testid="profile-chart" data-has-data={String(Boolean(data))}/>,
+    ProfileChart: ({data, axisPreset}) => (
+        <div
+            data-testid="profile-chart"
+            data-has-data={String(Boolean(data))}
+            data-axis-preset={JSON.stringify(axisPreset)}
+        />
+    ),
 }))
 vi.mock('@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender', () => ({
     WidgetDynamicRenderer: {instance: rendererMock},
@@ -159,6 +165,11 @@ describe('ElevationProfile', () => {
         await waitFor(() => {
             expect(screen.getByTestId('profile-chart')).not.toBeNull()
             expect(screen.getByTestId('profile-chart').dataset.hasData).toBe('true')
+        })
+
+        expect(JSON.parse(screen.getByTestId('profile-chart').dataset.axisPreset)).toEqual({
+            xAxis: {main: true, second: false, labels: true, units: true},
+            yAxis: {main: true, second: false, labels: true, units: true},
         })
     })
 

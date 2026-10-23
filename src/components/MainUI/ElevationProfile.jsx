@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-07-28
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,6 +38,11 @@ import { useSnapshot }                                              from 'valtio
 
 const setProfileWidgetVisible = visible => {
     lgs.stores.main.components.profile.show = visible
+}
+
+const JOURNEY_DRAWER_PROFILE_AXIS_PRESET = {
+    xAxis: {main: true, second: false, labels: true, units: true},
+    yAxis: {main: true, second: false, labels: true, units: true},
 }
 
 /**
@@ -536,6 +541,7 @@ export const ElevationProfile = (props) => {
                             key={profileChartConfigId ?? 'profile'}
                             id="journey-profile-chart-in-settings"
                             configId={profileChartConfigId}
+                            axisPreset={JOURNEY_DRAWER_PROFILE_AXIS_PRESET}
                             data={data?.dataset}
                             height="180px"
                             width="100%"
