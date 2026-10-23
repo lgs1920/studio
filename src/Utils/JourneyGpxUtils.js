@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-02
- * Last modified: 2026-05-02
+ * Created on: 2026-05-03
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import {
     APP_STUDIO, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE,
 }                              from '@Core/constants'
 import { decodeHTMLEntities } from '@Utils/TextUtils'
+import { parseTimestampAsInstant } from '@Utils/TimeZoneUtils'
 
 export const LGS_GPX_NAMESPACE = 'https://www.lgs1920.fr/gpx/1'
 export const GPX_STYLE_NAMESPACE = 'http://www.topografix.com/GPX/gpx_style/0/2'
@@ -94,6 +95,15 @@ const toJson = value => {
 const compactObject = object => Object.fromEntries(
     Object.entries(object).filter(([, value]) => value !== undefined && value !== null && value !== ''),
 )
+
+/** Converts an ISO timestamp to its UTC representation for journey exports. */
+const formatTimestampAsUtc = value => {
+    if (typeof value !== 'string') {
+        return value
+    }
+
+    return parseTimestampAsInstant(value)?.toISO() ?? value
+}
 
 const valuesFromPOISource = source => {
     if (!source) {
@@ -374,7 +384,7 @@ const trackPointToGpx = (coordinate, time) => {
         lines.push(`        <ele>${formatNumber(ele)}</ele>`)
     }
     if (time) {
-        lines.push(`        <time>${escapeXml(time)}</time>`)
+        lines.push(`        <time>${escapeXml(formatTimestampAsUtc(time))}</time>`)
     }
     lines.push('      </trkpt>')
 
@@ -443,6 +453,13 @@ const trackToGeoJsonFeature = track => {
     }
 
     const feature = deepClone(track.content)
+    const times = feature.properties?.coordinateProperties?.times
+    if (Array.isArray(times)) {
+        feature.properties.coordinateProperties.times = feature.geometry?.type === 'MultiLineString'
+            ? times.map(segment => Array.isArray(segment) ? segment.map(formatTimestampAsUtc) : segment)
+            : times.map(formatTimestampAsUtc)
+    }
+
     feature.properties = compactObject({
         ...(feature.properties ?? {}),
         name: track.title ?? feature.properties?.name ?? 'Track',
@@ -511,7 +528,7 @@ const poiToGpx = (journey, poi) => {
     return [
         `  <wpt lat="${lat}" lon="${lon}">`,
         height !== undefined ? `    <ele>${formatNumber(height)}</ele>` : '',
-        poi.time ? `    <time>${escapeXml(poi.time)}</time>` : '',
+        poi.time ? `    <time>${escapeXml(formatTimestampAsUtc(poi.time))}</time>` : '',
         `    <name>${escapeXml(title)}</name>`,
         description ? `    <desc>${escapeXml(description)}</desc>` : '',
         `    <sym>${escapeXml(category)}</sym>`,
@@ -565,7 +582,7 @@ const poiToGeoJsonFeature = (journey, poi) => {
             desc: poi.description,
             type: category,
             sym:  category,
-            time: poi.time,
+            time: formatTimestampAsUtc(poi.time),
             ...getPoiLgsProperties(journey, poi),
         }),
         geometry:   {
@@ -626,7 +643,7 @@ export const exportJourneyToGPX = (journey, {pois = undefined, createdAt = new D
         '  <metadata>',
         `    <name>${escapeXml(journey?.title ?? 'Journey')}</name>`,
         journey?.description ? `    <desc>${escapeXml(journey.description)}</desc>` : '',
-        `    <time>${escapeXml(createdAt)}</time>`,
+        `    <time>${escapeXml(formatTimestampAsUtc(createdAt))}</time>`,
         metadataExtensions,
         '  </metadata>',
         ...waypoints,
@@ -649,7 +666,7 @@ export const exportJourneyToGeoJSON = (journey, {pois = undefined, createdAt = n
             name:    journey?.title ?? 'Journey',
             desc:    journey?.description,
             creator: APP_STUDIO,
-            time:    createdAt,
+            time:    formatTimestampAsUtc(createdAt),
             ...getJourneyLgsProperties(journey),
         }),
         features,

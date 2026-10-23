@@ -7,15 +7,16 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-09
- * Last modified: 2026-07-09
+ * Created on: 2024-02-05
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
 import { APP_GOOGLE_FONTS, COUNTRY_FLAGS_DIR, WIDGET_GOOGLE_FONTS } from '@Core/constants'
 import { colord }                                                   from 'colord'
-import { DateTime }                                                 from 'luxon'
+import { formatTimestampAtCoordinates, formatTimestampInTimeZone }   from '@Utils/TimeZoneUtils'
 
 export class UIUtils {
 
@@ -222,24 +223,27 @@ export class UIUtils {
     /**
      * Formats journey dates into one or two strings depending on whether
      * start and stop occur on the same day.
-     * * @param {Object} data - Object containing start and stop ISO strings.
-     * @returns {string[]} Array of formatted date/time strings.
+     * @param {Object} data - Object containing UTC start/stop timestamps and optional endpoint coordinates.
+     * @param {Object} [options] - Formatting options for local display or explicit-zone exports.
+     * @param {string|null} [options.timeZone=null] - Explicit IANA zone to use instead of endpoint coordinates.
+     * @param {boolean} [options.includeTimeZone=false] - Whether to include the selected zone in each time label.
+     * @returns {Promise<Object>} Formatted date and time labels for both endpoints.
      */
-    static formatJourneyDurationDates = (data) => {
+    static formatJourneyDurationDates = async (data, {timeZone = null, includeTimeZone = false} = {}) => {
         if (!data?.start || !data?.stop) {
             return {}
         }
 
-        const startDT = DateTime.fromISO(data.start)
-        const stopDT = DateTime.fromISO(data.stop)
-
-        const start = {
-            date: startDT.toLocaleString(DateTime.DATE_FULL),
-            time: startDT.toLocaleString(DateTime.TIME_SIMPLE),
-        }
-        const stop = {
-            date: stopDT.toLocaleString(DateTime.DATE_FULL),
-            time: stopDT.toLocaleString(DateTime.TIME_SIMPLE),
+        const items = [
+            {value: data.start, coordinates: data.startCoordinates},
+            {value: data.stop, coordinates: data.stopCoordinates},
+        ]
+        const format = item => timeZone
+            ? formatTimestampInTimeZone(item.value, timeZone, {includeTimeZone})
+            : formatTimestampAtCoordinates(item.value, item.coordinates)
+        const [start, stop] = await Promise.all(items.map(format))
+        if (!start || !stop) {
+            return {}
         }
 
         const sameDay = start.date === stop.date

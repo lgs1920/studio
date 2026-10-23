@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import {
     UnitUtils,
 } from '@Utils/UnitUtils'
 import { decodeHTMLEntities } from '@Utils/TextUtils'
-import { DateTime } from 'luxon'
+import { formatTimestampInTimeZone } from '@Utils/TimeZoneUtils'
 
 export const finiteNumber = value => {
     const number = Number(value)
@@ -58,25 +58,29 @@ export const formatCoordinate = value => {
     return coordinateSystem ? UnitUtils.convert(number).to(coordinateSystem) : number.toFixed(6)
 }
 
-export const formatDateTimeParts = ({start, stop} = {}) => {
+/** Formats journey report timestamps in UTC without applying the interactive display zone. */
+const formatJourneyDateTimes = ({start, stop} = {}) => {
     if (!start && !stop) {
+        return []
+    }
+
+    return [start, stop]
+        .filter(Boolean)
+        .map(value => formatTimestampInTimeZone(value, 'UTC', {includeTimeZone: true}))
+        .filter(Boolean)
+}
+
+/** Formats a journey's start and stop timestamps for an exported report in UTC. */
+export const formatDateTimeParts = data => {
+    const [first, second = first] = formatJourneyDateTimes(data)
+    if (!first) {
         return {date: '', time: ''}
     }
 
-    const startDate = start ? DateTime.fromISO(start) : null
-    const stopDate = stop ? DateTime.fromISO(stop) : null
-    const validStart = startDate?.isValid ? startDate : null
-    const validStop = stopDate?.isValid ? stopDate : null
-    if (!validStart && !validStop) {
-        return {date: '', time: ''}
-    }
-
-    const first = validStart ?? validStop
-    const second = validStop ?? validStart
-    const firstDay = first.toLocaleString(DateTime.DATE_FULL)
-    const secondDay = second.toLocaleString(DateTime.DATE_FULL)
-    const firstTime = first.toLocaleString(DateTime.TIME_SIMPLE)
-    const secondTime = second.toLocaleString(DateTime.TIME_SIMPLE)
+    const firstDay = first.date
+    const secondDay = second.date
+    const firstTime = first.time
+    const secondTime = second.time
     const sameDay = firstDay === secondDay
     const sameTime = firstTime === secondTime
 
@@ -102,24 +106,17 @@ export const reportLocationPhrase = journey => {
     return first && last && first !== last ? `from ${first} to ${last}` : `at ${first}`
 }
 
+/** Returns UTC calendar-date labels for an exported journey report. */
 export const journeyDateLabels = journey => {
-    const {start, stop} = journey?.getDate?.() ?? {}
-    const startDate = start ? DateTime.fromISO(start) : null
-    const stopDate = stop ? DateTime.fromISO(stop) : null
-    const validStart = startDate?.isValid ? startDate : null
-    const validStop = stopDate?.isValid ? stopDate : null
-    if (!validStart && !validStop) {
+    const [first, second = first] = formatJourneyDateTimes(journey?.getDate?.())
+    if (!first) {
         return []
     }
 
-    const first = validStart ?? validStop
-    const second = validStop ?? validStart
-    const firstLabel = first.toLocaleString(DateTime.DATE_FULL)
-    const secondLabel = second.toLocaleString(DateTime.DATE_FULL)
-
-    return firstLabel === secondLabel ? [firstLabel] : [firstLabel, secondLabel]
+    return first.date === second.date ? [first.date] : [first.date, second.date]
 }
 
+/** Builds the exported report's date phrase using UTC dates. */
 export const reportDatePhrase = journey => {
     const dates = journeyDateLabels(journey)
     if (dates.length === 0) {
@@ -129,6 +126,7 @@ export const reportDatePhrase = journey => {
     return dates.length === 1 ? `on ${dates[0]}` : `from ${dates[0]} to ${dates[1]}`
 }
 
+/** Builds an exported report subtitle while keeping its journey date in UTC. */
 export const reportSubtitle = journey => {
     const activity = plainText(journey?.activitySettings?.label ?? journey?.activity)
     return [

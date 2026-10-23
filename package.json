@@ -125,6 +125,7 @@
     "three": "^0.186.1",
     "turf-linestring": "^1.0.2",
     "turf-point": "^2.0.1",
+    "tzf-wasm": "^2.0.1",
     "uuid": "^14.0.3",
     "valtio": "^2.3.2",
     "vite-plugin-cesium": "^1.2.23",

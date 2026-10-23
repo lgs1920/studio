@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-06
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -136,14 +136,25 @@ export const JourneyStatsWidgetEditor = ({
     }, [dataSource, metricsSnap])
     const hasDurationData = Number.isFinite(Number(displayMetrics.duration)) && Number(displayMetrics.duration) > 0
 
+    const journeyDateData = journey?.getDate?.()
     const journeyDate = useMemo(() => {
-        if (!journey?.getDate) {
-            return {}
+        return {
+            items: journeyDateData?.start && journeyDateData?.stop
+                ? [
+                    {value: journeyDateData.start, coordinates: journeyDateData.startCoordinates},
+                    {value: journeyDateData.stop, coordinates: journeyDateData.stopCoordinates},
+                ]
+                : [],
         }
-
-        return __.ui.ui.formatJourneyDurationDates(journey.getDate())
-    }, [journey])
-    const hasJourneyDate = Boolean((journey?.hasTime ?? false) && journeyDate?.prefix && journeyDate?.sufix)
+    }, [
+        journeyDateData?.start,
+        journeyDateData?.stop,
+        journeyDateData?.startCoordinates?.longitude,
+        journeyDateData?.startCoordinates?.latitude,
+        journeyDateData?.stopCoordinates?.longitude,
+        journeyDateData?.stopCoordinates?.latitude,
+    ])
+    const hasJourneyDate = Boolean((journey?.hasTime ?? false) && journeyDate.items?.length === 2)
     const journeyLocation = (journeyLocationState.slug === journeySlug ? journeyLocationState.value : '') || journey?.location || ''
 
     const dataEditorOrderItems = orderedJourneyStatsTextItems(element.textOrder)

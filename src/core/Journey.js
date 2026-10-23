@@ -33,6 +33,7 @@ import {
     extractLgsTrackProperties,
 }                             from '@Utils/JourneyGpxUtils'
 import { decodeHTMLEntities } from '@Utils/TextUtils'
+import { resolveTimeZone } from '@Utils/TimeZoneUtils'
 import { importJourneyContent } from '@Utils/importers/SportsLibJourneyImporter'
 import { UIToast }            from '@Utils/UIToast'
 import { ElevationServer }    from './Elevation/ElevationServer'
@@ -275,14 +276,22 @@ export class Journey extends MapElement {
 
         if (points.length === 0) {
             return {
-                start: undefined,
-                stop:  undefined,
+                start:            undefined,
+                stop:             undefined,
+                startCoordinates: null,
+                stopCoordinates:  null,
             }
         }
 
+        const startPoint = points[0]
+        const stopPoint = points[points.length - 1]
+        const coordinatesFor = point => ({longitude: point?.longitude, latitude: point?.latitude})
+
         return {
-            start: points[0]?.time,
-            stop:  points[points.length - 1]?.time,
+            start:            startPoint?.time,
+            stop:             stopPoint?.time,
+            startCoordinates: coordinatesFor(startPoint),
+            stopCoordinates:  coordinatesFor(stopPoint),
         }
     }
 
@@ -673,14 +682,22 @@ export class Journey extends MapElement {
                     const importedType = lgsPoi.type ?? POI_STANDARD_TYPE
                     const importedCategory = lgsPoi.category ?? POI_STANDARD_TYPE
                     const importedTitle = properties.name ?? 'POI'
+                    const poiTime = lgsPoi.time ?? properties.time
+                    const existingTimeZone = existingPoi?.timeZone
+                        && getCoordKey(existingPoi.longitude, existingPoi.latitude) === key
+                        ? existingPoi.timeZone
+                        : null
 
-                    const clampedHeight = lgsPoi.simulatedHeight ?? await __.ui.poiManager.getHeightFromTerrain({
-                                                                                                                     coordinates: {
-                                                                                                                         longitude: lon,
-                                                                                                                         latitude:  lat,
-                                                                                                                         height:    importedHeight ?? 0,
-                                                                                                                     },
-                                                                                                                 })
+                    const [clampedHeight, timeZone] = await Promise.all([
+                        lgsPoi.simulatedHeight ?? __.ui.poiManager.getHeightFromTerrain({
+                            coordinates: {
+                                longitude: lon,
+                                latitude:  lat,
+                                height:    importedHeight ?? 0,
+                            },
+                        }),
+                        poiTime ? existingTimeZone ?? resolveTimeZone({longitude: lon, latitude: lat}) : null,
+                    ])
 
                     const poiData = {
                         ...common,
@@ -700,7 +717,8 @@ export class Journey extends MapElement {
                         visible:         lgsPoi.visible ?? true,
                         expanded:        lgsPoi.expanded ?? false,
                         animated:        lgsPoi.animated ?? false,
-                        time:            lgsPoi.time ?? properties.time,
+                        time:            poiTime,
+                        ...(poiTime ? {timeZone} : {}),
                         distance:        lgsPoi.distance,
                         cameraDistance:  lgsPoi.cameraDistance,
                         camera:          lgsPoi.camera,

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -370,7 +370,12 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                                 )}
                                 {point.time && (
                                     <div className="poi-time">
-                                        <DateTimeDisplay value={point.time}/>
+                                        <DateTimeDisplay
+                                            value={point.time}
+                                            timeZone={point.timeZone}
+                                            longitude={point.longitude}
+                                            latitude={point.latitude}
+                                        />
                                     </div>
                                 )}
                             </div>

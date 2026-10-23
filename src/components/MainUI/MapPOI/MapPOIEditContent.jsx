@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-25
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -497,6 +497,9 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                           <div className="poi-time">
                                                               <DateTimeDisplay
                                                                   value={time}
+                                                                  timeZone={point.timeZone}
+                                                                  longitude={point.longitude}
+                                                                  latitude={point.latitude}
                                                                   leading={<WaIcon name="clock" variant="regular"/>}
                                                               />
                                                           </div>

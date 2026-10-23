@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -673,10 +673,11 @@ export const addJourneyDetails = (doc, journey, pois, studioLogo, {profileImage 
     const writer = createTextWriter(doc, studioLogo, icons, colors)
     const {metrics} = journey.getMetrics()
     const dateTime = formatDateTimeParts(journey.getDate())
+    const subtitle = reportSubtitle(journey)
 
     writer.reportHeader({
         title:    journey.title || 'Journey',
-        subtitle: reportSubtitle(journey),
+        subtitle,
     })
     writer.summaryRows([
         {label: 'Location', value: journey.location, icon: 'location'},

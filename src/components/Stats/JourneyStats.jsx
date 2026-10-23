@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-03
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -391,8 +391,25 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     const hasElevation = isDynamicMode
                          ? displayMetrics?.hasElevation !== false
                          : (journey?.hasAltitude ?? false)
-    const date = journey ? __.ui.ui.formatJourneyDurationDates(journey.getDate()) : {}
-    const hasDateRange = Boolean(date?.prefix && date?.sufix)
+    const journeyDate = journey?.getDate?.()
+    const date = useMemo(() => {
+        return {
+            items: journeyDate?.start && journeyDate?.stop
+                ? [
+                    {value: journeyDate.start, coordinates: journeyDate.startCoordinates},
+                    {value: journeyDate.stop, coordinates: journeyDate.stopCoordinates},
+                ]
+                : [],
+        }
+    }, [
+        journeyDate?.start,
+        journeyDate?.stop,
+        journeyDate?.startCoordinates?.longitude,
+        journeyDate?.startCoordinates?.latitude,
+        journeyDate?.stopCoordinates?.longitude,
+        journeyDate?.stopCoordinates?.latitude,
+    ])
+    const hasDateRange = date.items.length === 2
     const dateTimeStack = element?.dateTimeStack ?? DEFAULT_JOURNEY_STATS_DATE_TIME_STACK
     const journeyLocation = (journeyLocationState.slug === journeySlug ? journeyLocationState.value : '') || journey?.location || ''
     const showDate = hasDuration && element?.date && hasDateRange

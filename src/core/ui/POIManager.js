@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-13
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -423,6 +423,13 @@ export class POIManager {
         }
         if (Object.keys(safeUpdates).length === 0) {
             return poi
+        }
+
+        const hasCoordinatesChanged = ['longitude', 'latitude'].some(key =>
+            Object.prototype.hasOwnProperty.call(safeUpdates, key)
+            && Number(safeUpdates[key]) !== Number(poi[key]))
+        if (hasCoordinatesChanged && !Object.prototype.hasOwnProperty.call(safeUpdates, 'timeZone')) {
+            safeUpdates.timeZone = undefined
         }
 
         const hasVisibilityUpdate = Object.prototype.hasOwnProperty.call(safeUpdates, 'visible')

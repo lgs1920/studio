@@ -8,33 +8,43 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-03
- * Last modified: 2026-05-03
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { DateTime } from 'luxon'
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+    formatTimestampAtCoordinates,
+    formatTimestampInTimeZone,
+    normalizeCoordinates,
+} from '@Utils/TimeZoneUtils'
 import './DateTimeDisplay.css'
 
 const defaultDateFormat = DateTime.DATE_FULL
 const defaultTimeFormat = DateTime.TIME_SIMPLE
 
-const toDateTime = value => {
-    if (!value) {
-        return null
-    }
-    if (DateTime.isDateTime(value)) {
-        return value.isValid ? value : null
-    }
-
-    const dateTime = DateTime.fromISO(value)
-
-    return dateTime.isValid ? dateTime : null
+const itemValue = item => {
+    const base = typeof item === 'object' && !DateTime.isDateTime(item) ? item : {}
+    return base.value ?? item
 }
 
-const normalizeItem = (item, {dateFormat = defaultDateFormat, timeFormat = defaultTimeFormat} = {}) => {
+const itemCoordinates = (item, fallbackCoordinates) => {
+    const base = typeof item === 'object' && !DateTime.isDateTime(item) ? item : {}
+    return base.coordinates ?? (base.longitude !== undefined || base.latitude !== undefined
+        ? {longitude: base.longitude, latitude: base.latitude}
+        : fallbackCoordinates)
+}
+
+/** Returns a stored IANA zone from the item or its enclosing display. */
+const itemTimeZone = (item, fallbackTimeZone) => {
+    const base = typeof item === 'object' && !DateTime.isDateTime(item) ? item : {}
+    return base.timeZone ?? fallbackTimeZone
+}
+
+const normalizeFormattedItem = (item, formatted) => {
     if (!item) {
         return null
     }
@@ -48,16 +58,16 @@ const normalizeItem = (item, {dateFormat = defaultDateFormat, timeFormat = defau
         }
     }
 
-    const dateTime = toDateTime(base.value ?? item)
-
-    if (!dateTime) {
+    if (!formatted) {
         return null
     }
 
     return {
         ...base,
-        date: dateTime.toLocaleString(dateFormat),
-        time: dateTime.toLocaleString(timeFormat),
+        date: formatted.date,
+        time: formatted.time,
+        timezoneFallback: formatted.timezoneFallback,
+        timeZone: formatted.timeZone,
     }
 }
 
@@ -78,17 +88,90 @@ export const DateTimeDisplay = ({
                                     stackItems = null,
                                     stackDateTime = null,
                                     leading = null,
+                                    longitude,
+                                    latitude,
+                                    timeZone: fallbackTimeZone = null,
                                 }) => {
     const rootRef = useRef(null)
     const measureRef = useRef(null)
     const [autoStack, setAutoStack] = useState(false)
-    const normalizedItems = useMemo(() => {
+    const source = useMemo(() => {
         const source = items ?? (value ? [value] : [])
+        const fallbackCoordinates = longitude !== undefined || latitude !== undefined
+            ? {longitude, latitude}
+            : null
 
-        return source
-            .map(item => normalizeItem(item, {dateFormat, timeFormat}))
-            .filter(Boolean)
-    }, [dateFormat, items, timeFormat, value])
+        return source.map(item => ({
+            item,
+            coordinates: itemCoordinates(item, fallbackCoordinates),
+            timeZone: itemTimeZone(item, fallbackTimeZone),
+        }))
+    }, [fallbackTimeZone, items, latitude, longitude, value])
+    const [resolved, setResolved] = useState({source: null, items: []})
+    const sourceItems = useMemo(() => source.map(({item, coordinates, timeZone}) => {
+        const base = typeof item === 'object' && !DateTime.isDateTime(item) ? item : {}
+        if (base.date || base.time) {
+            return normalizeFormattedItem(item, null)
+        }
+
+        const value = itemValue(item)
+        if (timeZone) {
+            return normalizeFormattedItem(
+                item,
+                formatTimestampInTimeZone(value, timeZone, {dateFormat, timeFormat}),
+            )
+        }
+
+        const normalizedCoordinates = normalizeCoordinates(coordinates)
+        if (normalizedCoordinates) {
+            return null
+        }
+
+        return normalizeFormattedItem(
+            item,
+            formatTimestampInTimeZone(value, 'UTC', {dateFormat, timeFormat, timezoneFallback: true}),
+        )
+    }), [dateFormat, source, timeFormat])
+
+    useEffect(() => {
+        let active = true
+        const resolveItems = async () => {
+            const nextItems = await Promise.all(source.map(async ({item, coordinates}, index) => {
+                if (sourceItems[index] || !normalizeCoordinates(coordinates)) {
+                    return sourceItems[index]
+                }
+
+                try {
+                    const formatted = await formatTimestampAtCoordinates(itemValue(item), coordinates, {dateFormat, timeFormat})
+                    return normalizeFormattedItem(item, formatted)
+                }
+                catch {
+                    return normalizeFormattedItem(
+                        item,
+                        formatTimestampInTimeZone(itemValue(item), 'UTC', {
+                            dateFormat,
+                            timeFormat,
+                            timezoneFallback: true,
+                        }),
+                    )
+                }
+            }))
+
+            if (active) {
+                setResolved({source, items: nextItems})
+            }
+        }
+
+        void resolveItems()
+        return () => {
+            active = false
+        }
+    }, [dateFormat, source, sourceItems, timeFormat])
+
+    const normalizedItems = useMemo(() => {
+        const asyncItems = resolved.source === source ? resolved.items : []
+        return sourceItems.map((item, index) => item ?? asyncItems[index]).filter(Boolean)
+    }, [resolved, source, sourceItems])
     const sameDateRange = isSameDateRange(normalizedItems)
     const hasLeading = Boolean(leading)
     const shouldStackItems = !sameDateRange && (forceStack || (stackItems ?? normalizedItems.length > 1))

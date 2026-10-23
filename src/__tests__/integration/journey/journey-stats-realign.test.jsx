@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,9 +34,10 @@ vi.mock('@Components/DataDisplay/NameValueUnit', () => ({
 }))
 
 vi.mock('@Components/DateTimeDisplay', () => ({
-    DateTimeDisplay: ({stackItems, stackDateTime}) => (
+    DateTimeDisplay: ({items, stackItems, stackDateTime}) => (
         <div
             data-date-time-display="true"
+            data-items={JSON.stringify(items)}
             data-stack-items={stackItems === undefined ? 'default' : String(stackItems)}
             data-stack-date-time={String(stackDateTime)}
         />
@@ -111,7 +112,12 @@ describe('JourneyStats', () => {
                 slug:        'journey-a',
                 hasTime:     true,
                 hasAltitude: true,
-                getDate:     () => new Date('2026-07-03T10:00:00Z'),
+                getDate:     () => ({
+                    start:            '2026-07-03T10:00:00Z',
+                    stop:             '2026-07-03T11:00:00Z',
+                    startCoordinates: {longitude: 2.3522, latitude: 48.8566},
+                    stopCoordinates:  {longitude: 2.2945, latitude: 48.8584},
+                }),
                 location:    'Test location',
                 metrics:     proxy({
                     global: {},
@@ -257,6 +263,10 @@ describe('JourneyStats', () => {
 
         expect(dateDisplay.dataset.stackItems).toBe('default')
         expect(dateDisplay.dataset.stackDateTime).toBe('false')
+        expect(JSON.parse(dateDisplay.dataset.items)).toEqual([
+            {value: '2026-07-03T10:00:00Z', coordinates: {longitude: 2.3522, latitude: 48.8566}},
+            {value: '2026-07-03T11:00:00Z', coordinates: {longitude: 2.2945, latitude: 48.8584}},
+        ])
     })
 
     it('keeps journey stats values on the video board before the recording starts', async () => {

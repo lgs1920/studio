@@ -16,6 +16,7 @@ to provide a readable dependency snapshot for contributors and maintainers.
 - Shoelace
 - ECharts
 - Mediabunny
+- `tzf-wasm` (coordinate-based IANA time-zone resolution)
 
 ### Build and Quality Tooling
 
@@ -131,6 +132,7 @@ ssh2
 ssh2-sftp-client
 turf-linestring
 turf-point
+tzf-wasm
 uuid
 valtio
 vite-plugin-cesium

@@ -6,6 +6,7 @@ The application, including studio, backend,APIs,site is based on :
 * [cesiumjs](https://cesium.com/)  - The Map engine
 * [cesium-mapterhorn-provider](https://github.com/bertt/cesium-mapterhorn-provider) by bertt - Mapterhorn Terrarium terrain provider (MIT)
 * [Three.js](https://threejs.org/) - 3D graphics library
+* [tzf-wasm](https://github.com/ringsaturn/tzf-wasm) - Local coordinate-to-time-zone lookup (MIT); its boundary data derives from [timezone-boundary-builder](https://github.com/evansiroky/timezone-boundary-builder) (ODbL)
 
 ### Code and devs:
 * [Bun](https://bun.sh/) - javascript runtime

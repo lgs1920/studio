@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-26
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,7 +35,6 @@ import {
     WaButton, WaCopyButton, WaDivider, WaIcon, WaSwitch, WaTooltip,
 }                                                                              from '@awesome.me/webawesome/dist/react'
 import { Cartographic, Rectangle }                                             from 'cesium'
-import { DateTime }                                                            from 'luxon'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DateInfo }                                                            from '../DateInfo'
 
@@ -562,6 +561,11 @@ export const TrackData = memo(({compactAfterProfile = false, showWidgetControls 
         return {
             start: points[0]?.time,
             stop: points[points.length - 1]?.time,
+            startCoordinates: {longitude: points[0]?.longitude, latitude: points[0]?.latitude},
+            stopCoordinates: {
+                longitude: points[points.length - 1]?.longitude,
+                latitude:  points[points.length - 1]?.latitude,
+            },
         }
     }, [metrics, metricsRevision])
 
@@ -647,7 +651,8 @@ export const TrackData = memo(({compactAfterProfile = false, showWidgetControls 
         }
 
         let _rafId
-        const updateCopyValue = () => {
+        let cancelled = false
+        const updateCopyValue = async () => {
             if (!_rootRef.current) {
                 return
             }
@@ -666,20 +671,21 @@ export const TrackData = memo(({compactAfterProfile = false, showWidgetControls 
                 _lines.push('-'.repeat(_tTitle.length))
             }
 
-            // 3. Dates with Luxon (Same day logic)
+            // 3. Track-local dates with same-day range formatting
             if (trackDate.start && trackDate.stop) {
-                const _start = DateTime.fromISO(trackDate.start)
-                const _stop = DateTime.fromISO(trackDate.stop)
+                const formattedDates = await __.ui.ui.formatJourneyDurationDates(trackDate)
+                if (cancelled || !_rootRef.current) {
+                    return
+                }
+                const _startDateStr = formattedDates.start?.date
+                const _stopDateStr = formattedDates.stop?.date
+                const _startTime = formattedDates.start?.time
+                const _stopTime = formattedDates.stop?.time
 
-                const _startDateStr = _start.toLocaleString(DateTime.DATE_FULL)
-                const _stopDateStr = _stop.toLocaleString(DateTime.DATE_FULL)
-                const _startTime = _start.toLocaleString(DateTime.TIME_SIMPLE)
-                const _stopTime = _stop.toLocaleString(DateTime.TIME_SIMPLE)
-
-                if (_startDateStr === _stopDateStr) {
+                if (_startDateStr && _startDateStr === _stopDateStr) {
                     _lines.push(`${_startDateStr} [${_startTime}-${_stopTime}]`)
                 }
-                else {
+                else if (_startDateStr && _stopDateStr) {
                     _lines.push(`${_startDateStr} [${_startTime}] - ${_stopDateStr} [${_stopTime}]`)
                 }
             }
@@ -692,14 +698,19 @@ export const TrackData = memo(({compactAfterProfile = false, showWidgetControls 
                 _lines.push(_domMetrics)
             }
 
-            setCopyValue(_lines.join('\n'))
+            if (!cancelled) {
+                setCopyValue(_lines.join('\n'))
+            }
         }
 
         _rafId = requestAnimationFrame(() => {
             _rafId = requestAnimationFrame(updateCopyValue)
         })
 
-        return () => cancelAnimationFrame(_rafId)
+        return () => {
+            cancelled = true
+            cancelAnimationFrame(_rafId)
+        }
     }, [metrics, track, trackDate])
 
     const handleCopySuccess = useCallback(() => {

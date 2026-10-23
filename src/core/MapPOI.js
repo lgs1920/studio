@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-03-27
- * Last modified: 2026-03-27
+ * Created on: 2025-02-14
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -135,6 +135,9 @@ export class MapPOI extends MapElement {
 
     /** @type {string} ISO8601 **/
     time
+
+    /** @type {string} IANA time zone resolved from this POI's coordinates. **/
+    timeZone
 
     /** @type {number} **/
     distance

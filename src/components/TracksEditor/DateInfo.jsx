@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-01
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,9 +33,11 @@ export const DateInfo = function DateInfo(props) {
                       ? [
             {
                 value: data.start,
+                coordinates: data.startCoordinates,
             },
             {
                 value: data.stop,
+                coordinates: data.stopCoordinates,
             },
         ]
                       : []
