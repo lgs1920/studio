@@ -402,6 +402,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                                     onChange={handleDryRunChange}
                                 >
                                     <WaIcon name="bolt" variant="regular" label=""/>
+                                    {'\u00a0'}
                                     {'Dry run'}
                                 </WaSwitch>
                             </div>

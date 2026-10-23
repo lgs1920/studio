@@ -299,6 +299,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(preparationRow?.children[0].classList).toContain('half-width')
         expect(preparationRow?.children[0].querySelector('.basic-replay-dry-run-switch')?.getAttribute('data-label-at-start')).toBe('true')
         expect(preparationRow?.children[0].querySelector('.basic-replay-dry-run-switch')?.getAttribute('data-width-auto')).toBe('true')
+        expect(preparationRow?.children[0].querySelector('.basic-replay-dry-run-switch')?.textContent).toContain('\u00a0')
         expect(preparationRow?.classList).not.toContain('basic-replay-settings-row--label-and-controls')
         for (const label of ['Aspect ratio', 'Duration']) {
             const settingsRow = document.querySelector(`.video-recording-settings-popup [role="group"][aria-label="${label}"]`)
@@ -317,7 +318,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(toolbarSamplingTarget?.getAttribute('aria-label')).toBe('Sampling: Basic')
         expect(toolbarSamplingTarget?.querySelector('[data-icon="square-b"]')).not.toBeNull()
         expect(document.querySelector(`[data-tooltip-for="${toolbarSamplingTarget?.getAttribute('id')}"]`)?.textContent).toBe('Basic')
-        for (const [value, icon] of [['512', 'square-b'], ['1024', 'square-b'], ['2048', 'square-m'], ['4096', 'square-h']]) {
+        for (const [value, icon] of [['512', 'square-l'], ['1024', 'square-b'], ['2048', 'square-m'], ['4096', 'square-h']]) {
             const option = select.querySelector(`option[value="${value}"]`)
             expect(option?.getAttribute('data-icon')).toBe(icon)
             expect(option?.getAttribute('data-variant')).toBe('regular')
@@ -331,7 +332,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         await act(async () => fireEvent.change(select, {target: {value: '512'}}))
         expect(globalThis.lgs.settings.ui.replay.basic.sampleCount).toBe(512)
         expect(globalThis.lgs.theJourney.replay.basic.sampleCount).toBe(512)
-        expect(document.querySelector('.basic-replay-sampling__select > [data-icon]')?.getAttribute('data-icon')).toBe('square-b')
+        expect(document.querySelector('.basic-replay-sampling__select > [data-icon]')?.getAttribute('data-icon')).toBe('square-l')
         const lowToolbarTarget = document.querySelector('.basic-replay-settings-summary__sampling-target')
         expect(lowToolbarTarget?.getAttribute('aria-label')).toBe('Sampling: Low')
         expect(document.querySelector(`[data-tooltip-for="${lowToolbarTarget?.getAttribute('id')}"]`)?.textContent).toBe('Low')
