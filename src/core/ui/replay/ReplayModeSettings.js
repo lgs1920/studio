@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-17
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,27 @@
 
 /** Check whether a value can contain Replay settings. */
 const isSettingsObject = value => value !== null && typeof value === 'object' && !Array.isArray(value)
+
+/** Named sample budgets and their toolbar glyphs for Basic Replay. */
+export const REPLAY_SAMPLE_COUNT_OPTIONS = Object.freeze([
+    {value: 1024, label: 'Basic', icon: 'square-b'},
+    {value: 2048, label: 'Medium', icon: 'square-m'},
+    {value: 4096, label: 'High', icon: 'square-h'},
+])
+
+/** Default to the Basic route-rendering sample budget. */
+export const DEFAULT_REPLAY_SAMPLE_COUNT = 1024
+
+/**
+ * Normalize a requested Replay render sample budget to one supported level.
+ * @param {number|string} value - Requested number of sampled route points.
+ * @returns {number} Supported point count, defaulting to Basic.
+ */
+export const normalizeReplaySampleCount = value => {
+    const numericValue = Number(value)
+    const option = REPLAY_SAMPLE_COUNT_OPTIONS.find(item => item.value === numericValue)
+    return option?.value ?? DEFAULT_REPLAY_SAMPLE_COUNT
+}
 
 /**
  * Read the `basic` key first and use the legacy `simple` key only when `basic` is absent.

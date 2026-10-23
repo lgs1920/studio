@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-22
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import {MAX_RENDER_POINTS} from '@Utils/cesium/trackRenderSmoothing'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
+import {normalizeReplaySampleCount} from './ReplayModeSettings'
 import {
     ArcType, CallbackProperty, Cartesian3, Cartographic, Color, CustomDataSource, HeightReference,
     ColorMaterialProperty, PolylineGlowMaterialProperty,
@@ -97,6 +98,7 @@ export class JourneyReplayCesiumRenderer {
     #cursorTraceFallbackPosition = null
     #cursorTracePositionProperty = null
     #lineEntities = new Map()
+    #lineCapEntities = new Map()
     #sampler = null
     #journeySlug = null
     #options = {}
@@ -117,6 +119,7 @@ export class JourneyReplayCesiumRenderer {
     #traceHidden = false
     #traceVisible = true
     #renderTarget = null
+    #maxRenderPoints = MAX_RENDER_POINTS
 
     constructor(options = {}) {
         this.#options = options
@@ -161,6 +164,7 @@ export class JourneyReplayCesiumRenderer {
         this.#journeySlug = this.#sampler?.journey?.slug ?? globalThis.lgs?.theJourney?.slug ?? 'current'
         this.#traceVisible = true
         this.#traceHidden = false
+        this.#maxRenderPoints = this.#style().maxRenderPoints
         this.#ensureSource()
         if (this.#source) {
             this.#source.show = false
@@ -238,7 +242,9 @@ export class JourneyReplayCesiumRenderer {
             })
         }
         const wasTraceHidden = this.#traceHidden
-        const traceStyleKey = this.#traceStyleKey()
+        const style = this.#style()
+        this.#maxRenderPoints = style.maxRenderPoints
+        const traceStyleKey = this.#traceStyleKey(style)
         const styleChanged = traceStyleKey !== this.#lastTraceStyleKey
         this.#lastTraceStyleKey = traceStyleKey
         const shouldUpdateGeometry = forceGeometry
@@ -413,6 +419,7 @@ export class JourneyReplayCesiumRenderer {
         this.#cursorEffectCore = null
         this.#cursorEffectsEnabled = false
         this.#lineEntities.clear()
+        this.#lineCapEntities.clear()
         this.#invalidateDynamicTraceFrames()
         this.#completedTracePositionsFactory = null
         this.#lastPathGeometryUpdate = 0
@@ -430,6 +437,7 @@ export class JourneyReplayCesiumRenderer {
         this.#cursorEffectCore = null
         this.#cursorEffectsEnabled = false
         this.#lineEntities.clear()
+        this.#lineCapEntities.clear()
         this.#invalidateDynamicTraceFrames()
         this.#completedTracePositionsFactory = null
         this.#lastPathGeometryUpdate = 0
@@ -567,8 +575,7 @@ export class JourneyReplayCesiumRenderer {
         return false
     }
 
-    #traceStyleKey = () => {
-        const style = this.#style()
+    #traceStyleKey = (style = this.#style()) => {
         return [
             style.traceMode,
             style.effectMode,
@@ -580,6 +587,7 @@ export class JourneyReplayCesiumRenderer {
             style.effectBorderOpacity,
             style.remainingColor?.toCssColorString?.(),
             style.remainingUseDefinedTrackStyle,
+            style.maxRenderPoints,
         ].join('|')
     }
 
@@ -588,8 +596,25 @@ export class JourneyReplayCesiumRenderer {
             if (predicate(key, record)) {
                 record.entity.show = false
                 record.show = false
+                this.#hidePolylineEndCaps(key)
             }
         })
+    }
+
+    /**
+     * Hide both caps for a polyline when its line layer is inactive.
+     *
+     * @param {string} key - Stable key of the associated trace polyline.
+     * @returns {void}
+     */
+    #hidePolylineEndCaps = key => {
+        for (const end of ['start', 'end']) {
+            const cap = this.#lineCapEntities.get(`${key}#cap:${end}`)
+            if (cap) {
+                cap.entity.show = false
+                cap.show = false
+            }
+        }
     }
 
     #hideRemainingLines = () => {
@@ -810,14 +835,15 @@ export class JourneyReplayCesiumRenderer {
     }
 
     #limitTracePositions = positions => {
-        if (!Array.isArray(positions) || positions.length <= MAX_RENDER_POINTS) {
+        const maxPoints = this.#maxRenderPoints
+        if (!Array.isArray(positions) || positions.length <= maxPoints) {
             return positions ?? []
         }
 
         const lastIndex = positions.length - 1
         const selected = []
-        for (let index = 0; index < MAX_RENDER_POINTS; index += 1) {
-            const sourceIndex = Math.round((index * lastIndex) / (MAX_RENDER_POINTS - 1))
+        for (let index = 0; index < maxPoints; index += 1) {
+            const sourceIndex = Math.round((index * lastIndex) / (maxPoints - 1))
             const position = positions[sourceIndex]
             if (position && position !== selected[selected.length - 1]) {
                 selected.push(position)
@@ -836,13 +862,14 @@ export class JourneyReplayCesiumRenderer {
         const first = Math.max(0, Math.min(positions.length - 1, startIndex))
         const last = Math.max(first, Math.min(positions.length - 1, endIndex))
         const count = last - first + 1
-        if (count <= MAX_RENDER_POINTS) {
+        const maxPoints = this.#maxRenderPoints
+        if (count <= maxPoints) {
             return positions.slice(first, last + 1)
         }
 
         const selected = []
-        for (let index = 0; index < MAX_RENDER_POINTS; index += 1) {
-            const sourceIndex = first + Math.round((index * (count - 1)) / (MAX_RENDER_POINTS - 1))
+        for (let index = 0; index < maxPoints; index += 1) {
+            const sourceIndex = first + Math.round((index * (count - 1)) / (maxPoints - 1))
             const position = positions[sourceIndex]
             if (position && position !== selected[selected.length - 1]) {
                 selected.push(position)
@@ -853,6 +880,10 @@ export class JourneyReplayCesiumRenderer {
     }
 
     #completedSmoothedPositions = () => {
+        if ((Number(this.#sample?.progress) || 0) <= 0) {
+            return []
+        }
+
         const {leftIndex} = this.#smoothedProgressCursor()
         const positions = this.#smoothedGroundPositions()
         if (positions.length < 2) {
@@ -875,6 +906,10 @@ export class JourneyReplayCesiumRenderer {
     }
 
     #liveCompletedSmoothedPositions = () => {
+        if ((Number(this.#sample?.progress) || 0) <= 0) {
+            return []
+        }
+
         const {guide, leftIndex} = this.#smoothedProgressCursor()
         if (guide.length < 2) {
             return this.#smoothedGroundPositions()
@@ -890,9 +925,6 @@ export class JourneyReplayCesiumRenderer {
         const lastWithAnchor = completed[completed.length - 1]
         if (interpolated && interpolated !== lastWithAnchor) {
             completed.push(interpolated)
-        }
-        if (completed.length < 2 && guide[1]?.position) {
-            completed.push(guide[1].position)
         }
 
         return this.#limitTracePositions(completed)
@@ -917,7 +949,8 @@ export class JourneyReplayCesiumRenderer {
             return this.#smoothedGroundPositions()
         }
 
-        const stride = Math.max(1, Math.ceil(guide.length / Math.max(2, MAX_RENDER_POINTS - 1)))
+        const maxPoints = this.#maxRenderPoints
+        const stride = Math.max(1, Math.ceil(guide.length / Math.max(2, maxPoints - 1)))
         const remaining = []
         const interpolated = this.#interpolatedSmoothedPosition()
         if (interpolated) {
@@ -988,6 +1021,9 @@ export class JourneyReplayCesiumRenderer {
             effectFillEdgeColor,
             remainingColor: cssColor(remaining.color, Color.GRAY).withAlpha(remaining.opacity),
             remainingUseDefinedTrackStyle: remaining.useDefinedTrackStyle !== false,
+            maxRenderPoints: basicMode
+                ? normalizeReplaySampleCount(settings.sampleCount)
+                : MAX_RENDER_POINTS,
             fillWidth: Math.max(REPLAY_MIN_TRACE_WIDTH, fill.width) * sizeScale,
             borderWidth: Math.max(0, border.width) * sizeScale,
             cursorDiameter: Math.max(CURSOR_MIN_RADIUS_METERS * 2, fill.width),
@@ -1482,6 +1518,7 @@ export class JourneyReplayCesiumRenderer {
             if (!Array.isArray(positions) || positions.length < 2) {
                 record.entity.show = false
                 record.show = false
+                this.#hidePolylineEndCaps(key)
                 return
             }
 
@@ -1505,6 +1542,14 @@ export class JourneyReplayCesiumRenderer {
                 name,
                 ...options,
             })
+            const capOptions = this.#lineCapEntities.get(`${key}#cap:start`)?.options
+            if (capOptions) {
+                this.#upsertPolylineEndCaps({
+                    ...capOptions,
+                    positions,
+                    positionsFactory: null,
+                })
+            }
         })
     }
 
@@ -1633,6 +1678,146 @@ export class JourneyReplayCesiumRenderer {
         this.#lineEntities.set(key, dynamicRecord)
     }
 
+    /**
+     * Add round point caps that close the outline of a rendered Replay polyline.
+     *
+     * @param {object} options - Polyline endpoints and layered line style.
+     * @returns {void}
+     */
+    #upsertPolylineEndCaps = ({
+        key,
+        id,
+        name,
+        positions = null,
+        positionsFactory = null,
+        fillWidth,
+        borderWidth,
+        fillColor,
+        borderColor,
+        show = true,
+    }) => {
+        const source = this.#ensureSource()
+        if (!source) {
+            return
+        }
+
+        const isDynamic = typeof positionsFactory === 'function'
+        const hasEndpoints = isDynamic || (Array.isArray(positions) && positions.length >= 2)
+        const isVisible = show && hasEndpoints && borderWidth > fillWidth && borderColor?.alpha > 0
+        const outlineWidth = Math.max(0, (borderWidth - fillWidth) / 2)
+        const styleKey = [
+            fillWidth,
+            outlineWidth,
+            fillColor?.toCssColorString?.() ?? `${fillColor ?? ''}`,
+            borderColor?.toCssColorString?.() ?? `${borderColor ?? ''}`,
+        ].join('|')
+
+        for (const end of ['start', 'end']) {
+            const capKey = `${key}#cap:${end}`
+            let record = this.#lineCapEntities.get(capKey)
+            if (!record && !isVisible) {
+                continue
+            }
+
+            if (record && record.isDynamic !== isDynamic) {
+                source.entities.remove(record.entity)
+                this.#lineCapEntities.delete(capKey)
+                record = null
+            }
+
+            if (!record) {
+                record = {
+                    entity: null,
+                    end,
+                    isDynamic,
+                    positions: null,
+                    positionsFactory: null,
+                    styleKey: null,
+                    show: isVisible,
+                }
+                const positionFromTrace = () => {
+                    const linePositions = record.isDynamic
+                        ? this.#traceFrameForCurrentProgress(record.positionsFactory).positions
+                        : record.positions
+                    if (!Array.isArray(linePositions) || linePositions.length < 2) {
+                        return undefined
+                    }
+
+                    return record.end === 'start' ? linePositions[0] : linePositions.at(-1)
+                }
+                record.entity = source.entities.add({
+                    id: `${id}#cap-${end}`,
+                    name: `${name} endpoint`,
+                    position: isDynamic
+                        ? new CallbackProperty(positionFromTrace, false)
+                        : (end === 'start' ? positions[0] : positions.at(-1)),
+                    point: {
+                        pixelSize: fillWidth,
+                        color: fillColor,
+                        outlineColor: borderColor,
+                        outlineWidth,
+                        heightReference: HeightReference.CLAMP_TO_GROUND,
+                        disableDepthTestDistance: 0,
+                    },
+                    show: isVisible,
+                })
+                this.#lineCapEntities.set(capKey, record)
+            }
+
+            record.isDynamic = isDynamic
+            record.positions = positions
+            record.positionsFactory = positionsFactory
+            record.show = isVisible
+            record.options = {
+                key,
+                id,
+                name,
+                fillWidth,
+                borderWidth,
+                fillColor,
+                borderColor,
+                show,
+            }
+            record.entity.show = isVisible
+
+            if (!isDynamic) {
+                record.entity.position = end === 'start' ? positions[0] : positions.at(-1)
+            }
+
+            if (record.styleKey !== styleKey) {
+                record.entity.point.pixelSize = fillWidth
+                record.entity.point.color = fillColor
+                record.entity.point.outlineColor = borderColor
+                record.entity.point.outlineWidth = outlineWidth
+                record.entity.point.heightReference = HeightReference.CLAMP_TO_GROUND
+                record.entity.point.disableDepthTestDistance = 0
+                record.styleKey = styleKey
+            }
+        }
+    }
+
+    /**
+     * Synchronize endpoint caps with the Replay border and fill layers.
+     *
+     * @param {object} options - Active line geometry and normalized Replay style.
+     * @returns {void}
+     */
+    #syncTraceLineCaps = ({key, id, name, positions, positionsFactory, style, fillWidth, borderWidth, show = true}) => {
+        const hasEffect = style.effectMode !== REPLAY_EFFECT_NONE
+        this.#upsertPolylineEndCaps({
+            key,
+            id,
+            name,
+            positions,
+            positionsFactory,
+            fillWidth,
+            borderWidth,
+            fillColor: hasEffect ? style.effectFillColor : style.fillColor,
+            borderColor: hasEffect ? style.effectBorderColor : style.borderColor,
+            show,
+        })
+    }
+
     #updateCompletedLines = (sample, {staticGeometry = false} = {}) => {
         const source = this.#ensureSource()
         if (!source || !this.#sampler) {
@@ -1677,6 +1862,15 @@ export class JourneyReplayCesiumRenderer {
                         zIndex: PROGRESS_Z_INDEX_BORDER,
                         clampToGround: true,
                     })
+                    this.#syncTraceLineCaps({
+                        key: 'smoothed#border',
+                        id: `${source.name}#completed#smoothed#border`,
+                        name: 'JourneyReplay completed track border',
+                        positions,
+                        style,
+                        fillWidth: renderedFillWidth,
+                        borderWidth: renderedBorderWidth,
+                    })
                     this.#upsertPolyline({
                         key: 'smoothed#inner-glow',
                         id: `${source.name}#completed#smoothed#inner-glow`,
@@ -1716,6 +1910,15 @@ export class JourneyReplayCesiumRenderer {
                     width: renderedBorderWidth,
                     zIndex: PROGRESS_Z_INDEX_BORDER,
                 })
+                this.#syncTraceLineCaps({
+                    key: 'smoothed#border',
+                    id: `${source.name}#completed#smoothed#border`,
+                    name: 'JourneyReplay completed track border',
+                    positionsFactory: this.#liveCompletedSmoothedPositions,
+                    style,
+                    fillWidth: renderedFillWidth,
+                    borderWidth: renderedBorderWidth,
+                })
                 this.#upsertDynamicPolyline({
                     key: 'smoothed#inner-glow',
                     id: `${source.name}#completed#smoothed#inner-glow`,
@@ -1747,6 +1950,15 @@ export class JourneyReplayCesiumRenderer {
                 material: this.#traceMaterial(style, style.borderColor, style.effectBorderColor, 'border'),
                 width: renderedBorderWidth,
                 zIndex: PROGRESS_Z_INDEX_BORDER,
+            })
+            this.#syncTraceLineCaps({
+                key: 'smoothed#border',
+                id: `${source.name}#completed#smoothed#border`,
+                name: 'JourneyReplay completed track border',
+                positionsFactory: this.#completedSmoothedPositions,
+                style,
+                fillWidth: renderedFillWidth,
+                borderWidth: renderedBorderWidth,
             })
             this.#upsertDynamicPolyline({
                 key: 'smoothed#inner-glow',
@@ -1796,6 +2008,15 @@ export class JourneyReplayCesiumRenderer {
                 material: this.#traceMaterial(style, style.borderColor, style.effectBorderColor, 'border'),
                 width: renderedBorderWidth,
                 zIndex: PROGRESS_Z_INDEX_BORDER,
+            })
+            this.#syncTraceLineCaps({
+                key: borderKey,
+                id: `${source.name}#completed#${borderKey}`,
+                name: 'JourneyReplay completed track border',
+                positions,
+                style,
+                fillWidth: renderedFillWidth,
+                borderWidth: renderedBorderWidth,
             })
 
             const innerGlowKey = `${segment.key}#inner-glow`

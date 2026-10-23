@@ -2,6 +2,7 @@ replay:
   duration: 30
   basic:
     duration: 15
+    sampleCount: 1024
     includeHiddenTracks: false
     readiness:
       enabled: false

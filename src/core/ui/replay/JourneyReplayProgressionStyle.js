@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,11 @@ import {
     currentReplayJourney,
     resolveJourneyReplayUserMode,
 } from './ReplayUserModeConstants'
-import {getBasicReplaySettings} from './ReplayModeSettings'
+import {
+    DEFAULT_REPLAY_SAMPLE_COUNT,
+    getBasicReplaySettings,
+    normalizeReplaySampleCount,
+} from './ReplayModeSettings'
 
 export const REPLAY_PROGRESSION_FILL_MIN_WIDTH = 1
 export const REPLAY_PROGRESSION_FILL_MAX_WIDTH = 10
@@ -239,6 +243,7 @@ export const defaultJourneyReplayBasicSettings = () => {
     return {
         ...basicDefaults,
         duration: basicDefaults.duration ?? DEFAULT_BASIC_REPLAY_DURATION,
+        sampleCount: normalizeReplaySampleCount(basicDefaults.sampleCount ?? DEFAULT_REPLAY_SAMPLE_COUNT),
         camera: {
             ...defaultJourneyReplayCameraStyle(),
             ...(replayDefaults.camera ?? {}),
@@ -784,6 +789,7 @@ export const normalizeJourneyReplaySettings = (settings = {}) => {
         inheritHideOtherJourneys: settings?.inheritHideOtherJourneys !== false,
         hideAllPoisDuringJourneyReplay: settings?.hideAllPoisDuringJourneyReplay === true,
         animateAllPoisDuringJourneyReplay: settings?.animateAllPoisDuringJourneyReplay === true,
+        sampleCount: normalizeReplaySampleCount(settings?.sampleCount),
         recordingSync: settings?.recordingSync === true,
         includeHiddenTracks: settings?.includeHiddenTracks === true,
         readiness:   normalizeJourneyReplayReadiness(settings?.readiness),
@@ -849,6 +855,9 @@ const resolveReplayBasicSettingsForRuntime = ({journey, user} = {}) => {
 
     return {
         duration: normalizeBasicReplayDuration(user?.duration ?? journey?.duration ?? product.duration),
+        sampleCount: normalizeReplaySampleCount(
+            journey?.sampleCount ?? user?.sampleCount ?? product.sampleCount ?? DEFAULT_REPLAY_SAMPLE_COUNT,
+        ),
         includeHiddenTracks: false,
         readiness: {
             ...product.readiness,
@@ -906,6 +915,7 @@ export const getJourneyReplaySettings = ({journey = currentReplayJourney()} = {}
             return {
                 ...settings,
                 duration: basic.duration,
+                sampleCount: basic.sampleCount,
                 includeHiddenTracks: basic.includeHiddenTracks,
                 readiness: normalizeJourneyReplayReadiness(basic.readiness),
                 camera: {...basic.camera, debug: true},

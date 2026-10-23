@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,12 +33,16 @@ import {
     BASIC_REPLAY_DURATIONS,
     toGlobalReplayCameraSettings,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
-import {getBasicReplaySettings, writeBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
+import {getBasicReplaySettings, REPLAY_SAMPLE_COUNT_OPTIONS, writeBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
 import {isJourneyReplayDryRunActive} from '@Core/ui/replay/JourneyReplayRuntime'
+import {currentReplayJourney} from '@Core/ui/replay/ReplayUserModeConstants'
+import {resolveBasicReplaySettings} from '@Core/ui/replay/ReplayUserModes'
 import { WaButton, WaIcon, WaSwitch, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { memo, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
+import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import { VideoRecordingSettingsMenuContent } from './VideoRecordingSettingsMenus'
+import {BasicReplaySamplingSettings} from './BasicReplaySamplingSettings'
 import {BasicReplayAppearanceSettings} from './BasicReplayAppearanceSettings'
 import '../style.css'
 
@@ -66,10 +70,12 @@ export const VideoRecordingSettingsToolbar = memo(({
     const $replay = lgs.stores.replay
     const replay = useSnapshot(lgs.stores.replay)
     const replaySettings = useSnapshot(lgs.settings.ui.replay)
+    const main = useOptionalSnapshot(lgs.stores.main)
     const video = useSnapshot($video)
     const [openPopup, setOpenPopup] = useState(null)
     const [popupDirections, setPopupDirections] = useState({ratio: 'bottom', preset: 'bottom'})
     const replaySettingsTriggerId = `replay-settings-trigger-${useId().replaceAll(':', '')}`
+    const samplingIconTooltipId = `${replaySettingsTriggerId}-sampling`
     const _cropSyncPromise = useRef(null)
     const shouldShowToolbar = video.editing === true
                               && !video.preRecording
@@ -93,6 +99,13 @@ export const VideoRecordingSettingsToolbar = memo(({
     const basicDuration = normalizeBasicReplayDuration(
         getBasicReplaySettings(replaySettings)?.duration ?? DEFAULT_BASIC_REPLAY_DURATION,
     )
+    const basicJourney = main?.theJourney ?? currentReplayJourney()
+    const basicSampleCount = resolveBasicReplaySettings({
+        user: getBasicReplaySettings(replaySettings),
+        journey: getBasicReplaySettings(basicJourney?.replay),
+    }).sampleCount
+    const basicSampleOption = REPLAY_SAMPLE_COUNT_OPTIONS.find(option => option.value === basicSampleCount)
+        ?? REPLAY_SAMPLE_COUNT_OPTIONS[0]
 
     /**
      * Persists the live crop before leaving the video editor or starting capture.
@@ -341,6 +354,17 @@ export const VideoRecordingSettingsToolbar = memo(({
                     <span>{dryRunEnabled ? 'Dry run' : `${currentQuality} · ${currentFPS} FPS`}</span>
                 </span>
                 {basicPreparation && (
+                    <span className="basic-replay-settings-summary__item basic-replay-settings-summary__sampling">
+                        <WaTooltip for={samplingIconTooltipId} placement="top">{basicSampleOption.label}</WaTooltip>
+                        <span id={samplingIconTooltipId}
+                              className="basic-replay-settings-summary__sampling-target"
+                              role="img"
+                              aria-label={`Sampling: ${basicSampleOption.label}`}>
+                            <WaIcon name={basicSampleOption.icon} variant="regular" label=""/>
+                        </span>
+                    </span>
+                )}
+                {basicPreparation && (
                     <span className="basic-replay-settings-summary__item">
                         <WaIcon name="clock" label=""/>
                         <span>{basicDuration === 60 ? '1 min' : `${basicDuration}s`}</span>
@@ -358,7 +382,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                 strategy="fixed"
             >
                 <div className={`video-recording-settings-popup video-recording-settings-popup--basic lgs-card ${mainTheme ? 'wa-theme-lgs1920' : 'wa-theme-lgs1920-on-map'}`}>
-                    <div className="basic-replay-settings-row" role="group" aria-label="Aspect ratio">
+                    <div className="basic-replay-settings-row basic-replay-settings-row--label-and-controls" role="group" aria-label="Aspect ratio">
                         <WaIcon name="crop-simple" label=""/>
                         <span className="basic-replay-settings-row__label">{'Ratio'}</span>
                         <VideoRecordingSettingsMenuContent menu="ratio"
@@ -368,21 +392,24 @@ export const VideoRecordingSettingsToolbar = memo(({
                                                            mainTheme={mainTheme}/>
                     </div>
                     {basicPreparation && (
-                        <div className="basic-replay-settings-row" role="group" aria-label="Dry run">
-                            <WaIcon name="bolt" variant="regular" label=""/>
-                            <WaSwitch
-                                className="basic-replay-dry-run-switch"
-                                size="xs"
-                                label-at-start
-                                checked={dryRunEnabled}
-                                onChange={handleDryRunChange}
-                            >
-                                {'Dry run'}
-                            </WaSwitch>
+                        <div className="basic-replay-settings-row basic-replay-settings-row--preparation" role="group" aria-label="Replay preparation options">
+                            <div className="basic-replay-dry-run-control half-width">
+                                <WaSwitch
+                                    className="basic-replay-dry-run-switch"
+                                    size="xs"
+                                    label-at-start width-auto
+                                    checked={dryRunEnabled}
+                                    onChange={handleDryRunChange}
+                                >
+                                    <WaIcon name="bolt" variant="regular" label=""/>
+                                    {'Dry run'}
+                                </WaSwitch>
+                            </div>
+                            <BasicReplaySamplingSettings/>
                         </div>
                     )}
                     {!dryRunEnabled && (
-                        <div className="basic-replay-settings-row" role="group" aria-label="Video preset">
+                        <div className="basic-replay-settings-row basic-replay-settings-row--label-and-controls" role="group" aria-label="Video preset">
                             <WaIcon name="ranking-star" label=""/>
                             <span className="basic-replay-settings-row__label">{'Preset'}</span>
                             <VideoRecordingSettingsMenuContent menu="preset"
@@ -396,7 +423,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                         <BasicReplayAppearanceSettings/>
                     )}
                     {basicPreparation && (
-                        <div className="basic-replay-settings-row" role="group" aria-label="Duration">
+                        <div className="basic-replay-settings-row basic-replay-settings-row--label-and-controls" role="group" aria-label="Duration">
                             <WaIcon name="clock" label=""/>
                             <span className="basic-replay-settings-row__label">{'Duration'}</span>
                             <div className="basic-replay-duration-buttons">

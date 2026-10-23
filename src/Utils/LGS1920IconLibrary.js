@@ -16,7 +16,9 @@
 
 import * as kitIcons from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import * as kitDuotoneIcons from '@awesome.me/kit-eb5c406148/icons/kit-duotone/custom'
-import {faCirclePlus, faQuestion, faRulerVertical, faSquare, faSquareCheck} from '@fortawesome/pro-regular-svg-icons'
+import {
+    faCirclePlus, faQuestion, faRulerVertical, faSquare, faSquareB, faSquareCheck, faSquareH, faSquareM,
+} from '@fortawesome/pro-regular-svg-icons'
 import {faArrowsLeftRight, faArrowsUpDown, faLasso, faSquareDashed, faSquareFull} from '@fortawesome/pro-solid-svg-icons'
 import {faCircle} from '@fortawesome/duotone-regular-svg-icons/faCircle'
 import {faDiamond} from '@fortawesome/duotone-regular-svg-icons/faDiamond'
@@ -27,7 +29,7 @@ export const LGS1920_ICON_KITS = [
     {family: 'classic', icons: kitIcons},
     {family: 'duotone', icons: kitDuotoneIcons},
     {family: 'duotone', variant: 'regular', icons: {faCircle, faDiamond}},
-    {family: 'classic', variant: 'regular', icons: {faSquare, faSquareCheck}},
+    {family: 'classic', variant: 'regular', icons: {faSquare, faSquareB, faSquareCheck, faSquareH, faSquareM}},
     {family: 'classic', variant: 'solid', icons: {faArrowsLeftRight, faArrowsUpDown, faLasso, faSquareDashed, faSquareFull}},
     {family: 'classic', variant: 'regular', icons: {faCirclePlus, faQuestion, faRulerVertical}},
 ]

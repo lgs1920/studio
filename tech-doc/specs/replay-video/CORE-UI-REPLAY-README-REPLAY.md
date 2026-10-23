@@ -61,12 +61,20 @@ JourneyReplay clip definitions are loaded from `public/replay.yaml`, which is th
 The JavaScript defaults in `JourneyReplayProgressionStyle.js` are normalization defaults for non-catalog settings only.
 Clip instances are stored on the current journey as `journey.replay.start` and `journey.replay.stop`.
 
+Basic Replay's rendered trace uses a configurable point budget: Basic is 1,024
+(the default), Medium is 2,048, and High is 4,096. The global preference is
+`replay.basic.sampleCount`; an explicit `journey.replay.basic.sampleCount`
+overrides it and is persisted with that Journey. This budget caps the rendered
+trace geometry only. It does not alter Replay duration or camera-path timing.
+
 Example:
 
 ```yaml
 ui:
   replay:
     duration: 60
+    basic:
+      sampleCount: 1024
     progression:
       fill:
         color: '#ff6a00'

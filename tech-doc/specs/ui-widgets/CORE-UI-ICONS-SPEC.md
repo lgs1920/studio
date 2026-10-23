@@ -107,10 +107,11 @@ const MY_LIBRARY_KITS = [
 registerIconLibraryFromKits('my-library', MY_LIBRARY_KITS)
 ```
 
-The application also bundles Classic Regular `ruler-vertical`, `question`, and
-`circle-plus` definitions from `@fortawesome/pro-regular-svg-icons`. They use
-explicit variant registrations in the same bootstrap registry, so the camera
-adjustment overlay and Fix Path help button do not depend on the remote Kit
+The application also bundles Classic Regular `ruler-vertical`, `question`,
+`circle-plus`, `square-b`, `square-m`, and `square-h` definitions from
+`@fortawesome/pro-regular-svg-icons`. They use explicit variant registrations
+in the same bootstrap registry, so the camera adjustment overlay, Fix Path help
+button, and Basic Replay sampling selector do not depend on the remote Kit
 subset for these icons.
 
 The Fix Path point-selection indicator also bundles Classic Regular `square` and

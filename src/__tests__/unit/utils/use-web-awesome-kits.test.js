@@ -111,6 +111,9 @@ describe('useWebAwesomeKits', () => {
 
     it.each([
         ['square', 'regular', 'far'],
+        ['square-b', 'regular', 'far'],
+        ['square-m', 'regular', 'far'],
+        ['square-h', 'regular', 'far'],
         ['square-check', 'regular', 'far'],
         ['square-full', 'solid', 'fas'],
     ])('bundles the %s %s icon independently of the remote Kit', (name, variant, prefix) => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,7 +34,12 @@ import {
     REPLAY_USER_MODE_EXPERT,
     resolveJourneyReplayUserMode,
 } from './ReplayUserModeConstants'
-import {getBasicReplaySettings, writeBasicReplaySettings} from './ReplayModeSettings'
+import {
+    DEFAULT_REPLAY_SAMPLE_COUNT,
+    getBasicReplaySettings,
+    normalizeReplaySampleCount,
+    writeBasicReplaySettings,
+} from './ReplayModeSettings'
 
 export {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT}
 export const DEFAULT_REPLAY_USER_MODE = REPLAY_USER_MODE_BASIC
@@ -54,6 +59,7 @@ const expertProgressionPersistTimers = new WeakMap()
 const basicCameraPersistTimers = new WeakMap()
 const basicTracePersistTimers = new WeakMap()
 const basicDurationPersistTimers = new WeakMap()
+const basicSampleCountPersistTimers = new WeakMap()
 const basicPresentationPersistTimers = new WeakMap()
 const journeyReplayStartPositionPersistPromises = new WeakMap()
 const EXPERT_CAMERA_PERSIST_DELAY_MS = 250
@@ -429,6 +435,34 @@ export const syncJourneyBasicReplayDuration = duration => {
 }
 
 /**
+ * Persist the selected Basic Replay sample budget on the current Journey.
+ * @param {number|string} sampleCount - Requested number of route samples.
+ * @param {Object|null} [journeyOverride=null] - Journey receiving the setting.
+ * @returns {number|null} Saved sample count, or null without a Journey.
+ */
+export const syncJourneyBasicReplaySampleCount = (sampleCount, journeyOverride = null) => {
+    const journey = journeyOverride ?? currentReplayJourney()
+    if (!journey) {
+        return null
+    }
+
+    const replay = journey.replay ?? {}
+    const basic = getBasicReplaySettings(replay) ?? {}
+    const nextSampleCount = normalizeReplaySampleCount(sampleCount ?? DEFAULT_REPLAY_SAMPLE_COUNT)
+    journey.replay = writeBasicReplaySettings(replay, Object.assign({}, basic, {sampleCount: nextSampleCount}))
+
+    if (typeof journey.persistToDatabase === 'function') {
+        clearTimeout(basicSampleCountPersistTimers.get(journey))
+        basicSampleCountPersistTimers.set(journey, setTimeout(() => {
+            basicSampleCountPersistTimers.delete(journey)
+            void journey.persistToDatabase()
+        }, EXPERT_CAMERA_PERSIST_DELAY_MS))
+    }
+
+    return nextSampleCount
+}
+
+/**
  * Return product defaults for the compact Basic Replay workflow.
  *
  * @returns {Object} Basic Replay defaults.
@@ -494,6 +528,9 @@ export const normalizeBasicReplaySettings = (settings = {}) => {
     })
     return {
         duration: normalizeBasicReplayDuration(settings?.duration ?? defaults.duration),
+        sampleCount: normalizeReplaySampleCount(
+            settings?.sampleCount ?? defaults.sampleCount ?? DEFAULT_REPLAY_SAMPLE_COUNT,
+        ),
         dryRun: settings?.dryRun === true,
         camera,
         presentation: resolveBasicReplayPresentation(settings?.presentation, defaults.presentation),

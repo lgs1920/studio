@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-10-22
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -892,6 +892,38 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(Cartesian3.equals(cursorWithinProgressStep, traceWithinProgressStep.at(-1))).toBe(true)
     })
 
+    it.each([false, true])('keeps the completed trace empty at exact progress zero with recording sync %s', recordingSync => {
+        const dataSources = makeDataSources()
+        installReplayGlobals({dataSources})
+        globalThis.lgs.stores.replay.playing = true
+        globalThis.lgs.stores.replay.recordingSync = recordingSync
+        const journey = makeJourney([
+            makeTrack({
+                slug: 'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.01, 48.01, 130]],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const renderer = new JourneyReplayCesiumRenderer()
+        const smoothedGuide = [
+            {longitude: 2, latitude: 48, progress: 0},
+            {longitude: 2.01, latitude: 48.01, progress: 1},
+        ]
+
+        renderer.show({sampler, options: {smoothedGuide}})
+        renderer.update({sample: sampler.atProgress(0), sampler, forceGeometry: true, showTrace: true})
+
+        const completedFill = replayEntity(dataSources, '#completed#smoothed#fill')
+        expect(propertyValue(completedFill?.polyline?.positions)).toEqual([])
+
+        renderer.update({sample: sampler.atProgress(0.1), sampler, forceGeometry: true, showTrace: true})
+
+        const positions = propertyValue(completedFill?.polyline?.positions)
+        expect(positions).toHaveLength(2)
+        expect(Cartesian3.equals(positions[0], Cartesian3.fromDegrees(2, 48, 0))).toBe(true)
+        expect(Cartesian3.equals(positions[1], Cartesian3.fromDegrees(2.001, 48.001, 0))).toBe(true)
+    })
+
     it('keeps the complete point set for the Interactive trace', () => {
         const dataSources = makeDataSources()
         const replay = defaultJourneyReplaySettings()
@@ -918,7 +950,9 @@ describe('JourneyReplayCesiumRenderer', () => {
 
     it('uniformly keeps at most 4096 trace points and preserves both endpoints', () => {
         const dataSources = makeDataSources()
-        installReplayGlobals({dataSources})
+        const replay = defaultJourneyReplaySettings()
+        replay.userMode = 'expert'
+        installReplayGlobals({dataSources, replay})
         const coordinates = Array.from({length: 8192}, (_, index) => [2 + (index * 0.00001), 48 + (index * 0.00001), 120])
         const journey = makeJourney([makeTrack({slug: 'track#journey#gpx#main', coordinates})])
         const sampler = new JourneyReplayPathSampler({journey})
@@ -936,7 +970,9 @@ describe('JourneyReplayCesiumRenderer', () => {
 
     it('caps partial replay geometry without copying the full completed prefix', () => {
         const dataSources = makeDataSources()
-        installReplayGlobals({dataSources})
+        const replay = defaultJourneyReplaySettings()
+        replay.userMode = 'expert'
+        installReplayGlobals({dataSources, replay})
         globalThis.lgs.stores.replay.recordingSync = true
         const coordinates = Array.from({length: 8192}, (_, index) => [2 + (index * 0.00001), 48 + (index * 0.00001), 120])
         const journey = makeJourney([makeTrack({slug: 'track#journey#gpx#main', coordinates})])
@@ -954,6 +990,32 @@ describe('JourneyReplayCesiumRenderer', () => {
             positions.at(-1),
             Cartesian3.fromDegrees(sample.longitude, sample.latitude, 0),
         )).toBe(true)
+    })
+
+    it.each([1024, 2048, 4096])('renders the Basic Replay Journey sample budget of %i points', sampleCount => {
+        const dataSources = makeDataSources()
+        const replay = defaultJourneyReplaySettings()
+        replay.basic = {sampleCount: 1024}
+        installReplayGlobals({dataSources, replay})
+        const journey = makeJourney([
+            makeTrack({
+                slug: 'track#journey#gpx#main',
+                coordinates: Array.from({length: 8192}, (_, index) => [2 + (index * 0.00001), 48 + (index * 0.00001), 120]),
+            }),
+        ])
+        journey.replay = {basic: {sampleCount}}
+        globalThis.lgs.theJourney = journey
+        const sampler = new JourneyReplayPathSampler({journey})
+        const renderer = new JourneyReplayCesiumRenderer()
+
+        renderer.show({sampler})
+        renderer.update({sample: sampler.atProgress(1), sampler, forceGeometry: true, showTrace: true})
+
+        const completedFill = replayEntity(dataSources, '#completed#smoothed#fill')
+        const positions = propertyValue(completedFill?.polyline?.positions)
+        expect(positions).toHaveLength(sampleCount)
+        expect(Cartesian3.equals(positions[0], Cartesian3.fromDegrees(2, 48, 0))).toBe(true)
+        expect(Cartesian3.equals(positions.at(-1), Cartesian3.fromDegrees(2 + (8191 * 0.00001), 48 + (8191 * 0.00001), 0))).toBe(true)
     })
 
     it('does not resurrect the remaining trace for stop clip frames', () => {

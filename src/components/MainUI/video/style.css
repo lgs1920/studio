@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-10
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -73,6 +73,18 @@
 
 .basic-replay-settings-summary wa-button::part(base) {
     padding-inline: var(--lgs-gutter-xxs);
+}
+
+.basic-replay-settings-summary__sampling-target {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--lgs-font-size-l);
+    min-height: var(--lgs-font-size-l);
+}
+
+.basic-replay-settings-summary__sampling-target wa-icon {
+    font-size: var(--lgs-font-size-l) !important;
 }
 
 .video-recording-settings-toolbar--timeline-drawer {
@@ -167,7 +179,8 @@
 .video-recording-settings-popup--basic {
     align-items: stretch;
     box-sizing: border-box;
-    width: max-content;
+    width: auto;
+    height: auto;
     max-width: calc(100vw - 2 * var(--lgs-gutter-s));
     min-width: 0;
 }
@@ -181,6 +194,33 @@
     gap: var(--lgs-gutter-xs);
 }
 
+.video-recording-settings-popup--basic .basic-replay-settings-row--preparation {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+}
+
+.video-recording-settings-popup--basic .basic-replay-settings-row--preparation > .half-width {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+}
+
+.video-recording-settings-popup--basic .basic-replay-settings-row--label-and-controls {
+    display: grid;
+    grid-template-columns: var(--lgs-dimension-s) 4rem minmax(max-content, 1fr);
+}
+
+.video-recording-settings-popup--basic .basic-replay-settings-row--label-and-controls > :last-child {
+    justify-self: end;
+}
+
+.video-recording-settings-popup--basic .basic-replay-dry-run-control {
+    display: flex;
+    align-items: center;
+}
+
 .video-recording-settings-popup--basic .basic-replay-settings-row > wa-icon {
     flex: 0 0 var(--lgs-dimension-s);
     font-size: var(--lgs-font-size-s);
@@ -188,13 +228,46 @@
 }
 
 .video-recording-settings-popup--basic .basic-replay-settings-row__label {
-    flex: 1 1 auto;
+    flex: 0 0 4rem;
     text-align: left;
     white-space: nowrap;
 }
 
+.video-recording-settings-popup--basic .basic-replay-sampling__select {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.video-recording-settings-popup--basic .basic-replay-sampling__select::part(form-control) {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+}
+
+.video-recording-settings-popup--basic .basic-replay-sampling__select::part(form-control-input) {
+    flex: 0 1 auto;
+    width: auto !important;
+    margin-left: 0 !important;
+    min-width: 0;
+}
+
+.video-recording-settings-popup--basic .basic-replay-sampling__select::part(form-control-label),
+.video-recording-settings-popup--basic .basic-replay-sampling__select::part(display-input) {
+    font-size: var(--lgs-font-size-s) !important;
+}
+
+.video-recording-settings-popup--basic .basic-replay-sampling__select wa-option,
+.video-recording-settings-popup--basic .basic-replay-sampling__select::part(listbox) {
+    font-size: var(--lgs-font-size-s);
+}
+
+.video-recording-settings-popup--basic .basic-replay-sampling-control {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
 .basic-replay-dry-run-switch {
-    margin-inline-start: auto;
+    min-width: 0;
 
     &::part(label) {
         font-size: var(--lgs-font-size-s);
@@ -271,13 +344,15 @@
 }
 
 .video-recording-settings-popup--basic .basic-replay-duration-buttons {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
+    margin-inline-start: auto;
 }
 
 .video-recording-settings-popup--basic .crop-ratio-popup-menu,
 .video-recording-settings-popup--basic .video-preset-toolbar-embedded,
 .video-recording-settings-popup--basic .video-preset-toolbar-embedded .video-preset-widget {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-width: 0;
     padding: 0;
     border: 0;
@@ -285,16 +360,17 @@
     box-shadow: none;
 }
 
+.video-recording-settings-popup--basic .crop-ratio-popup-menu,
+.video-recording-settings-popup--basic .video-preset-toolbar-embedded {
+    width: max-content;
+    margin-inline-start: auto;
+}
+
 .video-recording-settings-popup--basic .video-preset-toolbar-embedded .video-preset-widget {
     align-items: center;
     flex-direction: row;
     justify-content: flex-end;
     width: max-content;
-    margin-inline-start: auto;
-}
-
-.video-recording-settings-popup--basic .crop-ratio-popup-menu {
-    margin-inline-start: auto;
 }
 
 .video-recording-settings-popup--basic .crop-ratio-popup-menu ul,
@@ -305,13 +381,18 @@
     flex-wrap: nowrap;
     align-items: center;
     gap: var(--lgs-gutter-xxs);
-    min-width: 0;
+    min-width: max-content;
     padding: 0;
     justify-content: flex-end;
 }
 
+.video-recording-settings-popup--basic .crop-ratio-popup-menu ul {
+    margin-inline-start: auto;
+}
+
 .video-recording-settings-popup--basic .video-preset-toolbar-embedded .video-choice-buttons {
-    width: 100%;
+    width: max-content;
+    margin-inline-start: auto;
     border: 0;
     background: transparent;
 }
@@ -418,6 +499,16 @@
 
 .video-preset-toolbar-embedded .video-choice-button::part(base) {
     justify-content: space-between;
+}
+
+@media (max-width: 480px) {
+    .video-recording-settings-popup--basic .basic-replay-settings-row {
+        gap: var(--lgs-gutter-xxs);
+    }
+
+    .video-recording-settings-popup--basic .basic-replay-settings-row--label-and-controls {
+        grid-template-columns: var(--lgs-dimension-s) 2.5rem minmax(max-content, 1fr);
+    }
 }
 
 .video-choice-buttons wa-button.video-choice-button > wa-icon[slot='end'] {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
-import {cloneElement} from 'react'
+import {Children, cloneElement} from 'react'
 
 vi.mock('@Components/LGSPopup', () => ({
     LGSPopup: ({active, children, placement}) => active ? <div data-testid="settings-popup" data-placement={placement}>{children}</div> : null,
@@ -33,10 +33,31 @@ vi.mock('@Components/MainUI/video/toolbox/VideoPresetToolbar', () => ({
 
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
-    WaIcon: ({name, variant}) => <span data-icon={name} data-variant={variant}/>,
+    WaIcon: ({name, variant, id}) => <span id={id} data-icon={name} data-variant={variant}/>,
     WaColorPicker: ({value, onInput, 'aria-label': ariaLabel}) => (
         <input aria-label={ariaLabel} value={value} onInput={onInput} readOnly/>
     ),
+    WaSelect: ({children, className, value, onChange, label, 'label-at-start': labelAtStart}) => {
+        const items = Children.toArray(children)
+        const startItems = items.filter(item => item.props?.slot === 'start')
+        const options = items.filter(item => item.props?.value !== undefined)
+
+        return (
+            <div className={className} data-label-at-start={labelAtStart ? 'true' : undefined}>
+                {startItems}
+                <select aria-label={label} value={value} onChange={onChange}>{options}</select>
+            </div>
+        )
+    },
+    WaOption: ({children, value}) => {
+        const items = Children.toArray(children)
+        const icon = items.find(item => item.props?.name)
+        return (
+            <option value={value} data-icon={icon?.props.name} data-variant={icon?.props.variant}>
+                {items.filter(item => typeof item === 'string').join('')}
+            </option>
+        )
+    },
     WaRadioGroup: ({children, value, onChange, label}) => (
         <div role="radiogroup" aria-label={label}>
             {children.map(child => cloneElement(child, {checked: child.props.value === value, onChange}))}
@@ -49,8 +70,10 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
             {children}
         </label>
     ),
-    WaSwitch: ({children, checked, className, onChange}) => (
-        <label className={className}>
+    WaSwitch: ({children, checked, className, onChange, 'label-at-start': labelAtStart, 'width-auto': widthAuto}) => (
+        <label className={className}
+               data-label-at-start={labelAtStart ? 'true' : undefined}
+               data-width-auto={widthAuto ? 'true' : undefined}>
             <input type="checkbox" checked={checked} onChange={onChange}/>
             {children}
         </label>
@@ -255,6 +278,77 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(globalThis.lgs.stores.replay.duration).toBe(20)
     })
 
+    it('shows themed sample levels with matching regular icons and saves the selection per Journey', async () => {
+        vi.useFakeTimers()
+        globalThis.lgs.stores.replay.basicPreparationActive = true
+        const persistToDatabase = vi.fn()
+        globalThis.lgs.theJourney.replay = {basic: {}}
+        globalThis.lgs.theJourney.persistToDatabase = persistToDatabase
+        globalThis.lgs.stores.main = proxy({theJourney: globalThis.lgs.theJourney})
+        render(<VideoRecordingSettingsToolbar mainTheme/>)
+        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
+
+        const select = screen.getByRole('combobox', {name: 'Sampling'})
+        expect(select.value).toBe('1024')
+        const samplingControl = document.querySelector('.basic-replay-sampling__select')
+        expect(samplingControl?.getAttribute('data-label-at-start')).toBe('true')
+        expect(document.querySelector('.basic-replay-sampling-control')?.classList).toContain('half-width')
+        expect(document.querySelector('.video-recording-settings-popup')?.classList).toContain('wa-theme-lgs1920')
+        const preparationRow = document.querySelector('.basic-replay-settings-row--preparation')
+        expect(preparationRow?.children).toHaveLength(2)
+        expect(preparationRow?.children[0].classList).toContain('half-width')
+        expect(preparationRow?.children[0].querySelector('.basic-replay-dry-run-switch')?.getAttribute('data-label-at-start')).toBe('true')
+        expect(preparationRow?.children[0].querySelector('.basic-replay-dry-run-switch')?.getAttribute('data-width-auto')).toBe('true')
+        expect(preparationRow?.classList).not.toContain('basic-replay-settings-row--label-and-controls')
+        for (const label of ['Aspect ratio', 'Duration']) {
+            const settingsRow = document.querySelector(`.video-recording-settings-popup [role="group"][aria-label="${label}"]`)
+            expect(settingsRow?.classList).toContain('basic-replay-settings-row--label-and-controls')
+            expect(settingsRow?.classList).not.toContain('half-width')
+        }
+        const presetRow = document.querySelector('.video-recording-settings-popup [role="group"][aria-label="Video preset"]')
+        if (presetRow) {
+            expect(presetRow.classList).toContain('basic-replay-settings-row--label-and-controls')
+            expect(presetRow.classList).not.toContain('half-width')
+        }
+        expect(document.querySelector('.basic-replay-sampling__select > [data-icon]')?.getAttribute('data-icon')).toBe('square-b')
+        expect(document.querySelector('[data-tooltip-for="basic-replay-sampling-selected-icon"]')?.textContent).toBe('1024 pts')
+        const toolbarSamplingTarget = document.querySelector('.basic-replay-settings-summary__sampling-target')
+        expect(toolbarSamplingTarget?.getAttribute('id')).toBeTruthy()
+        expect(toolbarSamplingTarget?.getAttribute('aria-label')).toBe('Sampling: Basic')
+        expect(toolbarSamplingTarget?.querySelector('[data-icon="square-b"]')).not.toBeNull()
+        expect(document.querySelector(`[data-tooltip-for="${toolbarSamplingTarget?.getAttribute('id')}"]`)?.textContent).toBe('Basic')
+        for (const [value, icon] of [['1024', 'square-b'], ['2048', 'square-m'], ['4096', 'square-h']]) {
+            const option = select.querySelector(`option[value="${value}"]`)
+            expect(option?.getAttribute('data-icon')).toBe(icon)
+            expect(option?.getAttribute('data-variant')).toBe('regular')
+            expect(document.querySelector(`[data-tooltip-for="basic-replay-sampling-option-${value}"]`)?.textContent).toBe(`${value} pts`)
+        }
+        expect(select.querySelector('option[value="1024"]')?.textContent).toBe('Basic')
+        expect(select.querySelector('option[value="2048"]')?.textContent).toBe('Medium')
+        expect(select.querySelector('option[value="4096"]')?.textContent).toBe('High')
+
+        await act(async () => fireEvent.change(select, {target: {value: '2048'}}))
+        const mediumToolbarTarget = document.querySelector('.basic-replay-settings-summary__sampling-target')
+        expect(mediumToolbarTarget?.getAttribute('aria-label')).toBe('Sampling: Medium')
+        expect(mediumToolbarTarget?.querySelector('[data-icon="square-m"]')).not.toBeNull()
+        expect(document.querySelector(`[data-tooltip-for="${mediumToolbarTarget?.getAttribute('id')}"]`)?.textContent).toBe('Medium')
+
+        await act(async () => fireEvent.change(select, {target: {value: '4096'}}))
+
+        expect(globalThis.lgs.settings.ui.replay.basic.sampleCount).toBe(4096)
+        expect(globalThis.lgs.theJourney.replay.basic.sampleCount).toBe(4096)
+        expect(select.value).toBe('4096')
+        expect(document.querySelector('.basic-replay-sampling__select > [data-icon]')?.getAttribute('data-icon')).toBe('square-h')
+        expect(document.querySelector('[data-tooltip-for="basic-replay-sampling-selected-icon"]')?.textContent).toBe('4096 pts')
+        const updatedToolbarSamplingTarget = document.querySelector('.basic-replay-settings-summary__sampling-target')
+        expect(updatedToolbarSamplingTarget?.getAttribute('aria-label')).toBe('Sampling: High')
+        expect(updatedToolbarSamplingTarget?.querySelector('[data-icon="square-h"]')).not.toBeNull()
+        expect(document.querySelector(`[data-tooltip-for="${updatedToolbarSamplingTarget?.getAttribute('id')}"]`)?.textContent).toBe('High')
+        expect(persistToDatabase).not.toHaveBeenCalled()
+        await act(async () => vi.advanceTimersByTime(250))
+        expect(persistToDatabase).toHaveBeenCalledOnce()
+    })
+
     it('selects 45-second and one-minute durations for Basic playback and recording', async () => {
         globalThis.lgs.stores.replay.basicPreparationActive = true
         render(<VideoRecordingSettingsToolbar/>)
@@ -340,7 +434,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.getByTestId('settings-popup')).not.toBeNull()
         expect(document.querySelector('.basic-replay-settings-summary')?.textContent).not.toContain('FPS')
         expect(document.querySelector('.basic-replay-settings-summary [data-icon="bolt"]')?.getAttribute('data-variant')).toBe('regular')
-        expect(document.querySelector('[aria-label="Dry run"] [data-icon="bolt"]')?.getAttribute('data-variant')).toBe('regular')
+        expect(document.querySelector('.basic-replay-settings-row--preparation [data-icon="bolt"]')?.getAttribute('data-variant')).toBe('regular')
         expect(document.querySelector('[aria-label="Video preset"]')).toBeNull()
         expect(screen.queryByTestId('preset-popup-content')).toBeNull()
         expect(screen.getAllByText('Dry run')).not.toHaveLength(0)

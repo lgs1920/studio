@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,7 @@ import {
     syncJourneyExpertReplayCamera,
     syncJourneyExpertReplayProgression,
     syncJourneyBasicReplayCamera,
+    syncJourneyBasicReplaySampleCount,
     syncJourneyReplayStartPosition,
     REPLAY_USER_MODE_BASIC,
     REPLAY_USER_MODE_EXPERT,
@@ -171,6 +172,47 @@ describe('Replay user modes', () => {
         expect(resolved.camera.altitude).toBe(DEFAULT_REPLAY_CAMERA.altitude)
         expect(resolved.camera.cameraAngle).toBe(45)
         expect(resolved.camera.altitudeMode).toBe('constant')
+    })
+
+    it('uses Basic sampling by default and persists a Journey override above the global preference', async () => {
+        const previousLgs = globalThis.lgs
+        const persistToDatabase = vi.fn(async () => undefined)
+        const journey = {
+            slug: 'sampling-journey',
+            replay: {},
+            persistToDatabase,
+        }
+        vi.stubGlobal('lgs', {
+            savedConfiguration: {ui: {replay: replayYamlDefaults}},
+            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_BASIC, basic: {sampleCount: 4096}}}},
+            stores: {main: {theJourney: journey}, replay: {basicPreparationActive: true}},
+        })
+        vi.useFakeTimers()
+
+        try {
+            expect(defaultBasicReplaySettings().sampleCount).toBe(1024)
+            expect(normalizeBasicReplaySettings({sampleCount: 999}).sampleCount).toBe(1024)
+            expect(resolveBasicReplaySettings({
+                user: {sampleCount: 4096},
+                journey: {sampleCount: 1024},
+            }).sampleCount).toBe(1024)
+
+            expect(syncJourneyBasicReplaySampleCount(1024, journey)).toBe(1024)
+            expect(journey.replay.basic.sampleCount).toBe(1024)
+            expect(getJourneyReplaySettings({journey}).sampleCount).toBe(1024)
+            vi.advanceTimersByTime(250)
+            await Promise.resolve()
+            expect(persistToDatabase).toHaveBeenCalledOnce()
+        }
+        finally {
+            vi.useRealTimers()
+            if (previousLgs === undefined) {
+                delete globalThis.lgs
+            }
+            else {
+                globalThis.lgs = previousLgs
+            }
+        }
     })
 
     it('keeps Basic Replay in Navigation mode and enables zone diagnostics', () => {
