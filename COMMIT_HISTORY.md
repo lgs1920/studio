@@ -2368,3 +2368,7 @@
 ## 2026-10-20 — [`Merge pull request #544 from lgs1920/docs/project-rules-ui-cesium-pointer-ownership`](https://github.com/lgs1920/studio/commit/e7ffbb24bea973182bf195efa66834d0271d75b3)
 
 - docs: clarify component styling and Cesium gestures
+
+## 2026-10-23 — [`feat: support FIT and TCX journey imports`](https://github.com/lgs1920/studio/commit/152c5e91ecae55c826050e23b92a320f1f6e528a)
+
+- Recorded automatically from Git history.
