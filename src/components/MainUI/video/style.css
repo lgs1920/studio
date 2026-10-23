@@ -221,6 +221,10 @@
     align-items: center;
 }
 
+.video-recording-settings-popup--basic .basic-replay-dry-run-switch::part(label) {
+    gap: var(--lgs-gutter-xxs);
+}
+
 .video-recording-settings-popup--basic .basic-replay-settings-row > wa-icon {
     flex: 0 0 var(--lgs-dimension-s);
     font-size: var(--lgs-font-size-s);

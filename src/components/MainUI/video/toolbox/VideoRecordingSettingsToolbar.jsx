@@ -344,12 +344,12 @@ export const VideoRecordingSettingsToolbar = memo(({
                 </WaButton>
                 <span className="basic-replay-settings-summary__separator" aria-hidden="true"/>
                 <span className="basic-replay-settings-summary__item">
-                    <WaIcon name="crop-simple" label=""/>
+                    <WaIcon name="crop-simple" variant="regular" label=""/>
                     <span>{currentRatio?.label ?? video.ratio}</span>
                 </span>
                 <span className="basic-replay-settings-summary__item">
                     <WaIcon name={dryRunEnabled ? 'bolt' : 'ranking-star'}
-                            variant={dryRunEnabled ? 'regular' : undefined}
+                            variant="regular"
                             label=""/>
                     <span>{dryRunEnabled ? 'Dry run' : `${currentQuality} · ${currentFPS} FPS`}</span>
                 </span>
@@ -366,7 +366,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                 )}
                 {basicPreparation && (
                     <span className="basic-replay-settings-summary__item">
-                        <WaIcon name="clock" label=""/>
+                        <WaIcon name="clock" variant="regular" label=""/>
                         <span>{basicDuration === 60 ? '1 min' : `${basicDuration}s`}</span>
                     </span>
                 )}
@@ -383,7 +383,7 @@ export const VideoRecordingSettingsToolbar = memo(({
             >
                 <div className={`video-recording-settings-popup video-recording-settings-popup--basic lgs-card ${mainTheme ? 'wa-theme-lgs1920' : 'wa-theme-lgs1920-on-map'}`}>
                     <div className="basic-replay-settings-row basic-replay-settings-row--label-and-controls" role="group" aria-label="Aspect ratio">
-                        <WaIcon name="crop-simple" label=""/>
+                        <WaIcon name="crop-simple" variant="regular" label=""/>
                         <span className="basic-replay-settings-row__label">{'Ratio'}</span>
                         <VideoRecordingSettingsMenuContent menu="ratio"
                                                            context={$cropper}
@@ -410,7 +410,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                     )}
                     {!dryRunEnabled && (
                         <div className="basic-replay-settings-row basic-replay-settings-row--label-and-controls" role="group" aria-label="Video preset">
-                            <WaIcon name="ranking-star" label=""/>
+                            <WaIcon name="ranking-star" variant="regular" label=""/>
                             <span className="basic-replay-settings-row__label">{'Preset'}</span>
                             <VideoRecordingSettingsMenuContent menu="preset"
                                                                context={$cropper}
@@ -424,7 +424,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                     )}
                     {basicPreparation && (
                         <div className="basic-replay-settings-row basic-replay-settings-row--label-and-controls" role="group" aria-label="Duration">
-                            <WaIcon name="clock" label=""/>
+                            <WaIcon name="clock" variant="regular" label=""/>
                             <span className="basic-replay-settings-row__label">{'Duration'}</span>
                             <div className="basic-replay-duration-buttons">
                                 {BASIC_REPLAY_DURATIONS.map(duration => (
@@ -455,12 +455,12 @@ export const VideoRecordingSettingsToolbar = memo(({
                     appearance={openPopup === RATIO_POPUP ? 'outlined' : 'plain'}
                     onClick={() => togglePopup(RATIO_POPUP)}
                 >
-                    <WaIcon name="crop-simple" label=""/>
+                    <WaIcon name="crop-simple" variant="regular" label=""/>
                     <span>
                         <span className="video-recording-settings-ratio-prefix">{'Ratio:'}</span>
                         {` ${currentRatio?.label ?? video.ratio}`}
                     </span>
-                    <WaIcon slot="end" name={getCaretIcon(popupDirections.ratio)} variant="solid" label=""/>
+                    <WaIcon slot="end" name={getCaretIcon(popupDirections.ratio)} variant="regular" label=""/>
                 </WaButton> : null}
 
                 {showVideoOptions && !basicPreparation ? <LGSPopup
@@ -485,11 +485,11 @@ export const VideoRecordingSettingsToolbar = memo(({
                     appearance={openPopup === VIDEO_PRESET_POPUP ? 'outlined' : 'plain'}
                     onClick={() => togglePopup(VIDEO_PRESET_POPUP)}
                 >
-                    <WaIcon name="ranking-star" label=""/>
+                    <WaIcon name="ranking-star" variant="regular" label=""/>
                     <span>
                         {`${currentQuality} · ${currentFPS} FPS`}
                     </span>
-                    <WaIcon slot="end" name={getCaretIcon(popupDirections.preset)} variant="solid" label=""/>
+                    <WaIcon slot="end" name={getCaretIcon(popupDirections.preset)} variant="regular" label=""/>
                 </WaButton> : null}
 
                 {showVideoOptions && !basicPreparation ? <LGSPopup
@@ -551,7 +551,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                             onClick={() => void handleReplayRecording()}
                         >
                             <WaIcon name={dryRunEnabled ? 'bolt' : 'clapperboard-play'}
-                                    variant={dryRunEnabled ? 'regular' : undefined}
+                                    variant="regular"
                                     label=""/>
                             <span>{dryRunEnabled ? 'Dry run' : 'Record'}</span>
                         </WaButton>
@@ -571,7 +571,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                             aria-label="Cancel"
                             onClick={() => void handleCancel()}
                         >
-                            <WaIcon name="xmark" label=""/>
+                            <WaIcon name="xmark" variant="regular" label=""/>
                             <span>{'Cancel'}</span>
                         </WaButton>
                     </>

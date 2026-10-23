@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-30
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -158,7 +158,7 @@ export const VideoPresetToolbar = memo(({
             >
                 {value.name}
                 {value.submenu && (
-                    <WaIcon slot="end" name={getCaretIcon(popupDirection)} variant="solid" label=""/>
+                    <WaIcon slot="end" name={getCaretIcon(popupDirection)} variant="regular" label=""/>
                 )}
             </WaButton>
 

@@ -317,15 +317,24 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(toolbarSamplingTarget?.getAttribute('aria-label')).toBe('Sampling: Basic')
         expect(toolbarSamplingTarget?.querySelector('[data-icon="square-b"]')).not.toBeNull()
         expect(document.querySelector(`[data-tooltip-for="${toolbarSamplingTarget?.getAttribute('id')}"]`)?.textContent).toBe('Basic')
-        for (const [value, icon] of [['1024', 'square-b'], ['2048', 'square-m'], ['4096', 'square-h']]) {
+        for (const [value, icon] of [['512', 'square-b'], ['1024', 'square-b'], ['2048', 'square-m'], ['4096', 'square-h']]) {
             const option = select.querySelector(`option[value="${value}"]`)
             expect(option?.getAttribute('data-icon')).toBe(icon)
             expect(option?.getAttribute('data-variant')).toBe('regular')
             expect(document.querySelector(`[data-tooltip-for="basic-replay-sampling-option-${value}"]`)?.textContent).toBe(`${value} pts`)
         }
+        expect(select.querySelector('option[value="512"]')?.textContent).toBe('Low')
         expect(select.querySelector('option[value="1024"]')?.textContent).toBe('Basic')
         expect(select.querySelector('option[value="2048"]')?.textContent).toBe('Medium')
         expect(select.querySelector('option[value="4096"]')?.textContent).toBe('High')
+
+        await act(async () => fireEvent.change(select, {target: {value: '512'}}))
+        expect(globalThis.lgs.settings.ui.replay.basic.sampleCount).toBe(512)
+        expect(globalThis.lgs.theJourney.replay.basic.sampleCount).toBe(512)
+        expect(document.querySelector('.basic-replay-sampling__select > [data-icon]')?.getAttribute('data-icon')).toBe('square-b')
+        const lowToolbarTarget = document.querySelector('.basic-replay-settings-summary__sampling-target')
+        expect(lowToolbarTarget?.getAttribute('aria-label')).toBe('Sampling: Low')
+        expect(document.querySelector(`[data-tooltip-for="${lowToolbarTarget?.getAttribute('id')}"]`)?.textContent).toBe('Low')
 
         await act(async () => fireEvent.change(select, {target: {value: '2048'}}))
         const mediumToolbarTarget = document.querySelector('.basic-replay-settings-summary__sampling-target')

@@ -19,6 +19,7 @@ const isSettingsObject = value => value !== null && typeof value === 'object' &&
 
 /** Named sample budgets and their toolbar glyphs for Basic Replay. */
 export const REPLAY_SAMPLE_COUNT_OPTIONS = Object.freeze([
+    {value: 512, label: 'Low', icon: 'square-b'},
     {value: 1024, label: 'Basic', icon: 'square-b'},
     {value: 2048, label: 'Medium', icon: 'square-m'},
     {value: 4096, label: 'High', icon: 'square-h'},

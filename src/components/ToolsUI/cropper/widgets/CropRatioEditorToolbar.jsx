@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -159,7 +159,7 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId, embedded = fal
                         isPresetVisible(preset) && (
                             <Fragment key={`embedded-crop-ratio-${preset.value}`}>
                                 <WaTooltip for={`embedded-btn-ratio-${preset.value}`} placement="right">
-                                    {`${preset.label}: ${preset.description}`}
+                                    {preset.description}
                                 </WaTooltip>
                                 {unifiedChoices ? (
                                     <li>
@@ -231,7 +231,7 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId, embedded = fal
                                     isPresetVisible(preset) && (
                                         <Fragment key={`crop-ratio-${preset.value}`}>
                                             <WaTooltip for={`btn-ratio-${preset.value}`} placement="right">
-                                                {`${preset.label}: ${preset.description}`}
+                                                {preset.description}
                                             </WaTooltip>
 
                                             <li

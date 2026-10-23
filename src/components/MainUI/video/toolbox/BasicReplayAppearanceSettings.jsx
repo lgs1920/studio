@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-14
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -65,7 +65,7 @@ export const BasicReplayAppearanceSettings = () => {
 
     return (
         <div className="basic-replay-settings-row basic-replay-appearance" role="group" aria-label="Trace and marker appearance">
-            <WaIcon name="paintbrush" label=""/>
+            <WaIcon name="paintbrush" variant="regular" label=""/>
             <div className="basic-replay-appearance__colors">
                 <WaColorPicker size="s" aria-label="Replay border color"
                                value={border.color} swatches={swatches}
