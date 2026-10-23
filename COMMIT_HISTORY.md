@@ -2381,3 +2381,7 @@
 
 - This reverts commit f4384717a1cee36d1e671b87e04557ba92e22994, reversing
 - changes made to 9ba7db81c5b3c5e7998b87edec1dfbb32792dcf3.
+
+## 2026-10-23 — [`Merge pull request #551 from lgs1920/codex/revert-388-main`](https://github.com/lgs1920/studio/commit/282ee2a65edd89d32bcbdaaf6725bb6715ec8504)
+
+- revert: remove FIT and TCX import from main
