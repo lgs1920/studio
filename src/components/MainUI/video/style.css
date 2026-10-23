@@ -79,12 +79,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: var(--lgs-font-size-l);
-    min-height: var(--lgs-font-size-l);
+    min-width: var(--lgs-font-size-m);
+    min-height: var(--lgs-font-size-m);
 }
 
 .basic-replay-settings-summary__sampling-target wa-icon {
-    font-size: var(--lgs-font-size-l) !important;
+    font-size: var(--lgs-font-size-m) !important;
 }
 
 .video-recording-settings-toolbar--timeline-drawer {
