@@ -27,6 +27,7 @@ import { default as centroid }                         from '@turf/centroid'
 import { SceneUtils }                                  from '@Utils/cesium/SceneUtils'
 import { TerrainUtils }                                from '@Utils/cesium/TerrainUtils'
 import { getCorrectedTrackContent, fixPathRevisionKey } from '@Utils/cesium/fixPathCorrections'
+import { createPolylineEndCapImage, getPolylineEndCapRotation } from '@Utils/cesium/TrackEndCapUtils'
 import {
     getTrackRenderContent, trackRenderSmoothingKey,
 }                                                      from '@Utils/cesium/trackRenderSmoothing'
@@ -35,9 +36,9 @@ import {
 }                                                      from '@Utils/cesium/trackRenderStyle'
 import { CountApi }                                     from '@Utils/CountApi'
 import {
-    BoundingSphere, BufferPolyline, BufferPolylineMaterial, Cartesian2, Cartesian3, Cartographic, Color as CColor,
-    CustomDataSource, GeoJsonDataSource, GeoJsonPrimitive, HeightReference, HorizontalOrigin, Math as M,
-    PolylineDashMaterialProperty, PolylineOutlineMaterialProperty, Rectangle, VerticalOrigin,
+    BoundingSphere, BufferPolyline, BufferPolylineMaterial, CallbackProperty, Cartesian2, Cartesian3, Cartographic,
+    Color as CColor, CustomDataSource, GeoJsonDataSource, GeoJsonPrimitive, HeightReference, HorizontalOrigin,
+    Math as M, PolylineDashMaterialProperty, PolylineOutlineMaterialProperty, Rectangle, VerticalOrigin,
 }                                                      from 'cesium'
 import { UIToast }                                     from '../UIToast.js'
 import { POI_FLAG, POI_FLAG_START, POI_STD, POIUtils } from './POIUtils'
@@ -119,22 +120,30 @@ const setGraphicValue = (graphic, propertyName, value) => {
 }
 
 /**
- * Size an endpoint point so its fill and outline match a layered track line.
+ * Size and color a semicircular endpoint cap to match a layered track line.
  *
- * @param {object} entity - Endpoint entity with a PointGraphics instance.
+ * @param {object} entity - Endpoint entity with a BillboardGraphics instance.
  * @param {number} fillWidth - Screen width of the main track line.
  * @param {number} underlayWidth - Screen width of the underlay line.
+ * @param {object} fillColor - Main line color used inside the cap.
+ * @param {object} borderColor - Underlay color used around the cap.
  * @returns {void}
  */
-const setUnderlayCapSize = (entity, fillWidth, underlayWidth) => {
-    const point = entity?.point
-    if (!point) {
+const setUnderlayCapStyle = (entity, fillWidth, underlayWidth, fillColor, borderColor) => {
+    const billboard = entity?.billboard
+    if (!billboard) {
         return
     }
 
     const innerWidth = Math.min(fillWidth, underlayWidth)
-    setGraphicValue(point, 'pixelSize', innerWidth)
-    setGraphicValue(point, 'outlineWidth', Math.max(0, (underlayWidth - innerWidth) / 2))
+    setGraphicValue(billboard, 'width', underlayWidth / 2)
+    setGraphicValue(billboard, 'height', underlayWidth)
+    setGraphicValue(billboard, 'image', createPolylineEndCapImage({
+        fillWidth: innerWidth,
+        borderWidth: underlayWidth,
+        fillColor,
+        borderColor,
+    }))
 }
 
 const coordinateSignature = coordinate => Array.isArray(coordinate)
@@ -1100,10 +1109,12 @@ export class TrackUtils {
                 }
 
                 if (style.underlay.enabled && (mainWidthChanged || underlayWidthChanged)) {
-                    entities.underlayCaps.forEach(entity => setUnderlayCapSize(
+                    entities.underlayCaps.forEach(entity => setUnderlayCapStyle(
                         entity,
                         mainStyledWidth,
                         underlayStyledWidth,
+                        TrackUtils.cssColor(style.color),
+                        TrackUtils.cssColor(style.underlay.color),
                     ))
                     changed = true
                 }
@@ -1267,31 +1278,48 @@ export class TrackUtils {
         }
 
         /**
-         * Create or refresh a point cap at one end of an underlaid track.
+         * Create or refresh a semicircular billboard cap at one end of an underlaid track.
          *
          * @param {string} entityId - Stable identifier for the cap entity.
-         * @param {Cartesian3} position - Track endpoint used by the cap.
+         * @param {object} trackEntity - Base track entity used to resolve the endpoint and tangent.
+         * @param {'start'|'end'} end - Track endpoint used by the cap.
          * @returns {object} Updated endpoint cap entity.
          */
-        const updateUnderlayCap = (entityId, position) => {
+        const updateUnderlayCap = (entityId, trackEntity, end) => {
             activeStyleEntityIds.add(entityId)
-            const point = {
-                pixelSize: style.farPixelWidth,
-                color: TrackUtils.cssColor(style.color),
-                outlineColor: TrackUtils.cssColor(style.underlay.color),
-                outlineWidth: Math.max(0, (style.underlay.pixelWidth - style.farPixelWidth) / 2),
+            const positions = getPolylinePositions(trackEntity)
+            const position = end === 'start' ? positions[0] : positions.at(-1)
+            const billboard = {
+                image: createPolylineEndCapImage({
+                    fillWidth: style.farPixelWidth,
+                    borderWidth: style.underlay.pixelWidth,
+                    fillColor: TrackUtils.cssColor(style.color),
+                    borderColor: TrackUtils.cssColor(style.underlay.color),
+                }),
+                width: style.underlay.pixelWidth / 2,
+                height: style.underlay.pixelWidth,
+                horizontalOrigin: HorizontalOrigin.LEFT,
+                verticalOrigin: VerticalOrigin.CENTER,
+                rotation: new CallbackProperty(
+                    () => getPolylineEndCapRotation(lgs.scene, getPolylinePositions(trackEntity), end),
+                    false,
+                ),
                 heightReference: HeightReference.CLAMP_TO_GROUND,
                 disableDepthTestDistance: 0,
+                zIndex: 21,
             }
             const existing = source.entities.getById(entityId)
-            if (existing?.point) {
+            if (existing?.billboard) {
                 existing.position = position
-                setGraphicValue(existing.point, 'pixelSize', point.pixelSize)
-                setGraphicValue(existing.point, 'color', point.color)
-                setGraphicValue(existing.point, 'outlineColor', point.outlineColor)
-                setGraphicValue(existing.point, 'outlineWidth', point.outlineWidth)
-                setGraphicValue(existing.point, 'heightReference', point.heightReference)
-                setGraphicValue(existing.point, 'disableDepthTestDistance', point.disableDepthTestDistance)
+                setGraphicValue(existing.billboard, 'image', billboard.image)
+                setGraphicValue(existing.billboard, 'width', billboard.width)
+                setGraphicValue(existing.billboard, 'height', billboard.height)
+                setGraphicValue(existing.billboard, 'horizontalOrigin', billboard.horizontalOrigin)
+                setGraphicValue(existing.billboard, 'verticalOrigin', billboard.verticalOrigin)
+                setGraphicValue(existing.billboard, 'rotation', billboard.rotation)
+                setGraphicValue(existing.billboard, 'heightReference', billboard.heightReference)
+                setGraphicValue(existing.billboard, 'disableDepthTestDistance', billboard.disableDepthTestDistance)
+                setGraphicValue(existing.billboard, 'zIndex', billboard.zIndex)
                 existing.show = true
                 return existing
             }
@@ -1299,7 +1327,7 @@ export class TrackUtils {
             return source.entities.add({
                 id: entityId,
                 position,
-                point,
+                billboard,
                 show: true,
             })
         }
@@ -1320,11 +1348,13 @@ export class TrackUtils {
                 if (endpointPositions.length >= 2) {
                     entities.underlayCaps.push(updateUnderlayCap(
                         `${entity.id}${TRACK_STYLE_ENTITY_MARKER}underlay-cap#start`,
-                        endpointPositions[0],
+                        entity,
+                        'start',
                     ))
                     entities.underlayCaps.push(updateUnderlayCap(
                         `${entity.id}${TRACK_STYLE_ENTITY_MARKER}underlay-cap#end`,
-                        endpointPositions.at(-1),
+                        entity,
+                        'end',
                     ))
                 }
             }

@@ -15,11 +15,12 @@
  ******************************************************************************/
 
 import {MAX_RENDER_POINTS} from '@Utils/cesium/trackRenderSmoothing'
+import {createPolylineEndCapImage, getPolylineEndCapRotation} from '@Utils/cesium/TrackEndCapUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {normalizeReplaySampleCount} from './ReplayModeSettings'
 import {
     ArcType, CallbackProperty, Cartesian3, Cartographic, Color, CustomDataSource, HeightReference,
-    ColorMaterialProperty, PolylineGlowMaterialProperty,
+    ColorMaterialProperty, HorizontalOrigin, PolylineGlowMaterialProperty, VerticalOrigin,
 } from 'cesium'
 import {
     getJourneyReplaySettings, normalizeJourneyReplayProgressionStyle, normalizeJourneyReplayTrace, REPLAY_EFFECT_NEON,
@@ -1679,7 +1680,7 @@ export class JourneyReplayCesiumRenderer {
     }
 
     /**
-     * Add round point caps that close the outline of a rendered Replay polyline.
+     * Add open semicircular caps that close the outline of a rendered Replay polyline.
      *
      * @param {object} options - Polyline endpoints and layered line style.
      * @returns {void}
@@ -1735,29 +1736,46 @@ export class JourneyReplayCesiumRenderer {
                     styleKey: null,
                     show: isVisible,
                 }
+                /** Resolve the latest static or dynamic trace positions for this cap. */
+                const positionsFromTrace = () => {
+                    if (record.isDynamic) {
+                        return this.#traceFrameForCurrentProgress(record.positionsFactory).positions
+                    }
+
+                    return record.positions
+                }
+
+                /** Resolve the current endpoint position for a dynamic Replay cap. */
                 const positionFromTrace = () => {
-                    const linePositions = record.isDynamic
-                        ? this.#traceFrameForCurrentProgress(record.positionsFactory).positions
-                        : record.positions
+                    const linePositions = positionsFromTrace()
                     if (!Array.isArray(linePositions) || linePositions.length < 2) {
                         return undefined
                     }
 
                     return record.end === 'start' ? linePositions[0] : linePositions.at(-1)
                 }
+                /** Resolve the current screen-space tangent direction for this cap. */
+                const rotationFromTrace = () => getPolylineEndCapRotation(
+                    lgs.viewer.scene,
+                    positionsFromTrace(),
+                    record.end,
+                )
                 record.entity = source.entities.add({
                     id: `${id}#cap-${end}`,
                     name: `${name} endpoint`,
                     position: isDynamic
                         ? new CallbackProperty(positionFromTrace, false)
                         : (end === 'start' ? positions[0] : positions.at(-1)),
-                    point: {
-                        pixelSize: fillWidth,
-                        color: fillColor,
-                        outlineColor: borderColor,
-                        outlineWidth,
+                    billboard: {
+                        image: createPolylineEndCapImage({fillWidth, borderWidth, fillColor, borderColor}),
+                        width: borderWidth / 2,
+                        height: borderWidth,
+                        horizontalOrigin: HorizontalOrigin.LEFT,
+                        verticalOrigin: VerticalOrigin.CENTER,
+                        rotation: new CallbackProperty(rotationFromTrace, false),
                         heightReference: HeightReference.CLAMP_TO_GROUND,
                         disableDepthTestDistance: 0,
+                        zIndex: 42,
                     },
                     show: isVisible,
                 })
@@ -1785,12 +1803,14 @@ export class JourneyReplayCesiumRenderer {
             }
 
             if (record.styleKey !== styleKey) {
-                record.entity.point.pixelSize = fillWidth
-                record.entity.point.color = fillColor
-                record.entity.point.outlineColor = borderColor
-                record.entity.point.outlineWidth = outlineWidth
-                record.entity.point.heightReference = HeightReference.CLAMP_TO_GROUND
-                record.entity.point.disableDepthTestDistance = 0
+                record.entity.billboard.image = createPolylineEndCapImage({fillWidth, borderWidth, fillColor, borderColor})
+                record.entity.billboard.width = borderWidth / 2
+                record.entity.billboard.height = borderWidth
+                record.entity.billboard.horizontalOrigin = HorizontalOrigin.LEFT
+                record.entity.billboard.verticalOrigin = VerticalOrigin.CENTER
+                record.entity.billboard.heightReference = HeightReference.CLAMP_TO_GROUND
+                record.entity.billboard.disableDepthTestDistance = 0
+                record.entity.billboard.zIndex = 42
                 record.styleKey = styleKey
             }
         }

@@ -17,7 +17,7 @@
 import {JourneyReplayCesiumRenderer} from '@Core/ui/replay/JourneyReplayCesiumRenderer'
 import {JourneyReplayPathSampler} from '@Core/ui/replay/JourneyReplayPathSampler'
 import {defaultJourneyReplaySettings} from '@Core/ui/replay/JourneyReplayProgressionStyle'
-import {Cartesian3} from 'cesium'
+import {Cartesian2, Cartesian3, HeightReference, HorizontalOrigin, VerticalOrigin} from 'cesium'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
 vi.mock('@Utils/cesium/TrackUtils', () => ({
@@ -95,10 +95,14 @@ const installReplayGlobals = dataSources => {
                 position: Cartesian3.fromDegrees(2, 48, 1500),
                 frustum: {fovy: Math.PI / 3},
             },
-            scene: {canvas: {height: 1000}},
+            scene: {
+                canvas: {height: 1000},
+                cartesianToCanvasCoordinates: position => new Cartesian2(position.x, position.y),
+            },
         },
         scene: {
             canvas: {height: 1000},
+            cartesianToCanvasCoordinates: position => new Cartesian2(position.x, position.y),
             requestRender: vi.fn(),
         },
     }
@@ -125,16 +129,18 @@ describe('JourneyReplayCesiumRenderer trace endpoint caps', () => {
 
         const source = dataSources.getByName('replay#journey#gpx')[0]
         const border = source.entities.values.find(entity => String(entity.id).endsWith('#completed#smoothed#border'))
-        const fill = source.entities.values.find(entity => String(entity.id).endsWith('#completed#smoothed#fill'))
         const startCap = source.entities.values.find(entity => String(entity.id).endsWith('#completed#smoothed#border#cap-start'))
         const endCap = source.entities.values.find(entity => String(entity.id).endsWith('#completed#smoothed#border#cap-end'))
 
         expect(startCap).toBeTruthy()
         expect(endCap).toBeTruthy()
-        expect(startCap.point.pixelSize.getValue()).toBe(propertyValue(fill.polyline.width))
-        expect(startCap.point.outlineWidth.getValue()).toBeCloseTo(
-            (propertyValue(border.polyline.width) - propertyValue(fill.polyline.width)) / 2,
-        )
+        expect(startCap.billboard.width.getValue()).toBe(propertyValue(border.polyline.width) / 2)
+        expect(startCap.billboard.height.getValue()).toBe(propertyValue(border.polyline.width))
+        expect(startCap.billboard.heightReference.getValue()).toBe(HeightReference.CLAMP_TO_GROUND)
+        expect(startCap.billboard.horizontalOrigin.getValue()).toBe(HorizontalOrigin.LEFT)
+        expect(startCap.billboard.verticalOrigin.getValue()).toBe(VerticalOrigin.CENTER)
+        expect(decodeURIComponent(startCap.billboard.image.getValue())).toContain('A 64 64 0 0 1 0 128 Z')
+        expect(Number.isFinite(endCap.billboard.rotation.getValue())).toBe(true)
         const dynamicEndPosition = endCap.position.getValue()
         const dynamicLineEnd = border.polyline.positions.getValue().at(-1)
         expect(Cartesian3.equals(dynamicEndPosition, dynamicLineEnd)).toBe(true)
@@ -156,6 +162,7 @@ describe('JourneyReplayCesiumRenderer trace endpoint caps', () => {
 
         expect(Cartesian3.equals(completedStartCap.position.getValue(), completedPositions[0])).toBe(true)
         expect(Cartesian3.equals(completedEndCap.position.getValue(), completedPositions.at(-1))).toBe(true)
+        expect(decodeURIComponent(completedEndCap.billboard.image.getValue())).toContain('A 64 64 0 0 1 0 128 Z')
         expect(completedStartCap.show).toBe(true)
         expect(completedEndCap.show).toBe(true)
 

@@ -15,8 +15,9 @@
  ******************************************************************************/
 
 import {afterEach, describe, expect, it, vi} from 'vitest'
-import {Cartesian3, Color, CustomDataSource, HeightReference} from 'cesium'
+import {Cartesian2, Cartesian3, CustomDataSource, HeightReference, HorizontalOrigin, VerticalOrigin} from 'cesium'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
+import {getPolylineEndCapRotation} from '@Utils/cesium/TrackEndCapUtils'
 
 describe('TrackUtils underlay endpoint caps', () => {
     let source = null
@@ -29,6 +30,16 @@ describe('TrackUtils underlay endpoint caps', () => {
         vi.restoreAllMocks()
         globalThis.lgs = undefined
         globalThis.__ = undefined
+    })
+
+    it('points each semicircle away from the trace with its diameter perpendicular to the segment', () => {
+        const scene = {
+            cartesianToCanvasCoordinates: position => new Cartesian2(position.x, position.y),
+        }
+        const positions = [{x: 0, y: 0}, {x: 10, y: 10}]
+
+        expect(getPolylineEndCapRotation(scene, positions, 'start')).toBeCloseTo(3 * Math.PI / 4)
+        expect(getPolylineEndCapRotation(scene, positions, 'end')).toBeCloseTo(-Math.PI / 4)
     })
 
     it('closes both ends with ground-clamped caps that follow the rendered line widths', () => {
@@ -44,6 +55,7 @@ describe('TrackUtils underlay endpoint caps', () => {
         globalThis.lgs = {
             scene: {
                 requestRender: vi.fn(),
+                cartesianToCanvasCoordinates: vi.fn(position => new Cartesian2(position.x, position.y)),
             },
             viewer: {
                 scene: {
@@ -95,17 +107,23 @@ describe('TrackUtils underlay endpoint caps', () => {
         expect(endCap).toBeTruthy()
         expect(startCap.position.getValue()).toEqual(firstPosition)
         expect(endCap.position.getValue()).toEqual(lastPosition)
-        expect(startCap.point.heightReference.getValue()).toBe(HeightReference.CLAMP_TO_GROUND)
-        expect(startCap.point.disableDepthTestDistance.getValue()).toBe(0)
-        expect(startCap.point.pixelSize.getValue()).toBe(5)
-        expect(startCap.point.outlineWidth.getValue()).toBe(5)
-        expect(startCap.point.color.getValue()).toEqual(Color.RED)
-        expect(startCap.point.outlineColor.getValue()).toEqual(Color.BLACK)
+        expect(startCap.billboard.heightReference.getValue()).toBe(HeightReference.CLAMP_TO_GROUND)
+        expect(startCap.billboard.disableDepthTestDistance.getValue()).toBe(0)
+        expect(startCap.billboard.horizontalOrigin.getValue()).toBe(HorizontalOrigin.LEFT)
+        expect(startCap.billboard.verticalOrigin.getValue()).toBe(VerticalOrigin.CENTER)
+        expect(startCap.billboard.width.getValue()).toBe(7.5)
+        expect(startCap.billboard.height.getValue()).toBe(15)
+        const capImage = decodeURIComponent(startCap.billboard.image.getValue())
+        expect(capImage).toContain('A 64 64 0 0 1 0 128 Z')
+        expect(capImage).toContain('fill="rgb(255,0,0)"')
+        expect(capImage).toContain('fill="rgb(0,0,0)"')
+        expect(capImage).not.toContain('<circle')
+        expect(Number.isFinite(startCap.billboard.rotation.getValue())).toBe(true)
 
         pixelsPerMeter = 8
         source.__lgsTrackWidthUpdate()
-        expect(startCap.point.pixelSize.getValue()).toBe(8)
-        expect(startCap.point.outlineWidth.getValue()).toBe(8)
+        expect(startCap.billboard.width.getValue()).toBe(12)
+        expect(startCap.billboard.height.getValue()).toBe(24)
 
         getTrackDistanceScaleInfo.mockReturnValue({
             shouldShowLocatorMarker: false,
