@@ -2376,3 +2376,8 @@
 ## 2026-10-23 — [`Merge pull request #549 from lgs1920/fix/388-fit-tcx-loader`](https://github.com/lgs1920/studio/commit/f4384717a1cee36d1e671b87e04557ba92e22994)
 
 - feat: support FIT and TCX journey imports
+
+## 2026-10-23 — [`Revert "Merge pull request #549 from lgs1920/fix/388-fit-tcx-loader"`](https://github.com/lgs1920/studio/commit/59a8a4acef61fd3927a1c1687e86f9cc7c506d9a)
+
+- This reverts commit f4384717a1cee36d1e671b87e04557ba92e22994, reversing
+- changes made to 9ba7db81c5b3c5e7998b87edec1dfbb32792dcf3.

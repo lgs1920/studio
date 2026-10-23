@@ -35,21 +35,10 @@ import { v4 as uuid }                                         from 'uuid'
 import { useSnapshot }                                        from 'valtio'
 import './style.css'
 
-const SUPPORTED_EXTENSIONS = ['.fit', '.tcx', '.gpx', '.kml', '.json', '.geojson']
-const ACCEPTED_FILES = 'FIT, TCX, GPX, KML, JSON, GeoJSON'
-const ACCEPTED_FILE_EXTENSIONS = SUPPORTED_EXTENSIONS.join(',')
-const ACCEPTED_FILE_MIME_TYPES = [
-    'application/vnd.ant.fit',
-    'application/vnd.garmin.tcx+xml',
-    'application/gpx+xml',
-    'application/xml',
-    'text/xml',
-    'application/geo+json',
-    'application/json',
-].join(',')
+const SUPPORTED_EXTENSIONS = ['.geojson', '.json', '.kml', '.gpx']
+const ACCEPTED_FILES = 'GPX, KML, JSON, GeoJSON'
 const REMOTE_JOURNEY_DEFAULT_NAME = 'remote-journey'
 const REMOTE_JOURNEY_IMPORT_TIMEOUT_MS = 25000
-const MAX_JOURNEY_IMPORT_BYTES = 25 * 1024 * 1024
 const CLOUD_PROVIDER_LABELS = {
     dropbox:   'Dropbox',
     google:    'Google Drive',
@@ -122,7 +111,7 @@ const getImportErrorRecommendation = error => {
     }
 
     if (/unsupported|format/i.test(details)) {
-        return `Choose a file in one of these formats: ${ACCEPTED_FILES}.`
+        return 'Rename the file so it ends with .gpx, .kml, .geojson, or .json, then import it again.'
     }
 
     return 'Download the file again, save it locally on the device, and retry the import.'
@@ -222,7 +211,7 @@ const remoteImportFeedback = (error, fallbackProvider = '') => {
             return {
                 caption:  'Unsupported file format',
                 itemName: provider ? `${providerLabel} import` : REMOTE_JOURNEY_DEFAULT_NAME,
-                message:  `The imported file must use one of these formats: ${ACCEPTED_FILES}.`,
+                message:  'The imported file must be GPX, KML, GeoJSON, or JSON.',
             }
         case CLOUD_ERROR_CODES.READ_FAILED:
             return {
@@ -423,15 +412,11 @@ export const JourneyLoaderUI = (props) => {
         }
 
         try {
-            const isFit = validation.file.extension === 'fit'
-            const content = isFit ? undefined : await FileUtils.readFileAsTextAsync(file)
-            const binaryContent = isFit ? await FileUtils.readFileAsArrayBufferAsync(file) : undefined
+            const content = await FileUtils.readFileAsTextAsync(file)
             const status = await TrackUtils.loadJourneyFromFile({
                                                                     name:      validation.file.name,
                                                                     extension: validation.file.extension,
-                                                                    content,
-                                                                    binaryContent,
-                                                                    fileName:  file.name,
+                                                                    content:   content,
                                                                 }, {
                                                                     onError: error => showImportError(file.name, error, file),
                                                                 })
@@ -443,7 +428,6 @@ export const JourneyLoaderUI = (props) => {
                                     caption: IMPORT_SUCCESS.caption,
                                     text:    `<strong>${file.name}</strong> ${IMPORT_SUCCESS.text}`,
                                 })
-                showJourneyImportWarnings(file.name)
             }
             else {
                 const isDoublon = status === JOURNEY_EXISTS
@@ -565,8 +549,6 @@ export const JourneyLoaderUI = (props) => {
                                                                     name:      fileInfo.name,
                                                                     extension: fileInfo.extension,
                                                                     content:   remote.content,
-                                                                    contentBase64: remote.contentBase64,
-                                                                    fileName:  fileInfo.fullName,
                                                                 }, {
                                                                     onError: error => showImportError(fileInfo.fullName, error),
                                                                 })
@@ -579,7 +561,6 @@ export const JourneyLoaderUI = (props) => {
                                     caption: IMPORT_SUCCESS.caption,
                                     text:    `<strong>${fileInfo.fullName}</strong> ${IMPORT_SUCCESS.text}`,
                                 })
-                showJourneyImportWarnings(fileInfo.fullName)
                 return
             }
 
@@ -905,24 +886,7 @@ export const JourneyLoaderUI = (props) => {
         UIToast.error({
                           caption,
                           text,
-        })
-    }
-
-    /**
-     * Shows parser warnings retained with an imported journey.
-     * @param {string} fileName
-     * @returns {void}
-     */
-    const showJourneyImportWarnings = fileName => {
-        const warnings = lgs.theJourney?.sourceMetadata?.warnings ?? []
-        if (warnings.length === 0) {
-            return
-        }
-
-        UIToast.warning({
-            caption: 'Imported with warnings',
-            text:    `<strong>${fileName}</strong><br/>${warnings.map(warning => warning.message).join('<br/>')}`,
-        })
+                      })
     }
 
     /**
@@ -935,10 +899,6 @@ export const JourneyLoaderUI = (props) => {
         if (!SUPPORTED_EXTENSIONS.includes(`.${normalizedInfo.extension}`)) {
             result.validated = false
             result.error = 'Format not supported'
-        }
-        else if (Number(file.size) > MAX_JOURNEY_IMPORT_BYTES) {
-            result.validated = false
-            result.error = 'File exceeds the 25 MiB journey import limit'
         }
         else if (props.validateCB) {
             result = props.validateCB(file)
@@ -1008,7 +968,7 @@ export const JourneyLoaderUI = (props) => {
                         className="standard-file-input"
                         type="file"
                         multiple={props.multiple ?? true}
-                        accept={`${ACCEPTED_FILE_EXTENSIONS},${ACCEPTED_FILE_MIME_TYPES}`}
+                        accept={'.gpx,.geojson,.json,.kml,application/gpx+xml,application/xml,text/xml,application/geo+json,application/json'}
                         onChange={handleFilesChange}
                     />
 
