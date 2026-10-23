@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-08
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,6 +33,7 @@ import {
     extractLgsTrackProperties,
 }                             from '@Utils/JourneyGpxUtils'
 import { decodeHTMLEntities } from '@Utils/TextUtils'
+import { importJourneyContent } from '@Utils/importers/SportsLibJourneyImporter'
 import { UIToast }            from '@Utils/UIToast'
 import { ElevationServer }    from './Elevation/ElevationServer'
 import { MapElement }         from './MapElement'
@@ -59,6 +60,7 @@ export class Journey extends MapElement {
     activity
     activitySettings
     renderSmoothing
+    sourceMetadata = null
 
     origin                                     // initial geoJson
     POIsVisible = true
@@ -153,18 +155,39 @@ export class Journey extends MapElement {
      * 2. Saves the fetched data to the database.
      * 3. Prepares the visual drawing or configuration for the initialized journey.
      *
-     * If any step fails, an error is caught and logged to the console.
+     * If initialization fails, the original error is reported and rethrown.
      *
      * This method is designed to be called at the start of the journey initialization process.
      *
      * @async
      * @function
-     * @throws Will log an error to the console if any of the asynchronous operations fail.
+     * @throws Will rethrow parsing, drawing, or persistence failures.
      */
     initializeJourney = async (options) => {
         try {
-            // Transform content to GeoJson
-            this.getGeoJson(options.content ?? '', options)
+            const format = `${this.type ?? ''}`.toLowerCase()
+            let importedMetrics
+
+            if (format === 'fit' || format === 'tcx') {
+                const imported = await importJourneyContent({
+                    format,
+                    content: options.binaryContent ?? options.content ?? '',
+                    fileName: options.fileName ?? `${this.title}.${format}`,
+                    contentHash: options.contentHash ?? null,
+                })
+                this.geoJson = imported.geoJson
+                this.activity = imported.activity ?? this.activity
+                this.sourceMetadata = imported.sourceMetadata
+                importedMetrics = imported.metrics
+            }
+            else {
+                // Transform the existing text formats to GeoJSON.
+                this.getGeoJson(options.content ?? '', options)
+            }
+
+            if (!this.geoJson) {
+                throw new Error(`Unable to parse journey content for ${this.title}.`)
+            }
 
             // Get all tracks
             this.getTracksFromGeoJson()
@@ -175,9 +198,12 @@ export class Journey extends MapElement {
             this.metrics = {
                 global:   {},
                 user:     {},
-                external: {},
                 points:   [],
                 ...(options.metrics ?? {}),
+                external: {
+                    ...(importedMetrics?.external ?? {}),
+                    ...(options.metrics?.external ?? {}),
+                },
             }
 
             this.prepareDrawing().then(async () => {
@@ -188,7 +214,8 @@ export class Journey extends MapElement {
             })
         }
         catch (error) {
-            console.error('Failed to initialize journey:', error)
+            options.onError?.(error)
+            throw error
         }
     }
 
@@ -518,6 +545,11 @@ export class Journey extends MapElement {
                         thickness:       keepContext ? track.thickness : (lgsTrack.thickness ?? lgs.settings.getJourney.thickness),
                         flags:           keepContext ? track.flags : {start: undefined, stop: undefined},
                         content:         feature,
+                        observations:    keepContext ? track.observations : feature.properties?.observations ?? null,
+                        sourceMetadata:  keepContext ? track.sourceMetadata : feature.properties?.sourceMetadata ?? null,
+                        metrics:         keepContext
+                            ? track.metrics
+                            : {external: feature.properties?.externalMetrics ?? {}},
                     }
                     this.tracks.set(slug, new Track(title, parameters))
                 }
@@ -1108,7 +1140,14 @@ export class Journey extends MapElement {
 
         if (this.tracks.size === 1) {
             // If there's ontrack we'll use the track metrics
-            this.metrics = this.tracks.entries().next().value[1].metrics
+            const trackMetrics = this.tracks.entries().next().value[1].metrics
+            this.metrics = {
+                ...trackMetrics,
+                external: {
+                    ...(trackMetrics?.external ?? {}),
+                    ...(this.metrics?.external ?? {}),
+                },
+            }
             return
         }
         // For a multi track journey, let's compute journey level metrics

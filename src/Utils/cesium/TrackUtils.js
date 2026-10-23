@@ -41,6 +41,7 @@ import {
     Math as M, PolylineDashMaterialProperty, PolylineOutlineMaterialProperty, Rectangle, VerticalOrigin,
 }                                                      from 'cesium'
 import { UIToast }                                     from '../UIToast.js'
+import { getJourneyContentHash }                       from '../importers/SportsLibJourneyImporter.js'
 import { POI_FLAG, POI_FLAG_START, POI_STD, POIUtils } from './POIUtils'
 
 export const FEATURE = 'Feature'
@@ -71,6 +72,20 @@ const TRACK_MIN_SCREEN_WIDTH = 1
 const TRACK_MAX_SCREEN_WIDTH = 256
 const TRACK_WIDTH_CHANGE_EPSILON = 0.25
 const TRACK_PRIMITIVE_MIN_POINTS = 4096
+
+/**
+ * Decodes base64 remote file content into binary bytes.
+ * @param {string} encodedContent
+ * @returns {ArrayBuffer}
+ */
+const decodeBase64Content = encodedContent => {
+    const binaryContent = globalThis.atob(encodedContent)
+    const bytes = new Uint8Array(binaryContent.length)
+    for (let index = 0; index < binaryContent.length; index++) {
+        bytes[index] = binaryContent.charCodeAt(index)
+    }
+    return bytes.buffer
+}
 
 const isTrackStyleEntity = entity => `${entity?.id ?? ''}`.includes(TRACK_STYLE_ENTITY_MARKER)
 const isTrackLocatorMarkerEntity = entity => `${entity?.id ?? ''}`.includes(TRACK_LOCATOR_MARKER_ENTITY_MARKER)
@@ -360,6 +375,8 @@ export class TrackUtils {
 
     static MIMES = {
         gpx: ['application/gpx+xml', 'vnd.gpxsee.map+xml', 'application/octet-stream'],
+        fit: ['application/vnd.ant.fit', 'application/octet-stream'],
+        tcx: ['application/vnd.garmin.tcx+xml', 'application/xml', 'text/xml'],
         geojson: ['application/geo+json', 'application/json'],
         kml: ['vnd.google-earth.kml+xml'],
     }
@@ -414,7 +431,7 @@ export class TrackUtils {
     /**
      * Process a single journey file
      *
-     * @param {Object} journey {name, extension, content}
+     * @param {Object} journey {name, extension, content, binaryContent, contentBase64}
      * @param {Object} options loading options
      * @param {Function} options.onError callback invoked with the original loading error
      * @return {Promise<number>} Result status
@@ -442,8 +459,30 @@ export class TrackUtils {
                 return JOURNEY_KO
             }
 
+            const extension = `${journey.extension ?? ''}`.toLowerCase()
+            let binaryContent = journey.binaryContent
+            let content = journey.content ?? ''
+            if (!binaryContent && journey.contentBase64) {
+                binaryContent = decodeBase64Content(journey.contentBase64)
+            }
+            if (!binaryContent && extension === 'fit' && (content instanceof ArrayBuffer || ArrayBuffer.isView(content))) {
+                binaryContent = content
+                content = ''
+            }
+            const contentHash = await getJourneyContentHash(
+                extension === 'fit' ? binaryContent : content,
+                extension,
+            )
+
+            if (contentHash && Array.from(lgs.journeys.values()).some(existing => existing.sourceMetadata?.contentHash === contentHash)) {
+                return JOURNEY_EXISTS
+            }
+
             let theJourney = await Journey.create(journey.name, journey.extension, {
-                content:     journey.content,
+                content,
+                binaryContent,
+                contentHash,
+                fileName: journey.fileName ?? journey.fullName ?? `${journey.name}.${extension}`,
                 allowRename: false,
                 onError:     reportError,
             })
