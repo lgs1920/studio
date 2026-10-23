@@ -52,6 +52,13 @@ describe('substituted map cursors', () => {
     })
 })
 
+describe('Replay guide menu typography', () => {
+    it('uses the application font size for menu items and icons', () => {
+        expect(appStyleSource).toMatch(/\.replay-widget-guide-context-menu-item\s*\{\s*font-size:\s*var\(--lgs-font-size\);/)
+        expect(appStyleSource).toMatch(/& wa-icon\s*\{\s*font-size:\s*var\(--lgs-font-size\);/)
+    })
+})
+
 describe('on-map selected controls', () => {
     it('keeps selected controls visibly distinct from their surface', () => {
         expect(styleSource).toContain('--lgs-card-on-map-selected-bg-color: color-mix(in oklab, var(--wa-color-brand) 18%, var(--lgs-card-on-map-bg-color) 82%);')

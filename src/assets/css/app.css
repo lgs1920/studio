@@ -1073,10 +1073,10 @@ body.lgs-app-booting #cesium-viewer {
 }
 
 .replay-widget-guide-context-menu-item {
-    font-size: var(--wa-font-size-s);
+    font-size: var(--lgs-font-size);
 
     & wa-icon {
-        font-size: var(--wa-font-size-s);
+        font-size: var(--lgs-font-size);
     }
 
     &:focus-visible {
