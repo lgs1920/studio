@@ -127,7 +127,7 @@ widgets:
       default:
         show: true
         background:
-          show: true
+          show: false
           color: "#ffffff"
           opacity: 0.15
           blur: true
@@ -138,7 +138,7 @@ widgets:
             opacity: 0.5
 
         border:
-          show: true
+          show: false
           color: "#ffffff"
           opacity: 0.5
           thickness: 1
