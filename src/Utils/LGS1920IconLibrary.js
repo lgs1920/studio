@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-11
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import * as kitIcons from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import * as kitDuotoneIcons from '@awesome.me/kit-eb5c406148/icons/kit-duotone/custom'
 import {faCirclePlus, faQuestion, faRulerVertical, faSquare, faSquareCheck} from '@fortawesome/pro-regular-svg-icons'
-import {faLasso, faSquareDashed, faSquareFull} from '@fortawesome/pro-solid-svg-icons'
+import {faArrowsLeftRight, faArrowsUpDown, faLasso, faSquareDashed, faSquareFull} from '@fortawesome/pro-solid-svg-icons'
 import {faCircle} from '@fortawesome/duotone-regular-svg-icons/faCircle'
 import {faDiamond} from '@fortawesome/duotone-regular-svg-icons/faDiamond'
 import {LGS1920_ICON_LIBRARY, registerIconLibraryFromKits} from './useWebAwesomeKits'
@@ -28,9 +28,8 @@ export const LGS1920_ICON_KITS = [
     {family: 'duotone', icons: kitDuotoneIcons},
     {family: 'duotone', variant: 'regular', icons: {faCircle, faDiamond}},
     {family: 'classic', variant: 'regular', icons: {faSquare, faSquareCheck}},
-    {family: 'classic', variant: 'solid', icons: {faSquareFull}},
+    {family: 'classic', variant: 'solid', icons: {faArrowsLeftRight, faArrowsUpDown, faLasso, faSquareDashed, faSquareFull}},
     {family: 'classic', variant: 'regular', icons: {faCirclePlus, faQuestion, faRulerVertical}},
-    {family: 'classic', variant: 'solid', icons: {faLasso, faSquareDashed}},
 ]
 
 /**

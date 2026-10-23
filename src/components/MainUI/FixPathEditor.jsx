@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-22
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -2924,6 +2924,7 @@ export const FixPathEditor = () => {
         ? lassoGestureLabel + ': drag around ' + lassoTargetLabel + ' and release, or click vertices and double-click to select. Press Escape to cancel.'
         : null
     const sectionFixesMenuLabel = hasVisibleSectionFixes ? 'Hide section fixes' : 'Show section fixes'
+    const isAreaSelectionCursor = journeyCursorIcon === 'lasso' || journeyCursorIcon === 'square-dashed'
     const content = (
         <>
         <div
@@ -2941,7 +2942,7 @@ export const FixPathEditor = () => {
             <div
                 ref={journeyCursorRef}
                 className={'fix-path-journey-cursor'
-                    + (journeyCursorIcon === 'lasso' || journeyCursorIcon === 'square-dashed' ? ' is-area-selection-cursor' : '')
+                    + (isAreaSelectionCursor ? ' is-area-selection-cursor' : '')
                     + (journeyCursorVisible ? ' is-visible' : '')
                     + (journeyCursorSelectionColor ? ' is-' + journeyCursorSelectionColor + '-selection' : '')}
                 aria-hidden="true"

@@ -108,16 +108,21 @@ registerIconLibraryFromKits('my-library', MY_LIBRARY_KITS)
 ```
 
 The application also bundles Classic Regular `ruler-vertical`, `question`, and
-`circle-plus` definitions from `@fortawesome/pro-regular-svg-icons`, plus the
-Classic Solid `lasso` and `square-dashed` definitions from
-`@fortawesome/pro-solid-svg-icons`. They use explicit variant registrations in
-the same bootstrap registry, so the camera adjustment overlay, Fix Path help
-button, and Fix Path selection cursor do not depend on the remote Kit subset for
-these icons.
+`circle-plus` definitions from `@fortawesome/pro-regular-svg-icons`. They use
+explicit variant registrations in the same bootstrap registry, so the camera
+adjustment overlay and Fix Path help button do not depend on the remote Kit
+subset for these icons.
 
 The Fix Path point-selection indicator also bundles Classic Regular `square` and
 `square-check`, plus Classic Solid `square-full`, for its empty, complete, and
 partial selection states.
+
+Replay guide movement cursors and Fix Path area-selection cursors bundle Classic
+Solid `arrows-up-down`, `arrows-left-right`, `lasso`, and `square-dashed`
+definitions. The glyphs are 20 × 20 CSS pixels in centered 24 × 24 cursor
+boxes. Replay guide glyphs are black with a compact dark shadow and Fix Path
+glyphs retain their state color. Both receive a white outline with a subdued
+gray halo, and the cursor hit point stays at the center of the cursor box.
 
 The overlay calculates vertical clearance from the physical camera's cartographic
 height minus the cached terrain height at that same longitude and latitude. It

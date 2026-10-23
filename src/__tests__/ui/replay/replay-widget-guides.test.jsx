@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-22
- * Last modified: 2026-10-22
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -155,7 +155,7 @@ describe('ReplayWidgetGuides', () => {
         ])
     })
 
-    it('uses a centered standard-size Font Awesome cursor icon for each guide axis', async () => {
+    it('uses a centered 24-pixel classic cursor icon for each guide axis', async () => {
         journey.replay.expert.alignmentGuides = [
             {id: 'movable-guide', orientation: 'horizontal', position: 0.4, blocked: false},
             {id: 'second-guide', orientation: 'vertical', position: 0.6, blocked: false},
@@ -173,6 +173,7 @@ describe('ReplayWidgetGuides', () => {
         expect(cursor.style.top).toBe('130px')
         expect(cursor.style.transform).toBe('translate(-50%, -50%)')
         expect(cursor.querySelector('[data-icon="arrows-up-down"]')).not.toBeNull()
+        expect(cursor.querySelector('[data-icon="arrows-up-down"]')?.getAttribute('family')).toBeNull()
         expect(cursor.querySelectorAll('[data-icon]')).toHaveLength(1)
 
         fireEvent.pointerEnter(screen.getByRole('button', {name: 'Vertical guide'}), {
