@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -351,6 +351,23 @@ describe('JourneyReplayDrawer', () => {
 
         expect(lgs.stores.replay.camera).toMatchObject({altitude: 2630, pitch: -23})
         expect(view.getByLabelText('Pitch (deg)').value).toBe('-23')
+    })
+
+    it('applies an edited Basic duration when the user default is also configured', async () => {
+        lgs.settings.ui.replay.userMode = 'basic'
+        lgs.settings.ui.replay.basic = {duration: 30}
+        lgs.stores.main.theJourney.replay = {basic: {duration: 30}}
+
+        const view = render(<JourneyReplayDrawer/>)
+        const durationInput = view.getByLabelText('Duration (s)')
+
+        fireEvent.input(durationInput, {target: {value: '45'}})
+
+        await waitFor(() => {
+            expect(lgs.stores.main.theJourney.replay.basic.duration).toBe(45)
+            expect(durationInput.value).toBe('45')
+        })
+        expect(lgs.settings.ui.replay.basic.duration).toBe(30)
     })
 
     it('keeps the prepared height and pitch when only the Basic cone angle changes', async () => {

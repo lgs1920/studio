@@ -854,7 +854,7 @@ const resolveReplayBasicSettingsForRuntime = ({journey, user} = {}) => {
     }, product.presentation)
 
     return {
-        duration: normalizeBasicReplayDuration(user?.duration ?? journey?.duration ?? product.duration),
+        duration: normalizeBasicReplayDuration(journey?.duration ?? user?.duration ?? product.duration),
         sampleCount: normalizeReplaySampleCount(
             journey?.sampleCount ?? user?.sampleCount ?? product.sampleCount ?? DEFAULT_REPLAY_SAMPLE_COUNT,
         ),
