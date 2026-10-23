@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-22
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -377,6 +377,32 @@ describe('Fix Path correction editing', () => {
         })
     })
 
+    it('creates, applies, and moves a section containing one selected source point', () => {
+        const content = makeFeature()
+        const selected = buildFixPathSectionsFromSourceIndexes(content, [], 0, new Set([4]))
+
+        expect(selected.errors).toEqual([])
+        expect(selected.sections).toHaveLength(1)
+        expect(selected.sections[0]).toMatchObject({startIndex: 4, endIndex: 4})
+        expect(selected.sections[0].controlPoints.map(point => point.sourceIndex)).toEqual([4])
+        expect(normalizeFixPathCorrectionData({tracks: {'track-a': selected.corrections}})?.tracks['track-a'])
+            .toHaveLength(1)
+
+        const moved = buildDraggedPointCorrections(content, selected.corrections, 0, 4, [0.00019, 0.0002, 42])
+        const movedSection = moved.corrections.find(section => section.id === selected.sections[0].id)
+        expect(movedSection).toMatchObject({startIndex: 4, endIndex: 4})
+        expect(movedSection.controlPoints).toHaveLength(1)
+        expect(movedSection.controlPoints[0]).toMatchObject({
+            sourceIndex: 4,
+            coordinate: [0.00019, 0.0002, 42],
+            fixed: true,
+        })
+        expect(applyFixPathCorrections(content, moved.corrections)).toMatchObject({
+            changed: true,
+            skippedCorrectionIds: [],
+        })
+    })
+
     it('adds a clicked route point to the correction section it falls inside', () => {
         const content = makeFeature()
         const existing = makeCorrection(content, 'existing-section', 1, 5, 'existing-control', [0.00015, 0.0002, 30])
@@ -462,19 +488,29 @@ describe('Fix Path correction editing', () => {
         expect(result.corrections.some(section => section.startIndex <= 3 && section.endIndex >= 5)).toBe(false)
     })
 
-    it('creates one continuous section for one lasso intersection', () => {
+    it('creates sections containing only the disjoint selected source points', () => {
         const content = makeFeature()
 
         const result = buildFixPathSectionsFromSourceIndexes(content, [], 0, new Set([1, 7]))
 
         expect(result.errors).toEqual([])
         expect(result.corrections.map(section => [section.startIndex, section.endIndex])).toEqual([
-            [1, 7],
+            [1, 1],
+            [7, 7],
         ])
+        expect(result.sections).toHaveLength(2)
+        expect(result.sections.flatMap(section => section.controlPoints.map(point => point.sourceIndex))).toEqual([1, 7])
+    })
+
+    it('creates one continuous section for contiguous selected source points', () => {
+        const content = makeFeature()
+
+        const result = buildFixPathSectionsFromSourceIndexes(content, [], 0, new Set([1, 2, 3, 4, 5, 6, 7]))
+
+        expect(result.errors).toEqual([])
         expect(result.sections).toHaveLength(1)
+        expect(result.sections[0]).toMatchObject({startIndex: 1, endIndex: 7})
         expect(result.sections[0].controlPoints.map(point => point.sourceIndex)).toEqual([1, 2, 3, 4, 5, 6, 7])
-        expect(result.sections[0].controlPoints.filter(point => [3, 4, 5].includes(point.sourceIndex))
-            .every(point => point.fixed === false)).toBe(true)
     })
 
     it('keeps two disjoint lasso intersections as two sections', () => {
@@ -489,7 +525,7 @@ describe('Fix Path correction editing', () => {
         ])
     })
 
-    it('merges existing sections bridged by one disjoint lasso selection', () => {
+    it('extends neighboring sections without absorbing unselected source points', () => {
         const content = makeFeature()
         const corrections = [
             makeCorrection(content, 'section-a', 0, 1, 'control-a', [0.000025, 0.0002, 10]),
@@ -499,13 +535,16 @@ describe('Fix Path correction editing', () => {
         const result = buildFixPathSectionsFromSourceIndexes(content, corrections, 0, new Set([2, 5]))
 
         expect(result.errors).toEqual([])
-        expect(result.corrections).toHaveLength(1)
-        expect(result.corrections[0]).toMatchObject({startIndex: 0, endIndex: 8})
-        expect(result.sections).toHaveLength(1)
-        expect(result.sections[0].controlPoints.map(point => point.id)).toEqual(expect.arrayContaining([
-            'control-a',
-            'control-b',
-        ]))
+        expect(result.corrections.map(section => [section.startIndex, section.endIndex])).toEqual([
+            [0, 2],
+            [5, 8],
+        ])
+        expect(result.corrections[0].controlPoints.map(point => point.sourceIndex).filter(Number.isInteger))
+            .toEqual([0, 1, 2])
+        expect(result.corrections[1].controlPoints.map(point => point.sourceIndex).filter(Number.isInteger))
+            .toEqual([5, 6, 7, 8])
+        expect(result.corrections.flatMap(section => section.controlPoints.map(point => point.id)))
+            .toEqual(expect.arrayContaining(['control-a', 'control-b']))
     })
 
     it('keeps erased source points hidden when the surrounding sections are extended again', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-22
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -578,23 +578,30 @@ export const buildFixPathSectionsFromSourceIndexes = (content, corrections, segm
         return {corrections: nextCorrections, sections: [], errors}
     }
 
-    const result = buildFixPathSection(
-        content,
-        nextCorrections,
-        segmentIndex,
-        uniqueIndexes[0],
-        uniqueIndexes.at(-1),
-    )
-    if (result.error || !result.correction) {
-        errors.push(result.error ?? 'The selected Journey points could not form a correction section.')
-    }
-    else {
-        nextCorrections = result.corrections
-        const section = nextCorrections.find(item => item.id === result.correction.id)
-        if (section) sectionsById.set(section.id, section)
-    }
+    const selectedRuns = []
+    uniqueIndexes.forEach(index => {
+        const run = selectedRuns.at(-1)
+        if (!run || index !== run.at(-1) + 1) {
+            selectedRuns.push([index])
+            return
+        }
+        run.push(index)
+    })
 
-    return {corrections: nextCorrections, sections: [...sectionsById.values()], errors}
+    selectedRuns.forEach(run => {
+        const result = buildFixPathSection(content, nextCorrections, segmentIndex, run[0], run.at(-1))
+        if (result.error || !result.correction) {
+            errors.push(result.error ?? 'The selected Journey points could not form a correction section.')
+            return
+        }
+        nextCorrections = result.corrections
+        sectionsById.set(result.correction.id, result.correction)
+    })
+
+    const sections = [...sectionsById.keys()]
+        .map(id => nextCorrections.find(item => item.id === id))
+        .filter(Boolean)
+    return {corrections: nextCorrections, sections, errors}
 }
 
 /**
@@ -637,9 +644,7 @@ export const buildDraggedPointCorrections = (content, corrections, segmentIndex,
     if (!Array.isArray(segment) || index < 0 || index >= segment.length) {
         return {corrections, error: 'The selected route point is no longer available.'}
     }
-    const startIndex = Math.max(0, index - 1)
-    const endIndex = Math.min(segment.length - 1, index + 1)
-    return buildFixPathSection(content, corrections, segmentIndex, startIndex, endIndex, [{
+    return buildFixPathSection(content, corrections, segmentIndex, index, index, [{
         id: controlId,
         sourceIndex: index,
         coordinate: movedCoordinate,

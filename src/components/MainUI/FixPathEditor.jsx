@@ -1317,12 +1317,8 @@ export const FixPathEditor = () => {
         candidateZones.forEach((zone, zoneIndex) => {
             const firstPoint = zone[0]
             const zoneId = firstPoint.trackSlug + ':' + firstPoint.segmentIndex + ':' + firstPoint.index + ':' + zoneIndex
-            const startIndex = firstPoint.index
-            const endIndex = zone.at(-1).index
             zone.forEach(point => {
                 point.selectionZoneId = zoneId
-                point.selectionZoneStartIndex = startIndex
-                point.selectionZoneEndIndex = endIndex
                 const cell = zoneId + ':' + Math.floor(point.x / SOURCE_VISIBILITY_CELL_SIZE) + ':' + Math.floor(point.y / SOURCE_VISIBILITY_CELL_SIZE)
                 const group = visibilityCells.get(cell) ?? []
                 group.push(point)
@@ -1382,15 +1378,13 @@ export const FixPathEditor = () => {
         const selectedByZone = new Map()
         sourcePoints.forEach(point => {
             if (!trackBySlug.has(point.trackSlug) || !Number.isInteger(point.segmentIndex)
-                || !Number.isInteger(point.index) || !point.selectionZoneId
-                || !Number.isInteger(point.selectionZoneStartIndex)
-                || !Number.isInteger(point.selectionZoneEndIndex)) return
+                || !Number.isInteger(point.index) || !point.selectionZoneId) return
             const selected = selectedByZone.get(point.selectionZoneId) ?? {
                 trackSlug: point.trackSlug,
                 segmentIndex: point.segmentIndex,
-                startIndex: point.selectionZoneStartIndex,
-                endIndex: point.selectionZoneEndIndex,
+                sourceIndexes: new Set(),
             }
+            selected.sourceIndexes.add(point.index)
             selectedByZone.set(point.selectionZoneId, selected)
         })
 
@@ -1399,19 +1393,15 @@ export const FixPathEditor = () => {
         const nextDraft = {...previousDraft}
         let activeSection = null
         const errors = []
-        selectedByZone.forEach(({trackSlug, segmentIndex, startIndex, endIndex}) => {
+        selectedByZone.forEach(({trackSlug, segmentIndex, sourceIndexes}) => {
             const trackContent = trackBySlug.get(trackSlug)?.content
             if (!trackContent) return
             const corrections = nextDraft[trackSlug] ?? []
-            const indexes = new Set(Array.from(
-                {length: endIndex - startIndex + 1},
-                (_, offset) => startIndex + offset,
-            ))
             const result = buildFixPathSectionsFromSourceIndexes(
                 trackContent,
                 corrections,
                 segmentIndex,
-                indexes,
+                sourceIndexes,
             )
             if (result.sections.length === 0) {
                 errors.push(...result.errors)
