@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-11
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -118,6 +118,7 @@ const createLgs = ({loaded = []} = {}) => {
     return {
         axios: {
             get: vi.fn(async () => ({data: '<gpx />'})),
+            post: vi.fn(async () => ({data: {success: false, error: 'No remote response configured'}})),
         },
         versions: {studio: '1.0.0-test'},
         platform: 'test',
@@ -297,6 +298,135 @@ describe('journey sample catalog', () => {
 
         fireEvent.click(screen.getByText('Complete diagnostic report'))
         expect(screen.getByText(/Format not supported/)).not.toBeNull()
+    })
+
+    it('accepts local FIT and reads it as binary content', async () => {
+        globalThis.lgs = createLgs()
+        mocks.loadJourneyFromFile.mockResolvedValue(1)
+
+        render(<JourneyLoaderUI multiple/>)
+
+        const input = document.querySelector('input[type="file"]')
+        expect(input.accept).toContain('.fit')
+        expect(input.accept).toContain('.tcx')
+        const file = new File([new Uint8Array([0, 46, 70, 73, 84, 255])], 'ride.fit', {type: 'application/octet-stream'})
+        fireEvent.change(input, {target: {files: [file]}})
+
+        await waitFor(() => expect(mocks.loadJourneyFromFile).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name:      'ride',
+                extension: 'fit',
+                content:   undefined,
+                binaryContent: expect.any(ArrayBuffer),
+                fileName:  'ride.fit',
+            }),
+            {onError: expect.any(Function)},
+        ))
+    })
+
+    it('lists every supported format in the loader and native file picker', () => {
+        globalThis.lgs = createLgs()
+
+        render(<JourneyLoaderUI multiple/>)
+
+        expect(screen.getByText('Accepted formats: FIT, TCX, GPX, KML, JSON, GeoJSON')).toBeTruthy()
+
+        const input = document.querySelector('input[type="file"]')
+        for (const extension of ['.fit', '.tcx', '.gpx', '.kml', '.json', '.geojson']) {
+            expect(input.accept).toContain(extension)
+        }
+    })
+
+    it('reads local TCX files as text for the shared activity importer', async () => {
+        globalThis.lgs = createLgs()
+        mocks.loadJourneyFromFile.mockResolvedValue(1)
+
+        render(<JourneyLoaderUI multiple/>)
+        const file = new File(['<TrainingCenterDatabase/>'], 'ride.tcx', {type: 'application/xml'})
+        fireEvent.change(document.querySelector('input[type="file"]'), {target: {files: [file]}})
+
+        await waitFor(() => expect(mocks.loadJourneyFromFile).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name:      'ride',
+                extension: 'tcx',
+                content:   '<TrainingCenterDatabase/>',
+                fileName:  'ride.tcx',
+            }),
+            {onError: expect.any(Function)},
+        ))
+    })
+
+    it('passes remote FIT base64 to the binary-safe loader contract', async () => {
+        globalThis.lgs = createLgs()
+        globalThis.lgs.axios.post.mockResolvedValue({
+            data: {
+                success: true,
+                file: {name: 'ride', extension: 'fit', fullName: 'ride.fit', type: 'application/octet-stream', size: 6},
+                contentBase64: 'AC5GSVT/',
+            },
+        })
+        mocks.loadJourneyFromFile.mockResolvedValue(1)
+
+        render(<JourneyLoaderUI multiple/>)
+        fireEvent.input(screen.getByLabelText('journey-url'), {target: {value: 'https://files.example.test/ride.fit'}})
+        fireEvent.click(screen.getByRole('button', {name: 'Import journey'}))
+
+        await waitFor(() => expect(globalThis.lgs.axios.post).toHaveBeenCalledWith(
+            expect.any(String),
+            {url: 'https://files.example.test/ride.fit'},
+            expect.any(Object),
+        ))
+        await waitFor(() => expect(mocks.loadJourneyFromFile).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name:           'ride',
+                extension:      'fit',
+                content:        undefined,
+                contentBase64:  'AC5GSVT/',
+                fileName:       'ride.fit',
+            }),
+            {onError: expect.any(Function)},
+        ))
+    })
+
+    it('passes remote TCX XML to the shared text importer', async () => {
+        globalThis.lgs = createLgs()
+        globalThis.lgs.axios.post.mockResolvedValue({
+            data: {
+                success: true,
+                file: {name: 'ride', extension: 'tcx', fullName: 'ride.tcx', type: 'application/xml', size: 30},
+                content: '<TrainingCenterDatabase/>',
+            },
+        })
+        mocks.loadJourneyFromFile.mockResolvedValue(1)
+
+        render(<JourneyLoaderUI multiple/>)
+        fireEvent.input(screen.getByLabelText('journey-url'), {target: {value: 'https://files.example.test/ride.tcx'}})
+        fireEvent.click(screen.getByRole('button', {name: 'Import journey'}))
+
+        await waitFor(() => expect(mocks.loadJourneyFromFile).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name:      'ride',
+                extension: 'tcx',
+                content:   '<TrainingCenterDatabase/>',
+                fileName:  'ride.tcx',
+            }),
+            {onError: expect.any(Function)},
+        ))
+    })
+
+    it('lists FIT and TCX in remote unsupported-format feedback', async () => {
+        globalThis.lgs = createLgs()
+        globalThis.lgs.axios.post.mockRejectedValueOnce({
+            response: {data: {errorCode: 'unsupported_format'}},
+        })
+
+        render(<JourneyLoaderUI multiple/>)
+        fireEvent.input(screen.getByLabelText('journey-url'), {target: {value: 'https://files.example.test/ride.bin'}})
+        fireEvent.click(screen.getByRole('button', {name: 'Import journey'}))
+
+        await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith(expect.objectContaining({
+            text: 'The imported file must use one of these formats: FIT, TCX, GPX, KML, JSON, GeoJSON.',
+        })))
     })
 
     it('keeps the multi-file picker on Android browsers', () => {
