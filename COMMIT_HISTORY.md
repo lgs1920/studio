@@ -3883,3 +3883,7 @@
 ## 2026-10-22 — [`fix: size and center substituted cursors`](https://github.com/lgs1920/studio/commit/a7b79b34442faeffe1da09375beea3a1738cf546)
 
 - Recorded automatically from Git history.
+
+## 2026-10-23 — [`feat: support FIT and TCX journey imports`](https://github.com/lgs1920/studio/commit/4ffbda845608874a2995eaa157e7aac3b9bc3743)
+
+- Recorded automatically from Git history.
