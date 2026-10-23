@@ -235,12 +235,15 @@
 
 .video-recording-settings-popup--basic .basic-replay-sampling__select {
     flex: 0 1 auto;
+    width: 13rem;
+    max-width: 100%;
     min-width: 0;
 }
 
 .video-recording-settings-popup--basic .basic-replay-sampling__select::part(form-control) {
     justify-content: flex-start;
     flex-wrap: nowrap;
+    width: 100%;
 }
 
 .video-recording-settings-popup--basic .basic-replay-sampling__select::part(form-control-input) {
