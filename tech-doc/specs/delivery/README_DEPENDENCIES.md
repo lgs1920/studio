@@ -53,7 +53,6 @@ These are the current package names declared in the `dependencies` section of `p
 @mapbox/togeojson
 @renoun/screenshot
 @shoelace-style/shoelace
-@sports-alliance/sports-lib
 @tmcw/togeojson
 @turf/along
 @turf/bbox
@@ -91,7 +90,6 @@ echarts-for-react
 three
 elysia
 fflate
-fit-file-parser
 fs
 fs.promises
 geo-coordinates-parser
@@ -180,4 +178,4 @@ protobufjs
 - A few tooling packages are currently declared in `dependencies` rather than `devDependencies`; this document reflects
   the repository as it exists today rather than an idealized split.
 - When `package.json` changes, this file should be updated in the same change set.
-- Last synchronized with `package.json`: 2026-10-23.
+- Last synchronized with `package.json`: 2026-09-13.

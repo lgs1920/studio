@@ -169,20 +169,6 @@ journey:
         maxSpeedDelta: 0
         stopDuration: 45
         stopSpeedLimit: 0.3
-      - id: running
-        label: Running
-        icon: person-running
-        minSegmentDuration: 2
-        minSegmentDistance: 3
-        maxAltitudeJump: 10
-        altitudeSmoothingWindow: 5
-        maxSpeed: 8.0
-        maxClimbRate: 2.5
-        maxDescentRate: 3.5
-        maxPace: 0
-        maxSpeedDelta: 0
-        stopDuration: 45
-        stopSpeedLimit: 0.3
       - id: bike
         label: Bike
         icon: bicycle
@@ -211,48 +197,6 @@ journey:
         maxSpeedDelta: 0
         stopDuration: 60
         stopSpeedLimit: 0.25
-      - id: alpine-skiing
-        label: Alpine skiing
-        icon: person-skiing
-        minSegmentDuration: 2
-        minSegmentDistance: 5
-        maxAltitudeJump: 30
-        altitudeSmoothingWindow: 5
-        maxSpeed: 35.0
-        maxClimbRate: 3.0
-        maxDescentRate: 20.0
-        maxPace: 0
-        maxSpeedDelta: 0
-        stopDuration: 30
-        stopSpeedLimit: 0.6
-      - id: cross-country-skiing
-        label: Cross-country skiing
-        icon: person-skiing-nordic
-        minSegmentDuration: 2
-        minSegmentDistance: 4
-        maxAltitudeJump: 15
-        altitudeSmoothingWindow: 5
-        maxSpeed: 12.0
-        maxClimbRate: 2.5
-        maxDescentRate: 4.0
-        maxPace: 0
-        maxSpeedDelta: 0
-        stopDuration: 45
-        stopSpeedLimit: 0.4
-      - id: open-water-swimming
-        label: Open-water swimming
-        icon: person-swimming
-        minSegmentDuration: 2
-        minSegmentDistance: 5
-        maxAltitudeJump: 8
-        altitudeSmoothingWindow: 5
-        maxSpeed: 3.0
-        maxClimbRate: 0.5
-        maxDescentRate: 0.5
-        maxPace: 0
-        maxSpeedDelta: 0
-        stopDuration: 60
-        stopSpeedLimit: 0.2
   ## POIs
   pois:
 
@@ -493,20 +437,6 @@ ui:
         maxSpeedDelta: 0
         stopDuration: 45
         stopSpeedLimit: 0.3
-      - id: running
-        label: Running
-        icon: person-running
-        minSegmentDuration: 2
-        minSegmentDistance: 3
-        maxAltitudeJump: 10
-        altitudeSmoothingWindow: 5
-        maxSpeed: 8.0
-        maxClimbRate: 2.5
-        maxDescentRate: 3.5
-        maxPace: 0
-        maxSpeedDelta: 0
-        stopDuration: 45
-        stopSpeedLimit: 0.3
       - id: bike
         label: Bike
         icon: bicycle
@@ -535,45 +465,3 @@ ui:
         maxSpeedDelta: 0
         stopDuration: 60
         stopSpeedLimit: 0.25
-      - id: alpine-skiing
-        label: Alpine skiing
-        icon: person-skiing
-        minSegmentDuration: 2
-        minSegmentDistance: 5
-        maxAltitudeJump: 30
-        altitudeSmoothingWindow: 5
-        maxSpeed: 35.0
-        maxClimbRate: 3.0
-        maxDescentRate: 20.0
-        maxPace: 0
-        maxSpeedDelta: 0
-        stopDuration: 30
-        stopSpeedLimit: 0.6
-      - id: cross-country-skiing
-        label: Cross-country skiing
-        icon: person-skiing-nordic
-        minSegmentDuration: 2
-        minSegmentDistance: 4
-        maxAltitudeJump: 15
-        altitudeSmoothingWindow: 5
-        maxSpeed: 12.0
-        maxClimbRate: 2.5
-        maxDescentRate: 4.0
-        maxPace: 0
-        maxSpeedDelta: 0
-        stopDuration: 45
-        stopSpeedLimit: 0.4
-      - id: open-water-swimming
-        label: Open-water swimming
-        icon: person-swimming
-        minSegmentDuration: 2
-        minSegmentDistance: 5
-        maxAltitudeJump: 8
-        altitudeSmoothingWindow: 5
-        maxSpeed: 3.0
-        maxClimbRate: 0.5
-        maxDescentRate: 0.5
-        maxPace: 0
-        maxSpeedDelta: 0
-        stopDuration: 60
-        stopSpeedLimit: 0.2

@@ -8,12 +8,8 @@ This note summarizes the `Journey` settings that matter for metrics, profile cle
 
 - `trek`
 - `trail`
-- `running`
 - `bike`
 - `ski-touring`
-- `alpine-skiing`
-- `cross-country-skiing`
-- `open-water-swimming`
 
 Each profile defines how a track is cleaned before its metrics are aggregated. The same journey can therefore be evaluated differently depending on the activity.
 
@@ -121,12 +117,8 @@ Typical tuning goals:
 
 - `trek`: strict on spikes, tolerant on low speed, low altitude noise
 - `trail`: similar to trek but slightly faster
-- `running`: faster road and track running with less restrictive speed limits
 - `bike`: higher speed tolerance, larger distance threshold
 - `ski-touring`: higher speed and altitude variation tolerance
-- `alpine-skiing`: high downhill speeds and rapid altitude changes
-- `cross-country-skiing`: moderate speeds with repeated climbs and descents
-- `open-water-swimming`: swimming speeds with stricter altitude-noise filtering
 
 Concrete example:
 

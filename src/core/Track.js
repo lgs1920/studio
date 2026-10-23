@@ -176,10 +176,6 @@ export class Track extends MapElement {
     hasAltitude
     /** @type {[]} */
     content     // GEo JSON
-    /** @type {object | null} */
-    observations = null
-    /** @type {object | null} */
-    sourceMetadata = null
     /** @type {{start:MapPOI|undefined,stop:MapPOI|undefined}} */
     flags = {start: undefined, stop: undefined}
     /** @type {object | null} */
@@ -219,8 +215,6 @@ export class Track extends MapElement {
         this.hasAltitude = options.hasAltitude ?? false
         this.segments = options.segments ?? 0
         this.content = options.content
-        this.observations = options.observations ?? null
-        this.sourceMetadata = options.sourceMetadata ?? null
         this.flags = options.flags ?? {start: undefined, stop: undefined}
         this.marker = options.marker ?? null
 
@@ -710,12 +704,7 @@ export class Track extends MapElement {
                                                         minHeight,
                                                         maxHeight,
         })
-        this.metrics = {
-            ...this.metrics,
-            points: featureMetrics,
-            global,
-            external: this.metrics?.external ?? {},
-        }
+        this.metrics = {points: featureMetrics, global: global}
     }
 
     /**
