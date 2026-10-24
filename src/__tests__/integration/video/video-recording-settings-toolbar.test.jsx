@@ -264,8 +264,8 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.getByTestId('settings-popup').dataset.placement).toBe('bottom')
         expect(screen.getByTestId('ratio-popup-content').dataset.unifiedChoices).toBe('true')
         expect(screen.getByText('Ratio')).not.toBeNull()
-        expect(screen.getByText('Preset')).not.toBeNull()
-        expect(screen.getByText('Duration')).not.toBeNull()
+        expect(screen.getByText('Quality')).not.toBeNull()
+        expect(screen.getByRole('group', {name: 'Duration'})).not.toBeNull()
         expect(screen.getByRole('button', {name: '15s'}).getAttribute('aria-pressed')).toBe('true')
         expect(screen.getByTestId('preset-popup-content').dataset.inlineCustom).toBe('false')
         expect(screen.getByTestId('preset-popup-content').dataset.compactBasic).toBe('true')
@@ -312,7 +312,7 @@ describe('VideoRecordingSettingsToolbar', () => {
             expect(settingsRow?.classList).toContain('basic-replay-settings-row--label-and-controls')
             expect(settingsRow?.classList).not.toContain('half-width')
         }
-        const presetRow = document.querySelector('.video-recording-settings-popup [role="group"][aria-label="Video preset"]')
+        const presetRow = document.querySelector('.video-recording-settings-popup [role="group"][aria-label="Video quality"]')
         if (presetRow) {
             expect(presetRow.classList).toContain('basic-replay-settings-row--label-and-controls')
             expect(presetRow.classList).not.toContain('half-width')
@@ -507,7 +507,7 @@ describe('VideoRecordingSettingsToolbar', () => {
 
         expect(screen.getByText('High · 30 FPS')).not.toBeNull()
         fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
-        expect(screen.getByText('Preset')).not.toBeNull()
+        expect(screen.getByText('Quality')).not.toBeNull()
 
         await act(async () => {
             fireEvent.click(screen.getByRole('checkbox', {name: 'Dry run'}))
@@ -524,7 +524,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(document.querySelector('.basic-replay-settings-summary')?.textContent).not.toContain('FPS')
         expect(document.querySelector('.basic-replay-settings-summary [data-icon="bolt"]')?.getAttribute('data-variant')).toBe('regular')
         expect(document.querySelector('.basic-replay-settings-row--preparation [data-icon="bolt"]')?.getAttribute('data-variant')).toBe('regular')
-        expect(document.querySelector('[aria-label="Video preset"]')).toBeNull()
+        expect(document.querySelector('[aria-label="Video quality"]')).toBeNull()
         expect(screen.queryByTestId('preset-popup-content')).toBeNull()
         expect(screen.getAllByText('Dry run')).not.toHaveLength(0)
         expect(screen.getByRole('button', {name: 'Run Dry run'})).not.toBeNull()

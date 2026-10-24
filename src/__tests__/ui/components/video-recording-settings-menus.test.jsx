@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-09-12
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,7 +45,7 @@ describe('VideoRecordingSettingsMenus', () => {
                                             mainTheme/>)
 
         expect(screen.getByRole('heading', {name: 'Aspect ratio'})).not.toBeNull()
-        expect(screen.getByRole('heading', {name: 'Preset'})).not.toBeNull()
+        expect(screen.getByRole('heading', {name: 'Quality'})).not.toBeNull()
         expect(screen.getByTestId('ratio-menu-content')).toMatchObject({
             dataset: {embedded: 'true', mainTheme: 'true'},
         })

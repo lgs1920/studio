@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-12
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -85,7 +85,7 @@ export const VideoRecordingSettingsMenus = memo(({className = '', context, cropz
                                                mainTheme={mainTheme}/>
         </section>
         <section aria-labelledby="timeline-video-preset-label">
-            <h3 id="timeline-video-preset-label">{'Preset'}</h3>
+            <h3 id="timeline-video-preset-label">{'Quality'}</h3>
             <VideoRecordingSettingsMenuContent menu="preset"
                                                context={context}
                                                cropzoneId={cropzoneId}

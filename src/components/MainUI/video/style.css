@@ -232,6 +232,7 @@
 
 .video-recording-settings-popup--basic .basic-replay-end-focus-switch {
     max-width: 100%;
+    white-space: nowrap;
 
     &::part(label) {
         font-size: var(--lgs-font-size-s) !important;
@@ -239,10 +240,12 @@
 }
 
 .video-recording-settings-popup--basic .basic-replay-end-focus-duration {
-    flex: 0 0 auto;
+    flex-wrap: nowrap;
     justify-self: end;
     width: max-content;
+    min-width: 0;
     max-width: 100%;
+    white-space: nowrap;
     font-size: var(--lgs-font-size-s) !important;
 
     &::part(label),
@@ -255,7 +258,7 @@
 
 .video-recording-settings-popup--basic .basic-replay-poi-settings {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: flex-start;
     gap: var(--lgs-gutter-s);
@@ -282,7 +285,7 @@
 }
 
 .video-recording-settings-popup--basic .basic-replay-poi-settings__visibility {
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     width: auto;
     max-width: 100%;
 }
@@ -307,9 +310,9 @@
 }
 
 .video-recording-settings-popup--basic .basic-replay-poi-settings__animation {
-    flex: 0 0 auto;
+    flex: 1 0 auto;
     width: auto;
-    justify-content: flex-start;
+    justify-content: space-between;
     column-gap: var(--lgs-gutter-s);
 }
 
@@ -317,21 +320,36 @@
     flex: 0 0 auto;
     min-width: 0;
     width: auto;
+    margin-inline: auto;
 
     &::part(label) {
         font-size: var(--lgs-font-size-s) !important;
         white-space: nowrap;
-        margin-inline-start: var(--lgs-gutter-xs);
     }
 }
 
 .video-recording-settings-popup--basic .basic-replay-poi-settings__duration {
     flex: 0 0 auto;
-    width: 5rem;
+    width: 7rem;
+    font-size: var(--lgs-font-size-s) !important;
 
     &::part(input),
     &::part(stepper) {
         font-size: var(--lgs-font-size-s) !important;
+    }
+}
+
+.video-recording-settings-popup--basic :is(.basic-replay-poi-settings__duration, .basic-replay-end-focus-duration) {
+    &::part(base) {
+        box-sizing: border-box;
+        flex: none;
+        width: 7rem;
+    }
+
+    &::part(input) {
+        flex: 1 1 0;
+        width: 0;
+        min-width: 0;
     }
 }
 
@@ -690,11 +708,6 @@
 @media (max-width: 480px) {
     .video-recording-settings-popup--basic .basic-replay-settings-row {
         gap: var(--lgs-gutter-xxs);
-    }
-
-    .video-recording-settings-popup--basic .basic-replay-poi-settings {
-        flex-direction: column;
-        align-items: flex-start;
     }
 
     .video-recording-settings-popup--basic .basic-replay-settings-row--label-and-controls {

@@ -462,9 +462,9 @@ export const VideoRecordingSettingsToolbar = memo(({
                         </div>
                     )}
                     {!dryRunEnabled && (
-                        <div className="basic-replay-settings-row basic-replay-settings-row--label-and-controls" role="group" aria-label="Video preset">
+                        <div className="basic-replay-settings-row basic-replay-settings-row--label-and-controls" role="group" aria-label="Video quality">
                             <WaIcon name="ranking-star" variant="regular" label=""/>
-                            <span className="basic-replay-settings-row__label">{'Preset'}</span>
+                            <span className="basic-replay-settings-row__label">{'Quality'}</span>
                             <VideoRecordingSettingsMenuContent menu="preset"
                                                                context={$cropper}
                                                                cropzoneId={VIDEO_CROP_ZONE}

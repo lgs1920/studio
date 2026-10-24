@@ -84,7 +84,7 @@ export const BasicReplayPOISettings = () => {
 
     return (
         <div className="basic-replay-settings-row basic-replay-poi-settings" role="group" aria-label="Replay POIs">
-            <div className="basic-replay-poi-settings__visibility half-width">
+            <div className="basic-replay-poi-settings__visibility">
                 <WaIcon name="location-dot" variant="regular" label=""/>
                 <span>{'Show POIs'}</span>
                 <WaTooltip for="basic-replay-poi-visibility" placement="top">
@@ -106,7 +106,7 @@ export const BasicReplayPOISettings = () => {
                     ))}
                 </WaSelect>
             </div>
-            <div className="basic-replay-poi-settings__animation half-width">
+            <div className="basic-replay-poi-settings__animation">
                 <WaTooltip for="basic-replay-poi-animation" placement="top">
                     {'With animation'}
                 </WaTooltip>
@@ -114,6 +114,7 @@ export const BasicReplayPOISettings = () => {
                     id="basic-replay-poi-animation"
                     className="basic-replay-poi-settings__switch"
                     size="xs"
+                    label-at-start width-auto
                     checked={behavior.animatePoisDuringJourneyReplay}
                     onInput={changeAnimation}
                 >
