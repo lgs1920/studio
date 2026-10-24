@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-08
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,7 +30,7 @@ import {
 }                             from '@Utils/cesium/TrackUtils'
 import {
     applyGpxStyleExtensionProperties, extractJourneyMetadataFromGeoJson, extractJourneyMetadataFromGpxDocument, extractLgsPoiProperties,
-    extractLgsTrackProperties,
+    extractLgsTrackProperties, resolveImportedPoiCategory,
 }                             from '@Utils/JourneyGpxUtils'
 import { decodeHTMLEntities } from '@Utils/TextUtils'
 import { resolveTimeZone } from '@Utils/TimeZoneUtils'
@@ -680,7 +680,7 @@ export class Journey extends MapElement {
                     const importedHeight = lgsPoi.height ?? (lgsPoi.simulatedHeight !== undefined ? undefined : z ?? undefined)
                     const importedParent = resolveImportedPoiParent(lgsPoi)
                     const importedType = lgsPoi.type ?? POI_STANDARD_TYPE
-                    const importedCategory = lgsPoi.category ?? POI_STANDARD_TYPE
+                    const importedCategory = resolveImportedPoiCategory(properties, lgsPoi.category)
                     const importedTitle = properties.name ?? 'POI'
                     const poiTime = lgsPoi.time ?? properties.time
                     const existingTimeZone = existingPoi?.timeZone

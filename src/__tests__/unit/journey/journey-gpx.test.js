@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-02
- * Last modified: 2026-05-02
+ * Created on: 2026-05-03
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import { describe, expect, it } from 'vitest'
 import { gpx }                  from '@tmcw/togeojson'
 import {
     applyGpxStyleExtensionProperties, exportJourneyToGeoJSON, exportJourneyToGPX, extractJourneyMetadataFromGeoJson, extractJourneyMetadataFromGpxDocument,
-    extractLgsPoiProperties, extractLgsTrackProperties, getExportableJourneyPOIs, getJourneyExportBaseName,
+    extractLgsPoiProperties, extractLgsTrackProperties, getExportableJourneyPOIs, getJourneyExportBaseName, resolveImportedPoiCategory,
     getJourneyExportFileName, normalizeJourneyExportBaseName, normalizeJourneyExportFileName,
 }                               from '@Utils/JourneyGpxUtils'
 
@@ -192,6 +192,19 @@ describe('journey GPX export', () => {
         expect(poiMetadata.countryCode).toBe('FR')
         expect(poiMetadata.visible).toBe(false)
         expect(poiMetadata.height).toBe(112)
+    })
+
+    it('maps standard GPX waypoint type and symbol labels to Studio categories', () => {
+        const gpxContent = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Garmin" xmlns="http://www.topografix.com/GPX/1/1">
+  <wpt lat="45.1" lon="6.1"><name>Scenic point</name><sym>Scenic Area</sym><type>Unmapped classification</type></wpt>
+  <wpt lat="45.2" lon="6.2"><name>Peak</name><sym>Generic pin</sym><type>Summit</type></wpt>
+</gpx>`
+        const document = new DOMParser().parseFromString(gpxContent, 'text/xml')
+        const features = gpx(document).features
+
+        expect(resolveImportedPoiCategory(features[0].properties)).toBe('viewpoint')
+        expect(resolveImportedPoiCategory(features[1].properties)).toBe('summit')
     })
 
     it('uses raw GPX line style width as pixel track width', () => {

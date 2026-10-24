@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-03
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -56,6 +56,47 @@ const GPX_STYLE_COLOR_PROPERTY = '__lgsGpxStyleColor'
 const TRACK_RENDER_WIDTH_UNIT_PIXELS = 'pixels'
 const EXCLUDED_POI_TYPES = new Set([POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE])
 const EXPORT_EXTENSION_PATTERN = /\.(gpx|geojson|json|pdf|zip)$/i
+
+/** Normalizes external POI labels so provider casing, accents, and punctuation do not affect matching. */
+const normalizePoiCategoryLabel = value => `${value ?? ''}`
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+
+const IMPORTED_POI_CATEGORY_ALIASES = new Map([
+    {category: 'shelter', aliases: ['shelter', 'hut']},
+    {category: 'refuge', aliases: ['refuge', 'mountain hut', 'alpine hut', 'mountain refuge']},
+    {category: 'building', aliases: ['building']},
+    {category: 'viewpoint', aliases: ['viewpoint', 'scenic area', 'lookout', 'belvedere', 'point of view', 'point de vue']},
+    {category: 'summit', aliases: ['summit', 'peak', 'mountain peak', 'high point', 'sommet']},
+    {category: 'cave', aliases: ['cave', 'cavern', 'grotto', 'grotte']},
+    {category: 'car-park', aliases: ['parking', 'parking lot', 'parking area', 'car park', 'car parking']},
+    {category: 'castle', aliases: ['castle', 'fort', 'fortress']},
+    {category: 'place-of-worship', aliases: ['place of worship', 'church', 'chapel', 'religious site']},
+    {category: 'cross', aliases: ['cross', 'wayside cross', 'croix']},
+    {category: 'monument', aliases: ['monument', 'memorial', 'historical monument', 'monument historique']},
+    {category: 'ruins', aliases: ['ruins', 'ruin', 'historic ruins']},
+    {category: 'campground', aliases: ['campground', 'campsite', 'camp site', 'camping area', 'camping ground', 'camping', 'aire de camping']},
+    {category: 'bivouac', aliases: ['bivouac', 'wild camping', 'wild camp', 'backcountry camp', 'wilderness camp', 'bivouac sauvage']},
+    {category: 'picnic-area', aliases: ['picnic area', 'picnic site', 'picnic']},
+    {category: 'drinking-water', aliases: ['drinking water', 'potable water', 'water fountain', 'drinking fountain', 'water refill', 'water refill station', 'drinking water source', 'eau potable', 'point d eau potable']},
+    {category: 'restroom', aliases: ['restroom', 'toilet', 'toilets', 'wc', 'bathroom', 'washroom', 'public toilet', 'lavatory']},
+    {category: 'cafe', aliases: ['cafe', 'coffee shop', 'coffeehouse']},
+    {category: 'restaurant', aliases: ['restaurant', 'dining']},
+    {category: 'trailhead', aliases: ['trailhead', 'trail head', 'trail start', 'trail access', 'trail entrance', 'hiking trailhead']},
+    {category: 'train-stop', aliases: ['train stop', 'train station', 'railway station']},
+    {category: 'bus-stop', aliases: ['bus stop']},
+    {category: 'cable-car', aliases: ['cable car', 'gondola', 'chairlift', 'aerial tramway']},
+    {category: 'hazard', aliases: ['hazard', 'danger', 'dangerous area']},
+    {category: 'first-aid', aliases: ['first aid', 'first aid station']},
+    {category: 'photo-spot', aliases: ['photo spot', 'photo point', 'photography point', 'photo location']},
+    {category: 'waterfall', aliases: ['waterfall', 'cascade']},
+    {category: 'bridge', aliases: ['bridge', 'footbridge']},
+    {category: 'shop', aliases: ['shop', 'supplies', 'store', 'bike shop', 'bicycle shop']},
+].flatMap(({category, aliases}) => aliases.map(alias => [normalizePoiCategoryLabel(alias), category])))
 
 const finiteNumber = value => {
     if (value === null || value === undefined || value === '') {
@@ -812,3 +853,21 @@ export const extractLgsPoiProperties = (properties = {}) => ({
     cameraDistance:   finiteNumber(lgsProperty(properties, 'cameraDistance')),
     camera:           parseJson(lgsProperty(properties, 'camera')),
 })
+
+/** Resolves a POI category from LGS metadata or recognized external category labels. */
+export const resolveImportedPoiCategory = (properties = {}, lgsCategory) => {
+    const canonicalCategory = `${lgsCategory ?? ''}`.trim()
+    if (canonicalCategory) {
+        return canonicalCategory
+    }
+
+    for (const sourceCategory of [properties.category, properties.type, properties.sym]) {
+        const normalizedCategory = normalizePoiCategoryLabel(sourceCategory)
+        const category = IMPORTED_POI_CATEGORY_ALIASES.get(normalizedCategory)
+        if (category) {
+            return category
+        }
+    }
+
+    return POI_STANDARD_TYPE
+}
