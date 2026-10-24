@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-18
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -355,6 +355,21 @@ export const POI_CATEGORY_ICONS = new Map([
                                               ['ruins', 'ruins.svg'],
                                               ['campground', 'campground'],
                                               ['picnic-area', 'table-picnic'],
+                                              ['drinking-water', 'bottle-water'],
+                                              ['restroom', 'restroom'],
+                                              ['cafe', 'mug-hot'],
+                                              ['restaurant', 'utensils'],
+                                              ['trailhead', 'sign-post'],
+                                              ['train-stop', 'train'],
+                                              ['bus-stop', 'bus-stop'],
+                                              ['cable-car', 'cable-car'],
+                                              ['hazard', 'triangle-exclamation'],
+                                              ['first-aid', 'kit-medical'],
+                                              ['photo-spot', 'camera'],
+                                              ['waterfall', 'water'],
+                                              ['bridge', 'bridge'],
+                                              ['shop', 'basket-shopping'],
+                                              ['bivouac', 'tent'],
                                           ])
 
 export const ROTATION_ICON = 'arrows-rotate',

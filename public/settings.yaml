@@ -334,6 +334,51 @@ poi:
     # Picnic Area
     - title: Picnic Area
       slug: picnic-area
+    # Drinking Water
+    - title: Drinking Water
+      slug: drinking-water
+    # Restroom
+    - title: Restroom
+      slug: restroom
+    # Cafe
+    - title: Cafe
+      slug: cafe
+    # Restaurant
+    - title: Restaurant
+      slug: restaurant
+    # Trailhead
+    - title: Trailhead
+      slug: trailhead
+    # Train Stop
+    - title: Train Stop
+      slug: train-stop
+    # Bus Stop
+    - title: Bus Stop
+      slug: bus-stop
+    # Cable Car
+    - title: Cable Car
+      slug: cable-car
+    # Hazard
+    - title: Hazard
+      slug: hazard
+    # First Aid
+    - title: First Aid
+      slug: first-aid
+    # Photo Spot
+    - title: Photo Spot
+      slug: photo-spot
+    # Waterfall
+    - title: Waterfall
+      slug: waterfall
+    # Bridge
+    - title: Bridge
+      slug: bridge
+    # Shop and Supplies
+    - title: Shop / Supplies
+      slug: shop
+    # Bivouac
+    - title: Bivouac
+      slug: bivouac
 
 ########################################
 # Metrics and computations

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-11
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,11 @@ import * as kitDuotoneIcons from '@awesome.me/kit-eb5c406148/icons/kit-duotone/c
 import {
     faCirclePlus, faQuestion, faRulerVertical, faSquare, faSquareB, faSquareCheck, faSquareH, faSquareM,
 } from '@fortawesome/pro-regular-svg-icons'
-import {faArrowsLeftRight, faArrowsUpDown, faLasso, faSquareDashed, faSquareFull} from '@fortawesome/pro-solid-svg-icons'
+import {
+    faArrowsLeftRight, faArrowsUpDown, faBasketShopping, faBottleWater, faBridge, faBusStop, faCableCar,
+    faCamera, faKitMedical, faLasso, faMugHot, faRestroom, faSignPost, faSquareDashed, faSquareFull, faTent,
+    faTrain, faTriangleExclamation, faUtensils, faWater,
+} from '@fortawesome/pro-solid-svg-icons'
 import {faCircle} from '@fortawesome/duotone-regular-svg-icons/faCircle'
 import {faDiamond} from '@fortawesome/duotone-regular-svg-icons/faDiamond'
 import {LGS1920_ICON_LIBRARY, registerIconLibraryFromKits} from './useWebAwesomeKits'
@@ -30,6 +34,27 @@ export const LGS1920_ICON_KITS = [
     {family: 'duotone', icons: kitDuotoneIcons},
     {family: 'duotone', variant: 'regular', icons: {faCircle, faDiamond}},
     {family: 'classic', variant: 'regular', icons: {faSquare, faSquareB, faSquareCheck, faSquareH, faSquareM}},
+    {
+        family: 'classic',
+        variant: 'solid',
+        icons: {
+            faBasketShopping,
+            faBottleWater,
+            faBridge,
+            faBusStop,
+            faCableCar,
+            faCamera,
+            faKitMedical,
+            faMugHot,
+            faRestroom,
+            faSignPost,
+            faTent,
+            faTrain,
+            faTriangleExclamation,
+            faUtensils,
+            faWater,
+        },
+    },
     {family: 'classic', variant: 'solid', icons: {faArrowsLeftRight, faArrowsUpDown, faLasso, faSquareDashed, faSquareFull}},
     {family: 'classic', variant: 'regular', icons: {faCirclePlus, faQuestion, faRulerVertical}},
 ]
