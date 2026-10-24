@@ -280,7 +280,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(globalThis.lgs.settings.ui.replay.basic.camera).not.toHaveProperty('altitude')
         expect(globalThis.lgs.settings.ui.replay.basic.camera).not.toHaveProperty('pitch')
         expect(globalThis.lgs.settings.ui.replay.basic.camera.cameraAngle).toBe(0)
-        expect(globalThis.lgs.settings.ui.replay.duration).toBe(20)
+        expect(globalThis.lgs.settings.ui.replay).not.toHaveProperty('duration')
         expect(globalThis.lgs.stores.replay.duration).toBe(20)
     })
 
@@ -378,6 +378,33 @@ describe('VideoRecordingSettingsToolbar', () => {
                 expect(document.querySelector('.basic-replay-settings-summary')?.textContent).toContain('1 min 3s')
             }
         }
+    })
+
+    it('selects and updates a Journey duration without changing global Replay duration', async () => {
+        vi.useFakeTimers()
+        globalThis.lgs.stores.replay.basicPreparationActive = true
+        globalThis.lgs.settings.ui.replay.duration = 60
+        globalThis.lgs.settings.ui.replay.basic.duration = 15
+        const persistToDatabase = vi.fn()
+        globalThis.lgs.theJourney.replay = {basic: {duration: 30}}
+        globalThis.lgs.theJourney.persistToDatabase = persistToDatabase
+        globalThis.lgs.stores.main = proxy({theJourney: globalThis.lgs.theJourney})
+        render(<VideoRecordingSettingsToolbar/>)
+        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
+
+        expect(screen.getByRole('button', {name: '30s'}).getAttribute('aria-pressed')).toBe('true')
+        expect(screen.getByRole('button', {name: '15s'}).getAttribute('aria-pressed')).toBe('false')
+        await act(async () => fireEvent.click(screen.getByRole('button', {name: '45s'})))
+
+        expect(globalThis.lgs.theJourney.replay.basic.duration).toBe(45)
+        expect(globalThis.lgs.settings.ui.replay.basic.duration).toBe(15)
+        expect(globalThis.lgs.settings.ui.replay.duration).toBe(60)
+        expect(globalThis.lgs.stores.replay.duration).toBe(45)
+        expect(screen.getByRole('button', {name: '45s'}).getAttribute('aria-pressed')).toBe('true')
+        expect(screen.getByRole('button', {name: '30s'}).getAttribute('aria-pressed')).toBe('false')
+
+        await act(async () => vi.advanceTimersByTime(250))
+        expect(persistToDatabase).toHaveBeenCalledOnce()
     })
 
     it('shows equal-size appearance choices without pixel or color labels and persists them', async () => {

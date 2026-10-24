@@ -28,7 +28,6 @@ import {
     REPLAY_VIDEO_QUALITY,
 } from '@Core/ui/replay/ReplayVideoSettings'
 import {
-    DEFAULT_BASIC_REPLAY_DURATION,
     normalizeBasicReplayDuration,
     BASIC_REPLAY_DURATIONS,
     toGlobalReplayCameraSettings,
@@ -42,7 +41,9 @@ import {
 import {isJourneyReplayDryRunActive} from '@Core/ui/replay/JourneyReplayRuntime'
 import {currentReplayJourney} from '@Core/ui/replay/ReplayUserModeConstants'
 import {
+    normalizeBasicReplaySettings,
     resolveBasicReplaySettings,
+    syncJourneyBasicReplayDuration,
     syncJourneyBasicReplayEndFocus,
 } from '@Core/ui/replay/ReplayUserModes'
 import { WaButton, WaIcon, WaNumberInput, WaSwitch, WaTooltip } from '@awesome.me/webawesome/dist/react'
@@ -114,14 +115,12 @@ export const VideoRecordingSettingsToolbar = memo(({
         ? ['Med', 'High', 'Ultra'][video.quality] ?? fullQualityName
         : fullQualityName
     const currentFPS = REPLAY_VIDEO_FPS[video.fps] ?? REPLAY_VIDEO_FPS[DEFAULT_REPLAY_VIDEO_FPS_INDEX]
-    const basicDuration = normalizeBasicReplayDuration(
-        getBasicReplaySettings(replaySettings)?.duration ?? DEFAULT_BASIC_REPLAY_DURATION,
-    )
     const basicJourney = main?.theJourney ?? currentReplayJourney()
     const resolvedBasicSettings = resolveBasicReplaySettings({
         user: getBasicReplaySettings(replaySettings),
         journey: getBasicReplaySettings(basicJourney?.replay),
     })
+    const basicDuration = resolvedBasicSettings.duration
     const basicSampleCount = resolvedBasicSettings.sampleCount
     const basicEndFocus = resolvedBasicSettings.endFocus
     const basicTotalDuration = basicDuration + (basicEndFocus.enabled ? basicEndFocus.duration : 0)
@@ -255,19 +254,19 @@ export const VideoRecordingSettingsToolbar = memo(({
 
     /**
      * Store the selected Basic Replay duration for playback and export.
-     * @param {Event} event - Duration select change event.
+     * @param {number|string} value - Requested Basic Replay duration in seconds.
      * @returns {void} Nothing.
      */
     const handleBasicDurationChange = useCallback(value => {
         const duration = normalizeBasicReplayDuration(value)
+        const journeyDuration = syncJourneyBasicReplayDuration(duration)
+        if (journeyDuration === null) {
+            const basicSettings = normalizeBasicReplaySettings(getBasicReplaySettings(lgs.settings.ui.replay) ?? {})
+            basicSettings.duration = duration
+            basicSettings.camera = toGlobalReplayCameraSettings(basicSettings.camera)
+            lgs.settings.ui.replay = writeBasicReplaySettings(lgs.settings.ui.replay, basicSettings)
+        }
         $replay.duration = duration
-        lgs.settings.ui.replay.duration = duration
-        const basic = getBasicReplaySettings(lgs.settings.ui.replay) ?? {}
-        lgs.settings.ui.replay = writeBasicReplaySettings(lgs.settings.ui.replay, {
-            ...basic,
-            duration,
-            ...(basic.camera ? {camera: toGlobalReplayCameraSettings(basic.camera)} : {}),
-        })
     }, [$replay])
 
     /** Persist Basic Replay end-focus settings globally and on the active Journey. */
