@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,6 +37,7 @@ import {
 import {
     DEFAULT_REPLAY_SAMPLE_COUNT,
     getBasicReplaySettings,
+    normalizeBasicReplayEndFocus,
     normalizeReplaySampleCount,
     writeBasicReplaySettings,
 } from './ReplayModeSettings'
@@ -60,6 +61,7 @@ const basicCameraPersistTimers = new WeakMap()
 const basicTracePersistTimers = new WeakMap()
 const basicDurationPersistTimers = new WeakMap()
 const basicSampleCountPersistTimers = new WeakMap()
+const basicEndFocusPersistTimers = new WeakMap()
 const basicPresentationPersistTimers = new WeakMap()
 const journeyReplayStartPositionPersistPromises = new WeakMap()
 const EXPERT_CAMERA_PERSIST_DELAY_MS = 250
@@ -463,6 +465,34 @@ export const syncJourneyBasicReplaySampleCount = (sampleCount, journeyOverride =
 }
 
 /**
+ * Persist the Basic Replay end-focus switch and duration on the current Journey.
+ * @param {Object} endFocus - End-focus settings to save.
+ * @param {Object|null} [journeyOverride=null] - Journey receiving the setting.
+ * @returns {Object|null} Saved settings, or null without a Journey.
+ */
+export const syncJourneyBasicReplayEndFocus = (endFocus, journeyOverride = null) => {
+    const journey = journeyOverride ?? currentReplayJourney()
+    if (!journey) {
+        return null
+    }
+
+    const replay = journey.replay ?? {}
+    const basic = getBasicReplaySettings(replay) ?? {}
+    const nextEndFocus = normalizeBasicReplayEndFocus(endFocus)
+    journey.replay = writeBasicReplaySettings(replay, Object.assign({}, basic, {endFocus: nextEndFocus}))
+
+    if (typeof journey.persistToDatabase === 'function') {
+        clearTimeout(basicEndFocusPersistTimers.get(journey))
+        basicEndFocusPersistTimers.set(journey, setTimeout(() => {
+            basicEndFocusPersistTimers.delete(journey)
+            void journey.persistToDatabase()
+        }, EXPERT_CAMERA_PERSIST_DELAY_MS))
+    }
+
+    return nextEndFocus
+}
+
+/**
  * Return product defaults for the compact Basic Replay workflow.
  *
  * @returns {Object} Basic Replay defaults.
@@ -528,6 +558,7 @@ export const normalizeBasicReplaySettings = (settings = {}) => {
     })
     return {
         duration: normalizeBasicReplayDuration(settings?.duration ?? defaults.duration),
+        endFocus: normalizeBasicReplayEndFocus(settings?.endFocus ?? defaults.endFocus),
         sampleCount: normalizeReplaySampleCount(
             settings?.sampleCount ?? defaults.sampleCount ?? DEFAULT_REPLAY_SAMPLE_COUNT,
         ),
@@ -581,6 +612,21 @@ export const resolveBasicReplaySettings = ({journey, user, product} = {}) => nor
         ...(user?.trace ?? {}),
         ...(journey?.trace ?? {}),
     },
+    endFocus: {
+        ...(product?.endFocus ?? {}),
+        ...(user?.endFocus ?? {}),
+        ...(journey?.endFocus ?? {}),
+    },
+})
+
+/**
+ * Resolve Basic Replay preferences for a Journey, including global defaults.
+ * @param {Object|null} [journey=currentReplayJourney()] - Journey to resolve.
+ * @returns {Object} Effective Basic Replay settings.
+ */
+export const currentBasicReplaySettingsForJourney = (journey = currentReplayJourney()) => resolveBasicReplaySettings({
+    user: getBasicReplaySettings(globalThis.lgs?.settings?.ui?.replay),
+    journey: getBasicReplaySettings(journey?.replay),
 })
 
 /**

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,11 @@ import {CameraUtils} from '@Utils/cesium/CameraUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips} from './JourneyReplayClips'
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
-import {journeyReplayStartPosition, syncJourneyReplayStartPosition} from './ReplayUserModes'
+import {
+    currentBasicReplaySettingsForJourney,
+    journeyReplayStartPosition,
+    syncJourneyReplayStartPosition,
+} from './ReplayUserModes'
 import {
     currentJourneyReplayCameraSettings, currentJourneyReplaySample, finiteNumber, replayStore,
 } from './JourneyReplayRuntime'
@@ -913,7 +917,10 @@ export const clipListForSlot = (mode, slot) => {
 
     if (isJourneyReplayBasicMode()) {
         return slot === REPLAY_CLIP_SLOT_STOP
-            ? createBasicReplayTraceFocusClips(currentJourneyReplayCameraSettings()).stop
+            ? createBasicReplayTraceFocusClips(
+                currentJourneyReplayCameraSettings(),
+                currentBasicReplaySettingsForJourney().endFocus,
+            ).stop
             : []
     }
 

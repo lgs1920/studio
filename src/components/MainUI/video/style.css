@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-10
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -214,6 +214,20 @@
 
 .video-recording-settings-popup--basic .basic-replay-settings-row--label-and-controls > :last-child {
     justify-self: end;
+}
+
+.video-recording-settings-popup--basic .basic-replay-end-focus-row {
+    justify-content: flex-start;
+}
+
+.video-recording-settings-popup--basic .basic-replay-end-focus-switch,
+.video-recording-settings-popup--basic .basic-replay-end-focus-duration {
+    flex: 0 0 auto;
+}
+
+.video-recording-settings-popup--basic .basic-replay-end-focus-duration {
+    width: 10rem;
+    max-width: 100%;
 }
 
 .video-recording-settings-popup--basic .basic-replay-dry-run-control {

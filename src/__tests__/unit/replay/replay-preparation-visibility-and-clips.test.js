@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-30
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest'
 import {hideJourneyReplayPOIsForPreparation, restoreJourneyReplayPOIVisibility} from '@Core/ui/replay/JourneyReplayVisibilityController'
 import {enterReplayPreparation} from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
 import {clipListForSlot} from '@Core/ui/replay/JourneyReplayClipController'
+import {createBasicReplayTraceFocusClips} from '@Core/ui/replay/JourneyReplayBasicFocus'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP} from '@Core/ui/replay/JourneyReplayClips'
 import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModeConstants'
@@ -25,6 +26,29 @@ import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/R
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Replay preparation visibility and clip rules', () => {
+    it('applies the configured Basic end-focus duration at a fixed three revolutions per minute', () => {
+        expect(createBasicReplayTraceFocusClips({}, {enabled: true, duration: 5}).stop[0].params)
+            .toMatchObject({duration: 5, rpm: 3, focusTarget: 'trace-centroid'})
+        expect(createBasicReplayTraceFocusClips({}, {enabled: false, duration: 5}).stop).toEqual([])
+    })
+
+    it('omits the end-focus clip from interactive Basic Replay when disabled for the current Journey', () => {
+        const journey = {replay: {basic: {endFocus: {enabled: false, duration: 5}}}}
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_BASIC}}},
+            stores: {
+                main: {theJourney: journey},
+                replay: {userMode: REPLAY_USER_MODE_BASIC, basicPreparationActive: false},
+            },
+        })
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {},
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {},
+        }
+
+        expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_STOP)).toEqual([])
+    })
+
     it('hides POIs during preparation and restores their saved visibility', () => {
         const poi = {id: 'poi-a', visible: true, entityVisible: true}
         const state = {replayPOIVisibilityState: new Map()}
@@ -106,7 +130,7 @@ describe('Replay preparation visibility and clip rules', () => {
         expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_STOP)).toMatchObject([expect.objectContaining({
             id: 'simple-trace-focus',
             clipId: 'focus',
-            params: expect.objectContaining({duration: 4, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 15}),
+            params: expect.objectContaining({duration: 3, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 3}),
         })])
 
         lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
@@ -115,7 +139,7 @@ describe('Replay preparation visibility and clip rules', () => {
         expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_STOP)).toMatchObject([expect.objectContaining({
             id: 'simple-trace-focus',
             clipId: 'focus',
-            params: expect.objectContaining({duration: 4, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 15}),
+            params: expect.objectContaining({duration: 3, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 3}),
         })])
 
         lgs.stores.replay.basicPreparationActive = false
@@ -125,7 +149,7 @@ describe('Replay preparation visibility and clip rules', () => {
         expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_STOP)).toMatchObject([expect.objectContaining({
             id: 'simple-trace-focus',
             clipId: 'focus',
-            params: expect.objectContaining({duration: 4, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 15}),
+            params: expect.objectContaining({duration: 3, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 3}),
         })])
 
         lgs.stores.replay.userMode = REPLAY_USER_MODE_EXPERT

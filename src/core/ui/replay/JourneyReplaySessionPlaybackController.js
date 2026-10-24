@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,7 @@ import {
 import { Journey }                                                                         from '@Core/Journey'
 import {currentReplayJourney, isJourneyReplayBasicMode}                                    from './ReplayUserModeConstants'
 import {
+    currentBasicReplaySettingsForJourney,
     flushJourneyReplayCameraPersistence,
     flushJourneyReplayStartPositionPersistence,
     journeyReplayStartPosition,
@@ -322,7 +323,10 @@ export const configure = (mode, options = {}) => {
             journey,
         })
         const clips = basicReplay
-            ? createBasicReplayTraceFocusClips(camera)
+            ? createBasicReplayTraceFocusClips(
+                camera,
+                currentBasicReplaySettingsForJourney(journey).endFocus,
+            )
             : resolvedClips
 
         if (state.samplerConfigKey !== samplerConfigKey || !state.sampler) {

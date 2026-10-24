@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-22
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -86,8 +86,9 @@ import {
 import {createReplayRecordingPerformance} from '@Core/ui/replay/ReplayRecordingPerformance'
 import {acquireReplayExportRenderLoop} from '@Core/ui/replay/ReplayExportRenderLoop'
 import {REPLAY_VIDEO_FPS} from '@Core/ui/replay/ReplayVideoSettings'
-import {isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
+import {currentReplayJourney, isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
 import {createBasicReplayTraceFocusClips} from '@Core/ui/replay/JourneyReplayBasicFocus'
+import {currentBasicReplaySettingsForJourney} from '@Core/ui/replay/ReplayUserModes'
 import {
     normalizeMediabunnyMetadataTags,
 }                              from '@Core/ui/replay/ReplayMediaMetadata'
@@ -648,7 +649,7 @@ const normalizeReplayWidgetIds = (widgetIds = []) => (
         .sort()
 )
 
-const resolveReplayExportClips = ({replay = defaultReplayStore()} = {}) => {
+const resolveReplayExportClips = ({replay = defaultReplayStore(), journey = currentReplayJourney()} = {}) => {
     const clips = normalizeJourneyReplayClips(
         replay?.clips
         ?? globalThis.lgs?.stores?.replay?.clips
@@ -657,7 +658,10 @@ const resolveReplayExportClips = ({replay = defaultReplayStore()} = {}) => {
     )
 
     if (isJourneyReplayBasicMode({replay})) {
-        return createBasicReplayTraceFocusClips(replay?.camera ?? currentJourneyReplayCameraSettings())
+        return createBasicReplayTraceFocusClips(
+            replay?.camera ?? currentJourneyReplayCameraSettings(),
+            currentBasicReplaySettingsForJourney(journey).endFocus,
+        )
     }
 
     return clips
@@ -2098,7 +2102,7 @@ export const prepareReplayDeferredExportPlan = ({
                                 ? Math.max(0, Number(controller.duration) * 1000)
                                 : Math.max(0, Number(replay?.durationMillis) || 0)
     const direction = controller?.direction ?? replay?.direction ?? 1
-    const replayClips = resolveReplayExportClips({replay})
+    const replayClips = resolveReplayExportClips({replay, journey})
     const videoTimeline = buildReplayVideoTimeline({
         replayDurationMillis,
         fps,

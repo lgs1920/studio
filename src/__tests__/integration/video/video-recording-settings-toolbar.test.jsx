@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -77,6 +77,12 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
             <input type="checkbox" checked={checked} onChange={onChange}/>
             {children}
         </label>
+    ),
+    WaNumberInput: ({className, value, label, min, max, step, onInput, 'label-at-start': labelAtStart, 'width-auto': widthAuto}) => (
+        <input type="number" className={className} aria-label={label} value={value} min={min} max={max} step={step}
+               data-label-at-start={labelAtStart ? 'true' : undefined}
+               data-width-auto={widthAuto ? 'true' : undefined}
+               onInput={onInput}/>
     ),
     WaTooltip: ({children, for: targetId}) => <span data-tooltip-for={targetId}>{children}</span>,
 }))
@@ -449,6 +455,38 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.queryByTestId('preset-popup-content')).toBeNull()
         expect(screen.getAllByText('Dry run')).not.toHaveLength(0)
         expect(screen.getByRole('button', {name: 'Run Dry run'})).not.toBeNull()
+    })
+
+    it('configures an optional Basic Replay end focus and persists its 1-to-5-second duration', async () => {
+        vi.useFakeTimers()
+        globalThis.lgs.stores.replay.basicPreparationActive = true
+        __.ui.replay.refresh = vi.fn()
+        const persistToDatabase = vi.fn()
+        globalThis.lgs.theJourney.replay = {basic: {}}
+        globalThis.lgs.theJourney.persistToDatabase = persistToDatabase
+        render(<VideoRecordingSettingsToolbar/>)
+        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
+
+        const focusSwitch = screen.getByRole('checkbox', {name: 'End Focus Duration'})
+        const durationInput = screen.getByRole('spinbutton', {name: 'Duration (s)'})
+        expect(focusSwitch.checked).toBe(true)
+        expect(durationInput.value).toBe('3')
+        expect(durationInput.min).toBe('1')
+        expect(durationInput.max).toBe('5')
+        expect(durationInput.dataset.labelAtStart).toBe('true')
+        expect(durationInput.parentElement.classList).toContain('basic-replay-end-focus-row')
+
+        await act(async () => fireEvent.input(durationInput, {target: {value: '5'}}))
+        expect(globalThis.lgs.settings.ui.replay.basic.endFocus).toEqual({enabled: true, duration: 5})
+        expect(globalThis.lgs.theJourney.replay.basic.endFocus).toEqual({enabled: true, duration: 5})
+
+        await act(async () => fireEvent.click(focusSwitch))
+        expect(globalThis.lgs.settings.ui.replay.basic.endFocus.enabled).toBe(false)
+        expect(globalThis.lgs.theJourney.replay.basic.endFocus.enabled).toBe(false)
+        expect(screen.queryByRole('spinbutton', {name: 'Duration (s)'})).toBeNull()
+        expect(globalThis.__.ui.replay.refresh).toHaveBeenCalledWith({camera: false})
+        await act(async () => vi.advanceTimersByTime(250))
+        expect(persistToDatabase).toHaveBeenCalledOnce()
     })
 
     it('starts Basic Replay Dry run without requiring the media recorder', async () => {

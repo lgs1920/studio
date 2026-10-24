@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,7 +50,6 @@ import {
 import { normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
 import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
 import { REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT } from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
-import { BASIC_REPLAY_TRACE_FOCUS_DURATION_SECONDS } from '@Core/ui/replay/JourneyReplayBasicFocus'
 import {currentReplayJourney} from '@Core/ui/replay/ReplayUserModeConstants'
 import {getBasicReplaySettings, writeBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
 import {
@@ -526,10 +525,20 @@ export const JourneyReplayDrawer = memo(() => {
         const clipDurationSeconds = isExpertMode
             ? [...(clips.start ?? []), ...(clips.stop ?? [])]
                 .reduce((total, clip) => total + Math.max(0, finiteNumber(clip?.params?.duration) ?? 0), 0)
-            : BASIC_REPLAY_TRACE_FOCUS_DURATION_SECONDS
+            : effectiveReplaySettings.basic?.endFocus?.enabled === true
+                ? Math.max(0, finiteNumber(effectiveReplaySettings.basic.endFocus.duration) ?? 0)
+                : 0
 
         return Math.max(0, finiteNumber(effectiveReplaySettings.duration) ?? 0) + clipDurationSeconds
-    }, [clips.start, clips.stop, effectiveReplaySettings.duration, isExpertMode, replayState.duration])
+    }, [
+        clips.start,
+        clips.stop,
+        effectiveReplaySettings.basic?.endFocus?.duration,
+        effectiveReplaySettings.basic?.endFocus?.enabled,
+        effectiveReplaySettings.duration,
+        isExpertMode,
+        replayState.duration,
+    ])
 
     useEffect(() => {
         const replayRuntime = lgs.stores.replay

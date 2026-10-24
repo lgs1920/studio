@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,7 @@ import {
     syncJourneyExpertReplayCamera,
     syncJourneyExpertReplayProgression,
     syncJourneyBasicReplayCamera,
+    syncJourneyBasicReplayEndFocus,
     syncJourneyBasicReplaySampleCount,
     syncJourneyReplayStartPosition,
     REPLAY_USER_MODE_BASIC,
@@ -200,6 +201,45 @@ describe('Replay user modes', () => {
             expect(syncJourneyBasicReplaySampleCount(1024, journey)).toBe(1024)
             expect(journey.replay.basic.sampleCount).toBe(1024)
             expect(getJourneyReplaySettings({journey}).sampleCount).toBe(1024)
+            vi.advanceTimersByTime(250)
+            await Promise.resolve()
+            expect(persistToDatabase).toHaveBeenCalledOnce()
+        }
+        finally {
+            vi.useRealTimers()
+            if (previousLgs === undefined) {
+                delete globalThis.lgs
+            }
+            else {
+                globalThis.lgs = previousLgs
+            }
+        }
+    })
+
+    it('defaults Basic end focus to 3 seconds, normalizes its range, and persists Journey overrides', async () => {
+        const previousLgs = globalThis.lgs
+        const persistToDatabase = vi.fn(async () => undefined)
+        const journey = {slug: 'focus-journey', replay: {}, persistToDatabase}
+        vi.stubGlobal('lgs', {
+            savedConfiguration: {ui: {replay: replayYamlDefaults}},
+            settings: {ui: {replay: {basic: {endFocus: {enabled: false, duration: 4}}}}},
+            stores: {main: {theJourney: journey}, replay: {basicPreparationActive: true}},
+        })
+        vi.useFakeTimers()
+
+        try {
+            expect(defaultBasicReplaySettings().endFocus).toEqual({enabled: true, duration: 3})
+            expect(normalizeBasicReplaySettings({endFocus: {enabled: false, duration: 9}}).endFocus)
+                .toEqual({enabled: false, duration: 5})
+            expect(resolveBasicReplaySettings({
+                user: {endFocus: {enabled: true, duration: 2}},
+                journey: {endFocus: {enabled: false}},
+            }).endFocus).toEqual({enabled: false, duration: 2})
+
+            expect(syncJourneyBasicReplayEndFocus({enabled: true, duration: 5}, journey))
+                .toEqual({enabled: true, duration: 5})
+            expect(journey.replay.basic.endFocus).toEqual({enabled: true, duration: 5})
+            expect(getJourneyReplaySettings({journey}).basic.endFocus).toEqual({enabled: true, duration: 5})
             vi.advanceTimersByTime(250)
             await Promise.resolve()
             expect(persistToDatabase).toHaveBeenCalledOnce()

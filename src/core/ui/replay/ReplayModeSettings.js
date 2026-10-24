@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-17
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,29 @@ export const REPLAY_SAMPLE_COUNT_OPTIONS = Object.freeze([
 
 /** Default to the Basic route-rendering sample budget. */
 export const DEFAULT_REPLAY_SAMPLE_COUNT = 1024
+
+/** Default Basic Replay end-focus settings. */
+export const DEFAULT_BASIC_REPLAY_END_FOCUS = Object.freeze({
+    enabled: true,
+    duration: 3,
+})
+
+/**
+ * Normalize the optional Basic Replay end focus and its duration in seconds.
+ * @param {Object|null} settings - Candidate switch and duration settings.
+ * @returns {{enabled: boolean, duration: number}} Normalized end-focus settings.
+ */
+export const normalizeBasicReplayEndFocus = settings => {
+    const requestedDuration = Number(settings?.duration)
+    const duration = Number.isFinite(requestedDuration)
+        ? Math.min(5, Math.max(1, Math.round(requestedDuration)))
+        : DEFAULT_BASIC_REPLAY_END_FOCUS.duration
+
+    return {
+        enabled: settings?.enabled !== false,
+        duration,
+    }
+}
 
 /**
  * Normalize a requested Replay render sample budget to one supported level.

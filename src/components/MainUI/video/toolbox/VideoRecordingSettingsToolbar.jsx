@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,11 +33,19 @@ import {
     BASIC_REPLAY_DURATIONS,
     toGlobalReplayCameraSettings,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
-import {getBasicReplaySettings, REPLAY_SAMPLE_COUNT_OPTIONS, writeBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
+import {
+    getBasicReplaySettings,
+    normalizeBasicReplayEndFocus,
+    REPLAY_SAMPLE_COUNT_OPTIONS,
+    writeBasicReplaySettings,
+} from '@Core/ui/replay/ReplayModeSettings'
 import {isJourneyReplayDryRunActive} from '@Core/ui/replay/JourneyReplayRuntime'
 import {currentReplayJourney} from '@Core/ui/replay/ReplayUserModeConstants'
-import {resolveBasicReplaySettings} from '@Core/ui/replay/ReplayUserModes'
-import { WaButton, WaIcon, WaSwitch, WaTooltip } from '@awesome.me/webawesome/dist/react'
+import {
+    resolveBasicReplaySettings,
+    syncJourneyBasicReplayEndFocus,
+} from '@Core/ui/replay/ReplayUserModes'
+import { WaButton, WaIcon, WaNumberInput, WaSwitch, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { memo, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
@@ -100,10 +108,12 @@ export const VideoRecordingSettingsToolbar = memo(({
         getBasicReplaySettings(replaySettings)?.duration ?? DEFAULT_BASIC_REPLAY_DURATION,
     )
     const basicJourney = main?.theJourney ?? currentReplayJourney()
-    const basicSampleCount = resolveBasicReplaySettings({
+    const resolvedBasicSettings = resolveBasicReplaySettings({
         user: getBasicReplaySettings(replaySettings),
         journey: getBasicReplaySettings(basicJourney?.replay),
-    }).sampleCount
+    })
+    const basicSampleCount = resolvedBasicSettings.sampleCount
+    const basicEndFocus = resolvedBasicSettings.endFocus
     const basicSampleOption = REPLAY_SAMPLE_COUNT_OPTIONS.find(option => option.value === basicSampleCount)
         ?? REPLAY_SAMPLE_COUNT_OPTIONS[0]
 
@@ -248,6 +258,36 @@ export const VideoRecordingSettingsToolbar = memo(({
             ...(basic.camera ? {camera: toGlobalReplayCameraSettings(basic.camera)} : {}),
         })
     }, [$replay])
+
+    /** Persist Basic Replay end-focus settings globally and on the active Journey. */
+    const updateBasicEndFocus = useCallback(updates => {
+        const userBasic = getBasicReplaySettings(lgs.settings.ui.replay) ?? {}
+        const currentSettings = resolveBasicReplaySettings({
+            user: userBasic,
+            journey: getBasicReplaySettings(basicJourney?.replay),
+        })
+        const endFocus = normalizeBasicReplayEndFocus({...currentSettings.endFocus, ...updates})
+        lgs.settings.ui.replay = writeBasicReplaySettings(lgs.settings.ui.replay, {
+            ...userBasic,
+            endFocus,
+        })
+        syncJourneyBasicReplayEndFocus(endFocus, basicJourney)
+        __.ui.replay?.refresh?.({camera: false})
+        lgs.scene?.requestRender?.()
+    }, [basicJourney])
+
+    const handleBasicEndFocusSwitchChange = useCallback(event => {
+        const enabled = event.currentTarget?.checked ?? event.target?.checked
+        updateBasicEndFocus({enabled: enabled === true})
+    }, [updateBasicEndFocus])
+
+    const handleBasicEndFocusDurationInput = useCallback(event => {
+        const rawDuration = event.currentTarget?.value ?? event.target?.value
+        if (`${rawDuration ?? ''}`.trim() === '') {
+            return
+        }
+        updateBasicEndFocus({duration: rawDuration})
+    }, [updateBasicEndFocus])
 
     useEffect(() => {
         const safeFPS = Number.isInteger(lgs.settings.ui.video?.fps)
@@ -422,6 +462,35 @@ export const VideoRecordingSettingsToolbar = memo(({
                     )}
                     {basicPreparation && (
                         <BasicReplayAppearanceSettings/>
+                    )}
+                    {basicPreparation && (
+                        <div className="basic-replay-settings-row basic-replay-end-focus-row" role="group" aria-label="End Focus Duration">
+                            <WaIcon name="rotate" variant="regular" label=""/>
+                            <WaSwitch
+                                className="basic-replay-end-focus-switch"
+                                size="xs"
+                                label-at-start width-auto
+                                checked={basicEndFocus.enabled}
+                                onChange={handleBasicEndFocusSwitchChange}
+                            >
+                                {'End Focus Duration'}
+                            </WaSwitch>
+                            {basicEndFocus.enabled && (
+                                <WaNumberInput
+                                    className="basic-replay-end-focus-duration"
+                                    appearance="filled"
+                                    size="s"
+                                    type="number"
+                                    label="Duration (s)"
+                                    label-at-start width-auto
+                                    min={1}
+                                    max={5}
+                                    step={1}
+                                    value={basicEndFocus.duration}
+                                    onInput={handleBasicEndFocusDurationInput}
+                                />
+                            )}
+                        </div>
                     )}
                     {basicPreparation && (
                         <div className="basic-replay-settings-row basic-replay-settings-row--label-and-controls" role="group" aria-label="Duration">

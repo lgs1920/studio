@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,7 +26,9 @@ import {
 } from './ReplayUserModeConstants'
 import {
     DEFAULT_REPLAY_SAMPLE_COUNT,
+    DEFAULT_BASIC_REPLAY_END_FOCUS,
     getBasicReplaySettings,
+    normalizeBasicReplayEndFocus,
     normalizeReplaySampleCount,
 } from './ReplayModeSettings'
 
@@ -243,6 +245,9 @@ export const defaultJourneyReplayBasicSettings = () => {
     return {
         ...basicDefaults,
         duration: basicDefaults.duration ?? DEFAULT_BASIC_REPLAY_DURATION,
+        endFocus: normalizeBasicReplayEndFocus(
+            basicDefaults.endFocus ?? DEFAULT_BASIC_REPLAY_END_FOCUS,
+        ),
         sampleCount: normalizeReplaySampleCount(basicDefaults.sampleCount ?? DEFAULT_REPLAY_SAMPLE_COUNT),
         camera: {
             ...defaultJourneyReplayCameraStyle(),
@@ -855,6 +860,11 @@ const resolveReplayBasicSettingsForRuntime = ({journey, user} = {}) => {
 
     return {
         duration: normalizeBasicReplayDuration(journey?.duration ?? user?.duration ?? product.duration),
+        endFocus: normalizeBasicReplayEndFocus({
+            ...(product.endFocus ?? {}),
+            ...(user?.endFocus ?? {}),
+            ...(journey?.endFocus ?? {}),
+        }),
         sampleCount: normalizeReplaySampleCount(
             journey?.sampleCount ?? user?.sampleCount ?? product.sampleCount ?? DEFAULT_REPLAY_SAMPLE_COUNT,
         ),
@@ -914,6 +924,7 @@ export const getJourneyReplaySettings = ({journey = currentReplayJourney()} = {}
         if (settings.userMode === REPLAY_USER_MODE_BASIC) {
             return {
                 ...settings,
+                basic,
                 duration: basic.duration,
                 sampleCount: basic.sampleCount,
                 includeHiddenTracks: basic.includeHiddenTracks,
