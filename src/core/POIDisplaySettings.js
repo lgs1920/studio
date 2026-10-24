@@ -21,8 +21,8 @@ export const POI_DISPLAY_WIDTH_STEP = 10
 
 /** @type {Readonly<{category: boolean, titleCategoryIcon: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number}>} */
 export const DEFAULT_POI_DISPLAY_SETTINGS = Object.freeze({
-    category:          true,
-    titleCategoryIcon: false,
+    category:          false,
+    titleCategoryIcon: true,
     location:          false,
     altitude:          false,
     coordinates:       false,

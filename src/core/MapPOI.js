@@ -30,6 +30,9 @@ export class MapPOI extends MapElement {
      */
     bgColor
 
+    /** @type {boolean} */
+    noBackground = false
+
     /**
      * @type {Camera}
      */
@@ -111,6 +114,9 @@ export class MapPOI extends MapElement {
      */
     parent = null
 
+    /** @type {boolean} */
+    pill = true
+
     /** @type {POIUtils} **/
     utils = POIUtils
 
@@ -166,6 +172,7 @@ export class MapPOI extends MapElement {
         options.slug = options.id
         this.update({
             ...options,
+            pill: options.pill ?? true,
             display: normalizePOIDisplaySettings(options.display),
         })
     }

@@ -150,6 +150,19 @@
     border-radius: var(--lgs-border-radius-xs);
 }
 
+.poi-card-inner.poi-card-inner--pill {
+    border-radius: 9999px;
+}
+
+.poi-card-inner.poi-card-inner--no-background {
+    /* Cesium discards billboard pixels below 0.005 alpha in its pick pass. Keep a visually imperceptible hit area. */
+    background-color: rgba(0, 0, 0, 0.01);
+
+    & .poi-card-inner-background {
+        display: none;
+    }
+}
+
 .poi-card-inner-background {
     position: absolute;
     z-index: -1;
@@ -453,22 +466,87 @@
     gap: var(--lgs-gutter-s);
 }
 
+.map-poi-edit-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.map-poi-edit-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+
+    & .map-poi-category-selector {
+        flex: 1 1 auto;
+        width: auto;
+        min-width: 0;
+    }
+}
+
+.map-poi-edit-swatches {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: var(--lgs-gutter-xs);
+}
+
+.map-poi-edit-tabs {
+    width: 100%;
+    height: auto;
+    max-height: none;
+
+    &::part(body) {
+        height: auto;
+        max-height: none;
+        overflow: visible;
+        padding-block: var(--lgs-gutter-s);
+    }
+
+    & wa-tab-panel {
+        height: auto;
+        max-height: none;
+        overflow: visible;
+
+        &::part(base) {
+            height: auto;
+            max-height: none;
+            overflow: visible;
+        }
+    }
+}
+
+#pois-editor-drawer .map-poi-edit-tabs::part(body),
+#pois-editor-drawer .map-poi-edit-tabs wa-tab-panel::part(base),
+#pois-editor-drawer .map-poi-edit-tabs,
+#pois-editor-drawer .map-poi-edit-tabs wa-tab-panel {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+}
+
 .map-poi-display-settings {
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-xs);
 }
 
-.map-poi-display-settings h4 {
-    font-size: var(--lgs-font-size-s);
-    margin: 0;
-}
-
 .map-poi-display-controls {
     display: flex;
-    flex-wrap: wrap;
-    column-gap: var(--lgs-gutter-s);
+    flex-direction: column;
     row-gap: var(--lgs-gutter-xs);
+}
+
+.map-poi-style-switch {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+
+    &::part(base) {
+        width: 100%;
+    }
 }
 
 .map-poi-display-width-slider {

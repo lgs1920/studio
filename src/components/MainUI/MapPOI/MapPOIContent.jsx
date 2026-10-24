@@ -281,6 +281,8 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                   point?.expanded,
                   point?.color,
                   point?.bgColor,
+                  point?.pill,
+                  point?.noBackground,
                   point?.height,
                   point?.location,
                   point?.display?.category,
@@ -339,7 +341,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                 useInMenu && 'used-in-menu',
             )}
             style={{
-                '--lgs-poi-background-color': point?.bgColor ?? lgs.colors.poiDefaultBackground,
+                '--lgs-poi-background-color': point?.noBackground ? 'transparent' : point?.bgColor ?? lgs.colors.poiDefaultBackground,
                 '--lgs-poi-border-color':     point?.color ?? lgs.colors.poiDefault,
                 '--lgs-poi-color':            point?.color ?? lgs.colors.poiDefault,
                 ...(point?.expanded && !useInMenu
@@ -349,7 +351,11 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
             }}
         >
             <div className="poi-card" ref={_poiContent}>
-                <div className="poi-card-inner">
+                <div className={classNames(
+                    'poi-card-inner',
+                    point?.expanded && !useInMenu && point?.pill !== false && 'poi-card-inner--pill',
+                    point?.noBackground && 'poi-card-inner--no-background',
+                )}>
                     <div className="poi-card-inner-background"/>
 
                     {point?.expanded && !useInMenu ? (

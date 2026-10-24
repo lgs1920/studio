@@ -17,16 +17,15 @@
 import {
     normalizePOIDisplaySettings, POI_DISPLAY_MAX_WIDTH, POI_DISPLAY_MIN_WIDTH, POI_DISPLAY_WIDTH_STEP,
 }                                    from '@Core/POIDisplaySettings'
-import { WaDivider, WaSlider, WaSwitch } from '@awesome.me/webawesome/dist/react'
+import { WaSlider, WaSwitch }       from '@awesome.me/webawesome/dist/react'
 import { memo }                     from 'react'
 
 const DISPLAY_OPTIONS = [
-    {key: 'category', label: 'Category'},
     {key: 'titleCategoryIcon', label: 'Category icon in title'},
+    {key: 'category', label: 'Category'},
     {key: 'location', label: 'Location'},
     {key: 'altitude', label: 'Altitude'},
     {key: 'coordinates', label: 'Coordinates'},
-    {key: 'dateTime', label: 'Date-Time'},
 ]
 
 /**
@@ -35,29 +34,57 @@ const DISPLAY_OPTIONS = [
  * @param {Object} props - Component properties.
  * @param {string} props.poi - POI identifier.
  * @param {Object|null|undefined} props.display - Persisted POI display choices.
+ * @param {boolean} props.hasDateTime - Whether the POI has a date to display.
+ * @param {boolean} props.pill - Whether the POI card uses a rounded pill shape.
+ * @param {boolean} props.noBackground - Whether the POI background is transparent.
  * @param {Function} props.onDisplayChange - Callback for a changed display flag.
+ * @param {Function} props.onStyleChange - Callback for a changed POI style flag.
  * @returns {JSX.Element} The display controls.
  */
-export const MapPOIDisplaySettings = memo(({poi, display, onDisplayChange}) => {
+export const MapPOIDisplaySettings = memo(({
+                                                poi,
+                                                display,
+                                                hasDateTime = false,
+                                                pill = false,
+                                                noBackground = false,
+                                                onDisplayChange,
+                                                onStyleChange,
+                                            }) => {
     const displaySettings = normalizePOIDisplaySettings(display)
 
     return (
-        <section className="map-poi-display-settings" aria-labelledby={`map-poi-display-title-${poi}`}>
-            <WaDivider/>
-            <h4 id={`map-poi-display-title-${poi}`}>{'Display'}</h4>
+        <section className="map-poi-display-settings" aria-label={`POI style settings for ${poi}`}>
             <div className="map-poi-display-controls">
-                {DISPLAY_OPTIONS.map(({key, label}) => (
+                {[...DISPLAY_OPTIONS, ...(hasDateTime ? [{key: 'dateTime', label: 'Date-Time'}] : [])].map(({key, label}) => (
                     <WaSwitch
                         key={key}
+                        className="map-poi-style-switch"
                         size="xs"
                         label-at-start
-                        width-auto
                         checked={displaySettings[key]}
                         onChange={event => onDisplayChange(key, event)}
                     >
                         {label}
                     </WaSwitch>
                 ))}
+                <WaSwitch
+                    className="map-poi-style-switch"
+                    size="xs"
+                    label-at-start
+                    checked={pill}
+                    onChange={event => onStyleChange('pill', event)}
+                >
+                    {'Pill'}
+                </WaSwitch>
+                <WaSwitch
+                    className="map-poi-style-switch"
+                    size="xs"
+                    label-at-start
+                    checked={noBackground}
+                    onChange={event => onStyleChange('noBackground', event)}
+                >
+                    {'No background'}
+                </WaSwitch>
             </div>
             <WaSlider
                 className="map-poi-display-width-slider"

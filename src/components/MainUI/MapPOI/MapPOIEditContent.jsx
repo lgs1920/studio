@@ -32,7 +32,8 @@ import {
     ELEVATION_UNITS, UnitUtils,
 }                  from '@Utils/UnitUtils'
 import {
-    WaButton, WaCallout, WaColorPicker, WaCopyButton, WaDivider, WaIcon, WaInput, WaTextarea, WaTooltip,
+    WaButton, WaCallout, WaColorPicker, WaCopyButton, WaDivider, WaIcon, WaInput, WaTab, WaTabGroup, WaTabPanel,
+    WaTextarea, WaTooltip,
 }                  from '@awesome.me/webawesome/dist/react'
 import classNames  from 'classnames'
 import parse       from 'html-react-parser'
@@ -96,6 +97,22 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                   .catch(error => console.error(`[MapPOIEditContent] Failed to save ${field}:`, error))
                                           }, [poi])
 
+                                          /**
+                                           * Persist a changed POI shape or background setting immediately.
+                                           *
+                                           * @param {string} field - POI style property.
+                                           * @param {Event} event - Web Awesome switch change event.
+                                           * @returns {void}
+                                           */
+                                          const handleStyleChange = useCallback((field, event) => {
+                                              if (!window.isOK) {
+                                                  return
+                                              }
+
+                                              void __.ui.poiManager.updatePOI(poi, {[field]: event.target.checked}, {immediate: true})
+                                                  .catch(error => console.error(`[MapPOIEditContent] Failed to save ${field}:`, error))
+                                          }, [poi])
+
                                           if (!point.id) {
                                               return null
                                           }
@@ -111,6 +128,8 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                     simulatedHeight,
                                                     color,
                                                     bgColor,
+                                                    pill = true,
+                                                    noBackground = false,
                                                     time,
                                                     visible     = true,
                                                 } = point
@@ -123,6 +142,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                                                      latitude:  false,
                                                                                                      longitude: false,
                                                                                                  })
+                                          const [activeTab, setActiveTab] = useState(`poi-edit-${id}`)
 
                                           /** @type {[boolean, function]} Tracks if the altitude is currently simulated */
                                           const [simulated, setSimulated] = useState(height == null || height === simulatedHeight)
@@ -272,6 +292,14 @@ export const MapPOIEditContent = memo(({poi}) => {
 
                                           const previousTitleRef = useRef(title)
 
+                                          /** Keep the selected tab controlled without resetting it during POI updates. */
+                                          const handleTabShow = useCallback((event) => {
+                                              const panelName = event?.detail?.name
+                                              if (panelName) {
+                                                  setActiveTab(panelName)
+                                              }
+                                          }, [])
+
                                           const handleTitleFocus = useCallback(() => {
                                               previousTitleRef.current = title
                                           }, [title])
@@ -331,6 +359,10 @@ export const MapPOIEditContent = memo(({poi}) => {
                                           useEffect(() => {
                                               setSimulated(height == null || height === simulatedHeight)
                                           }, [height, simulatedHeight])
+
+                                          useEffect(() => {
+                                              setActiveTab(`poi-edit-${id}`)
+                                          }, [id])
 
                                           useEffect(() => {
                                               setCoordinateDraft((prev) => ({
@@ -448,134 +480,149 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                           </div>
                                                       </WaCallout>)}
 
-                                                  <div className="edit-map-poi-wrapper" id={`edit-map-poi-content-${id}`}>
-                                                      <WaInput appearance="filled"
-                                                          size="s"
-                                                          value={title}
-                                                          onInput={handleChangeTitle}
-                                                          onFocus={handleTitleFocus}
-                                                          onBlur={handleTitleBlur}
-                                                          className="edit-title-map-poi-input"
-                                                          readOnly={!visible}
-                                                      >
-                                                          <div className="map-poi-header-actions" slot="label" onClick={(e) => e.stopPropagation()}>
-                                                              {'Title'}
-                                                              <div>
-                                                                  {visible && (
-                                                                      <>
-                                                                          <WaTooltip for={`map-poi-bg-${id}`}>{'Background Color'}</WaTooltip>
-                                                                          <WaColorPicker
-                                                                              id={`map-poi-bg-${id}`}
-                                                                              size="s"
-                                                                              value={bgColor ?? lgs.colors.poiDefaultBackground}
-                                                                              swatches={swatches}
-                                                                              onChange={handleChangeColor}
-                                                                              disabled={!visible}
-                                                                              noFormatToggle
-                                                                              ref={_poiBgColor}
-                                                                          />
-
-                                                                          <WaTooltip for={`map-poi-fg-${id}`}>{'Foreground Color'}</WaTooltip>
-                                                                          <WaColorPicker
-                                                                              id={`map-poi-fg-${id}`}
-                                                                              size="s"
-                                                                              value={color ?? lgs.colors.poiDefault}
-                                                                              swatches={swatches}
-                                                                              onChange={handleChangeColor}
-                                                                              disabled={!visible}
-                                                                              noFormatToggle
-                                                                              ref={_poiColor}
-                                                                          />
-                                                                      </>)}
-                                                                  <MapPOIEditMenu poiId={id}/>
-                                                              </div>
-                                                          </div>
-                                                      </WaInput>
-
-                                                      {visible && <MapPOICategorySelector point={point}/>}
-                                                      {journeyAssociation.canAssociate && (
-                                                          <JourneySelector
-                                                              label="Journey"
-                                                              value={journeyAssociation.selectedJourneySlug}
-                                                              size="s"
-                                                              className="map-poi-journey-selector"
-                                                              onChange={journeyAssociation.handleChangeJourney}
-                                                              disabled={!visible}
-                                                              journeys={journeyAssociation.journeys}
-                                                              allowEmptyOption
-                                                              emptyLabel={NO_ASSOCIATED_JOURNEY_LABEL}
-                                                              hint={journeyAssociation.hint}
-                                                              syncEditorSelection={false}
-                                                          />
-                                                      )}
-                                                      <WaTextarea appearance="filled"
-                                                          value={description}
-                                                          onInput={handleChangeDescription}
-                                                          className="edit-title-map-poi-input"
-                                                          label="Description"
-                                                          disabled={!visible}
-                                                      />
-                                                      {location && (
-                                                          <div
-                                                              className="map-poi-location"
-                                                              title={location}
-                                                          >
-                                                              <WaIcon name="location-dot" variant="regular"/>
-                                                              <span>{location}</span>
-                                                          </div>
-                                                      )}
-
-                                                      {time && (
-                                                          <div className="poi-time">
-                                                              <DateTimeDisplay
-                                                                  value={time}
-                                                                  timeZone={point.timeZone}
-                                                                  longitude={point.longitude}
-                                                                  latitude={point.latitude}
-                                                                  leading={<WaIcon name="clock" variant="regular"/>}
+                                                  <div className="map-poi-edit-wrapper" id={`edit-map-poi-content-${id}`}>
+                                                      <div className="map-poi-edit-toolbar">
+                                                          <div className="map-poi-edit-swatches">
+                                                              <WaTooltip for={`map-poi-bg-${id}`}>{'Background Color'}</WaTooltip>
+                                                              <WaColorPicker
+                                                                  id={`map-poi-bg-${id}`}
+                                                                  size="s"
+                                                                  value={bgColor ?? lgs.colors.poiDefaultBackground}
+                                                                  swatches={swatches}
+                                                                  onChange={handleChangeColor}
+                                                                  disabled={!visible || noBackground}
+                                                                  noFormatToggle
+                                                                  ref={_poiBgColor}
+                                                              />
+                                                              <WaTooltip for={`map-poi-fg-${id}`}>{'Foreground Color'}</WaTooltip>
+                                                              <WaColorPicker
+                                                                  id={`map-poi-fg-${id}`}
+                                                                  size="s"
+                                                                  value={color ?? lgs.colors.poiDefault}
+                                                                  swatches={swatches}
+                                                                  onChange={handleChangeColor}
+                                                                  disabled={!visible}
+                                                                  noFormatToggle
+                                                                  ref={_poiColor}
                                                               />
                                                           </div>
-                                                      )}
-
-                                                      <div className="map-poi-edit-row-coordinates">
-                                                          <WaInput appearance="filled"
-                                                              className={classNames({'map-poi-edit-warning-coordinate': coordinateError.latitude})}
-                                                              size="s"
-                                                              inputMode="decimal"
-                                                              withoutSpinButtons
-                                                              value={coordinateDraft.latitude}
-                                                              onInput={handleChangeLatitude}
-                                                              label="Latitude"
-                                                              disabled={!visible}
-                                                          />
-                                                          <WaInput appearance="filled"
-                                                              className={classNames({'map-poi-edit-warning-coordinate': coordinateError.longitude})}
-                                                              size="s"
-                                                              inputMode="decimal"
-                                                              withoutSpinButtons
-                                                              value={coordinateDraft.longitude}
-                                                              onInput={handleChangeLongitude}
-                                                              label="Longitude"
-                                                              disabled={!visible}
-                                                          />
-
-                                                          <WaCopyButton
-                                                              variant="brand"
-                                                              appearance="plain"
-                                                              value={formattedCoordinates}
-                                                              size="s"
-                                                              onWaCopy={handleCopySuccess}
-                                                              disabled={!visible}
-                                                          />
+                                                          <MapPOIEditMenu poiId={id}/>
                                                       </div>
 
-                                                      {altitudeInput}
+                                                      <WaTabGroup
+                                                          className="map-poi-edit-tabs"
+                                                          active={activeTab}
+                                                          onWaTabShow={handleTabShow}
+                                                      >
+                                                          <WaTab slot="nav" panel={`poi-edit-${id}`}>
+                                                              <WaIcon size="s" name="pen-to-square" variant="regular"/>{'Edit'}
+                                                          </WaTab>
+                                                          <WaTab slot="nav" panel={`poi-style-${id}`}>
+                                                              <WaIcon size="s" name="paintbrush-pencil" variant="regular"/>{'Style'}
+                                                          </WaTab>
+                                                          <WaTabPanel name={`poi-edit-${id}`}>
+                                                              <div className="edit-map-poi-wrapper">
+                                                                  <MapPOICategorySelector point={point} disabled={!visible}/>
+                                                                  <WaInput appearance="filled"
+                                                                      size="s"
+                                                                      value={title}
+                                                                      onInput={handleChangeTitle}
+                                                                      onFocus={handleTitleFocus}
+                                                                      onBlur={handleTitleBlur}
+                                                                      className="edit-title-map-poi-input"
+                                                                      label="Title"
+                                                                      label-at-start
+                                                                      readOnly={!visible}
+                                                                  />
+
+                                                                  {journeyAssociation.canAssociate && (
+                                                                      <JourneySelector
+                                                                          label="Journey"
+                                                                          value={journeyAssociation.selectedJourneySlug}
+                                                                          size="s"
+                                                                          className="map-poi-journey-selector"
+                                                                          onChange={journeyAssociation.handleChangeJourney}
+                                                                          disabled={!visible}
+                                                                          journeys={journeyAssociation.journeys}
+                                                                          allowEmptyOption
+                                                                          emptyLabel={NO_ASSOCIATED_JOURNEY_LABEL}
+                                                                          hint={journeyAssociation.hint}
+                                                                          syncEditorSelection={false}
+                                                                      />
+                                                                  )}
+                                                                  <WaTextarea appearance="filled"
+                                                                      value={description}
+                                                                      onInput={handleChangeDescription}
+                                                                      className="edit-title-map-poi-input"
+                                                                      label="Description"
+                                                                      label-at-start
+                                                                      disabled={!visible}
+                                                                  />
+                                                                  {location && (
+                                                                      <div className="map-poi-location" title={location}>
+                                                                          <WaIcon name="location-dot" variant="regular"/>
+                                                                          <span>{location}</span>
+                                                                      </div>
+                                                                  )}
+                                                                  {time && (
+                                                                      <div className="poi-time">
+                                                                          <DateTimeDisplay
+                                                                              value={time}
+                                                                              timeZone={point.timeZone}
+                                                                              longitude={point.longitude}
+                                                                              latitude={point.latitude}
+                                                                              leading={<WaIcon name="clock" variant="regular"/>}
+                                                                          />
+                                                                      </div>
+                                                                  )}
+                                                                  <div className="map-poi-edit-row-coordinates">
+                                                                      <WaInput appearance="filled"
+                                                                          className={classNames({'map-poi-edit-warning-coordinate': coordinateError.latitude})}
+                                                                          size="s"
+                                                                          inputMode="decimal"
+                                                                          withoutSpinButtons
+                                                                          value={coordinateDraft.latitude}
+                                                                          onInput={handleChangeLatitude}
+                                                                          label="Latitude"
+                                                                          label-at-start
+                                                                          disabled={!visible}
+                                                                      />
+                                                                      <WaInput appearance="filled"
+                                                                          className={classNames({'map-poi-edit-warning-coordinate': coordinateError.longitude})}
+                                                                          size="s"
+                                                                          inputMode="decimal"
+                                                                          withoutSpinButtons
+                                                                          value={coordinateDraft.longitude}
+                                                                          onInput={handleChangeLongitude}
+                                                                          label="Longitude"
+                                                                          label-at-start
+                                                                          disabled={!visible}
+                                                                      />
+                                                                      <WaCopyButton
+                                                                          variant="brand"
+                                                                          appearance="plain"
+                                                                          value={formattedCoordinates}
+                                                                          size="s"
+                                                                          onWaCopy={handleCopySuccess}
+                                                                          disabled={!visible}
+                                                                      />
+                                                                  </div>
+                                                                  {altitudeInput}
+                                                              </div>
+                                                          </WaTabPanel>
+                                                          <WaTabPanel name={`poi-style-${id}`} onClick={event => event.stopPropagation()}>
+                                                              <MapPOIDisplaySettings
+                                                                  poi={id}
+                                                                  display={point.display}
+                                                                  hasDateTime={Boolean(time)}
+                                                                  pill={pill}
+                                                                  noBackground={noBackground}
+                                                                  onDisplayChange={handleDisplayChange}
+                                                                  onStyleChange={handleStyleChange}
+                                                              />
+                                                          </WaTabPanel>
+                                                      </WaTabGroup>
                                                   </div>
-                                                  <MapPOIDisplaySettings
-                                                      poi={id}
-                                                      display={point.display}
-                                                      onDisplayChange={handleDisplayChange}
-                                                  />
                                               </>
                                           )
                                       },

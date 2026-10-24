@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-10
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,10 +20,24 @@ import { WaIcon, WaOption, WaSelect } from '@awesome.me/webawesome/dist/react'
 import { useMemo }                        from 'react'
 import { useSnapshot }                    from 'valtio'
 
-export const MapPOICategorySelector = ({point: current, props}) => {
+/**
+ * Render a POI category selector using the current POI's colors and category.
+ *
+ * @param {Object} props - Component properties.
+ * @param {Object} props.point - The POI displayed by the editor.
+ * @param {boolean} [props.disabled=false] - Whether the category can be changed.
+ * @returns {JSX.Element|null} The category selector when a current POI exists.
+ */
+export const MapPOICategorySelector = ({point: current, props, disabled = false}) => {
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
 
+    /**
+     * Persist the selected category on the current POI.
+     *
+     * @param {Event} event - Web Awesome select change event.
+     * @returns {void}
+     */
     const handleCategory = (event) => {
         __.ui.poiManager.updatePOI(pois.current, {
             category: event.target.value,
@@ -67,6 +81,7 @@ export const MapPOICategorySelector = ({point: current, props}) => {
                 <WaSelect appearance="filled" label={'Category'} value={current.category} size={props?.size ?? 'small'}
                           className="map-poi-category-selector"
                           style={duotoneVars}
+                          disabled={disabled}
                           onChange={handleCategory}>
                     {categoryOptions}
                 </WaSelect>
