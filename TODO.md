@@ -6,5 +6,6 @@ Investigate why the same Replay video now takes more than 10 minutes to export i
 
 - Verify whether the Fix Path widget's dimensions and position persist after it is closed and reopened.
 - Support moving an isolated journey point by allowing a Fix Path section to contain a single point.
+- Review mispositioned resize handles on some widgets and determine whether corner handles would improve their placement.
 
 - Clarify how Fix Path should handle POIs.
