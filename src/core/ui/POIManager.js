@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-13
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,6 +19,7 @@ import {
     POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE, REMOVE_POI_EVENT,
 }                                                  from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
+import { normalizePOIDisplaySettings }              from '@Core/POIDisplaySettings'
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
 import { Export }                                  from '@Core/ui/Export'
 import { POIUtils }                                from '@Utils/cesium/POIUtils'
@@ -420,6 +421,13 @@ export class POIManager {
         if (Object.prototype.hasOwnProperty.call(safeUpdates, 'simulatedHeight')
             && !Number.isFinite(safeUpdates.simulatedHeight)) {
             delete safeUpdates.simulatedHeight
+        }
+        if (Object.prototype.hasOwnProperty.call(safeUpdates, 'display')) {
+            const currentDisplay = normalizePOIDisplaySettings(poi.display)
+            const displayUpdates = safeUpdates.display && typeof safeUpdates.display === 'object'
+                ? safeUpdates.display
+                : {}
+            safeUpdates.display = normalizePOIDisplaySettings({...currentDisplay, ...displayUpdates})
         }
         if (Object.keys(safeUpdates).length === 0) {
             return poi

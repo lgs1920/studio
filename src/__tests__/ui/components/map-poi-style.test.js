@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-24
- * Last modified: 2026-07-24
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,5 +33,19 @@ describe('Map POI style', () => {
         expect(css).toContain('border: var(--poi-border-width) solid var(--lgs-poi-color);')
         expect(css).toContain('box-shadow: none;')
         expect(css).not.toContain('box-shadow: inset 0 0 0 var(--poi-border-width) var(--lgs-poi-color);')
+    })
+
+    it('keeps the expanded title icon upright and the configured card width within its canvas', () => {
+        const css = loadMapPOIStyle()
+        const genericRotation = css.indexOf('.poi-card-inner svg, :not(.poi-shrinked) .poi-card-inner wa-icon::part(svg)')
+        const titleIconOverride = css.indexOf(
+            '.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner .poi-title .poi-category-title-icon::part(svg)',
+        )
+        const overrideEnd = css.indexOf('}', titleIconOverride)
+
+        expect(css).toContain('max-width: var(--poi-expanded-dimension);')
+        expect(css).toContain('box-sizing: border-box;')
+        expect(titleIconOverride).toBeGreaterThan(genericRotation)
+        expect(css.slice(titleIconOverride, overrideEnd)).toContain('transform: none;')
     })
 })

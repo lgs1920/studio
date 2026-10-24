@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-25
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { MapPOICategorySelector } from '@Components/MainUI/MapPOI/MapPOICategorySelector'
+import { MapPOIDisplaySettings }  from '@Components/MainUI/MapPOI/MapPOIDisplaySettings'
 import { DateTimeDisplay }        from '@Components/DateTimeDisplay'
 import { MapPOIEditMenu }         from '@Components/MainUI/MapPOI/MapPOIEditMenu'
 import {
@@ -24,6 +25,7 @@ import { JourneySelector }        from '@Editor/journey/JourneySelector'
 import {
     COORDINATE_INPUT_ERROR_DURATION_MS, COORDINATE_INPUT_NORMALIZE_DELAY_MS, POI_STANDARD_TYPE, POI_TMP_TYPE,
 }                                 from '@Core/constants'
+import { normalizePOIDisplaySettings } from '@Core/POIDisplaySettings'
 
 import { UIToast } from '@Utils/UIToast'
 import {
@@ -63,6 +65,36 @@ export const MapPOIEditContent = memo(({poi}) => {
                                           const $point = lgs.stores.main.components.pois.list.get(poi)
                                           const point = useSnapshot($point ?? EMPTY_POI_PROXY)
                                           const journeyAssociation = usePOIJourneyAssociation(point)
+
+                                          /**
+                                           * Persist a changed display flag while retaining the other POI choices.
+                                           *
+                                           * @param {string} field - Display field key.
+                                           * @param {Event} event - Web Awesome control change event.
+                                           * @returns {void}
+                                           */
+                                          const handleDisplayChange = useCallback((field, event) => {
+                                              if (!window.isOK) {
+                                                  return
+                                              }
+
+                                              const currentPoint = lgs.stores.main.components.pois.list.get(poi)
+                                              if (!currentPoint) {
+                                                  return
+                                              }
+
+                                              const currentDisplay = normalizePOIDisplaySettings(currentPoint.display)
+                                              const value = field === 'maxWidth'
+                                                  ? Number(event.target.value)
+                                                  : event.target.checked
+                                              const nextDisplay = normalizePOIDisplaySettings({
+                                                  ...currentDisplay,
+                                                  [field]: value,
+                                              })
+
+                                              void __.ui.poiManager.updatePOI(poi, {display: nextDisplay}, {immediate: true})
+                                                  .catch(error => console.error(`[MapPOIEditContent] Failed to save ${field}:`, error))
+                                          }, [poi])
 
                                           if (!point.id) {
                                               return null
@@ -539,6 +571,11 @@ export const MapPOIEditContent = memo(({poi}) => {
 
                                                       {altitudeInput}
                                                   </div>
+                                                  <MapPOIDisplaySettings
+                                                      poi={id}
+                                                      display={point.display}
+                                                      onDisplayChange={handleDisplayChange}
+                                                  />
                                               </>
                                           )
                                       },

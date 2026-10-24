@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,8 +18,12 @@ import { NameValueUnit }                           from '@Components/DataDisplay
 import { DateTimeDisplay }                         from '@Components/DateTimeDisplay'
 import { stylePOIDuotoneIcon }                     from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import { openPOIEditor }                           from '@Components/MainUI/MapPOI/openPOIEditor'
+import { calculatePOIContentPixelOffset }          from '@Components/MainUI/MapPOI/poiCanvasGeometry'
 import { ICONS_PATH }                              from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
+import {
+    normalizePOIDisplaySettings, shouldDisplayPOIField,
+}                                                   from '@Core/POIDisplaySettings'
 import { normalizeJourneyReplayPOISettings }          from '@Core/ui/replay/JourneyReplayPOISettings'
 import { ELEVATION_UNITS }                         from '@Utils/UnitUtils'
 import { WaIcon }                                  from '@awesome.me/webawesome/dist/react'
@@ -80,10 +84,25 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         ? replay.nearbyPois.find(entry => entry?.poi?.id === point?.id)
         : null
     const replayActive = Boolean(replay.active || replay.playing || replay.paused)
+    const displaySettings = normalizePOIDisplaySettings(point?.display)
     const replaySettings = normalizeJourneyReplayPOISettings(point?.replay)
     const replayMasked = replayActive && replaySettings.visible === false
     const hiddenBecauseTooClose = point?.tooClose === true
     const hideJourneyReplayField = key => replayActive && replayEntry && replaySettings.hiddenFields[key] === true
+    const displayCategory = shouldDisplayPOIField('category', displaySettings, replayActive)
+        && !hideJourneyReplayField('category')
+    const displayTitleCategoryIcon = shouldDisplayPOIField('titleCategoryIcon', displaySettings, replayActive)
+        && !hideJourneyReplayField('category')
+    const displayLocation = shouldDisplayPOIField('location', displaySettings, replayActive)
+        && !hideJourneyReplayField('location')
+    const displayAltitude = shouldDisplayPOIField('altitude', displaySettings, replayActive)
+        && !hideJourneyReplayField('altitude')
+    const displayCoordinates = shouldDisplayPOIField('coordinates', displaySettings, replayActive)
+        && !hideJourneyReplayField('coordinates')
+    const displayDateTime = shouldDisplayPOIField('dateTime', displaySettings, replayActive)
+    const displayAltitudeValue = point?.height > 0 && point.height !== point.simulatedHeight && displayAltitude
+    const displayDateTimeValue = Boolean(point?.time && displayDateTime)
+    const displayCoordinateDetails = displayAltitudeValue || displayCoordinates || displayDateTimeValue
 
     const iconName = point?.categoryIcon(point?.category)
     const isSvgIcon = iconName?.endsWith('.svg')
@@ -188,16 +207,14 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                     }
 
                     const mapPOI = new MapPOI(currentPoint)
+                    const width = canvas.width / scale / ratio
                     mapPOI.image = {
                         // Cesium accepts canvases directly; a data URL needlessly copies the pixel buffer.
                         src:    canvas,
-                        width:  canvas.width / scale / ratio,
+                        width,
                         height: canvas.height / scale / ratio,
                     }
-                    mapPOI.pixelOffset = {
-                        x: currentPoint.expanded ? -13 : 0,
-                        y: 0,
-                    }
+                    mapPOI.pixelOffset = calculatePOIContentPixelOffset(element, width)
                     await mapPOI.utils.draw(mapPOI)
                 }
                 catch (error) {
@@ -266,6 +283,13 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                   point?.bgColor,
                   point?.height,
                   point?.location,
+                  point?.display?.category,
+                  point?.display?.titleCategoryIcon,
+                  point?.display?.maxWidth,
+                  point?.display?.location,
+                  point?.display?.altitude,
+                  point?.display?.coordinates,
+                  point?.display?.dateTime,
                   point?.longitude,
                   point?.latitude,
                   point?.type,
@@ -318,6 +342,9 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                 '--lgs-poi-background-color': point?.bgColor ?? lgs.colors.poiDefaultBackground,
                 '--lgs-poi-border-color':     point?.color ?? lgs.colors.poiDefault,
                 '--lgs-poi-color':            point?.color ?? lgs.colors.poiDefault,
+                ...(point?.expanded && !useInMenu
+                    ? {'--poi-expanded-dimension': `${displaySettings.maxWidth}px`}
+                    : {}),
                 ...style,
             }}
         >
@@ -326,9 +353,24 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                     <div className="poi-card-inner-background"/>
 
                     {point?.expanded && !useInMenu ? (
-                        <>
-                            <h3>{point.title ?? 'Point Of Interest'}</h3>
-                            {point.location && !hideJourneyReplayField('location') && (
+                        <div className={classNames(
+                            'poi-card-content',
+                            !(point.location && displayLocation) && !displayCategory && !displayCoordinateDetails
+                            && 'poi-card-content--title-only',
+                        )}>
+                            <div className="poi-title">
+                                {displayTitleCategoryIcon && (
+                                    <WaIcon
+                                        name={isSvgIcon ? '' : iconName}
+                                        src={isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
+                                        className="poi-category-title-icon"
+                                        variant="regular"
+                                        onWaLoad={renderToCanvasAfterIconLoad}
+                                    />
+                                )}
+                                <h3>{point.title ?? 'Point Of Interest'}</h3>
+                            </div>
+                            {point.location && displayLocation && (
                                 <div className="poi-location" title={point.location}>
                                     <WaIcon name="location-dot"
                                             variant="regular"
@@ -338,20 +380,22 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                                 </div>
                             )}
 
-                            {!hideJourneyReplayField('category') && (
+                            {point.category && displayCategory && (
                                 <div className="poi-location" title={point.location}>
-                                    <WaIcon name={iconName}
-                                            variant="regular"
-                                            src={point?.visible && isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
-                                            onWaLoad={renderToCanvasAfterIconLoad}
+                                    <WaIcon
+                                        name={isSvgIcon ? '' : iconName}
+                                        src={isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
+                                        variant="regular"
+                                        onWaLoad={renderToCanvasAfterIconLoad}
                                     />
                                     <span>{point.category}</span>
                                 </div>
                             )}
 
 
-                            <div className="poi-full-coordinates">
-                                {point.height > 0 && point.height !== point.simulatedHeight && !hideJourneyReplayField('altitude') && (
+                            {displayCoordinateDetails && (
+                                <div className="poi-full-coordinates">
+                                {displayAltitudeValue && (
                                     <NameValueUnit
                                         className="poi-elevation"
                                         text={'Altitude:'}
@@ -360,7 +404,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                                         units={ELEVATION_UNITS}
                                     />
                                 )}
-                                {!hideJourneyReplayField('coordinates') && (
+                                {displayCoordinates && (
                                     <div className="poi-coordinates">
                                         <span>
                                             {__.convert(point.latitude).to(coordinateSystem.current)},{' '}
@@ -368,7 +412,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                                         </span>
                                     </div>
                                 )}
-                                {point.time && (
+                                {displayDateTimeValue && (
                                     <div className="poi-time">
                                         <DateTimeDisplay
                                             value={point.time}
@@ -378,8 +422,9 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                                         />
                                     </div>
                                 )}
-                            </div>
-                        </>
+                                </div>
+                            )}
+                        </div>
                     ) : (
                         <WaIcon
                             ref={_icon}

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { CURRENT_POI, POI_CATEGORY_ICONS, POI_STANDARD_TYPE, POI_TMP_TYPE, POIS_STORE } from '@Core/constants'
 import { MapElement }                                                                   from '@Core/MapElement'
+import { normalizePOIDisplaySettings }                                                  from '@Core/POIDisplaySettings'
 import { POIUtils }                                                                     from '@Utils/cesium/POIUtils'
 import { v4 as uuid }                                                                   from 'uuid'
 
@@ -58,6 +59,11 @@ export class MapPOI extends MapElement {
      * @type {string}
      */
     description
+
+    /**
+     * @type {{category: boolean, titleCategoryIcon: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number}}
+     */
+    display = normalizePOIDisplaySettings()
 
     /**
      * @type {number}
@@ -154,10 +160,14 @@ export class MapPOI extends MapElement {
      */
     constructor(options = null) {
         super(CURRENT_POI)
+        options = options ?? {}
         // If there is no id provided, we generate one
         options.id = options?.id ? options.id.toString() : uuid()
         options.slug = options.id
-        this.update(options)
+        this.update({
+            ...options,
+            display: normalizePOIDisplaySettings(options.display),
+        })
     }
 
     toggleExpand = async () => {
@@ -230,7 +240,7 @@ export class MapPOI extends MapElement {
         // Define a set of keys that trigger a redraw when modified
         const keys = new Set(['bgcolor', 'category', 'color', 'expanded', 'type', 'image'])
         // Additional keys to check when the item is expanded
-        const keysWhenExpanded = new Set(['title', 'description', 'height', 'location'])
+        const keysWhenExpanded = new Set(['title', 'description', 'display', 'height', 'location'])
 
         let shouldRedraw = false
 
