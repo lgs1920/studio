@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-10
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -207,6 +207,94 @@ describe('Replay with the real Cesium camera', () => {
             mode.dispose()
             await mode.waitForSceneRestore()
         }
+    })
+
+    it('follows the route gently through turns without changing camera orientation, height, or zoom', async () => {
+        const {camera, mode, journey, settings} = installScene({userMode: 'basic', altitude: 1600, pitch: -38})
+        const slug = 'track#journey#gpx#main'
+        journey.tracks = new Map([[
+            slug,
+            makeTrack({
+                slug,
+                coordinates: [
+                    [2, 48, 120],
+                    [2.0008, 48, 120],
+                    [2.0008, 48.0008, 120],
+                    [2.0016, 48.0008, 120],
+                ],
+            }),
+        ]])
+        settings.basic.duration = 12
+        const replayViewport = {left: 0, top: 0, width: 10_000, height: 8_000, canvasWidth: 10_000, canvasHeight: 8_000}
+        camera.frustum.aspectRatio = 1.25
+        const replayCall = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        replayCall.viewportRectForCesiumSurface = () => replayViewport
+        replayCall.cameraCollisionForFrame = () => null
+        const applyCameraFrame = replayCall.applyCameraFrame
+        const appliedNavigationFrames = []
+        let activeProgress = 0
+        replayCall.applyCameraFrame = frame => {
+            const positionBefore = Cartesian3.clone(camera.positionWC)
+            const directionBefore = Cartesian3.clone(camera.directionWC)
+            const heightBefore = camera.positionCartographic.height
+            const applied = applyCameraFrame(frame)
+            if (activeProgress > 0) {
+                appliedNavigationFrames.push({
+                    destinationDelta: Cartesian3.distance(frame.destination, positionBefore),
+                    positionDelta: Cartesian3.distance(camera.positionWC, positionBefore),
+                    heightDelta: Math.abs(camera.positionCartographic.height - heightBefore),
+                    orientationDelta: Cartesian3.angleBetween(frame.direction, directionBefore),
+                })
+            }
+            return applied
+        }
+        mode.configure({duration: 12})
+        const returnPose = readPose(camera)
+        const replayDirections = []
+
+        try {
+            mode.beginReplayCameraExport()
+            lgs.stores.ui.video.exporting = true
+            await mode.preparePlaybackSceneForExport({journey})
+            const replayFrustumFov = camera.frustum.fovy
+            const replayStartPosition = Cartesian3.clone(camera.positionWC)
+
+            for (let index = 0; index <= 346; index += 1) {
+                const progress = index / 360
+                activeProgress = progress
+                await mode.renderReplayExportFrame({
+                    phase: {kind: 'replay', progress},
+                    frame: {
+                        frameTimeMs: progress * 12_000,
+                        frameIntervalMs: 1000 / 30,
+                        isLast: false,
+                    },
+                })
+                replayDirections.push(Cartesian3.clone(camera.directionWC))
+            }
+
+            const directionSteps = replayDirections.slice(1).map((direction, index) => (
+                Cartesian3.angleBetween(replayDirections[index], direction)
+            ))
+
+            expect(appliedNavigationFrames.length).toBeGreaterThan(30)
+            expect(Math.max(...appliedNavigationFrames.map(frame => frame.destinationDelta))).toBeGreaterThan(0.001)
+            expect(Math.max(...appliedNavigationFrames.map(frame => frame.destinationDelta))).toBeLessThan(2)
+            expect(Math.max(...appliedNavigationFrames.map(frame => frame.positionDelta))).toBeGreaterThan(0.001)
+            expect(Math.max(...appliedNavigationFrames.map(frame => frame.positionDelta))).toBeLessThan(2)
+            expect(Math.max(...appliedNavigationFrames.map(frame => frame.heightDelta))).toBeLessThan(0.02)
+            expect(Math.max(...appliedNavigationFrames.map(frame => frame.orientationDelta))).toBeLessThan(0.02)
+            expect(Cartesian3.distance(camera.positionWC, replayStartPosition)).toBeGreaterThan(0.1)
+            expect(Math.max(...directionSteps)).toBeLessThan(1e-4)
+            expect(camera.frustum.fovy).toBe(replayFrustumFov)
+        }
+        finally {
+            mode.endReplayCameraExport()
+            mode.dispose()
+            await mode.waitForSceneRestore()
+        }
+
+        expectPose(camera, returnPose)
     })
 
     it.each(['basic', 'expert'])('seeds first %s Replay H/P from the live Cesium camera and starts at zero azimuth', async userMode => {

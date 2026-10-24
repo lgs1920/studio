@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-03
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@
  * Shared logical replay camera tracking for interactive playback and export rendering.
  */
 
-import {Cartesian3} from 'cesium'
+import {Cartesian3, Cartographic, Ellipsoid} from 'cesium'
 import {currentJourneyReplayCameraSettings, finiteNumber} from './JourneyReplayRuntime'
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
 import {
@@ -68,6 +68,7 @@ import {replayCameraCropWidthMeters} from './JourneyReplayCameraMotionSmoothing'
 
 const REPLAY_NAVIGATION_TARGET_LEAD_RATIO = 1
 const REPLAY_CAMERA_LIVE_RECENTER_MIN_DURATION_SECONDS = 3
+const REPLAY_NAVIGATION_IDLE_FOLLOW_RATIO = 0.12
 
 /**
  * Resolve a softened duration for live Replay camera corrections.
@@ -115,6 +116,7 @@ const resetCameraTransportState = state => {
     state.deterministicCameraFollowerAt = null
     state.deterministicCameraFollowerActive = false
     state.deterministicCameraFollowerVelocity = null
+    state.navigationIdleFollowTarget = null
 }
 
 /**
@@ -203,6 +205,75 @@ const applyLiveReplayCameraView = (mode, view, cameraSettings, {
     void recenter()
     state.lastCameraHeading = view.heading
     state.lastCameraPitch = view.pitch
+    return true
+}
+
+/**
+ * Pan the Navigation camera gently with the route while it remains in its
+ * trigger zone, preserving the prepared orientation and camera height.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {object} options - Current camera-follow inputs.
+ * @param {object} options.view - Current nominal route view.
+ * @param {object|null} [options.logicalFrame=null] - Active deterministic frame.
+ * @returns {boolean} Whether the gentle route pan was applied.
+ */
+const applyNavigationIdleFollow = (mode, {
+    view,
+    logicalFrame = null,
+} = {}) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const currentFrame = call.currentCameraFrame?.(null)
+    const referenceTarget = call.markerRenderCartesianForSample?.(view.sample)
+    if (!currentFrame || !referenceTarget || typeof call.applyCameraFrame !== 'function') {
+        return false
+    }
+
+    const scene = call.cesiumScene?.()
+    const ellipsoid = scene?.globe?.ellipsoid ?? Ellipsoid.WGS84
+    const currentCartographic = Cartographic.fromCartesian(referenceTarget, ellipsoid, new Cartographic())
+    if (!currentCartographic) {
+        return false
+    }
+    currentCartographic.height = 0
+    const currentSurfaceTarget = ellipsoid.cartographicToCartesian(currentCartographic, new Cartesian3())
+    const previousSurfaceTarget = state.navigationIdleFollowTarget
+    state.navigationIdleFollowTarget = Cartesian3.clone(currentSurfaceTarget, new Cartesian3())
+
+    if (!previousSurfaceTarget) {
+        return false
+    }
+
+    const targetDelta = Cartesian3.subtract(currentSurfaceTarget, previousSurfaceTarget, new Cartesian3())
+    const surfaceDelta = Cartesian3.multiplyByScalar(targetDelta, REPLAY_NAVIGATION_IDLE_FOLLOW_RATIO, new Cartesian3())
+    const destination = Cartesian3.add(currentFrame.destination, surfaceDelta, new Cartesian3())
+    const targetFrame = {
+        destination,
+        direction: currentFrame.direction,
+        up: currentFrame.up,
+    }
+    if (Cartesian3.magnitudeSquared(surfaceDelta) < 1e-8) {
+        return false
+    }
+    if (!call.applyCameraFrame(targetFrame)) {
+        return false
+    }
+
+    const appliedFrame = call.currentCameraFrame?.(targetFrame) ?? targetFrame
+    state.lastCameraHeading = state.lastAppliedCameraView?.heading ?? view.heading
+    state.lastCameraPitch = state.lastAppliedCameraView?.pitch ?? view.pitch
+    call.rememberCameraView?.({
+        anchor: view.sample,
+        heading: state.lastCameraHeading,
+        pitch: state.lastCameraPitch,
+        roll: state.lastAppliedCameraView?.roll ?? view.roll ?? 0,
+        rangeMeters: Cartesian3.distance(appliedFrame.destination, referenceTarget),
+    })
+    if (logicalFrame) {
+        logicalFrame.cameraPose = view
+        logicalFrame.cameraFrame = appliedFrame
+    }
     return true
 }
 
@@ -935,6 +1006,7 @@ const updateCameraTracking = (mode, {
     if (state.deterministicCameraTransition
         && (markerSettings.mode === REPLAY_MARKER_MODE_NAVIGATION || !pitchCorrection.ownsCamera)) {
         if (call.applyDeterministicCameraTransition(logicalNow)) {
+            state.navigationIdleFollowTarget = null
             return
         }
     }
@@ -1016,24 +1088,34 @@ const updateCameraTracking = (mode, {
                 })
                 return
             }
-            if (!deterministicCamera && source !== 'playback') {
+            if (deterministicCamera || source === 'playback') {
+                const idleFollowActive = (finiteNumber(progress) ?? 0) > 0.02
+                                          && Boolean(state.lastAppliedCameraView)
+                const hasIdleFollowBaseline = Boolean(state.navigationIdleFollowTarget)
+                const followed = idleFollowActive && applyNavigationIdleFollow(mode, {
+                    view: nominalView,
+                    logicalFrame,
+                })
+                if (!followed
+                    && (deterministicCamera || !state.lastAppliedCameraView)
+                    && (!idleFollowActive || !hasIdleFollowBaseline)) {
+                    applyResolvedReplayCameraView(mode, {
+                        view: navigationCameraView,
+                        cameraSettings,
+                        logicalFrame,
+                    })
+                }
+            }
+            else if (!deterministicCamera && source !== 'playback') {
                 state.navigationCameraView = nominalView
                 applyLiveReplayCameraView(mode, nominalView, cameraSettings)
             }
-            else if (deterministicCamera || !state.lastAppliedCameraView) {
-                // Navigation keeps its applied pose until a confirmed zone exit.
-                // Replacing it with the nominal pose on every export frame both
-                // recenters continuously and undoes completed corrections.
-                applyResolvedReplayCameraView(mode, {
-                    view: navigationCameraView,
-                    cameraSettings,
-                    logicalFrame,
-                })
-            }
-            state.lastCameraHeading = navigationCameraView.heading
-            state.lastCameraPitch = navigationCameraView.pitch
+            state.lastCameraHeading = state.navigationCameraView?.heading ?? navigationCameraView.heading
+            state.lastCameraPitch = state.navigationCameraView?.pitch ?? navigationCameraView.pitch
             return
         }
+
+        state.navigationIdleFollowTarget = null
 
         const predictiveTarget = call.cameraLookaheadSample?.(nominalView.sample, {
             lookaheadSeconds: navigationTransitionSeconds * REPLAY_NAVIGATION_TARGET_LEAD_RATIO,

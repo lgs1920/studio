@@ -31,6 +31,10 @@ When a configured absolute altitude falls below the rendered target, entry and
 tracking use the target's minimum terrain clearance before deriving range from
 the requested pitch. They never borrow the normal map camera's distance. This
 safety adjustment leaves the persisted altitude and altitude mode unchanged.
+While Navigation stays inside its trigger zone, Replay pans the camera by a
+small fraction of the route movement so the map keeps moving between safety
+recenters. The pan preserves the prepared orientation and zoom; collision-driven
+camera corrections retain control when the marker approaches the zone boundary.
 Start/stop clips may define their own camera movement.
 Completed videos open in the standard preview and sharing dialog.
 `ReplayMediaCapture` handles screenshots and completed-media handoff.
