@@ -41,14 +41,19 @@ legacy `simple` key only when it is absent. Settings hydration migrates legacy
 values to `basic`, preferring `basic` when both keys exist. Every subsequent
 write stores `basic` and removes `simple`.
 
-The Basic settings popup offers 10, 15, 20, 30, 45, and 60-second durations, border/fill
-color swatches, and trace/marker size choices of 1, 1.5, and 2.3 times the
-product baseline. Explicit appearance choices are stored in
-`basic.presentation.sizeScale`, `fillColor`, and `borderColor`, on the Journey
-and in the application defaults. Product dimensions remain unscaled in the
-normalized progression; the Basic renderer applies the factor at rendering
-time, after projection limits for the marker. Color inputs update every choice
-preview and the active Replay immediately. Expert appearance remains independent.
+The Basic settings popup offers 10, 15, 20, 30, 45, and 60-second durations,
+border/fill color swatches, a border toggle, and four trace/marker size choices.
+The thin preset scales the trace to 0.65 while keeping the marker at the small
+preset's baseline; small, medium, and large use factors 1, 1.5, and 2.3 for
+both. Explicit appearance choices are stored in
+`basic.presentation.sizeScale`, `markerSizeScale`, `borderEnabled`, `fillColor`,
+and `borderColor`, on the Journey and in application defaults. Missing
+`borderEnabled` values retain the legacy bordered appearance. Product
+dimensions remain unscaled in the normalized progression; the Basic renderer
+applies the path and marker factors at rendering time, after projection limits
+for the marker. Disabling the border hides it on the trace and marker while
+retaining the selected border color. Color inputs update every choice preview
+and the active Replay immediately. Expert appearance remains independent.
 
 Basic and Expert MP4 recording temporarily suspend the main viewer's default render loop.
 Each capture flush calls `Viewer.render()` after resizing and requesting the

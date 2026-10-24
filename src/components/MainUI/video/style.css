@@ -316,6 +316,7 @@
 
 .basic-replay-appearance {
     justify-content: flex-start !important;
+    align-items: center !important;
 
     & .basic-replay-appearance__reset::part(base) {
         min-width: var(--lgs-dimension-s);
@@ -331,6 +332,36 @@
         display: flex;
         align-items: center;
         gap: var(--lgs-gutter-xs);
+    }
+
+    & .basic-replay-appearance__colors wa-color-picker[size="s"]::part(trigger) {
+        margin-top: 0;
+    }
+
+    & .basic-replay-appearance__border-mode {
+        display: flex;
+        align-items: center;
+    }
+
+    & .basic-replay-appearance__border-mode::part(form-control-input) {
+        display: flex;
+        align-items: center;
+        gap: var(--lgs-gutter-xxs);
+    }
+
+    & .basic-replay-appearance__border-mode wa-radio {
+        display: flex;
+        flex: 0 0 calc(var(--lgs-dimension-s) + var(--lgs-gutter-xxs));
+        align-items: center;
+        justify-content: center;
+        width: calc(var(--lgs-dimension-s) + var(--lgs-gutter-xxs));
+        height: calc(var(--lgs-dimension-s) + var(--lgs-gutter-xxs));
+        min-height: calc(var(--lgs-dimension-s) + var(--lgs-gutter-xxs));
+        padding: 0;
+        box-sizing: border-box;
+        border-radius: var(--wa-border-radius-m) !important;
+        margin: 0;
+        border: 1px solid var(--wa-color-border-normal, var(--lgs-card-on-map-border-color));
     }
 
     & .basic-replay-appearance__sizes {
@@ -375,12 +406,45 @@
         height: var(--lgs-dimension-s);
         max-width: 100%;
     }
+
+    & .basic-replay-appearance__marker {
+        display: block;
+        flex: 0 0 1.3125rem;
+        width: 1.3125rem;
+        height: 1.3125rem;
+        overflow: visible;
+    }
 }
 
 .video-recording-settings-popup.wa-theme-lgs1920 .basic-replay-appearance wa-radio.is-selected {
     border-color: var(--wa-color-brand-border-normal);
     background-color: var(--wa-color-brand-fill-quiet);
     background-image: none;
+}
+
+.video-recording-settings-popup--basic .basic-replay-appearance__border-mode wa-radio {
+    color: var(--lgs-text-on-color, var(--wa-color-text-normal)) !important;
+    border-color: var(--lgs-card-on-map-border-color) !important;
+    background-color: var(--lgs-card-on-map-bg-color) !important;
+    background-image: var(--lgs-card-on-map-bg-image) !important;
+}
+
+.video-recording-settings-popup--basic .basic-replay-appearance__border-mode wa-radio.is-selected {
+    border-color: var(--lgs-card-on-map-selected-border-color) !important;
+    background-color: var(--lgs-card-on-map-selected-bg-color) !important;
+    background-image: var(--lgs-card-on-map-selected-bg-image) !important;
+}
+
+.video-recording-settings-popup--basic .basic-replay-appearance__border-mode wa-radio:not(.is-selected):hover {
+    color: var(--lgs-card-on-map-hover-color, var(--lgs-text-on-color, var(--wa-color-text-normal))) !important;
+    border-color: var(--lgs-card-on-map-hover-border-color) !important;
+    background-color: var(--lgs-card-on-map-hover-bg-color) !important;
+    background-image: none !important;
+}
+
+.video-recording-settings-popup--basic .basic-replay-appearance__border-mode wa-radio:focus-visible {
+    outline: var(--lgs-card-on-map-hover-outline);
+    outline-offset: var(--lgs-card-on-map-hover-outline-offset);
 }
 
 .video-recording-settings-popup--basic .basic-replay-duration-buttons {

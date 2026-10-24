@@ -47,8 +47,8 @@ export const DEFAULT_REPLAY_DURATION = 60
 export const DEFAULT_BASIC_REPLAY_DURATION = 15
 /** Supported duration choices in seconds for the compact Basic Replay workflow. */
 export const BASIC_REPLAY_DURATIONS = Object.freeze([10, 15, 20, 30, 45, 60])
-/** Supported Basic Replay trace and marker scale factors. */
-export const BASIC_REPLAY_SIZE_SCALES = Object.freeze([1, 1.5, 2.3])
+/** Supported Basic Replay trace scale factors. */
+export const BASIC_REPLAY_SIZE_SCALES = Object.freeze([0.65, 1, 1.5, 2.3])
 /** Minimum rendered width in pixels for a Basic Replay trace. */
 export const REPLAY_MIN_TRACE_WIDTH = 3
 
@@ -462,6 +462,7 @@ export const normalizeJourneyReplayProgressionStyle = (progression = {}) => {
 
     return {
         ...(progression?.sizeScale !== undefined ? {sizeScale: normalizeBasicReplaySizeScale(progression.sizeScale)} : {}),
+        ...(progression?.markerSizeScale !== undefined ? {markerSizeScale: normalizeBasicReplaySizeScale(progression.markerSizeScale)} : {}),
         effect: {
             mode: effect.mode === REPLAY_EFFECT_GLOW || effect.mode === REPLAY_EFFECT_NEON
                   ? effect.mode
@@ -512,17 +513,26 @@ export const normalizeJourneyReplayProgressionStyle = (progression = {}) => {
 export const resolveBasicReplayPresentation = (presentation = {}, defaults = defaultJourneyReplayBasicSettings().presentation) => {
     const baseline = normalizeJourneyReplayProgressionStyle(defaults?.progression)
     const sizeScale = normalizeBasicReplaySizeScale(presentation?.sizeScale)
+    const markerSizeScale = normalizeBasicReplaySizeScale(presentation?.markerSizeScale ?? sizeScale)
+    const borderEnabled = presentation?.borderEnabled !== false
     const fillColor = presentation?.fillColor ?? presentation?.progression?.fill?.color ?? baseline.fill.color
     const borderColor = presentation?.borderColor ?? presentation?.progression?.border?.color ?? baseline.border.color
     return {
         sizeScale,
+        markerSizeScale,
+        borderEnabled,
         fillColor,
         borderColor,
         progression: normalizeJourneyReplayProgressionStyle({
             ...baseline,
             sizeScale,
+            markerSizeScale,
             fill: {...baseline.fill, color: fillColor},
-            border: {...baseline.border, color: borderColor},
+            border: {
+                ...baseline.border,
+                color: borderColor,
+                opacity: borderEnabled ? baseline.border.opacity : 0,
+            },
         }),
         profileInfo: normalizeJourneyReplayProfileInfo(defaults?.profileInfo),
     }

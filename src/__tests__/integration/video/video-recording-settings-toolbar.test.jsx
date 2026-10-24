@@ -34,8 +34,8 @@ vi.mock('@Components/MainUI/video/toolbox/VideoPresetToolbar', () => ({
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
     WaIcon: ({name, variant, id}) => <span id={id} data-icon={name} data-variant={variant}/>,
-    WaColorPicker: ({value, onInput, 'aria-label': ariaLabel}) => (
-        <input aria-label={ariaLabel} value={value} onInput={onInput} readOnly/>
+    WaColorPicker: ({id, value, onInput, disabled, 'aria-label': ariaLabel}) => (
+        <input id={id} aria-label={ariaLabel} value={value} onInput={onInput} disabled={disabled} readOnly/>
     ),
     WaSelect: ({children, className, value, onChange, label, 'label-at-start': labelAtStart}) => {
         const items = Children.toArray(children)
@@ -58,13 +58,13 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
             </option>
         )
     },
-    WaRadioGroup: ({children, value, onChange, label}) => (
-        <div role="radiogroup" aria-label={label}>
+    WaRadioGroup: ({children, value, onChange, label, className}) => (
+        <div role="radiogroup" aria-label={label} className={className}>
             {children.map(child => cloneElement(child, {checked: child.props.value === value, onChange}))}
         </div>
     ),
-    WaRadio: ({children, value, checked, onChange, 'aria-label': ariaLabel}) => (
-        <label>
+    WaRadio: ({children, id, value, checked, onChange, 'aria-label': ariaLabel}) => (
+        <label id={id}>
             <input type="radio" aria-label={ariaLabel} checked={checked}
                    onChange={() => onChange({currentTarget: {value}})}/>
             {children}
@@ -393,15 +393,55 @@ describe('VideoRecordingSettingsToolbar', () => {
         const appearance = document.querySelector('.basic-replay-appearance')
         expect(appearance.children[0].getAttribute('data-icon')).toBe('paintbrush')
         expect(appearance.children[1].classList).toContain('basic-replay-appearance__colors')
-        expect(appearance.children[2].classList).toContain('basic-replay-appearance__reset')
-        const baselineRadius = Number(document.querySelector('circle').getAttribute('r'))
+        expect(appearance.children[2].classList).toContain('basic-replay-appearance__border-mode')
+        expect(appearance.children[3].classList).toContain('basic-replay-appearance__reset')
+        expect(appearance.querySelectorAll('[title]')).toHaveLength(0)
+        for (const [targetId, text] of [
+            ['basic-replay-border-color', 'Border color'],
+            ['basic-replay-fill-color', 'Fill color'],
+            ['basic-replay-with-border', 'With border'],
+            ['basic-replay-without-border', 'No border'],
+            ['basic-replay-appearance-reset', 'Reset'],
+            ['basic-replay-size-thin', 'Thin'],
+            ['basic-replay-size-small', 'Small'],
+            ['basic-replay-size-medium', 'Medium'],
+            ['basic-replay-size-large', 'Large'],
+        ]) {
+            expect(document.querySelector(`[data-tooltip-for="${targetId}"]`)?.textContent).toBe(text)
+        }
+        const borderMarkers = appearance.querySelectorAll('.basic-replay-appearance__border-mode .basic-replay-appearance__marker circle')
+        expect(borderMarkers).toHaveLength(2)
+        expect(borderMarkers[0].getAttribute('r')).toBe('8')
+        expect(borderMarkers[0].getAttribute('stroke-width')).toBe('2')
+        expect(borderMarkers[1].getAttribute('r')).toBe('7')
+        expect(Number(borderMarkers[1].getAttribute('r'))).toBe(
+            Number(borderMarkers[0].getAttribute('r')) - Number(borderMarkers[0].getAttribute('stroke-width')) / 2,
+        )
+        expect(appearance.querySelectorAll('.basic-replay-appearance__border-mode .basic-replay-appearance__marker path')).toHaveLength(0)
+        const baselineRadius = Number(document.querySelector('.basic-replay-appearance__preview circle').getAttribute('r'))
         await act(async () => fireEvent.input(screen.getByLabelText('Replay fill color'), {target: {value: '#008000'}}))
         await act(async () => fireEvent.input(screen.getByLabelText('Replay border color'), {target: {value: '#0000ff'}}))
-        for (const circle of document.querySelectorAll('.basic-replay-appearance circle')) {
+        for (const circle of document.querySelectorAll('.basic-replay-appearance__preview circle')) {
             expect(circle.getAttribute('fill')).toBe('#008000')
             expect(circle.getAttribute('stroke')).toBe('#0000ff')
         }
+        const borderColorPicker = screen.getByLabelText('Replay border color')
+        const withBorder = screen.getByRole('radio', {name: 'Trace with border'})
+        const withoutBorder = screen.getByRole('radio', {name: 'Trace without border'})
+        expect(withBorder.checked).toBe(true)
+        await act(async () => fireEvent.click(withoutBorder))
+        expect(withoutBorder.checked).toBe(true)
+        expect(borderColorPicker.disabled).toBe(true)
+        expect(globalThis.lgs.stores.replay.progression.border.opacity).toBe(0)
+        for (const preview of document.querySelectorAll('.basic-replay-appearance__preview')) {
+            expect(preview.querySelectorAll('line')).toHaveLength(1)
+            expect(preview.querySelector('circle').getAttribute('stroke')).toBe('none')
+        }
+        await act(async () => fireEvent.click(withBorder))
+        expect(borderColorPicker.disabled).toBe(false)
+        expect(globalThis.lgs.stores.replay.progression.border.opacity).toBeGreaterThan(0)
         for (const [scale, sizeLabel, traceWidth, markerRadius] of [
+            [0.65, 'thin', 1.95, 4],
             [1.5, 'medium', 4.5, 6],
             [2.3, 'large', 6.9, 9.2],
             [1, 'small', 3, 4],
@@ -410,6 +450,7 @@ describe('VideoRecordingSettingsToolbar', () => {
             await act(async () => fireEvent.click(radio))
             expect(radio.checked).toBe(true)
             expect(globalThis.lgs.stores.replay.progression.sizeScale).toBe(scale)
+            expect(globalThis.lgs.stores.replay.progression.markerSizeScale).toBe(scale === 0.65 ? 1 : scale)
             const preview = radio.parentElement.querySelector('svg')
             expect(preview.getAttribute('width')).toBe('36')
             expect(preview.getAttribute('height')).toBe('24')
@@ -417,14 +458,16 @@ describe('VideoRecordingSettingsToolbar', () => {
             expect(Number(preview.querySelectorAll('line')[1].getAttribute('stroke-width'))).toBeCloseTo(traceWidth)
             expect(Number(preview.querySelector('circle').getAttribute('r'))).toBeCloseTo(markerRadius)
         }
-        expect(Number(document.querySelector('circle').getAttribute('r'))).toBe(baselineRadius)
+        expect(Number(document.querySelector('.basic-replay-appearance__preview circle').getAttribute('r'))).toBe(baselineRadius)
 
         await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Reset Replay appearance to defaults'})))
         expect(screen.getByLabelText('Replay fill color').value).toBe('#ff6a00')
         expect(screen.getByLabelText('Replay border color').value).toBe('#ffffff')
         expect(globalThis.lgs.stores.replay.progression.sizeScale).toBe(1)
+        expect(globalThis.lgs.stores.replay.progression.markerSizeScale).toBe(1)
         expect(globalThis.lgs.theJourney.replay.basic.presentation).toMatchObject({
-            sizeScale: 1, fillColor: '#ff6a00', borderColor: '#ffffff',
+            sizeScale: 1, markerSizeScale: 1, borderEnabled: true,
+            fillColor: '#ff6a00', borderColor: '#ffffff',
         })
         expect(globalThis.__.ui.replay.refresh).toHaveBeenCalledWith({camera: false})
         await act(async () => vi.advanceTimersByTime(250))

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -355,6 +355,35 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(propertyValue(replayEntity(dataSources, '#fill').polyline.width)).toBeCloseTo(baselineLineWidth * scale)
         expect(propertyValue(cursor.point.color).toCssColorString()).toBe(Color.fromCssColorString('#008000').toCssColorString())
         expect(propertyValue(cursor.point.outlineColor).toCssColorString()).toBe(Color.fromCssColorString('#0000ff').toCssColorString())
+        renderer.clear()
+    })
+
+    it('keeps the thin Basic trace marker at the small size and hides its border when disabled', () => {
+        const dataSources = makeDataSources()
+        const replay = defaultJourneyReplaySettings()
+        replay.userMode = 'basic'
+        replay.basic = {presentation: {sizeScale: 1, markerSizeScale: 1}}
+        installReplayGlobals({dataSources, replay})
+        globalThis.lgs.stores.replay.basicPreparationActive = true
+        const journey = makeJourney([makeTrack({
+            slug: 'track#journey#gpx#main',
+            coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
+        })])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const renderer = new JourneyReplayCesiumRenderer()
+        renderer.show({sampler})
+        const sample = sampler.atProgress(0.5)
+        renderer.update({sample, sampler, forceGeometry: true})
+        const baselinePointSize = propertyValue(replayEntity(dataSources, '#cursor').point.pixelSize)
+        const baselineLineWidth = propertyValue(replayEntity(dataSources, '#fill').polyline.width)
+
+        replay.basic.presentation = {sizeScale: 0.65, markerSizeScale: 1, borderEnabled: false}
+        renderer.update({sample, sampler, forceGeometry: true})
+
+        const cursor = replayEntity(dataSources, '#cursor')
+        expect(propertyValue(cursor.point.pixelSize)).toBeCloseTo(baselinePointSize)
+        expect(propertyValue(replayEntity(dataSources, '#fill').polyline.width)).toBeCloseTo(baselineLineWidth * 0.65)
+        expect(propertyValue(cursor.point.outlineColor).alpha).toBe(0)
         renderer.clear()
     })
 

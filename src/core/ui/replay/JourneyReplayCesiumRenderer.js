@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -991,6 +991,7 @@ export class JourneyReplayCesiumRenderer {
         const fill = progression.fill
         const border = progression.border
         const sizeScale = basicMode ? progression.sizeScale ?? 1 : 1
+        const markerSizeScale = basicMode ? progression.markerSizeScale ?? sizeScale : 1
         const remaining = trace.remaining
         const fillColor = fill.color ?? this.#options.color ?? DEFAULT_COLOR
         const borderColor = border.color ?? this.#options.border ?? DEFAULT_BORDER
@@ -1028,8 +1029,8 @@ export class JourneyReplayCesiumRenderer {
             fillWidth: Math.max(REPLAY_MIN_TRACE_WIDTH, fill.width) * sizeScale,
             borderWidth: Math.max(0, border.width) * sizeScale,
             cursorDiameter: Math.max(CURSOR_MIN_RADIUS_METERS * 2, fill.width),
-            cursorSizeScale: sizeScale,
-            cursorBorder: Math.max(0, border.width) * sizeScale,
+            cursorSizeScale: markerSizeScale,
+            cursorBorder: Math.max(0, border.width) * markerSizeScale,
         }
     }
 

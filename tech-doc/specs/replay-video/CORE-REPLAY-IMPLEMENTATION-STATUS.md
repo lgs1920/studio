@@ -72,9 +72,10 @@ the production controller, renderer, and a real Cesium Camera reduced the
 profiled Dry-run frame-work interval from 22.9 s to 2.0 s. This excludes WebGL
 rendering, tile loading, bitmap capture, and encoding; it is not an end-to-end
 recording benchmark or visual validation.
-The Basic settings popup also exposes border/fill colors and three fixed
-trace/marker scales, with reactive previews and Journey persistence. Its duration
-choices include 45 seconds and one minute.
+The Basic settings popup also exposes border/fill colors, a border toggle, and
+four fixed trace/marker presets, with reactive previews and Journey persistence.
+The thin preset reduces the trace scale to 0.65 while keeping the marker at the
+small preset's baseline. Its duration choices include 45 seconds and one minute.
 
 Basic/Expert support is present but incomplete:
 

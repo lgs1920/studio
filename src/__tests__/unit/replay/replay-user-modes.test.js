@@ -162,6 +162,35 @@ describe('Replay user modes', () => {
         }
     })
 
+    it('keeps legacy Basic borders enabled and resolves the thin trace with an independent marker scale', () => {
+        const legacy = normalizeBasicReplaySettings({presentation: {sizeScale: 1.5, borderColor: '#123456'}})
+        expect(legacy.presentation).toMatchObject({
+            sizeScale: 1.5,
+            markerSizeScale: 1.5,
+            borderEnabled: true,
+            borderColor: '#123456',
+            progression: {border: {opacity: 1}},
+        })
+
+        const thin = normalizeBasicReplaySettings({presentation: {
+            sizeScale: 0.65,
+            markerSizeScale: 1,
+            borderEnabled: false,
+            borderColor: '#654321',
+        }})
+        expect(thin.presentation).toMatchObject({
+            sizeScale: 0.65,
+            markerSizeScale: 1,
+            borderEnabled: false,
+            borderColor: '#654321',
+            progression: {
+                sizeScale: 0.65,
+                markerSizeScale: 1,
+                border: {color: '#654321', opacity: 0},
+            },
+        })
+    })
+
     it('resolves journey settings over user and product settings', () => {
         const product = defaultBasicReplaySettings()
         const resolved = resolveBasicReplaySettings({
