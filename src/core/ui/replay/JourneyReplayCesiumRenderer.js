@@ -1381,11 +1381,22 @@ export class JourneyReplayCesiumRenderer {
         this.#cursorEffectCore.show = true
     }
 
+    /** Convert a world-space marker diameter to CSS pixels for the current camera. */
     #metersToPixels = (meters, position, maxPixels = 24) => {
         const viewer = this.#viewer()
+        const scene = this.#scene()
         const camera = viewer?.camera
-        const canvasHeight = finiteNumber(viewer?.scene?.canvas?.height
-            ?? this.#scene()?.canvas?.height) ?? 0
+        const canvas = scene?.canvas ?? viewer?.scene?.canvas
+        const drawingBufferHeight = finiteNumber(scene?.drawingBufferHeight ?? canvas?.height) ?? 0
+        const clientHeight = finiteNumber(canvas?.clientHeight)
+        const boundingHeight = finiteNumber(canvas?.getBoundingClientRect?.().height)
+        const pixelRatio = finiteNumber(scene?.pixelRatio)
+        // PointPrimitiveCollection applies scene.pixelRatio to pixelSize in its shader.
+        const cssCanvasHeight = clientHeight > 0
+            ? clientHeight
+            : boundingHeight > 0
+                ? boundingHeight
+                : drawingBufferHeight / (pixelRatio > 0 ? pixelRatio : 1)
         const cameraPosition = camera?.positionWC ?? camera?.position
         const hasPosition = isUsableCartesian3(position)
         const hasCameraPosition = isUsableCartesian3(cameraPosition)
@@ -1394,8 +1405,8 @@ export class JourneyReplayCesiumRenderer {
             : 1
         const fovy = finiteNumber(camera?.frustum?.fovy) ?? (Math.PI / 3)
         const tangent = Math.tan(fovy / 2)
-        const pixelsPerMeter = canvasHeight > 0 && Number.isFinite(tangent) && tangent > 0
-            ? canvasHeight / (2 * distance * tangent)
+        const pixelsPerMeter = cssCanvasHeight > 0 && Number.isFinite(tangent) && tangent > 0
+            ? cssCanvasHeight / (2 * distance * tangent)
             : 1
         const safePixelsPerMeter = Number.isFinite(pixelsPerMeter) && pixelsPerMeter > 0 ? pixelsPerMeter : 1
         const safeMeters = finiteNumber(meters) ?? 1

@@ -89,7 +89,14 @@ const materialCss = material => material?.color?.getValue?.()?.toCssColorString?
 
 const propertyValue = value => typeof value?.getValue === 'function' ? value.getValue() : value
 
-const installReplayGlobals = ({dataSources, replay = defaultJourneyReplaySettings(), requestRender = vi.fn()} = {}) => {
+/** Install a minimal Cesium scene with explicit CSS and drawing-buffer dimensions. */
+const installReplayGlobals = ({
+                               dataSources,
+                               replay = defaultJourneyReplaySettings(),
+                               requestRender = vi.fn(),
+                               canvas = {height: 1000, clientHeight: 1000},
+                               pixelRatio = 1,
+                           } = {}) => {
     globalThis.lgs = {
         settings: {
             ui: {
@@ -109,12 +116,11 @@ const installReplayGlobals = ({dataSources, replay = defaultJourneyReplaySetting
                 position: Cartesian3.fromDegrees(2, 48, 1500),
                 frustum: {fovy: Math.PI / 3},
             },
-            scene: {
-                canvas: {height: 1000},
-            },
+            scene: {canvas},
         },
         scene: {
-            canvas: {height: 1000},
+            canvas,
+            pixelRatio,
             requestRender,
         },
     }
@@ -384,6 +390,37 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(propertyValue(cursor.point.pixelSize)).toBeCloseTo(baselinePointSize)
         expect(propertyValue(replayEntity(dataSources, '#fill').polyline.width)).toBeCloseTo(baselineLineWidth * 0.65)
         expect(propertyValue(cursor.point.outlineColor).alpha).toBe(0)
+        renderer.clear()
+    })
+
+    it('keeps marker CSS size and trace width stable when the drawing buffer resolution doubles', () => {
+        const dataSources = makeDataSources()
+        const canvas = {height: 1000, clientHeight: 1000}
+        const replay = defaultJourneyReplaySettings()
+        replay.userMode = 'expert'
+        installReplayGlobals({dataSources, replay, canvas, pixelRatio: 1})
+        const journey = makeJourney([makeTrack({
+            slug: 'track#journey#gpx#main',
+            coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
+        })])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const renderer = new JourneyReplayCesiumRenderer()
+        const sample = sampler.atProgress(0.5)
+
+        renderer.show({sampler})
+        renderer.update({sample, sampler, forceGeometry: true})
+
+        const marker = replayEntity(dataSources, '#cursor')
+        const fill = replayEntity(dataSources, '#fill')
+        const baselineMarkerSize = propertyValue(marker.point.pixelSize)
+        const baselinePathWidth = propertyValue(fill.polyline.width)
+
+        canvas.height = 2000
+        globalThis.lgs.scene.pixelRatio = 2
+        renderer.update({sample, sampler, forceGeometry: true})
+
+        expect(propertyValue(marker.point.pixelSize)).toBe(baselineMarkerSize)
+        expect(propertyValue(fill.polyline.width)).toBe(baselinePathWidth)
         renderer.clear()
     })
 
