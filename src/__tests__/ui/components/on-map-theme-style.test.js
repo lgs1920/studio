@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-27
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -71,5 +71,11 @@ describe('on-map disabled controls', () => {
     it('slightly reduces the visibility of disabled buttons and their contents', () => {
         expect(styleSource).toContain('.wa-theme-lgs1920-on-map:is(wa-button, wa-icon-button)[disabled]')
         expect(styleSource).toContain('opacity: 0.85;')
+    })
+})
+
+describe('Cesium canvas image scaling', () => {
+    it('uses smooth browser resampling for the high-resolution map canvas', () => {
+        expect(appStyleSource).toMatch(/#cesium-viewer \.cesium-widget canvas\s*\{[^}]*image-rendering:\s*auto\s*!important/s)
     })
 })

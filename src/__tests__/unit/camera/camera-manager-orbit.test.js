@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-13
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -203,6 +203,27 @@ describe('CameraManager orbit', () => {
         animationFrames[1]()
 
         expect(lgs.camera.lookAtTransform).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps Cesium resolution scale unchanged during continuous camera rendering', () => {
+        installCameraManagerGlobals()
+        const manager = new CameraManager()
+        lgs.viewer = {resolutionScale: 2}
+        lgs.scene.msaaSamples = 4
+        lgs.scene.shadows = true
+
+        manager.optimizeContinuousCameraRender()
+
+        expect(lgs.viewer.resolutionScale).toBe(2)
+        expect(lgs.scene.msaaSamples).toBe(1)
+        expect(lgs.scene.shadows).toBe(false)
+
+        manager.restoreContinuousCameraRender()
+
+        expect(lgs.viewer.resolutionScale).toBe(2)
+        expect(lgs.scene.msaaSamples).toBe(4)
+        expect(lgs.scene.shadows).toBe(true)
+        expect(lgs.scene.requestRender).toHaveBeenCalled()
     })
 
     it('cancels the active panorama motion before clearing its state', () => {

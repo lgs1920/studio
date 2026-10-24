@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -1165,6 +1165,22 @@ describe('replay camera angle map guide', () => {
         expect(Number(traceActivityIcon.style.zIndex)).toBeGreaterThan(
             Number(overlay.querySelector('[data-part="journey-route-after"]').ownerSVGElement.style.zIndex),
         )
+        const initialCameraIconTransform = overlay.querySelector('img').style.transform
+        const initialActivityIconTransform = traceActivityIcon.style.transform
+        const initialConePath = outerPath.getAttribute('d')
+        viewer.scene.drawingBufferWidth = 2000
+        viewer.scene.drawingBufferHeight = 1600
+        canvas.width = 2000
+        canvas.height = 1600
+        expect(updateJourneyReplayCameraAngleGuide(viewer, guide)).toBe(true)
+        expect(overlay.querySelector('img').style.transform).toBe(initialCameraIconTransform)
+        expect(traceActivityIcon.style.transform).toBe(initialActivityIconTransform)
+        expect(outerPath.getAttribute('d')).toBe(initialConePath)
+        viewer.scene.drawingBufferWidth = 1000
+        viewer.scene.drawingBufferHeight = 800
+        canvas.width = 300
+        canvas.height = 150
+        expect(updateJourneyReplayCameraAngleGuide(viewer, guide)).toBe(true)
         const startLatitude = guide.routeStart.latitude * Math.PI / 180
         const activityLatitude = guide.activityPoint.latitude * Math.PI / 180
         const deltaLongitude = Math.atan2(

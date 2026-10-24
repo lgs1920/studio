@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-08
- * Last modified: 2026-10-10
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -103,7 +103,6 @@ export class CameraManager {
   renderQuality = {
     locks: 0,
     msaaSamples: null,
-    resolutionScale: null,
     shadows: null,
   };
   #panoramicCancel = null;
@@ -402,11 +401,6 @@ export class CameraManager {
       return;
     }
 
-    this.renderQuality.resolutionScale = lgs.viewer.resolutionScale;
-    if (lgs.viewer.resolutionScale > 1) {
-      lgs.viewer.resolutionScale = 1;
-    }
-
     this.renderQuality.msaaSamples = scene?.msaaSamples ?? null;
     if (scene?.msaaSamples > 1) {
       scene.msaaSamples = 1;
@@ -430,11 +424,6 @@ export class CameraManager {
     }
 
     let shouldRequestRender = false;
-    if (this.renderQuality.resolutionScale !== null) {
-      lgs.viewer.resolutionScale = this.renderQuality.resolutionScale;
-      this.renderQuality.resolutionScale = null;
-      shouldRequestRender = true;
-    }
     if (scene && this.renderQuality.msaaSamples !== null) {
       scene.msaaSamples = this.renderQuality.msaaSamples;
       this.renderQuality.msaaSamples = null;

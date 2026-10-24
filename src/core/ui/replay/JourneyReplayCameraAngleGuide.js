@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -591,24 +591,31 @@ const positionAtHeadingOffset = (transform, heading, forward, lateral = 0) => Ma
 const positionAtHeading = (transform, heading, distance) => positionAtHeadingOffset(transform, heading, distance)
 
 /**
- * Measure the current Cesium world-space scale at a map position.
+ * Measure the world metres represented by one CSS pixel at a map position.
  *
  * @param {Object} viewer - Cesium viewer.
  * @param {Cartesian3} position - World position used for the scale measurement.
  * @returns {number|null} World metres per CSS pixel, or null when unavailable.
  */
-const metersPerPixelFrom = (viewer, position) => {
+const metersPerCssPixelFrom = (viewer, position) => {
     const scene = viewer?.scene
-    const camera = viewer?.camera
-    const width = Number(scene?.drawingBufferWidth ?? viewer?.canvas?.clientWidth)
-    const height = Number(scene?.drawingBufferHeight ?? viewer?.canvas?.clientHeight)
-    if (!position || !camera?.getPixelSize || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    const camera = viewer?.camera ?? scene?.camera
+    const canvas = scene?.canvas ?? viewer?.canvas
+    const bufferWidth = Number(scene?.drawingBufferWidth ?? canvas?.width)
+    const bufferHeight = Number(scene?.drawingBufferHeight ?? canvas?.height)
+    const cssWidth = Number(canvas?.clientWidth) || Number(canvas?.getBoundingClientRect?.().width)
+    const cssHeight = Number(canvas?.clientHeight) || Number(canvas?.getBoundingClientRect?.().height)
+    if (!position || !camera?.getPixelSize || !Number.isFinite(bufferWidth) || !Number.isFinite(bufferHeight)
+        || !Number.isFinite(cssWidth) || !Number.isFinite(cssHeight)
+        || bufferWidth <= 0 || bufferHeight <= 0 || cssWidth <= 0 || cssHeight <= 0) {
         return null
     }
 
     try {
-        const metersPerPixel = camera.getPixelSize(new BoundingSphere(position, 1), width, height)
-        return Number.isFinite(metersPerPixel) && metersPerPixel > 0 ? metersPerPixel : null
+        // Cesium accounts for devicePixelRatio and resolutionScale through
+        // scene.pixelRatio, so this result is already expressed in CSS pixels.
+        const metersPerCssPixel = camera.getPixelSize(new BoundingSphere(position, 1), bufferWidth, bufferHeight)
+        return Number.isFinite(metersPerCssPixel) && metersPerCssPixel > 0 ? metersPerCssPixel : null
     }
     catch {
         return null
@@ -631,15 +638,16 @@ const coneLengthFrom = (viewer, anchor, currentLength = CAMERA_ANGLE_GUIDE_CAMER
     const safeCurrentLength = Number.isFinite(currentLength) && currentLength > 0
         ? currentLength
         : CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS
-    const metersPerPixel = metersPerPixelFrom(viewer, anchor)
-    if (!Number.isFinite(metersPerPixel)) {
+    const metersPerCssPixel = metersPerCssPixelFrom(viewer, anchor)
+    const canvas = viewer?.scene?.canvas ?? viewer?.canvas
+    const cssWidth = Number(canvas?.clientWidth) || Number(canvas?.getBoundingClientRect?.().width)
+    const cssHeight = Number(canvas?.clientHeight) || Number(canvas?.getBoundingClientRect?.().height)
+    if (!Number.isFinite(metersPerCssPixel) || !Number.isFinite(cssWidth) || !Number.isFinite(cssHeight)
+        || cssWidth <= 0 || cssHeight <= 0) {
         return safeCurrentLength
     }
 
-    const scene = viewer?.scene
-    const width = Number(scene?.drawingBufferWidth ?? viewer?.canvas?.clientWidth)
-    const height = Number(scene?.drawingBufferHeight ?? viewer?.canvas?.clientHeight)
-    const viewportLimit = metersPerPixel * Math.min(width, height) * CAMERA_ANGLE_GUIDE_MAX_SCREEN_RATIO
+    const viewportLimit = metersPerCssPixel * Math.min(cssWidth, cssHeight) * CAMERA_ANGLE_GUIDE_MAX_SCREEN_RATIO
     return Math.max(1, Math.min(safeCurrentLength, viewportLimit))
 }
 
@@ -704,36 +712,6 @@ const worldGeometryFrom = (viewer, guide, currentConeLength = null) => {
 }
 
 /**
- * Measure world metres represented by one CSS pixel at a map position.
- *
- * @param {Object} viewer - Cesium viewer.
- * @param {Cartesian3} position - World position used for the scale measurement.
- * @returns {number|null} World metres per CSS pixel, or null when unavailable.
- */
-const metersPerCssPixelFrom = (viewer, position) => {
-    const scene = viewer?.scene
-    const camera = viewer?.camera ?? scene?.camera
-    const canvas = scene?.canvas
-    const bufferWidth = Number(scene?.drawingBufferWidth) || Number(canvas?.width)
-    const bufferHeight = Number(scene?.drawingBufferHeight) || Number(canvas?.height)
-    const cssWidth = Number(canvas?.clientWidth) || Number(canvas?.getBoundingClientRect?.().width)
-    if (!camera?.getPixelSize || !position || !Number.isFinite(bufferWidth) || !Number.isFinite(bufferHeight)
-        || !Number.isFinite(cssWidth) || bufferWidth <= 0 || bufferHeight <= 0 || cssWidth <= 0) {
-        return null
-    }
-
-    try {
-        const metersPerBufferPixel = camera.getPixelSize(new BoundingSphere(position, 1), bufferWidth, bufferHeight)
-        return Number.isFinite(metersPerBufferPixel) && metersPerBufferPixel > 0
-            ? metersPerBufferPixel * bufferWidth / cssWidth
-            : null
-    }
-    catch {
-        return null
-    }
-}
-
-/**
  * Resolve a small world-space gap corresponding to the icon separation.
  *
  * @param {Object} viewer - Cesium viewer.
@@ -741,25 +719,10 @@ const metersPerCssPixelFrom = (viewer, position) => {
  * @returns {number} Gap in metres.
  */
 const iconGapFrom = (viewer, anchor, pixelGap = CAMERA_ANGLE_GUIDE_ICON_GAP_PIXELS) => {
-    const scene = viewer?.scene
-    const camera = viewer?.camera
-    // The returned value is in Cesium world metres. The pixel gap is expressed
-    // in drawing-buffer pixels here and is converted by the camera projection.
-    const width = Number(scene?.drawingBufferWidth ?? viewer?.canvas?.clientWidth)
-    const height = Number(scene?.drawingBufferHeight ?? viewer?.canvas?.clientHeight)
-    if (!camera?.getPixelSize || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-        return 20
-    }
-
-    try {
-        const metersPerPixel = camera.getPixelSize(new BoundingSphere(anchor, 1), width, height)
-        return Number.isFinite(metersPerPixel) && metersPerPixel > 0
-            ? metersPerPixel * pixelGap
-            : 20
-    }
-    catch {
-        return 20
-    }
+    const metersPerCssPixel = metersPerCssPixelFrom(viewer, anchor)
+    return Number.isFinite(metersPerCssPixel) && metersPerCssPixel > 0
+        ? metersPerCssPixel * pixelGap
+        : 20
 }
 
 /**

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-11
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -180,7 +180,6 @@ const getOrCreateViewer = () => {
                 infoBox:              false,
                 sceneModePicker:      false,
                 showRenderLoopErrors: true,
-                resolutionScale:      2,
                 mapProjection:        new WebMercatorProjection(), // TODO is it a problem in 3D ?
                 //selectionIndicator: false,
                 //*************************************
@@ -190,6 +189,7 @@ const getOrCreateViewer = () => {
                 baseLayer:             false,
                 baseLayerPicker:       false,
             })
+            lgs.viewer.resolutionScale = 2
         }
         catch (error) {
             console.error('[LGS1920][Cesium] Viewer construction failed.', {
