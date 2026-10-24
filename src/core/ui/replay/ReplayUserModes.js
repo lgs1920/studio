@@ -41,6 +41,7 @@ import {
     normalizeReplaySampleCount,
     writeBasicReplaySettings,
 } from './ReplayModeSettings'
+import {normalizeReplayPOIBehavior} from './JourneyReplayPOISettings'
 
 export {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT}
 export const DEFAULT_REPLAY_USER_MODE = REPLAY_USER_MODE_BASIC
@@ -63,6 +64,7 @@ const basicDurationPersistTimers = new WeakMap()
 const basicSampleCountPersistTimers = new WeakMap()
 const basicEndFocusPersistTimers = new WeakMap()
 const basicPresentationPersistTimers = new WeakMap()
+const basicPOIBehaviorPersistTimers = new WeakMap()
 const journeyReplayStartPositionPersistPromises = new WeakMap()
 const EXPERT_CAMERA_PERSIST_DELAY_MS = 250
 
@@ -511,6 +513,29 @@ export const defaultBasicReplaySettings = () => {
     }
 }
 
+/** Persist Basic Replay POI behavior on the active Journey after edits settle. */
+export const syncJourneyBasicReplayPOIBehavior = (behavior, journey = currentReplayJourney()) => {
+    if (!journey) {
+        return null
+    }
+
+    const normalizedBehavior = normalizeReplayPOIBehavior(behavior)
+    const replay = journey.replay ?? {}
+    journey.replay = writeBasicReplaySettings(replay, {
+        ...(getBasicReplaySettings(replay) ?? {}),
+        ...normalizedBehavior,
+    })
+    if (typeof journey.persistToDatabase === 'function') {
+        clearTimeout(basicPOIBehaviorPersistTimers.get(journey))
+        basicPOIBehaviorPersistTimers.set(journey, setTimeout(() => {
+            basicPOIBehaviorPersistTimers.delete(journey)
+            void journey.persistToDatabase()
+        }, EXPERT_CAMERA_PERSIST_DELAY_MS))
+    }
+
+    return normalizedBehavior
+}
+
 /**
  * Persist compact Basic appearance edits on the active journey after input settles.
  * @param {Object} presentation - Complete normalized Basic presentation.
@@ -557,6 +582,7 @@ export const normalizeBasicReplaySettings = (settings = {}) => {
         debug: false,
     })
     return {
+        ...normalizeReplayPOIBehavior(settings),
         duration: normalizeBasicReplayDuration(settings?.duration ?? defaults.duration),
         endFocus: normalizeBasicReplayEndFocus(settings?.endFocus ?? defaults.endFocus),
         sampleCount: normalizeReplaySampleCount(

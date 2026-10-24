@@ -8,13 +8,64 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-11
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 export const DEFAULT_REPLAY_POI_DISPLAY_DURATION_SECONDS = 3
+export const DEFAULT_REPLAY_POI_ANIMATION_DURATION_SECONDS = 2
+export const REPLAY_POI_VISIBILITY_MODES = Object.freeze(['yes', 'no', 'user'])
+
+/** Normalize global POI visibility and animation settings for Replay. */
+export const normalizeReplayPOIBehavior = settings => {
+    const savedMode = settings?.poiVisibilityMode
+    const poiVisibilityMode = REPLAY_POI_VISIBILITY_MODES.includes(savedMode)
+        ? savedMode
+        : settings?.hideAllPoisDuringJourneyReplay === true ? 'no' : 'user'
+    const rawDuration = Number(settings?.poiAnimationDurationSeconds)
+
+    return {
+        poiVisibilityMode,
+        animatePoisDuringJourneyReplay: settings?.animatePoisDuringJourneyReplay === true
+            || (settings?.animatePoisDuringJourneyReplay === undefined
+                && settings?.animateAllPoisDuringJourneyReplay === true),
+        poiAnimationDurationSeconds: Number.isFinite(rawDuration)
+            ? Math.max(1, Math.min(3, Math.round(rawDuration)))
+            : DEFAULT_REPLAY_POI_ANIMATION_DURATION_SECONDS,
+    }
+}
+
+/** Return whether the POI is an endpoint whose visibility remains user-controlled. */
+export const isReplayPOIEndpoint = poi => ['start', 'stop', 'starter'].includes(poi?.type)
+
+/** Check whether a normalized replay sample falls inside the POI's centered animation window. */
+export const isReplayPOIAnimationActiveAtProgress = ({
+    progress,
+    poiDistance,
+    totalDistance,
+    replayDurationSeconds,
+    animationDurationSeconds,
+} = {}) => {
+    const normalizedProgress = finiteNumber(progress)
+    const targetDistance = finiteNumber(poiDistance)
+    const routeDistance = finiteNumber(totalDistance)
+    const replayDuration = finiteNumber(replayDurationSeconds)
+    const animationDuration = finiteNumber(animationDurationSeconds)
+    if (normalizedProgress === null || targetDistance === null || routeDistance === null || routeDistance <= 0
+        || replayDuration === null || replayDuration <= 0 || animationDuration === null || animationDuration <= 0) {
+        return false
+    }
+
+    const currentReplaySeconds = Math.max(0, Math.min(1, normalizedProgress)) * replayDuration
+    const poiReplaySeconds = Math.max(0, Math.min(1, targetDistance / routeDistance)) * replayDuration
+    const visibleDuration = Math.min(replayDuration, animationDuration)
+    const centeredStart = poiReplaySeconds - visibleDuration / 2
+    const animationStart = Math.max(0, Math.min(centeredStart, replayDuration - visibleDuration))
+    const animationEnd = animationStart + visibleDuration
+    return currentReplaySeconds >= animationStart && currentReplaySeconds < animationEnd
+}
 
 const finiteNumber = value => {
     const number = Number(value)

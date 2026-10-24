@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,7 +61,9 @@ import {
 }                                                                                          from './JourneyReplayPlaybackController'
 import { replayVideoTraceDebug }                                                           from './ReplayVideoTraceDebug'
 import {
-    DEFAULT_REPLAY_POI_DISPLAY_DURATION_SECONDS, normalizeJourneyReplayPOISettings,
+    isReplayPOIAnimationActiveAtProgress,
+    isReplayPOIEndpoint,
+    normalizeJourneyReplayPOISettings,
 }                                                                                          from './JourneyReplayPOISettings'
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
@@ -109,8 +111,6 @@ import {
     REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO,
     REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO,
     REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR,
-    REPLAY_POI_TRIGGER_EPSILON_METERS,
-    REPLAY_POI_TRIGGER_SCAN_MARGIN_METERS,
     REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT,
     REPLAY_EVENT_STOP_CLIPS_COMPLETE,
     CAMERA_REDIRECT_CANDIDATES,
@@ -156,16 +156,9 @@ export const updatePOIExpandedState = async (mode, poiId, expanded) => {
 export const restoreNearbyPOIsAfterPlayback = async (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        for (const timerId of state.replayPoiCollapseTimers.values()) {
-            globalThis.clearTimeout?.(timerId)
-        }
-        state.replayPoiCollapseTimers.clear()
-
         const restoreEntries = Array.from(state.replayPoiExpandedState.entries())
         state.replayPoiExpandedState.clear()
         state.replayPoiTriggered.clear()
-        state.lastJourneyReplayPoiDistance = null
-        state.lastJourneyReplayPoiCursor = 0
         state.sortedNearbyPois = []
 
         await Promise.all(restoreEntries.map(([poiId, expanded]) => call.updatePOIExpandedState(poiId, expanded === true)))
@@ -174,12 +167,8 @@ export const restoreNearbyPOIsAfterPlayback = async (mode, ) => {
 export const closeJourneyReplayOpenedPOIsBeforeStopClips = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        for (const timerId of state.replayPoiCollapseTimers.values()) {
-            globalThis.clearTimeout?.(timerId)
-        }
-        state.replayPoiCollapseTimers.clear()
-
         const openedPOIIds = Array.from(state.replayPoiTriggered)
+        state.replayPoiTriggered.clear()
         if (openedPOIIds.length === 0) {
             return null
         }
@@ -188,13 +177,13 @@ export const closeJourneyReplayOpenedPOIsBeforeStopClips = (mode, ) => {
     }
 
 export const prepareNearbyPOIsForPlayback = async (mode, sample = null) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+        const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         await call.restoreNearbyPOIsAfterPlayback()
 
         const store = replayStore()
         const journey = globalThis.lgs?.theJourney ?? null
-        const {hideAllPoisDuringJourneyReplay} = currentJourneyReplayPoiBehavior()
+        const {poiVisibilityMode} = currentJourneyReplayPoiBehavior()
         const nearbyPois = Array.isArray(store?.nearbyPois) && store.nearbyPois.length > 0
             ? store.nearbyPois
             : call.syncRuntimeNearbyPOIs(journey)
@@ -217,29 +206,22 @@ export const prepareNearbyPOIsForPlayback = async (mode, sample = null) => {
 
         call.applyJourneyReplayPOIVisibility(sortedNearbyPois)
 
-        for (const entry of sortedNearbyPois) {
-            const poiId = entry?.poi?.id
-            const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
-            const settings = normalizeJourneyReplayPOISettings(poi?.replay)
+        const poisToCollapse = poiVisibilityMode === 'yes'
+            ? call.replayPOICandidates(sortedNearbyPois)
+            : sortedNearbyPois.map(entry => entry?.poi).filter(Boolean)
+        for (const poi of poisToCollapse) {
+            const poiId = poi?.id
             if (!poiId || !poi) {
                 continue
             }
 
-            if (!hideAllPoisDuringJourneyReplay && settings.visible === false) {
+            if (isReplayPOIEndpoint(poi)) {
                 continue
             }
 
             state.replayPoiExpandedState.set(poiId, poi.expanded === true)
             await call.updatePOIExpandedState(poiId, false)
         }
-
-        const currentDistance = finiteNumber(sample?.distanceFromStart)
-        state.lastJourneyReplayPoiDistance = currentDistance === null
-            ? null
-            : Math.max(0, currentDistance - REPLAY_POI_TRIGGER_EPSILON_METERS)
-        state.lastJourneyReplayPoiCursor = currentDistance === null
-            ? 0
-            : call.replayPoiCursorForDistance(sortedNearbyPois, currentDistance)
 
         if (sample) {
             void call.syncNearbyPOIsForSample(sample)
@@ -248,137 +230,101 @@ export const prepareNearbyPOIsForPlayback = async (mode, sample = null) => {
 
 export const openNearbyPOIForPlayback = async (mode, poiId) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         if (!poiId) {
             return
         }
 
-        const existingTimer = state.replayPoiCollapseTimers.get(poiId)
-        if (existingTimer) {
-            globalThis.clearTimeout?.(existingTimer)
-        }
-
         const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
         const settings = normalizeJourneyReplayPOISettings(poi?.replay)
-        const {hideAllPoisDuringJourneyReplay, animateAllPoisDuringJourneyReplay} = currentJourneyReplayPoiBehavior()
-        if (hideAllPoisDuringJourneyReplay || (!animateAllPoisDuringJourneyReplay && settings.animated === false)) {
+        const behavior = currentJourneyReplayPoiBehavior()
+        const shouldAnimate = behavior.basicMode
+            ? behavior.animatePoisDuringJourneyReplay
+            : !behavior.hideAllPoisDuringJourneyReplay
+                && (behavior.animateAllPoisDuringJourneyReplay || settings.animated !== false)
+        if (!poi || isReplayPOIEndpoint(poi) || !shouldAnimate) {
             return
         }
-        const durationSeconds = finiteNumber(settings.displayDurationSeconds) ?? DEFAULT_REPLAY_POI_DISPLAY_DURATION_SECONDS
-
         await call.updatePOIExpandedState(poiId, true)
-
-        const timeoutId = globalThis.setTimeout?.(() => {
-            state.replayPoiCollapseTimers.delete(poiId)
-            void call.updatePOIExpandedState(poiId, false)
-        }, durationSeconds * 1000)
-
-        if (timeoutId !== undefined) {
-            state.replayPoiCollapseTimers.set(poiId, timeoutId)
-        }
+        state.replayPoiTriggered.add(poiId)
     }
 
 export const syncNearbyPOIsForSample = async (mode, sample = null) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        const currentDistance = finiteNumber(sample?.distanceFromStart)
-        if (currentDistance === null) {
+        const progress = finiteNumber(sample?.progress)
+        if (progress === null) {
             return
         }
 
         const nearbyPois = state.sortedNearbyPois.length > 0
             ? state.sortedNearbyPois
             : replayStore()?.nearbyPois ?? []
-        const previousDistance = state.lastJourneyReplayPoiDistance
-
         if (!Array.isArray(nearbyPois) || nearbyPois.length === 0) {
-            state.lastJourneyReplayPoiDistance = currentDistance
+            state.replayPoiTriggered.clear()
             return
         }
 
-        const {hideAllPoisDuringJourneyReplay, animateAllPoisDuringJourneyReplay} = currentJourneyReplayPoiBehavior()
-        if (hideAllPoisDuringJourneyReplay) {
-            state.lastJourneyReplayPoiDistance = currentDistance
-            state.lastJourneyReplayPoiCursor = call.replayPoiCursorForDistance(nearbyPois, currentDistance)
-            return
-        }
+        const {
+            basicMode,
+            poiVisibilityMode,
+            hideAllPoisDuringJourneyReplay,
+            animatePoisDuringJourneyReplay,
+            poiAnimationDurationSeconds,
+            animateAllPoisDuringJourneyReplay,
+        } = currentJourneyReplayPoiBehavior()
+        const totalDistance = finiteNumber(state.sampler?.totalDistance)
+            ?? finiteNumber(replayStore()?.totalDistance)
+            ?? finiteNumber(sample?.distanceFromStart + sample?.remainingDistance)
+        const replayDurationSeconds = finiteNumber(state.controller?.duration)
+            ?? finiteNumber(replayStore()?.duration)
+            ?? 0
+        const shouldAnimatePOIs = replayDurationSeconds > 0 && totalDistance > 0
+        const expandedIds = new Set()
 
-        if (previousDistance !== null && currentDistance < previousDistance) {
-            state.lastJourneyReplayPoiCursor = call.replayPoiCursorForDistance(nearbyPois, currentDistance)
-            state.lastJourneyReplayPoiDistance = currentDistance
-            return
-        }
+        if (shouldAnimatePOIs && poiVisibilityMode !== 'no') {
+            for (const entry of nearbyPois) {
+                const poiId = entry?.poi?.id
+                const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId) ?? entry?.poi
+                if (!poiId || !poi || isReplayPOIEndpoint(poi)) {
+                    continue
+                }
 
-        const thresholdStart = previousDistance ?? Math.max(
-            0,
-            currentDistance - Math.max(REPLAY_POI_TRIGGER_EPSILON_METERS, REPLAY_POI_TRIGGER_SCAN_MARGIN_METERS),
-        )
-        let cursor = Number.isInteger(state.lastJourneyReplayPoiCursor)
-                    ? Math.max(0, state.lastJourneyReplayPoiCursor)
-                    : call.replayPoiCursorForDistance(nearbyPois, thresholdStart)
-        const triggeredIds = []
+                const poiSettings = normalizeJourneyReplayPOISettings(poi.replay)
+                const visibleForReplay = poiVisibilityMode === 'yes' || poiSettings.visible !== false
+                const animateThisPOI = basicMode
+                    ? animatePoisDuringJourneyReplay
+                    : !hideAllPoisDuringJourneyReplay
+                        && (animateAllPoisDuringJourneyReplay || poiSettings.animated !== false)
+                if (!visibleForReplay || !animateThisPOI) {
+                    continue
+                }
 
-        while (cursor < nearbyPois.length) {
-            const entry = nearbyPois[cursor]
-            const targetDistance = finiteNumber(entry?.projectedAbscissa)
-            if (targetDistance === null) {
-                cursor += 1
-                continue
-            }
-
-            if (targetDistance < thresholdStart) {
-                cursor += 1
-                continue
-            }
-
-            if (targetDistance > currentDistance + REPLAY_POI_TRIGGER_EPSILON_METERS) {
-                break
-            }
-
-            const poiId = entry?.poi?.id
-            if (poiId && !state.replayPoiTriggered.has(poiId)) {
-                const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
-                const settings = normalizeJourneyReplayPOISettings(poi?.replay)
-                if (settings.visible !== false && (animateAllPoisDuringJourneyReplay || settings.animated !== false)) {
-                    state.replayPoiTriggered.add(poiId)
-                    triggeredIds.push(poiId)
+                const displayDurationSeconds = basicMode
+                    ? poiAnimationDurationSeconds
+                    : poiSettings.displayDurationSeconds
+                if (isReplayPOIAnimationActiveAtProgress({
+                    progress,
+                    poiDistance: entry.projectedAbscissa,
+                    totalDistance,
+                    replayDurationSeconds,
+                    animationDurationSeconds: displayDurationSeconds,
+                })) {
+                    expandedIds.add(poiId)
                 }
             }
-
-            cursor += 1
         }
 
-        state.lastJourneyReplayPoiCursor = cursor
-        state.lastJourneyReplayPoiDistance = currentDistance
-        await Promise.all(triggeredIds.map(poiId => call.openNearbyPOIForPlayback(poiId)))
-    }
-
-export const replayPoiCursorForDistance = (mode, nearbyPois = [], distance = 0) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        if (!Array.isArray(nearbyPois) || nearbyPois.length === 0) {
-            return 0
-        }
-
-        const targetDistance = finiteNumber(distance) ?? 0
-        let low = 0
-        let high = nearbyPois.length
-        while (low < high) {
-            const mid = Math.floor((low + high) / 2)
-            const midDistance = finiteNumber(nearbyPois[mid]?.projectedAbscissa)
-            if (midDistance === null || midDistance <= targetDistance) {
-                low = mid + 1
-            }
-            else {
-                high = mid
-            }
-        }
-
-        return low
+        const collapsedIds = Array.from(state.replayPoiTriggered).filter(poiId => !expandedIds.has(poiId))
+        const newlyExpandedIds = Array.from(expandedIds).filter(poiId => !state.replayPoiTriggered.has(poiId))
+        state.replayPoiTriggered = expandedIds
+        await Promise.all([
+            ...collapsedIds.map(poiId => call.updatePOIExpandedState(poiId, false)),
+            ...newlyExpandedIds.map(poiId => call.updatePOIExpandedState(poiId, true)),
+        ])
     }
 
     /**
      * Pull the live Cesium camera state back into the replay settings/store.
      * This keeps the drawer and the Cesium viewport in lockstep while the FT is running.
      */
-

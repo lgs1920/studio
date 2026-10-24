@@ -253,6 +253,88 @@
     }
 }
 
+.video-recording-settings-popup--basic .basic-replay-poi-settings {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--lgs-gutter-s);
+}
+
+.video-recording-settings-popup--basic .basic-replay-poi-settings__visibility,
+.video-recording-settings-popup--basic .basic-replay-poi-settings__animation {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.video-recording-settings-popup--basic .basic-replay-poi-settings__visibility > wa-icon {
+    flex: 0 0 var(--lgs-dimension-s);
+    font-size: var(--lgs-font-size-s);
+    text-align: center;
+}
+
+.video-recording-settings-popup--basic .basic-replay-poi-settings__visibility > span {
+    flex: 0 0 auto;
+    font-size: var(--lgs-font-size-s);
+    white-space: nowrap;
+}
+
+.video-recording-settings-popup--basic .basic-replay-poi-settings__visibility {
+    flex: 0 1 auto;
+    width: auto;
+    max-width: 100%;
+}
+
+.video-recording-settings-popup--basic .basic-replay-poi-settings__select {
+    flex: 0 1 6rem;
+    width: 6rem;
+    max-width: 100%;
+    min-width: 0;
+    margin-inline-start: var(--lgs-gutter-s);
+
+    &::part(form-control),
+    &::part(form-control-input) {
+        min-width: 0;
+    }
+
+    &::part(form-control-label),
+    &::part(display-input),
+    wa-option {
+        font-size: var(--lgs-font-size-s) !important;
+    }
+}
+
+.video-recording-settings-popup--basic .basic-replay-poi-settings__animation {
+    flex: 0 0 auto;
+    width: auto;
+    justify-content: flex-start;
+    column-gap: var(--lgs-gutter-s);
+}
+
+.video-recording-settings-popup--basic .basic-replay-poi-settings__switch {
+    flex: 0 0 auto;
+    min-width: 0;
+    width: auto;
+
+    &::part(label) {
+        font-size: var(--lgs-font-size-s) !important;
+        white-space: nowrap;
+        margin-inline-start: var(--lgs-gutter-xs);
+    }
+}
+
+.video-recording-settings-popup--basic .basic-replay-poi-settings__duration {
+    flex: 0 0 auto;
+    width: 5rem;
+
+    &::part(input),
+    &::part(stepper) {
+        font-size: var(--lgs-font-size-s) !important;
+    }
+}
+
 .video-recording-settings-popup--basic .basic-replay-dry-run-control {
     display: flex;
     align-items: center;
@@ -608,6 +690,11 @@
 @media (max-width: 480px) {
     .video-recording-settings-popup--basic .basic-replay-settings-row {
         gap: var(--lgs-gutter-xxs);
+    }
+
+    .video-recording-settings-popup--basic .basic-replay-poi-settings {
+        flex-direction: column;
+        align-items: flex-start;
     }
 
     .video-recording-settings-popup--basic .basic-replay-settings-row--label-and-controls {

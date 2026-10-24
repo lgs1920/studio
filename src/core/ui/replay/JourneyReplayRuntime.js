@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,7 @@ import {attachReplayFrameIntent, publishReplayFrameState} from './ReplayFramePub
 import {createReplayRenderModeContract} from './ReplayRenderModeContract'
 import {getJourneyReplaySettings, normalizeJourneyReplayCamera} from './JourneyReplayProgressionStyle'
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
+import {normalizeReplayPOIBehavior} from './JourneyReplayPOISettings'
 import {REPLAY_BASIC_CAMERA_MIN_EASING} from './JourneyReplayCameraMotionSmoothing'
 
 /**
@@ -415,11 +416,29 @@ export const currentJourneyReplayPoiBehavior = () => {
     const settings = getJourneyReplaySettings()
     const store = replayStore()
     const basicMode = isJourneyReplayBasicMode()
+    if (basicMode) {
+        const behavior = normalizeReplayPOIBehavior(settings.basic)
+        return {
+            ...behavior,
+            showAllPoisDuringJourneyReplay: behavior.poiVisibilityMode === 'yes',
+            hideAllPoisDuringJourneyReplay: behavior.poiVisibilityMode === 'no',
+            animateAllPoisDuringJourneyReplay: behavior.animatePoisDuringJourneyReplay,
+            basicMode: true,
+        }
+    }
+
+    const hideAllPoisDuringJourneyReplay = settings.hideAllPoisDuringJourneyReplay === true
+        || store?.hideAllPoisDuringJourneyReplay === true
+    const animateAllPoisDuringJourneyReplay = settings.animateAllPoisDuringJourneyReplay === true
+        || store?.animateAllPoisDuringJourneyReplay === true
     return {
-        hideAllPoisDuringJourneyReplay: settings.hideAllPoisDuringJourneyReplay === true
-                                        || (!basicMode && store?.hideAllPoisDuringJourneyReplay === true),
-        animateAllPoisDuringJourneyReplay: settings.animateAllPoisDuringJourneyReplay === true
-                                           || (!basicMode && store?.animateAllPoisDuringJourneyReplay === true),
+        poiVisibilityMode: hideAllPoisDuringJourneyReplay ? 'no' : 'user',
+        showAllPoisDuringJourneyReplay: false,
+        hideAllPoisDuringJourneyReplay,
+        animatePoisDuringJourneyReplay: animateAllPoisDuringJourneyReplay,
+        animateAllPoisDuringJourneyReplay,
+        poiAnimationDurationSeconds: null,
+        basicMode: false,
     }
 }
 

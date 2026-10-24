@@ -53,6 +53,7 @@ import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import { VideoRecordingSettingsMenuContent } from './VideoRecordingSettingsMenus'
 import {BasicReplaySamplingSettings} from './BasicReplaySamplingSettings'
 import {BasicReplayAppearanceSettings} from './BasicReplayAppearanceSettings'
+import {BasicReplayPOISettings} from './BasicReplayPOISettings'
 import '../style.css'
 
 const RATIO_POPUP = 'ratio'
@@ -473,6 +474,9 @@ export const VideoRecordingSettingsToolbar = memo(({
                     )}
                     {basicPreparation && (
                         <BasicReplayAppearanceSettings/>
+                    )}
+                    {basicPreparation && (
+                        <BasicReplayPOISettings/>
                     )}
                     {basicPreparation && (
                         <div className="basic-replay-settings-row basic-replay-end-focus-row" role="group" aria-label="End Focus Duration">

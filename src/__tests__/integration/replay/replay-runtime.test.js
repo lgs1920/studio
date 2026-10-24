@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -128,9 +128,47 @@ describe('JourneyReplayRuntime', () => {
                 },
             }
 
-            expect(currentJourneyReplayPoiBehavior()).toEqual({
+            expect(currentJourneyReplayPoiBehavior()).toMatchObject({
+                poiVisibilityMode: 'user',
                 hideAllPoisDuringJourneyReplay: false,
+                animatePoisDuringJourneyReplay: false,
                 animateAllPoisDuringJourneyReplay: false,
+                poiAnimationDurationSeconds: 2,
+                basicMode: true,
+            })
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('uses the Basic Replay POI policy without importing stale Expert POI flags', () => {
+        const previousLgs = globalThis.lgs
+        try {
+            globalThis.lgs = {
+                settings: {ui: {replay: {
+                    userMode: 'basic',
+                    basic: {
+                        poiVisibilityMode: 'yes',
+                        animatePoisDuringJourneyReplay: true,
+                        poiAnimationDurationSeconds: 3,
+                    },
+                }}},
+                stores: {replay: {
+                    userMode: 'basic',
+                    basicPreparationActive: true,
+                    hideAllPoisDuringJourneyReplay: true,
+                    animateAllPoisDuringJourneyReplay: false,
+                }},
+            }
+
+            expect(currentJourneyReplayPoiBehavior()).toMatchObject({
+                poiVisibilityMode: 'yes',
+                showAllPoisDuringJourneyReplay: true,
+                hideAllPoisDuringJourneyReplay: false,
+                animatePoisDuringJourneyReplay: true,
+                poiAnimationDurationSeconds: 3,
+                basicMode: true,
             })
         }
         finally {

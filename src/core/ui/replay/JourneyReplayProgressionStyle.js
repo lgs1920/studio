@@ -31,6 +31,7 @@ import {
     normalizeBasicReplayEndFocus,
     normalizeReplaySampleCount,
 } from './ReplayModeSettings'
+import {normalizeReplayPOIBehavior} from './JourneyReplayPOISettings'
 
 export const REPLAY_PROGRESSION_FILL_MIN_WIDTH = 1
 export const REPLAY_PROGRESSION_FILL_MAX_WIDTH = 10
@@ -244,6 +245,7 @@ export const defaultJourneyReplayBasicSettings = () => {
 
     return {
         ...basicDefaults,
+        ...normalizeReplayPOIBehavior(basicDefaults),
         duration: basicDefaults.duration ?? DEFAULT_BASIC_REPLAY_DURATION,
         endFocus: normalizeBasicReplayEndFocus(
             basicDefaults.endFocus ?? DEFAULT_BASIC_REPLAY_END_FOCUS,
@@ -869,6 +871,11 @@ const resolveReplayBasicSettingsForRuntime = ({journey, user} = {}) => {
     }, product.presentation)
 
     return {
+        ...normalizeReplayPOIBehavior({
+            ...product,
+            ...(user ?? {}),
+            ...(journey ?? {}),
+        }),
         duration: normalizeBasicReplayDuration(journey?.duration ?? user?.duration ?? product.duration),
         endFocus: normalizeBasicReplayEndFocus({
             ...(product.endFocus ?? {}),

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,10 @@ import {JulianDate} from 'cesium'
 import {POIUtils} from '@Utils/cesium/POIUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {getJourneyReplayHideOtherJourneys} from '@Core/ui/JourneyVisibility'
-import {normalizeJourneyReplayPOISettings} from './JourneyReplayPOISettings'
+import {
+    isReplayPOIEndpoint,
+    normalizeJourneyReplayPOISettings,
+} from './JourneyReplayPOISettings'
 import {
     currentJourneyReplayPoiBehavior, finiteNumber, replayStore,
 } from './JourneyReplayRuntime'
@@ -268,7 +271,7 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const store = replayStore()
-        const {hideAllPoisDuringJourneyReplay} = currentJourneyReplayPoiBehavior()
+        const {poiVisibilityMode} = currentJourneyReplayPoiBehavior()
         const runtimeNearbyPois = Array.isArray(nearbyPois)
             ? nearbyPois
             : Array.isArray(store?.nearbyPois)
@@ -286,8 +289,9 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
             }
 
             const settings = normalizeJourneyReplayPOISettings(poi.replay)
+            const visibilityMode = isReplayPOIEndpoint(poi) ? 'user' : poiVisibilityMode
             const shouldApplyVisibility = nearbyPOIIds.has(poi.id)
-                || hideAllPoisDuringJourneyReplay
+                || visibilityMode !== 'user'
                 || settings.visible === false
                 || poi.visible === false
             if (!shouldApplyVisibility) {
@@ -296,12 +300,13 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
 
             const visibleBeforePlayback = state.replayPOIVisibilityState.get(poi.id)?.visible
                 ?? call.isPOIVisibleBeforePlayback(poi)
-            const visibleDuringPlayback = visibleBeforePlayback
-                && poi.visible !== false
-                && !hideAllPoisDuringJourneyReplay
-                && settings.visible !== false
+            const visibleDuringPlayback = (visibilityMode === 'yes' && !isReplayPOIEndpoint(poi))
+                || (poi.visible !== false
+                && (visibilityMode === 'yes'
+                    || (visibilityMode === 'user' && visibleBeforePlayback && settings.visible !== false))
+                )
 
-            if ((hideAllPoisDuringJourneyReplay || settings.visible === false) && !state.replayPOIVisibilityState.has(poi.id)) {
+            if ((visibilityMode !== 'user' || settings.visible === false) && !state.replayPOIVisibilityState.has(poi.id)) {
                 state.replayPOIVisibilityState.set(poi.id, {
                     visible: visibleBeforePlayback,
                 })
@@ -598,9 +603,6 @@ export const setHideAllPoisDuringJourneyReplay = (mode, enabled = true) => {
     }
 
 export const setAnimateAllPoisDuringJourneyReplay = (mode, enabled = true) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
         const nextEnabled = enabled === true
         const replaySettings = globalThis.lgs?.settings?.ui?.replay
         if (replaySettings) {

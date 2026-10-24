@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-12
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -101,10 +101,12 @@ describe('POIUtils replay visibility', () => {
         globalThis.lgs.settings = {
             ui: {
                 replay: {
+                    userMode: 'expert',
                     hideAllPoisDuringJourneyReplay: true,
                 },
             },
         }
+        globalThis.lgs.stores.replay.userMode = 'expert'
 
         expect(POIUtils.setPOIVisibility({
             visible: true,
@@ -112,6 +114,22 @@ describe('POIUtils replay visibility', () => {
                 visible: true,
             },
         }, true)).toBe(false)
+    })
+
+    it('forces Basic Replay Show all to reveal POIs regardless of their POI-level visibility preference', () => {
+        globalThis.lgs.stores.replay.active = true
+        globalThis.lgs.settings = {ui: {replay: {userMode: 'basic', basic: {poiVisibilityMode: 'yes'}}}}
+
+        expect(POIUtils.setPOIVisibility({visible: false, replay: {visible: false}}, true)).toBe(true)
+    })
+
+    it('keeps Basic Replay Start and Stop visibility under user control even when all POIs are hidden', () => {
+        globalThis.lgs.stores.replay.active = true
+        globalThis.lgs.settings = {ui: {replay: {userMode: 'basic', basic: {poiVisibilityMode: 'no'}}}}
+
+        expect(POIUtils.setPOIVisibility({type: 'start', visible: true, replay: {visible: true}}, true)).toBe(true)
+        expect(POIUtils.setPOIVisibility({type: 'stop', visible: true, replay: {visible: false}}, true)).toBe(false)
+        expect(POIUtils.setPOIVisibility({type: 'poi', visible: true, replay: {visible: true}}, true)).toBe(false)
     })
 
     it('keeps a too-close poi hidden even when it is otherwise visible', () => {

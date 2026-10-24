@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-03-01
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,12 @@
 import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { faLocationDot } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
-import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
+import {
+    isReplayPOIEndpoint,
+    normalizeJourneyReplayPOISettings,
+    normalizeReplayPOIBehavior,
+} from '@Core/ui/replay/JourneyReplayPOISettings'
+import {isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
 
 import { Canvg, Property } from 'canvg'
 import {
@@ -429,18 +434,35 @@ export class POIUtils {
 
         const replay = globalThis.lgs?.stores?.replay
         const replayActive = Boolean(replay?.active || replay?.playing || replay?.paused)
-        const hideAllPoisDuringJourneyReplay = Boolean(
-            replay?.hideAllPoisDuringJourneyReplay
-            || globalThis.lgs?.settings?.ui?.replay?.hideAllPoisDuringJourneyReplay,
-        )
-        if (replayActive && hideAllPoisDuringJourneyReplay) {
-            return false
-        }
-        if (replayActive && normalizeJourneyReplayPOISettings(poi?.replay).visible === false) {
-            return false
+        let forceShowDuringReplay = false
+        if (replayActive) {
+            const replaySettings = globalThis.lgs?.settings?.ui?.replay ?? replay
+            const basicMode = isJourneyReplayBasicMode({settings: replaySettings, replay})
+            if (basicMode) {
+                const behavior = normalizeReplayPOIBehavior(replaySettings?.basic)
+                const endpoint = isReplayPOIEndpoint(poi)
+                forceShowDuringReplay = behavior.poiVisibilityMode === 'yes' && !endpoint
+                if (behavior.poiVisibilityMode === 'no' && !endpoint) {
+                    return false
+                }
+                if ((endpoint || behavior.poiVisibilityMode === 'user')
+                    && normalizeJourneyReplayPOISettings(poi?.replay).visible === false) {
+                    return false
+                }
+            }
+            else {
+                const hideAllPOIs = replay?.hideAllPoisDuringJourneyReplay === true
+                    || replaySettings?.hideAllPoisDuringJourneyReplay === true
+                if (hideAllPOIs && !isReplayPOIEndpoint(poi)) {
+                    return false
+                }
+                if (normalizeJourneyReplayPOISettings(poi?.replay).visible === false) {
+                    return false
+                }
+            }
         }
 
-        return visibility ? poi?.visible !== false : false
+        return visibility ? forceShowDuringReplay || poi?.visible !== false : false
     }
 
     /**

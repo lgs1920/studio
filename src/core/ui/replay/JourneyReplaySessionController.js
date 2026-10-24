@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -136,8 +136,6 @@ const REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO = 0.3
 // a closed pitch can keep the marker moving toward the crop edge while the
 // camera is still interpolating.
 const REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR = 1.35
-const REPLAY_POI_TRIGGER_EPSILON_METERS = 0.001
-const REPLAY_POI_TRIGGER_SCAN_MARGIN_METERS = 5
 export const REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT = 'lgs:replay:journey-toolbar-visibility'
 export const REPLAY_EVENT_STOP_CLIPS_COMPLETE = 'replay/stop-clips-complete'
 
@@ -273,12 +271,9 @@ export class JourneyReplaySessionController {
     #replayCameraAltitudeTrackingRemove = null
     #preparationTransitionToken = 0
     #replayPoiExpandedState = new Map()
-    #replayPoiCollapseTimers = new Map()
     #replayPoiTriggered = new Set()
     #replayPOIVisibilityState = new Map()
     #stopClipPOIMaskFrame = null
-    #lastJourneyReplayPoiDistance = null
-    #lastJourneyReplayPoiCursor = 0
     #lastPlaybackUpdateProgressKey = null
     #sortedNearbyPois = []
 
@@ -889,13 +884,6 @@ export class JourneyReplaySessionController {
                 this.#replayPoiExpandedState = value
             },
         })
-        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayPoiCollapseTimers', {
-            configurable: true,
-            get: () => this.#replayPoiCollapseTimers,
-            set: value => {
-                this.#replayPoiCollapseTimers = value
-            },
-        })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayPoiTriggered', {
             configurable: true,
             get: () => this.#replayPoiTriggered,
@@ -915,20 +903,6 @@ export class JourneyReplaySessionController {
             get: () => this.#stopClipPOIMaskFrame,
             set: value => {
                 this.#stopClipPOIMaskFrame = value
-            },
-        })
-        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'lastJourneyReplayPoiDistance', {
-            configurable: true,
-            get: () => this.#lastJourneyReplayPoiDistance,
-            set: value => {
-                this.#lastJourneyReplayPoiDistance = value
-            },
-        })
-        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'lastJourneyReplayPoiCursor', {
-            configurable: true,
-            get: () => this.#lastJourneyReplayPoiCursor,
-            set: value => {
-                this.#lastJourneyReplayPoiCursor = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'lastPlaybackUpdateProgressKey', {
@@ -974,7 +948,6 @@ export class JourneyReplaySessionController {
             prepareNearbyPOIsForPlayback: (...args) => JourneyReplaySessionPOIController.prepareNearbyPOIsForPlayback(this, ...args),
             openNearbyPOIForPlayback: (...args) => JourneyReplaySessionPOIController.openNearbyPOIForPlayback(this, ...args),
             syncNearbyPOIsForSample: (...args) => JourneyReplaySessionPOIController.syncNearbyPOIsForSample(this, ...args),
-            replayPoiCursorForDistance: (...args) => JourneyReplaySessionPOIController.replayPoiCursorForDistance(this, ...args),
             interpolateReplayExportSample: (...args) => JourneyReplayClipController.interpolateReplayExportSample(this, ...args),
             focusTargetSampleForReplayExport: (...args) => JourneyReplayClipController.focusTargetSampleForReplayExport(this, ...args),
             replayExportBaseView: (...args) => JourneyReplayClipController.replayExportBaseView(this, ...args),

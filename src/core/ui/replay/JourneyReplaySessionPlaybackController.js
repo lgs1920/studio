@@ -1295,6 +1295,7 @@ export const renderReplayExportFrame = async (mode, {
                     hideTrace:     phase?.slot === REPLAY_CLIP_SLOT_START,
                     showTrace:     true,
                 })
+                await call.syncNearbyPOIsForSample(sample)
                 state.cameraAutoTrackingIgnoreUntil = call.now() + 180
                 const durationSeconds = finiteNumber(activeController?.duration ?? state.controller?.duration)
                 const logicalFrame = createJourneyReplayLogicalFrame({
