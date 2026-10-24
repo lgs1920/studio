@@ -78,8 +78,8 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
             {children}
         </label>
     ),
-    WaNumberInput: ({className, value, label, min, max, step, onInput, 'label-at-start': labelAtStart, 'width-auto': widthAuto}) => (
-        <input type="number" className={className} aria-label={label} value={value} min={min} max={max} step={step}
+    WaNumberInput: ({className, value, label, min, max, step, onInput, 'aria-label': ariaLabel, 'label-at-start': labelAtStart, 'width-auto': widthAuto}) => (
+        <input type="number" className={className} aria-label={ariaLabel ?? label} value={value} min={min} max={max} step={step}
                data-label-at-start={labelAtStart ? 'true' : undefined}
                data-width-auto={widthAuto ? 'true' : undefined}
                onInput={onInput}/>
@@ -250,7 +250,7 @@ describe('VideoRecordingSettingsToolbar', () => {
 
         expect(screen.getByText('16:9')).not.toBeNull()
         expect(screen.getByText('High · 30 FPS')).not.toBeNull()
-        expect(screen.getByText('15s')).not.toBeNull()
+        expect(screen.getByText('18s')).not.toBeNull()
         expect(screen.getByRole('button', {name: 'Video Settings'}).querySelector('[data-icon="gear"]')).not.toBeNull()
         expect(document.querySelector(`[data-tooltip-for="${screen.getByRole('button', {name: 'Video Settings'}).id}"]`)?.textContent).toBe('Video Settings')
         expect(document.querySelector('[data-tooltip-for="video-start-recording"]')?.textContent).toBe('Start Record')
@@ -374,6 +374,9 @@ describe('VideoRecordingSettingsToolbar', () => {
             expect(globalThis.lgs.settings.ui.replay.basic.duration).toBe(duration)
             expect(globalThis.lgs.stores.replay.duration).toBe(duration)
             expect(screen.getByRole('button', {name: label}).getAttribute('aria-pressed')).toBe('true')
+            if (duration === 60) {
+                expect(document.querySelector('.basic-replay-settings-summary')?.textContent).toContain('1 min 3s')
+            }
         }
     })
 
@@ -464,27 +467,43 @@ describe('VideoRecordingSettingsToolbar', () => {
         const persistToDatabase = vi.fn()
         globalThis.lgs.theJourney.replay = {basic: {}}
         globalThis.lgs.theJourney.persistToDatabase = persistToDatabase
+        globalThis.lgs.stores.main = proxy({theJourney: globalThis.lgs.theJourney})
         render(<VideoRecordingSettingsToolbar/>)
         fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
 
-        const focusSwitch = screen.getByRole('checkbox', {name: 'End Focus Duration'})
+        const focusSwitch = screen.getByRole('checkbox', {name: 'End Focus'})
         const durationInput = screen.getByRole('spinbutton', {name: 'Duration (s)'})
+        const focusControls = document.querySelector('.basic-replay-end-focus-controls')
         expect(focusSwitch.checked).toBe(true)
         expect(durationInput.value).toBe('3')
         expect(durationInput.min).toBe('1')
         expect(durationInput.max).toBe('5')
         expect(durationInput.dataset.labelAtStart).toBe('true')
-        expect(durationInput.parentElement.classList).toContain('basic-replay-end-focus-row')
+        expect(durationInput.parentElement).toBe(focusControls)
+        expect(focusSwitch.closest('.basic-replay-end-focus-controls')).toBe(focusControls)
+        expect(durationInput.classList).toContain('lgs--short-input')
+        expect(durationInput.closest('.basic-replay-end-focus-row')).not.toBeNull()
+        expect(screen.getByRole('spinbutton', {name: 'Duration (s)'})).toBe(durationInput)
+        expect(document.querySelector('.basic-replay-settings-summary')?.textContent).toContain('18s')
 
         await act(async () => fireEvent.input(durationInput, {target: {value: '5'}}))
         expect(globalThis.lgs.settings.ui.replay.basic.endFocus).toEqual({enabled: true, duration: 5})
         expect(globalThis.lgs.theJourney.replay.basic.endFocus).toEqual({enabled: true, duration: 5})
+        expect(document.querySelector('.basic-replay-settings-summary')?.textContent).toContain('20s')
 
         await act(async () => fireEvent.click(focusSwitch))
         expect(globalThis.lgs.settings.ui.replay.basic.endFocus.enabled).toBe(false)
         expect(globalThis.lgs.theJourney.replay.basic.endFocus.enabled).toBe(false)
         expect(screen.queryByRole('spinbutton', {name: 'Duration (s)'})).toBeNull()
+        expect(document.querySelector('.basic-replay-settings-summary')?.textContent).toContain('15s')
         expect(globalThis.__.ui.replay.refresh).toHaveBeenCalledWith({camera: false})
+
+        await act(async () => fireEvent.click(focusSwitch))
+        const restoredDurationInput = screen.getByRole('spinbutton', {name: 'Duration (s)'})
+        expect(restoredDurationInput.value).toBe('5')
+        expect(globalThis.lgs.settings.ui.replay.basic.endFocus.enabled).toBe(true)
+        expect(globalThis.lgs.theJourney.replay.basic.endFocus.enabled).toBe(true)
+        expect(document.querySelector('.basic-replay-settings-summary')?.textContent).toContain('20s')
         await act(async () => vi.advanceTimersByTime(250))
         expect(persistToDatabase).toHaveBeenCalledOnce()
     })

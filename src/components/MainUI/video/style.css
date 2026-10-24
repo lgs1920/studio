@@ -217,17 +217,40 @@
 }
 
 .video-recording-settings-popup--basic .basic-replay-end-focus-row {
-    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: var(--lgs-dimension-s) minmax(0, 1fr);
+    align-items: center;
 }
 
-.video-recording-settings-popup--basic .basic-replay-end-focus-switch,
+.video-recording-settings-popup--basic .basic-replay-end-focus-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    align-items: center;
+    min-width: 0;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.video-recording-settings-popup--basic .basic-replay-end-focus-switch {
+    max-width: 100%;
+
+    &::part(label) {
+        font-size: var(--lgs-font-size-s) !important;
+    }
+}
+
 .video-recording-settings-popup--basic .basic-replay-end-focus-duration {
     flex: 0 0 auto;
-}
-
-.video-recording-settings-popup--basic .basic-replay-end-focus-duration {
-    width: 10rem;
+    justify-self: end;
+    width: max-content;
     max-width: 100%;
+    font-size: var(--lgs-font-size-s) !important;
+
+    &::part(label),
+    &::part(form-control-label),
+    &::part(input),
+    &::part(stepper) {
+        font-size: var(--lgs-font-size-s) !important;
+    }
 }
 
 .video-recording-settings-popup--basic .basic-replay-dry-run-control {

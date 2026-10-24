@@ -58,6 +58,16 @@ const RATIO_POPUP = 'ratio'
 const VIDEO_PRESET_POPUP = 'video-preset'
 const BASIC_SETTINGS_POPUP = 'basic-settings'
 
+const formatBasicReplayDuration = seconds => {
+    const totalSeconds = Math.max(0, Math.round(Number(seconds) || 0))
+    const minutes = Math.floor(totalSeconds / 60)
+    const remainingSeconds = totalSeconds % 60
+    if (minutes === 0) {
+        return `${totalSeconds}s`
+    }
+    return `${minutes} min${remainingSeconds > 0 ? ` ${remainingSeconds}s` : ''}`
+}
+
 /**
  * VideoRecordingSettingsToolbar renders the horizontal video setup HUD.
  * @param {Object} props - Toolbar properties.
@@ -114,6 +124,7 @@ export const VideoRecordingSettingsToolbar = memo(({
     })
     const basicSampleCount = resolvedBasicSettings.sampleCount
     const basicEndFocus = resolvedBasicSettings.endFocus
+    const basicTotalDuration = basicDuration + (basicEndFocus.enabled ? basicEndFocus.duration : 0)
     const basicSampleOption = REPLAY_SAMPLE_COUNT_OPTIONS.find(option => option.value === basicSampleCount)
         ?? REPLAY_SAMPLE_COUNT_OPTIONS[0]
 
@@ -271,7 +282,8 @@ export const VideoRecordingSettingsToolbar = memo(({
             ...userBasic,
             endFocus,
         })
-        syncJourneyBasicReplayEndFocus(endFocus, basicJourney)
+        // `basicJourney` can come from a Valtio snapshot. Persist through the live Journey proxy.
+        syncJourneyBasicReplayEndFocus(endFocus, currentReplayJourney())
         __.ui.replay?.refresh?.({camera: false})
         lgs.scene?.requestRender?.()
     }, [basicJourney])
@@ -407,7 +419,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                 {basicPreparation && (
                     <span className="basic-replay-settings-summary__item">
                         <WaIcon name="clock" variant="regular" label=""/>
-                        <span>{basicDuration === 60 ? '1 min' : `${basicDuration}s`}</span>
+                        <span>{formatBasicReplayDuration(basicTotalDuration)}</span>
                     </span>
                 )}
             </div>
@@ -466,30 +478,32 @@ export const VideoRecordingSettingsToolbar = memo(({
                     {basicPreparation && (
                         <div className="basic-replay-settings-row basic-replay-end-focus-row" role="group" aria-label="End Focus Duration">
                             <WaIcon name="rotate" variant="regular" label=""/>
-                            <WaSwitch
-                                className="basic-replay-end-focus-switch"
-                                size="xs"
-                                label-at-start width-auto
-                                checked={basicEndFocus.enabled}
-                                onChange={handleBasicEndFocusSwitchChange}
-                            >
-                                {'End Focus Duration'}
-                            </WaSwitch>
-                            {basicEndFocus.enabled && (
-                                <WaNumberInput
-                                    className="basic-replay-end-focus-duration"
-                                    appearance="filled"
-                                    size="s"
-                                    type="number"
-                                    label="Duration (s)"
+                            <div className="basic-replay-end-focus-controls">
+                                <WaSwitch
+                                    className="basic-replay-end-focus-switch"
+                                    size="xs"
                                     label-at-start width-auto
-                                    min={1}
-                                    max={5}
-                                    step={1}
-                                    value={basicEndFocus.duration}
-                                    onInput={handleBasicEndFocusDurationInput}
-                                />
-                            )}
+                                    checked={basicEndFocus.enabled}
+                                    onChange={handleBasicEndFocusSwitchChange}
+                                >
+                                    {'End Focus'}
+                                </WaSwitch>
+                                {basicEndFocus.enabled && (
+                                    <WaNumberInput
+                                        className="basic-replay-end-focus-duration lgs--short-input"
+                                        appearance="filled"
+                                        size="s"
+                                        type="number"
+                                        label="Duration (s)"
+                                        label-at-start
+                                        min={1}
+                                        max={5}
+                                        step={1}
+                                        value={basicEndFocus.duration}
+                                        onInput={handleBasicEndFocusDurationInput}
+                                    />
+                                )}
+                            </div>
                         </div>
                     )}
                     {basicPreparation && (
