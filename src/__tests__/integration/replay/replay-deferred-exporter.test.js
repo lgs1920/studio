@@ -461,7 +461,7 @@ describe('ReplayDeferredExporter', () => {
         expect(plan.videoTimeline.phases.map(phase => phase.kind)).toEqual(['replay', 'post-replay'])
         expect(plan.videoTimeline.phases[1].clip).toMatchObject({
             id: 'simple-trace-focus',
-            params: {duration: 5, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 3},
+            params: {duration: 5, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 12},
         })
         expect(plan.videoTimeline.durationMillis).toBe(17500)
     })

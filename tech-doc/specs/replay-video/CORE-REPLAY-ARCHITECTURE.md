@@ -177,8 +177,9 @@ composition. The `replay.camera.transfer` and `camera.view.apply` trace events
 compare configured altitude, pitch, and angle with physical camera height and
 camera-to-marker range at each transfer boundary.
 
-Basic Replay adds a fixed four-second trace-centroid focus phase after its
-playback. Expert Replay uses its configured start and stop clips.
+Basic Replay adds a configurable trace-centroid focus phase after its playback.
+It rotates at 12 revolutions per minute, completing one turn every five seconds.
+Expert Replay uses its configured start and stop clips.
 
 ## Functional architecture
 

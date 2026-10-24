@@ -22,7 +22,8 @@ import {
 
 export const BASIC_REPLAY_TRACE_FOCUS_DURATION_SECONDS = DEFAULT_BASIC_REPLAY_END_FOCUS.duration
 export const BASIC_REPLAY_TRACE_FOCUS_HEIGHT_DELTA_METERS = 2000
-export const BASIC_REPLAY_TRACE_FOCUS_RPM = 3
+// One revolution every five seconds is equivalent to twelve revolutions per minute.
+export const BASIC_REPLAY_TRACE_FOCUS_RPM = 12
 export const BASIC_REPLAY_TRACE_FOCUS_INSTANCE_ID = 'simple-trace-focus'
 
 /**

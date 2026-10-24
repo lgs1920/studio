@@ -26,9 +26,9 @@ import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/R
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Replay preparation visibility and clip rules', () => {
-    it('applies the configured Basic end-focus duration at a fixed three revolutions per minute', () => {
+    it('applies the configured Basic end-focus duration at one revolution every five seconds', () => {
         expect(createBasicReplayTraceFocusClips({}, {enabled: true, duration: 5}).stop[0].params)
-            .toMatchObject({duration: 5, rpm: 3, focusTarget: 'trace-centroid'})
+            .toMatchObject({duration: 5, rpm: 12, focusTarget: 'trace-centroid'})
         expect(createBasicReplayTraceFocusClips({}, {enabled: false, duration: 5}).stop).toEqual([])
     })
 
@@ -130,7 +130,7 @@ describe('Replay preparation visibility and clip rules', () => {
         expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_STOP)).toMatchObject([expect.objectContaining({
             id: 'simple-trace-focus',
             clipId: 'focus',
-            params: expect.objectContaining({duration: 3, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 3}),
+            params: expect.objectContaining({duration: 3, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 12}),
         })])
 
         lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
@@ -139,7 +139,7 @@ describe('Replay preparation visibility and clip rules', () => {
         expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_STOP)).toMatchObject([expect.objectContaining({
             id: 'simple-trace-focus',
             clipId: 'focus',
-            params: expect.objectContaining({duration: 3, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 3}),
+            params: expect.objectContaining({duration: 3, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 12}),
         })])
 
         lgs.stores.replay.basicPreparationActive = false
@@ -149,7 +149,7 @@ describe('Replay preparation visibility and clip rules', () => {
         expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_STOP)).toMatchObject([expect.objectContaining({
             id: 'simple-trace-focus',
             clipId: 'focus',
-            params: expect.objectContaining({duration: 3, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 3}),
+            params: expect.objectContaining({duration: 3, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 12}),
         })])
 
         lgs.stores.replay.userMode = REPLAY_USER_MODE_EXPERT

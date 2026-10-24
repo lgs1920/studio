@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -553,7 +553,7 @@ describe('logical replay clip camera path', () => {
         expect(result.endView.cameraSettings).toEqual({altitude: 5000})
     })
 
-    it('preserves a full-turn focus rotation whose start and end orientations match', async () => {
+    it('preserves a full-turn focus rotation over five seconds', async () => {
         let queuedFrame = null
         vi.stubGlobal('requestAnimationFrame', callback => {
             queuedFrame = callback
@@ -591,8 +591,8 @@ describe('logical replay clip camera path', () => {
         const startedAt = globalThis.performance.now()
         const resultPromise = applyJourneyReplayClipCameraPlan(mode, {
             kind:     'focus',
-            duration: 4,
-            rpm:      15,
+            duration: 5,
+            rpm:      12,
             startView: {
                 sample,
                 heading: 0.2,
@@ -608,9 +608,9 @@ describe('logical replay clip camera path', () => {
         }, {token: 1})
 
         const middleFrame = queuedFrame
-        middleFrame(startedAt + 2000)
+        middleFrame(startedAt + 2500)
         const finalFrame = queuedFrame
-        finalFrame(startedAt + 5000)
+        finalFrame(startedAt + 6000)
         await resultPromise
 
         expect(startDeterministicCameraTransition).not.toHaveBeenCalled()
