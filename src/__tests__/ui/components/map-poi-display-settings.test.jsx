@@ -19,7 +19,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaDivider: () => <hr/>,
-    WaSlider:  ({label, value, min, max, step, onChange}) => (
+    WaSlider:  ({label, value, min, max, step, onInput}) => (
         <input
             type="range"
             aria-label={label}
@@ -27,7 +27,7 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
             min={min}
             max={max}
             step={step}
-            onChange={event => onChange({target: {value: event.currentTarget.value}})}
+            onInput={event => onInput({target: {value: event.currentTarget.value}})}
         />
     ),
     WaSwitch:  ({checked, children, onChange}) => (
@@ -111,7 +111,7 @@ describe('MapPOIDisplaySettings', () => {
         const onDisplayChange = vi.fn()
 
         render(<MapPOIDisplaySettings poi="poi-1" onDisplayChange={onDisplayChange}/>)
-        fireEvent.change(screen.getByRole('slider', {name: 'Width'}), {target: {value: '340'}})
+        fireEvent.input(screen.getByRole('slider', {name: 'Width'}), {target: {value: '340'}})
 
         expect(onDisplayChange).toHaveBeenCalledOnce()
         expect(onDisplayChange.mock.calls[0][0]).toBe('maxWidth')

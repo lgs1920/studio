@@ -97,7 +97,7 @@ export const MapPOIDisplaySettings = memo(({
                 value={displaySettings.maxWidth}
                 valueFormatter={value => `${value} px`}
                 withTooltip
-                onChange={event => onDisplayChange('maxWidth', event)}
+                onInput={event => onDisplayChange('maxWidth', event)}
             />
         </section>
     )

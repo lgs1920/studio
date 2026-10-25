@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-25
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -93,7 +93,9 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                   [field]: value,
                                               })
 
-                                              void __.ui.poiManager.updatePOI(poi, {display: nextDisplay}, {immediate: true})
+                                              void __.ui.poiManager.updatePOI(poi, {display: nextDisplay}, {
+                                                  immediate: field !== 'maxWidth',
+                                              })
                                                   .catch(error => console.error(`[MapPOIEditContent] Failed to save ${field}:`, error))
                                           }, [poi])
 
