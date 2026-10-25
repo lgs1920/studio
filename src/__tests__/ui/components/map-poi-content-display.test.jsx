@@ -246,6 +246,15 @@ describe('MapPOIContent display settings', () => {
         })
     })
 
+    it('clamps an expanded POI width to the configured maximum', () => {
+        poiList.get('poi-1').display.maxWidth = 900
+
+        render(<MapPOIContent poi="poi-1"/>)
+
+        expect(document.querySelector('.poi-icon-wrapper').style.getPropertyValue('--poi-expanded-dimension'))
+            .toBe('400px')
+    })
+
     it('centers the title layout when all optional content is disabled', () => {
         poiList.get('poi-1').display = {
             category:    false,

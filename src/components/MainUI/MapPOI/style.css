@@ -97,6 +97,8 @@
     display: flex;
     flex-direction: column;
     width: calc(var(--poi-expanded-dimension) + var(--poi-menu-icons-column-width));
+    max-width: calc(var(--poi-expanded-dimension) + var(--poi-menu-icons-column-width));
+    min-width: 0;
     pointer-events: none;
     opacity: 1;
 
@@ -126,6 +128,8 @@
     flex-direction: column;
     flex-wrap: nowrap;
     width: var(--poi-expanded-dimension);
+    max-width: var(--poi-expanded-dimension);
+    min-width: 0;
     box-sizing: border-box;
     margin-bottom: var(--triangle-size);
     margin-left: calc(1 * var(--poi-menu-icons-column-width));
@@ -223,8 +227,14 @@
     display: flex;
     flex-direction: column;
     width: 100%;
+    max-width: 100%;
     min-width: 0;
     gap: var(--lgs-gutter-xs);
+
+    & > * {
+        max-width: 100%;
+        min-width: 0;
+    }
 }
 
 .poi-card-content--title-only {
@@ -244,6 +254,8 @@
 .poi-card-inner .poi-title h3 {
     flex: 1 1 auto;
     width: auto;
+    max-width: 100%;
+    min-width: 0;
     margin: 0;
     white-space: normal;
     overflow-wrap: anywhere;
@@ -276,6 +288,7 @@
 .poi-card-inner .poi-time,
 .poi-card-inner .poi-coordinates {
     max-width: 100%;
+    min-width: 0;
     overflow-wrap: anywhere;
 }
 
@@ -345,6 +358,8 @@
     line-height: 1;
     display: flex;
     flex-direction: column;
+    max-width: 100%;
+    min-width: 0;
     gap: var(--lgs-gutter-xs);
 }
 
