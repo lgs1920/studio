@@ -133,6 +133,7 @@ describe('MapPOIContent display settings', () => {
 
     afterEach(() => {
         cleanup()
+        vi.restoreAllMocks()
         globalThis.lgs = undefined
         globalThis.__ = undefined
     })
@@ -150,20 +151,29 @@ describe('MapPOIContent display settings', () => {
         expect(screen.getByTestId('poi-date-time').textContent).toBe('2026-10-24T10:00:00Z')
     })
 
-    it('renders a one-rem angled leader whose endpoint is the geographic POI anchor', () => {
+    it.each([
+        {randomValue: 0.1, expectedAngle: -45},
+        {randomValue: 0.5, expectedAngle: 0},
+        {randomValue: 0.9, expectedAngle: 45},
+    ])('renders a one-rem leader at $expectedAngle degrees with the geographic POI as its endpoint', ({
+        randomValue,
+        expectedAngle,
+    }) => {
+        vi.spyOn(Math, 'random').mockReturnValue(randomValue)
         render(<MapPOIContent poi="poi-1"/>)
 
         const wrapper = document.querySelector('.poi-icon-wrapper')
-        const angle = Number.parseFloat(wrapper.style.getPropertyValue('--poi-expanded-leader-angle'))
+        const leaderSpace = wrapper.querySelector('.poi-expanded-leader-space')
+        const angle = Number.parseFloat(leaderSpace.style.getPropertyValue('--poi-expanded-leader-angle'))
         const radians = angle * Math.PI / 180
 
-        expect([-45, 0, 45]).toContain(angle)
+        expect(angle).toBe(expectedAngle)
         expect(wrapper.querySelector('.poi-card--expanded')).not.toBeNull()
         expect(wrapper.querySelector('.poi-expanded-leader')).not.toBeNull()
         expect(wrapper.querySelector('.poi-geographic-anchor')).not.toBeNull()
-        expect(Number.parseFloat(wrapper.style.getPropertyValue('--poi-expanded-leader-x')))
-            .toBeCloseTo(Math.sin(radians))
-        expect(Number.parseFloat(wrapper.style.getPropertyValue('--poi-expanded-leader-y')))
+        expect(Number.parseFloat(leaderSpace.style.getPropertyValue('--poi-expanded-leader-x')))
+            .toBeCloseTo(-Math.sin(radians))
+        expect(Number.parseFloat(leaderSpace.style.getPropertyValue('--poi-expanded-leader-y')))
             .toBeCloseTo(Math.cos(radians))
     })
 

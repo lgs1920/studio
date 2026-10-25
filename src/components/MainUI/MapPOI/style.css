@@ -135,7 +135,10 @@
 }
 
 .poi-expanded-leader-space {
-    /* --poi-expanded-leader-x and --poi-expanded-leader-y locate the real POI endpoint for the selected angle. */
+    --poi-expanded-leader-angle: 0deg; /* Connector inclination selected for this expanded POI. */
+    --poi-expanded-leader-x: 0rem; /* Horizontal projection from the frame to the geographic endpoint. */
+    --poi-expanded-leader-y: 1rem; /* Vertical projection from the frame to the geographic endpoint. */
+
     position: relative;
     flex: 0 0 auto;
     width: var(--poi-expanded-dimension);
@@ -143,7 +146,7 @@
     margin-left: var(--poi-menu-icons-column-width);
 
     & .poi-expanded-leader {
-        /* --poi-expanded-leader-angle controls the connector's random three-way inclination. */
+        /* --poi-expanded-leader-angle controls inclination; positive CSS angles move its lower endpoint left. */
         position: absolute;
         top: 0;
         left: calc(50% - 1px);

@@ -61,6 +61,7 @@ const assertPOICanvasDimensions = (element, scale, ratio) => {
 export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     const _poiContent = useRef(null)
     const _icon = useRef(null)
+    const _leaderSpace = useRef(null)
     const _renderRequestId = useRef(0)
 
     const unitSystem = useSnapshot(lgs.settings.unitSystem)
@@ -81,11 +82,6 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     const pointLatitude = point?.latitude
     const pointLocation = point?.location
     const pointCountryCode = point?.countryCode
-    const expandedLeaderAngle = useMemo(() => {
-        const angleIndex = Math.floor(Math.random() * POI_EXPANDED_LEADER_ANGLES.length)
-        return POI_EXPANDED_LEADER_ANGLES[angleIndex]
-    }, [pointId])
-    const expandedLeaderRadians = expandedLeaderAngle * Math.PI / 180
     const replayEntry = Array.isArray(replay.nearbyPois)
         ? replay.nearbyPois.find(entry => entry?.poi?.id === point?.id)
         : null
@@ -225,13 +221,14 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
 
                     const mapPOI = new MapPOI(currentPoint)
                     const width = canvas.width / scale / ratio
+                    const height = canvas.height / scale / ratio
                     mapPOI.image = {
                         // Cesium accepts canvases directly; a data URL needlessly copies the pixel buffer.
                         src:    canvas,
                         width,
-                        height: canvas.height / scale / ratio,
+                        height,
                     }
-                    mapPOI.pixelOffset = calculatePOIContentPixelOffset(element, width)
+                    mapPOI.pixelOffset = calculatePOIContentPixelOffset(element, width, height)
                     await mapPOI.utils.draw(mapPOI)
                 }
                 catch (error) {
@@ -351,6 +348,24 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         }
     }, [useInMenu, point?.expanded, iconName, isSvgIcon, point?.visible, renderToCanvas])
 
+    useEffect(() => {
+        const leaderSpace = _leaderSpace.current
+        if (!pointId || !point?.expanded || useInMenu || !leaderSpace) {
+            return
+        }
+
+        const angleIndex = Math.floor(Math.random() * POI_EXPANDED_LEADER_ANGLES.length)
+        const angle = POI_EXPANDED_LEADER_ANGLES[angleIndex]
+        const radians = angle * Math.PI / 180
+
+        leaderSpace.style.setProperty('--poi-expanded-leader-angle', `${angle}deg`)
+        // CSS positive rotation leans left in screen coordinates, so its lower endpoint uses -sin(angle).
+        leaderSpace.style.setProperty('--poi-expanded-leader-x', `${-Math.sin(radians)}rem`)
+        leaderSpace.style.setProperty('--poi-expanded-leader-y', `${Math.cos(radians)}rem`)
+        // Capture only after the random anchor geometry is set so canvas and billboard offsets agree.
+        renderToCanvas()
+    }, [pointId, point?.expanded, useInMenu, renderToCanvas])
+
     return (
         <div
             className={classNames(
@@ -364,12 +379,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                 '--lgs-poi-border-color':     point?.color ?? lgs.colors.poiDefault,
                 '--lgs-poi-color':            point?.color ?? lgs.colors.poiDefault,
                 ...(point?.expanded && !useInMenu
-                    ? {
-                        '--poi-expanded-dimension':      `${displaySettings.maxWidth}px`,
-                        '--poi-expanded-leader-angle':  `${expandedLeaderAngle}deg`,
-                        '--poi-expanded-leader-x':      `${Math.sin(expandedLeaderRadians)}rem`,
-                        '--poi-expanded-leader-y':      `${Math.cos(expandedLeaderRadians)}rem`,
-                    }
+                    ? {'--poi-expanded-dimension': `${displaySettings.maxWidth}px`}
                     : {}),
                 ...style,
             }}
@@ -475,7 +485,11 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                      )}
                 </div>
                 {point?.expanded && !useInMenu && (
-                    <div className="poi-expanded-leader-space" aria-hidden="true">
+                    <div
+                        className="poi-expanded-leader-space"
+                        aria-hidden="true"
+                        ref={_leaderSpace}
+                    >
                         <span className="poi-expanded-leader"/>
                         <span className="poi-geographic-anchor"/>
                     </div>

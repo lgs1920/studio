@@ -241,6 +241,32 @@ describe('POIUtils replay visibility', () => {
         expect(globalThis.lgs.viewer.scene.requestRender).toHaveBeenCalledTimes(2)
     })
 
+    it('scales an anchored POI pixel offset with the billboard distance scale', async () => {
+        const entity = await POIUtils.draw({
+            id:        'poi-expanded-anchor',
+            longitude: 2,
+            latitude:  48,
+            height:    100,
+            visible:   true,
+            expanded:  true,
+            scale:     0.5,
+            pixelOffset: {x: -20, y: 0},
+            image: {
+                src:    'data:image/png;base64,test',
+                width:  200,
+                height: 100,
+            },
+        })
+
+        expect(propertyValue(entity.billboard.pixelOffset).x).toBe(-10)
+        expect(propertyValue(entity.billboard.pixelOffsetScaleByDistance)).toMatchObject({
+            near:      10000,
+            nearValue: 1,
+            far:       50000,
+            farValue:  0,
+        })
+    })
+
     it('uses a canvas directly as a billboard image without serializing it', async () => {
         const canvas = {width: 80, height: 60}
 

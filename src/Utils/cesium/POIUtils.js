@@ -261,6 +261,8 @@ export class POIUtils {
         const heightReference = __.ui.sceneManager.noRelief()
                                    ? HeightReference.NONE
                                    : HeightReference.CLAMP_TO_GROUND
+        const scale = finiteNumber(poi.scale) ?? 1
+        const scaleByDistance = new NearFarScalar(10000.0, 1.0, 50000.0, 0)
 
         // Base entity options
         const options = {
@@ -275,11 +277,14 @@ export class POIUtils {
             image:           poi.image?.src ?? '',
             width:           width,
             height:          height,
-            scale:           finiteNumber(poi.scale) ?? 1,
-            scaleByDistance: new NearFarScalar(10000.0, 1.0, 50000.0, 0),
-            pixelOffset:     poi.pixelOffset ? new Cartesian2(poi.pixelOffset.x, poi.pixelOffset.y) : new Cartesian2(0, 0),
+            scale:           scale,
+            scaleByDistance: scaleByDistance,
+            pixelOffset:     poi.pixelOffset
+                ? new Cartesian2(poi.pixelOffset.x * scale, poi.pixelOffset.y * scale)
+                : new Cartesian2(0, 0),
+            pixelOffsetScaleByDistance: poi.pixelOffset ? scaleByDistance : undefined,
             horizontalOrigin: HorizontalOrigin.CENTER,
-            verticalOrigin:  VerticalOrigin.BOTTOM,
+            verticalOrigin:  VerticalOrigin.CENTER,
             heightReference: heightReference,
             disableDepthTestDistance: 0,
             show:            visible,
@@ -306,6 +311,7 @@ export class POIUtils {
                 entity.billboard.scale = billboard.scale
                 entity.billboard.scaleByDistance = billboard.scaleByDistance
                 entity.billboard.pixelOffset = billboard.pixelOffset
+                entity.billboard.pixelOffsetScaleByDistance = billboard.pixelOffsetScaleByDistance
                 entity.billboard.horizontalOrigin = billboard.horizontalOrigin
                 entity.billboard.verticalOrigin = billboard.verticalOrigin
                 entity.billboard.heightReference = billboard.heightReference
