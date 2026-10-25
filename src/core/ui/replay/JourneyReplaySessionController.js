@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -272,6 +272,7 @@ export class JourneyReplaySessionController {
     #preparationTransitionToken = 0
     #replayPoiExpandedState = new Map()
     #replayPoiTriggered = new Set()
+    #replayPOIAnimationOccurred = false
     #replayPOIVisibilityState = new Map()
     #stopClipPOIMaskFrame = null
     #lastPlaybackUpdateProgressKey = null
@@ -891,6 +892,13 @@ export class JourneyReplaySessionController {
                 this.#replayPoiTriggered = value
             },
         })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayPOIAnimationOccurred', {
+            configurable: true,
+            get: () => this.#replayPOIAnimationOccurred,
+            set: value => {
+                this.#replayPOIAnimationOccurred = value === true
+            },
+        })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayPOIVisibilityState', {
             configurable: true,
             get: () => this.#replayPOIVisibilityState,
@@ -933,6 +941,7 @@ export class JourneyReplaySessionController {
             isVisibleProperty: (...args) => JourneyReplayVisibilityController.isVisibleProperty(this, ...args),
             isPOIVisibleBeforePlayback: (...args) => JourneyReplayVisibilityController.isPOIVisibleBeforePlayback(this, ...args),
             applyJourneyReplayPOIVisibility: (...args) => JourneyReplayVisibilityController.applyJourneyReplayPOIVisibility(this, ...args),
+            reapplyHideAllPOIVisibilityAfterAnimations: (...args) => JourneyReplayVisibilityController.reapplyHideAllPOIVisibilityAfterAnimations(this, ...args),
             restoreJourneyReplayPOIVisibility: (...args) => JourneyReplayVisibilityController.restoreJourneyReplayPOIVisibility(this, ...args),
             hideGloballyHiddenPOIs: (...args) => JourneyReplayVisibilityController.hideGloballyHiddenPOIs(this, ...args),
             startStopClipPOIMaskLoop: (...args) => JourneyReplayVisibilityController.startStopClipPOIMaskLoop(this, ...args),
@@ -1103,6 +1112,7 @@ export class JourneyReplaySessionController {
             replayPOICandidates: (...args) => JourneyReplayVisibilityController.replayPOICandidates(this, ...args),
             isVisibleProperty: (...args) => JourneyReplayVisibilityController.isVisibleProperty(this, ...args),
             applyJourneyReplayPOIVisibility: (...args) => JourneyReplayVisibilityController.applyJourneyReplayPOIVisibility(this, ...args),
+            reapplyHideAllPOIVisibilityAfterAnimations: (...args) => JourneyReplayVisibilityController.reapplyHideAllPOIVisibilityAfterAnimations(this, ...args),
             restoreJourneyReplayPOIVisibility: (...args) => JourneyReplayVisibilityController.restoreJourneyReplayPOIVisibility(this, ...args),
             hideGloballyHiddenPOIs: (...args) => JourneyReplayVisibilityController.hideGloballyHiddenPOIs(this, ...args),
             startStopClipPOIMaskLoop: (...args) => JourneyReplayVisibilityController.startStopClipPOIMaskLoop(this, ...args),

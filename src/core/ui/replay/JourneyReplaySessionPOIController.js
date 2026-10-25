@@ -185,6 +185,7 @@ export const prepareNearbyPOIsForPlayback = async (mode, sample = null) => {
             call.applyJourneyReplayPOIVisibility()
         }
         await call.restoreNearbyPOIsAfterPlayback()
+        state.replayPOIAnimationOccurred = false
 
         const store = replayStore()
         const journey = globalThis.lgs?.theJourney ?? null
@@ -251,6 +252,7 @@ export const openNearbyPOIForPlayback = async (mode, poiId) => {
         }
         await call.updatePOIExpandedState(poiId, true)
         state.replayPoiTriggered.add(poiId)
+        state.replayPOIAnimationOccurred = true
         call.setPOIEntityVisibility(poi, true, {allowReplayAnimation: true})
     }
 
@@ -323,6 +325,9 @@ export const syncNearbyPOIsForSample = async (mode, sample = null) => {
         const collapsedIds = Array.from(state.replayPoiTriggered).filter(poiId => !expandedIds.has(poiId))
         const newlyExpandedIds = Array.from(expandedIds).filter(poiId => !state.replayPoiTriggered.has(poiId))
         state.replayPoiTriggered = expandedIds
+        if (newlyExpandedIds.length > 0) {
+            state.replayPOIAnimationOccurred = true
+        }
         await Promise.all([
             ...collapsedIds.map(poiId => call.updatePOIExpandedState(poiId, false)),
             ...newlyExpandedIds.map(poiId => call.updatePOIExpandedState(poiId, true)),

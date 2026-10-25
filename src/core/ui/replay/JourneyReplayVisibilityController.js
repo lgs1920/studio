@@ -289,7 +289,8 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
             }
 
             const settings = normalizeJourneyReplayPOISettings(poi.replay)
-            const visibilityMode = isReplayPOIEndpoint(poi) ? 'user' : poiVisibilityMode
+            const isEndpoint = isReplayPOIEndpoint(poi)
+            const visibilityMode = isEndpoint ? 'user' : poiVisibilityMode
             const shouldApplyVisibility = nearbyPOIIds.has(poi.id)
                 || visibilityMode !== 'user'
                 || settings.visible === false
@@ -301,11 +302,14 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
             const visibleBeforePlayback = state.replayPOIVisibilityState.get(poi.id)?.visible
                 ?? call.isPOIVisibleBeforePlayback(poi)
             const animationActive = state.replayPoiTriggered.has(poi.id)
+            const visibleByUser = isEndpoint
+                ? settings.visible !== false
+                : visibleBeforePlayback && settings.visible !== false
             const visibleDuringPlayback = animationActive
-                || (visibilityMode === 'yes' && !isReplayPOIEndpoint(poi))
+                || (visibilityMode === 'yes' && !isEndpoint)
                 || (poi.visible !== false
                 && (visibilityMode === 'yes'
-                    || (visibilityMode === 'user' && visibleBeforePlayback && settings.visible !== false))
+                    || (visibilityMode === 'user' && visibleByUser))
                 )
 
             if ((visibilityMode !== 'user' || settings.visible === false) && !state.replayPOIVisibilityState.has(poi.id)) {
@@ -317,6 +321,25 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
             call.setPOIEntityVisibility(poi, visibleDuringPlayback, {allowReplayAnimation: animationActive})
         }
     }
+
+/**
+ * Reapply the Replay hide-all filter after animated POI state has been restored.
+ *
+ * @param {object} mode - Replay session mode.
+ * @returns {boolean} Whether the hide-all filter was reapplied.
+ */
+export const reapplyHideAllPOIVisibilityAfterAnimations = mode => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    if (!state.replayPOIAnimationOccurred
+        || !currentJourneyReplayPoiBehavior().hideAllPoisDuringJourneyReplay) {
+        return false
+    }
+
+    call.applyJourneyReplayPOIVisibility()
+    globalThis.lgs?.scene?.requestRender?.()
+    return true
+}
 
 export const restoreJourneyReplayPOIVisibility = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]

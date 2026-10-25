@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-18
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -642,7 +642,9 @@ export const restorePlaybackSceneInternal = (mode, ) => {
         call.restoreJourneyToolbarVisibility()
         call.restoreJourneyReplayDrawerAfterPlayback()
         call.restoreMainUI()
-        void call.restoreNearbyPOIsAfterPlayback()
+        const nearbyPOIRestoration = Promise.resolve(call.restoreNearbyPOIsAfterPlayback()).catch(error => {
+            console.error('[Replay POI] Failed to restore POIs after playback.', error)
+        })
         resetRuntimeProgress(replayStore())
         // Keep captured visibility until asynchronous scene cleanup completes.
         call.restoreCurrentJourneyVisibility({restorePOIs: false})
@@ -653,7 +655,8 @@ export const restorePlaybackSceneInternal = (mode, ) => {
         let restorePromise
         restorePromise = call.focusJourneyAfterPlayback({
             snapDistance: 50000,
-        }).finally(() => {
+        }).finally(async () => {
+            await nearbyPOIRestoration
             const staleReplaySession = replaySessionLease
                                        && !ownsReplaySession(mode, replaySessionLease)
             if (state.sceneRestorePromise !== restorePromise || staleReplaySession) {
@@ -685,6 +688,7 @@ export const restorePlaybackSceneInternal = (mode, ) => {
             state.deferPlaybackCameraRestore = false
             // Reapply captured visibility after asynchronous scene cleanup.
             call.restoreCurrentJourneyVisibility()
+            call.reapplyHideAllPOIVisibilityAfterAnimations()
             // Hand back the normal view before allowing map persistence again.
             call.restoreCameraState()
             state.cameraStateRestoredBeforeSceneCleanup = false
@@ -1121,12 +1125,13 @@ export const bindRenderer = (mode, ) => {
                 state.videoReplayClipLogicalTrajectory = false
                 void call.restoreNearbyPOIsAfterPlayback().finally(() => {
                     call.restoreCurrentJourneyVisibility()
+                    call.reapplyHideAllPOIVisibilityAfterAnimations()
                 })
                 if (!state.deferPlaybackCameraRestore) {
                     call.restorePlaybackCameraSettings({force: true})
                 }
                 resetRuntimeProgress(replayStore())
-                call.restoreCurrentJourneyVisibility()
+                call.restoreCurrentJourneyVisibility({restorePOIs: false})
             }),
             state.controller.on(REPLAY_EVENT_END, detail => {
                 state.lastPlaybackUpdateProgressKey = null
