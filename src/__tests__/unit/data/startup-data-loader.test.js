@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,7 +55,11 @@ vi.mock('@Core/Journey', () => ({
 }))
 
 vi.mock('@Core/MapPOI', () => ({
-    MapPOI: class {},
+    MapPOI: class {
+        constructor(data = {}) {
+            Object.assign(this, data)
+        }
+    },
 }))
 
 vi.mock('@Core/Track', () => ({
@@ -202,6 +206,49 @@ describe('startup data loader', () => {
             vi.unstubAllGlobals()
             mocks.draw.mockReset()
             mocks.readCurrentFromDB.mockReset()
+        }
+    })
+
+    it('persists POI display defaults before installing worker-loaded POIs', async () => {
+        const previousLgs = globalThis.lgs
+        const previousNamespace = globalThis.__
+        const data = {id: 'poi-a', type: 'poi', display: {category: true}}
+        const list = new Map()
+        const ensurePersistedDisplaySettings = vi.fn(async poiData => {
+            poiData.display = {category: true, titleCategoryIcon: false, maxWidth: 200}
+        })
+        const addToJourneyIndex = vi.fn()
+        globalThis.lgs = {theJourney: {slug: 'journey-a'}}
+        globalThis.__ = {
+            ui: {
+                poiManager: {
+                    list,
+                    addToJourneyIndex,
+                    ensurePersistedDisplaySettings,
+                },
+            },
+        }
+
+        const client = {
+            request: vi.fn(async (_request, consume) => {
+                await consume({items: [data], type: 'pois'})
+                return true
+            }),
+        }
+
+        try {
+            const loader = new StartupDataLoader('studio-db', client)
+            await loader.loadPOIs({currentOnly: true})
+
+            expect(ensurePersistedDisplaySettings).toHaveBeenCalledWith(data)
+            expect(list.get(data.id)).toMatchObject({
+                display: {category: true, titleCategoryIcon: false, maxWidth: 200},
+            })
+            expect(addToJourneyIndex).toHaveBeenCalledWith(data.id, list.get(data.id))
+        }
+        finally {
+            globalThis.lgs = previousLgs
+            globalThis.__ = previousNamespace
         }
     })
 

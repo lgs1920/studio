@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,7 +35,9 @@ describe('POI canvas geometry', () => {
         measurements.forEach(({canvasWidth, elementBounds, cardBounds}) => {
             const element = {
                 getBoundingClientRect: () => elementBounds,
-                querySelector: vi.fn(() => ({getBoundingClientRect: () => cardBounds})),
+                querySelector: vi.fn(selector => selector === '.poi-card-inner'
+                    ? {getBoundingClientRect: () => cardBounds}
+                    : null),
             }
 
             const offset = calculatePOIContentPixelOffset(element, canvasWidth)
@@ -52,5 +54,25 @@ describe('POI canvas geometry', () => {
         }
 
         expect(calculatePOIContentPixelOffset(element, 100)).toEqual({x: 0, y: 0})
+    })
+
+    it('aligns the geographic anchor with the Cesium coordinate instead of centering the card', () => {
+        const anchor = {getBoundingClientRect: () => ({left: 180})}
+        const card = {getBoundingClientRect: () => ({left: 20, right: 120})}
+        const element = {
+            getBoundingClientRect: () => ({left: 20, right: 320, width: 300}),
+            querySelector: vi.fn(selector => {
+                if (selector === '.poi-geographic-anchor') {
+                    return anchor
+                }
+
+                return selector === '.poi-card-inner' ? card : null
+            }),
+        }
+
+        const offset = calculatePOIContentPixelOffset(element, 300)
+
+        expect(offset.x).toBeCloseTo(-10)
+        expect(offset.y).toBe(0)
     })
 })

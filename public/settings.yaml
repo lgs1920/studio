@@ -274,6 +274,15 @@ journey:
 # Global pois
 ########################################
 poi:
+  displayDefaults:
+    category: true
+    titleCategoryIcon: false
+    titleAltitude: false
+    location: false
+    altitude: false
+    coordinates: false
+    dateTime: false
+
   association:
     maxDistance: 10000 # meters - POI can be associated with a journey when one track point is within this distance
 

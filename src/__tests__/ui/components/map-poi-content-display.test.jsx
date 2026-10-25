@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -82,6 +82,7 @@ describe('MapPOIContent display settings', () => {
         poiList = proxyMap([['poi-1', createPOI({
             category:    true,
             titleCategoryIcon: true,
+            titleAltitude: false,
             location:    true,
             altitude:    true,
             coordinates: true,
@@ -149,8 +150,53 @@ describe('MapPOIContent display settings', () => {
         expect(screen.getByTestId('poi-date-time').textContent).toBe('2026-10-24T10:00:00Z')
     })
 
+    it('renders a one-rem angled leader whose endpoint is the geographic POI anchor', () => {
+        render(<MapPOIContent poi="poi-1"/>)
+
+        const wrapper = document.querySelector('.poi-icon-wrapper')
+        const angle = Number.parseFloat(wrapper.style.getPropertyValue('--poi-expanded-leader-angle'))
+        const radians = angle * Math.PI / 180
+
+        expect([-45, 0, 45]).toContain(angle)
+        expect(wrapper.querySelector('.poi-card--expanded')).not.toBeNull()
+        expect(wrapper.querySelector('.poi-expanded-leader')).not.toBeNull()
+        expect(wrapper.querySelector('.poi-geographic-anchor')).not.toBeNull()
+        expect(Number.parseFloat(wrapper.style.getPropertyValue('--poi-expanded-leader-x')))
+            .toBeCloseTo(Math.sin(radians))
+        expect(Number.parseFloat(wrapper.style.getPropertyValue('--poi-expanded-leader-y')))
+            .toBeCloseTo(Math.cos(radians))
+    })
+
+    it('adds a real POI altitude to the title using the selected system units', async () => {
+        poiList.get('poi-1').display.titleAltitude = true
+        poiList.get('poi-1').display.altitude = false
+
+        render(<MapPOIContent poi="poi-1"/>)
+
+        expect(screen.getByRole('heading', {name: 'River stop (125 m)'})).toBeTruthy()
+        expect(screen.queryByText('Altitude: 125')).toBeNull()
+
+        lgs.settings.unitSystem.current = 1
+
+        await waitFor(() => {
+            expect(screen.getByRole('heading', {name: 'River stop (410 ft)'})).toBeTruthy()
+        })
+    })
+
+    it('adds the available simulated altitude to the title when no real altitude is set', () => {
+        const poi = poiList.get('poi-1')
+        poi.height = poi.simulatedHeight
+        poi.simulatedHeight = 175
+        poi.display.titleAltitude = true
+
+        render(<MapPOIContent poi="poi-1"/>)
+
+        expect(screen.getByRole('heading', {name: 'River stop (175 m)'})).toBeTruthy()
+    })
+
     it('keeps only title and enabled category visible during Replay, even when every flag is enabled', () => {
         globalThis.lgs.stores.replay.active = true
+        poiList.get('poi-1').display.titleAltitude = true
 
         render(<MapPOIContent poi="poi-1"/>)
 
@@ -194,6 +240,7 @@ describe('MapPOIContent display settings', () => {
         poiList.get('poi-1').display = {
             category:    false,
             titleCategoryIcon: false,
+            titleAltitude: false,
             location:    false,
             altitude:    false,
             coordinates: false,

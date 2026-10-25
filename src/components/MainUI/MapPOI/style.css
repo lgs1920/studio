@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -56,7 +56,8 @@
     height: var(--dimension);
     transform: rotate(-45deg);
     --poi-delta-x: 0;
-    --dimension: var(--poi-reduce-dimension);
+    /* Keep reduced map POIs at 80% of their previous diameter. */
+    --dimension: calc(0.8 * var(--poi-reduce-dimension));
 }
 
 .poi-icon-wrapper.poi-shrinked:not(.used-in-menu) {
@@ -98,6 +99,10 @@
     width: calc(var(--poi-expanded-dimension) + var(--poi-menu-icons-column-width));
     pointer-events: none;
     opacity: 1;
+
+    &.poi-card--expanded .poi-card-inner {
+        margin-bottom: 0;
+    }
 }
 
 .used-in-menu .poi-card {
@@ -120,14 +125,44 @@
     display: flex;
     flex-direction: column;
     flex-wrap: nowrap;
-    width: fit-content;
-    max-width: var(--poi-expanded-dimension);
+    width: var(--poi-expanded-dimension);
     box-sizing: border-box;
     margin-bottom: var(--triangle-size);
     margin-left: calc(1 * var(--poi-menu-icons-column-width));
     border: var(--poi-border-width) solid var(--lgs-poi-border-color);
     border-radius: var(--lgs-border-radius-s);
     background-color: var(--lgs-poi-background-color);
+}
+
+.poi-expanded-leader-space {
+    /* --poi-expanded-leader-x and --poi-expanded-leader-y locate the real POI endpoint for the selected angle. */
+    position: relative;
+    flex: 0 0 auto;
+    width: var(--poi-expanded-dimension);
+    height: var(--poi-expanded-leader-y);
+    margin-left: var(--poi-menu-icons-column-width);
+
+    & .poi-expanded-leader {
+        /* --poi-expanded-leader-angle controls the connector's random three-way inclination. */
+        position: absolute;
+        top: 0;
+        left: calc(50% - 1px);
+        width: 2px;
+        height: 1rem;
+        transform: rotate(var(--poi-expanded-leader-angle));
+        transform-origin: top center;
+        border-radius: 9999px;
+        background-color: var(--lgs-poi-border-color);
+    }
+
+    & .poi-geographic-anchor {
+        /* --poi-expanded-leader-x aligns the captured billboard with the connector endpoint. */
+        position: absolute;
+        top: 100%;
+        left: calc(50% + var(--poi-expanded-leader-x));
+        width: 0;
+        height: 0;
+    }
 }
 
 .poi-shrinked .poi-card-inner {
@@ -518,39 +553,49 @@
     }
 }
 
-#pois-editor-drawer .map-poi-edit-tabs::part(body),
-#pois-editor-drawer .map-poi-edit-tabs wa-tab-panel::part(base),
-#pois-editor-drawer .map-poi-edit-tabs,
-#pois-editor-drawer .map-poi-edit-tabs wa-tab-panel {
-    height: auto;
-    max-height: none;
-    overflow: visible;
+#pois-editor-drawer,
+#journey-editor-drawer {
+    & .map-poi-edit-tabs::part(body),
+    & .map-poi-edit-tabs wa-tab-panel::part(base),
+    & .map-poi-edit-tabs,
+    & .map-poi-edit-tabs wa-tab-panel {
+        height: auto;
+        max-height: none;
+        overflow: visible;
+    }
 }
 
 .map-poi-display-settings {
     display: flex;
     flex-direction: column;
+    width: 100%;
+    min-width: 0;
     gap: var(--lgs-gutter-xs);
+
+    & .map-poi-display-width-slider {
+        box-sizing: border-box;
+        width: calc(100% - var(--lgs-gutter-s));
+        margin-inline-end: var(--lgs-gutter-s);
+    }
 }
 
 .map-poi-display-controls {
     display: flex;
     flex-direction: column;
+    width: 100%;
+    min-width: 0;
     row-gap: var(--lgs-gutter-xs);
 }
 
 .map-poi-style-switch {
     display: block;
     width: 100%;
+    min-width: 0;
     box-sizing: border-box;
-
-    &::part(base) {
-        width: 100%;
-    }
 }
 
-.map-poi-display-width-slider {
-    width: 100%;
+#pois-editor-drawer .lgs-scrollbars .track-vertical {
+    display: none !important;
 }
 
 .edit-map-poi-item {
@@ -577,6 +622,10 @@
 }
 
 .map-poi-edit-row-coordinates wa-icon {
+    align-self: center;
+}
+
+.map-poi-edit-row-coordinates > .label-on-left {
     align-self: center;
 }
 

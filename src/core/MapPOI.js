@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -64,7 +64,7 @@ export class MapPOI extends MapElement {
     description
 
     /**
-     * @type {{category: boolean, titleCategoryIcon: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number}}
+     * @type {{category: boolean, titleCategoryIcon: boolean, titleAltitude: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number}}
      */
     display = normalizePOIDisplaySettings()
 

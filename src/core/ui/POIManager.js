@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-13
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,6 +46,22 @@ const finiteNumber = value => {
 
 const normalizeText = value => String(value ?? '').trim()
 const normalizeCountryCode = value => normalizeText(value).toUpperCase()
+
+/**
+ * Check that a persisted POI already has every normalized display setting.
+ *
+ * @param {Object|null|undefined} storedDisplay - Display settings read from the database.
+ * @param {Object} normalizedDisplay - Complete display settings for the POI.
+ * @returns {boolean} Whether the stored settings need no migration.
+ */
+const hasCompleteDisplaySettings = (storedDisplay, normalizedDisplay) => Boolean(
+    storedDisplay
+    && typeof storedDisplay === 'object'
+    && Object.entries(normalizedDisplay).every(([key, value]) => (
+        Object.prototype.hasOwnProperty.call(storedDisplay, key)
+        && storedDisplay[key] === value
+    )),
+)
 
 const normalizeCoordinate = coordinate => {
     const longitude = finiteNumber(Array.isArray(coordinate) ? coordinate[0] : coordinate?.longitude)
@@ -980,6 +996,33 @@ export class POIManager {
         }
     }
 
+    /**
+     * Normalize legacy POI display settings and persist them when fields are missing or invalid.
+     *
+     * @param {Object} data - POI data read from persistent storage.
+     * @returns {Promise<Object>} Complete normalized display settings.
+     */
+    ensurePersistedDisplaySettings = async (data) => {
+        const normalizedDisplay = normalizePOIDisplaySettings(data?.display)
+        if (hasCompleteDisplaySettings(data?.display, normalizedDisplay)) {
+            return normalizedDisplay
+        }
+
+        data.display = normalizedDisplay
+        if (!data?.id || !data.type || data.type === POI_TMP_TYPE) {
+            return normalizedDisplay
+        }
+
+        try {
+            await this.persistToDatabase(new MapPOI(data))
+        }
+        catch (error) {
+            console.warn(`[POIManager] Failed to persist display defaults for POI ${data.id}:`, error)
+        }
+
+        return normalizedDisplay
+    }
+
     isPOIVisibleForJourney = (poi, journey = lgs.theJourney) => {
         if (!poi || !journey?.visible || !journey?.POIsVisible || poi.visible === false) {
             return false
@@ -1015,6 +1058,9 @@ export class POIManager {
 
             for (const key of keys) {
                 const data = await lgs.db.lgs1920.get(key, POIS_STORE)
+                if (data) {
+                    await this.ensurePersistedDisplaySettings(data)
+                }
                 if (!this.shouldLoadStartupPOI(data, {includeStarter, journey})) {
                     continue
                 }
@@ -1045,6 +1091,7 @@ export class POIManager {
                 if (this.list.has(data.id)) {
                     continue
                 }
+                await this.ensurePersistedDisplaySettings(data)
                 const poi = new MapPOI(data)
 
                 // On ajoute à la liste Valtio

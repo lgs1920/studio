@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,7 @@ import { memo }                     from 'react'
 
 const DISPLAY_OPTIONS = [
     {key: 'titleCategoryIcon', label: 'Category icon in title'},
+    {key: 'titleAltitude', label: 'Add Altitude to title'},
     {key: 'category', label: 'Category'},
     {key: 'location', label: 'Location'},
     {key: 'altitude', label: 'Altitude'},
@@ -88,7 +89,7 @@ export const MapPOIDisplaySettings = memo(({
             </div>
             <WaSlider
                 className="map-poi-display-width-slider"
-                label="Maximum width"
+                label="Width"
                 label-at-start
                 min={POI_DISPLAY_MIN_WIDTH}
                 max={POI_DISPLAY_MAX_WIDTH}

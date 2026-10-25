@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,7 +25,7 @@ import {
     normalizePOIDisplaySettings, shouldDisplayPOIField,
 }                                                   from '@Core/POIDisplaySettings'
 import { normalizeJourneyReplayPOISettings }          from '@Core/ui/replay/JourneyReplayPOISettings'
-import { ELEVATION_UNITS }                         from '@Utils/UnitUtils'
+import { ELEVATION_UNITS, UnitUtils }               from '@Utils/UnitUtils'
 import { WaIcon }                                  from '@awesome.me/webawesome/dist/react'
 import { snapdom }                                 from '@zumer/snapdom'
 import classNames                                  from 'classnames'
@@ -38,6 +38,7 @@ const EMPTY_REPLAY_PROXY = proxy({nearbyPois: []})
 const queuePOICanvasRender = createPOICanvasRenderQueue(2)
 const MAX_POI_CANVAS_SIDE = 4096
 const MAX_POI_CANVAS_PIXELS = 8_388_608
+const POI_EXPANDED_LEADER_ANGLES = [-45, 0, 45]
 
 const assertPOICanvasDimensions = (element, scale, ratio) => {
     const bounds = element.getBoundingClientRect()
@@ -80,6 +81,11 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     const pointLatitude = point?.latitude
     const pointLocation = point?.location
     const pointCountryCode = point?.countryCode
+    const expandedLeaderAngle = useMemo(() => {
+        const angleIndex = Math.floor(Math.random() * POI_EXPANDED_LEADER_ANGLES.length)
+        return POI_EXPANDED_LEADER_ANGLES[angleIndex]
+    }, [pointId])
+    const expandedLeaderRadians = expandedLeaderAngle * Math.PI / 180
     const replayEntry = Array.isArray(replay.nearbyPois)
         ? replay.nearbyPois.find(entry => entry?.poi?.id === point?.id)
         : null
@@ -97,10 +103,21 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         && !hideJourneyReplayField('location')
     const displayAltitude = shouldDisplayPOIField('altitude', displaySettings, replayActive)
         && !hideJourneyReplayField('altitude')
+    const displayTitleAltitude = shouldDisplayPOIField('titleAltitude', displaySettings, replayActive)
+        && !hideJourneyReplayField('altitude')
     const displayCoordinates = shouldDisplayPOIField('coordinates', displaySettings, replayActive)
         && !hideJourneyReplayField('coordinates')
     const displayDateTime = shouldDisplayPOIField('dateTime', displaySettings, replayActive)
     const displayAltitudeValue = point?.height > 0 && point.height !== point.simulatedHeight && displayAltitude
+    const explicitTitleAltitude = Number(point?.height)
+    const simulatedTitleAltitude = Number(point?.simulatedHeight)
+    const titleAltitude = Number.isFinite(explicitTitleAltitude) && explicitTitleAltitude > 0
+        ? explicitTitleAltitude
+        : simulatedTitleAltitude
+    const displayTitleAltitudeValue = Number.isFinite(titleAltitude) && titleAltitude > 0 && displayTitleAltitude
+    const formattedTitleAltitude = displayTitleAltitudeValue
+        ? UnitUtils.formatMetric(titleAltitude, {units: ELEVATION_UNITS, format: '%d'}).full
+        : ''
     const displayDateTimeValue = Boolean(point?.time && displayDateTime)
     const displayCoordinateDetails = displayAltitudeValue || displayCoordinates || displayDateTimeValue
 
@@ -284,9 +301,11 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                   point?.pill,
                   point?.noBackground,
                   point?.height,
+                  point?.simulatedHeight,
                   point?.location,
                   point?.display?.category,
                   point?.display?.titleCategoryIcon,
+                  point?.display?.titleAltitude,
                   point?.display?.maxWidth,
                   point?.display?.location,
                   point?.display?.altitude,
@@ -345,12 +364,20 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                 '--lgs-poi-border-color':     point?.color ?? lgs.colors.poiDefault,
                 '--lgs-poi-color':            point?.color ?? lgs.colors.poiDefault,
                 ...(point?.expanded && !useInMenu
-                    ? {'--poi-expanded-dimension': `${displaySettings.maxWidth}px`}
+                    ? {
+                        '--poi-expanded-dimension':      `${displaySettings.maxWidth}px`,
+                        '--poi-expanded-leader-angle':  `${expandedLeaderAngle}deg`,
+                        '--poi-expanded-leader-x':      `${Math.sin(expandedLeaderRadians)}rem`,
+                        '--poi-expanded-leader-y':      `${Math.cos(expandedLeaderRadians)}rem`,
+                    }
                     : {}),
                 ...style,
             }}
         >
-            <div className="poi-card" ref={_poiContent}>
+            <div
+                className={classNames('poi-card', point?.expanded && !useInMenu && 'poi-card--expanded')}
+                ref={_poiContent}
+            >
                 <div className={classNames(
                     'poi-card-inner',
                     point?.expanded && !useInMenu && point?.pill !== false && 'poi-card-inner--pill',
@@ -374,7 +401,10 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                                         onWaLoad={renderToCanvasAfterIconLoad}
                                     />
                                 )}
-                                <h3>{point.title ?? 'Point Of Interest'}</h3>
+                                <h3>
+                                    {point.title ?? 'Point Of Interest'}
+                                    {formattedTitleAltitude && ` (${formattedTitleAltitude})`}
+                                </h3>
                             </div>
                             {point.location && displayLocation && (
                                 <div className="poi-location" title={point.location}>
@@ -441,9 +471,15 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                             variant="regular"
                             family="duotone"
                             onWaLoad={renderToCanvasAfterIconLoad}
-                         />
+                        />
                      )}
                 </div>
+                {point?.expanded && !useInMenu && (
+                    <div className="poi-expanded-leader-space" aria-hidden="true">
+                        <span className="poi-expanded-leader"/>
+                        <span className="poi-geographic-anchor"/>
+                    </div>
+                )}
             </div>
         </div>
     )

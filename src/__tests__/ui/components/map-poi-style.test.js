@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-24
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,6 +35,15 @@ describe('Map POI style', () => {
         expect(css).not.toContain('box-shadow: inset 0 0 0 var(--poi-border-width) var(--lgs-poi-color);')
     })
 
+    it('renders reduced map POIs at 80% of their previous diameter', () => {
+        const css = loadMapPOIStyle()
+        const shrinkedStyle = css.slice(css.indexOf('.poi-icon-wrapper.poi-shrinked {'))
+        const menuOverride = shrinkedStyle.indexOf('.poi-icon-wrapper.poi-shrinked.used-in-menu {')
+
+        expect(shrinkedStyle.slice(0, menuOverride)).toContain('--dimension: calc(0.8 * var(--poi-reduce-dimension));')
+        expect(shrinkedStyle.slice(menuOverride)).toContain('--dimension: var(--poi-in-menu-dimension);')
+    })
+
     it('keeps the expanded title icon upright and the configured card width within its canvas', () => {
         const css = loadMapPOIStyle()
         const genericRotation = css.indexOf('.poi-card-inner svg, :not(.poi-shrinked) .poi-card-inner wa-icon::part(svg)')
@@ -43,7 +52,7 @@ describe('Map POI style', () => {
         )
         const overrideEnd = css.indexOf('}', titleIconOverride)
 
-        expect(css).toContain('max-width: var(--poi-expanded-dimension);')
+        expect(css).toContain('width: var(--poi-expanded-dimension);')
         expect(css).toContain('box-sizing: border-box;')
         expect(titleIconOverride).toBeGreaterThan(genericRotation)
         expect(css.slice(titleIconOverride, overrideEnd)).toContain('transform: none;')

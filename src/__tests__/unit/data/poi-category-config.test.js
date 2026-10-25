@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,5 +55,18 @@ describe('POI category configuration', () => {
     it('keeps Refuge as the overnight shelter category without adding a duplicate lodging category', () => {
         expect(settings.poi.categories).toContainEqual(expect.objectContaining({slug: 'refuge'}))
         expect(settings.poi.categories).not.toContainEqual(expect.objectContaining({slug: 'lodging'}))
+    })
+
+    it('defines POI display defaults in YAML and leaves expanded width to the code default', () => {
+        expect(settings.poi.displayDefaults).toEqual({
+            category:          true,
+            titleCategoryIcon: false,
+            titleAltitude:     false,
+            location:          false,
+            altitude:          false,
+            coordinates:       false,
+            dateTime:          false,
+        })
+        expect(settings.poi.displayDefaults).not.toHaveProperty('maxWidth')
     })
 })

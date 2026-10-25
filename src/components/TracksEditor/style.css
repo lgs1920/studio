@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-07
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,29 @@
 
 #journey-editor-drawer wa-switch::part(control) {
     margin-left: var(--lgs-gutter);
+}
+
+#journey-editor-drawer {
+    & .journey-pois-panel {
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+
+        & > .lgs-scrollbars-container {
+            flex: 1 1 0;
+            min-height: 0;
+        }
+
+        & .map-poi-style-switch::part(control) {
+            margin-left: auto;
+        }
+
+        & .lgs-scrollbars .track-vertical {
+            display: none !important;
+        }
+    }
 }
 
 .lgs--journey-fix-path-setting {

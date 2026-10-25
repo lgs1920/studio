@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -134,11 +134,18 @@ export class StartupDataLoader {
         await this.#activeJourneyCompletion
     }
 
-    #installPOIs = items => {
+    /**
+     * Persist display defaults on loaded POIs before installing them in the map store.
+     *
+     * @param {Array<Object>} items - POI records received from the startup worker.
+     * @returns {Promise<void>} Resolves after each record has been installed.
+     */
+    #installPOIs = async items => {
         for (const data of items ?? []) {
             if (!data?.id || __.ui.poiManager.list.has(data.id)) {
                 continue
             }
+            await __.ui.poiManager.ensurePersistedDisplaySettings?.(data)
             const poi = new MapPOI(data)
             __.ui.poiManager.list.set(poi.id, poi)
             __.ui.poiManager.addToJourneyIndex(poi.id, poi)
@@ -324,7 +331,7 @@ export class StartupDataLoader {
             }
 
             if (packet.type === 'pois') {
-                this.#installPOIs(packet.items)
+                await this.#installPOIs(packet.items)
                 if (current && !this.#currentPOIsReady) {
                     this.#currentPOIsReady = true
                     markStartup('current-pois-first-batch', {count: packet.items?.length ?? 0})
@@ -498,7 +505,7 @@ export class StartupDataLoader {
                 if (packet.type !== 'pois') {
                     return
                 }
-                this.#installPOIs(packet.items)
+                await this.#installPOIs(packet.items)
                 if (currentOnly) {
                     this.#currentPOIsReady = true
                 }

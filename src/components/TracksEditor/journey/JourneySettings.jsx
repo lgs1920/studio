@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-17
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -936,7 +936,7 @@ export const JourneySettings = () => {
 
                             {/* POIs Panel */}
                             <WaTabPanel name={POIS}>
-                                <div className="panel-wrapper">
+                                <div className="panel-wrapper journey-pois-panel">
                                     <MapPOIEditListActions/>
                                     <LGSScrollbars><MapPOIList/></LGSScrollbars>
                                 </div>
