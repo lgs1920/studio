@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {Widget} from '@Components/MainUI/widgets/Widget'
+import {applyPOIDuotoneIconStyles} from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import '@Components/MainUI/video/style.css'
 import {captureReplayCropSnapshot} from '@Core/ui/ReplayCropSnapshot'
 import {
@@ -416,6 +417,7 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                         animation={snapshot.paused ? 'fade' : indicatorAnimation}
                         className={`video-recorder-indicator ${indicatorState}${snapshot.paused ? ' paused' : ''}`}
                         label={snapshot.phase ?? (isDryRun ? 'Dry run' : 'Recording')}
+                        onWaLoad={isDryRun ? undefined : applyPOIDuotoneIconStyles}
                     />
                 )}
                 <span className={`replay-recording-monitor-title${titleClassName}`}>

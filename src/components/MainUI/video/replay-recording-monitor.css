@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,6 +68,10 @@
         display: grid !important;
         grid-template-columns: auto minmax(0, 1fr);
         justify-content: normal;
+
+        .video-recorder-indicator {
+            margin: 0;
+        }
 
         .replay-recording-monitor-title {
             justify-self: start;
