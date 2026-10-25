@@ -45,7 +45,7 @@ describe('POI canvas geometry', () => {
             const offset = calculatePOIContentPixelOffset(element, canvasWidth, canvasHeight)
 
             expect(offset.x).toBeCloseTo(-13)
-            expect(offset.y).toBe(50)
+            expect(offset.y).toBe(-50)
         })
     })
 
@@ -60,7 +60,7 @@ describe('POI canvas geometry', () => {
 
     it.each([
         {anchorLeft: 180, anchorTop: 170, expectedX: -10, expectedY: 0},
-        {anchorLeft: 160, anchorTop: 220, expectedX: 10, expectedY: 50},
+        {anchorLeft: 160, anchorTop: 220, expectedX: 10, expectedY: -50},
     ])('offsets the image so its geographic anchor reaches the Cesium position', ({
         anchorLeft,
         anchorTop,

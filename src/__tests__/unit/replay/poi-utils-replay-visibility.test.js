@@ -250,7 +250,7 @@ describe('POIUtils replay visibility', () => {
             visible:   true,
             expanded:  true,
             scale:     0.5,
-            pixelOffset: {x: -20, y: 0},
+            pixelOffset: {x: -20, y: -40},
             image: {
                 src:    'data:image/png;base64,test',
                 width:  200,
@@ -259,6 +259,7 @@ describe('POIUtils replay visibility', () => {
         })
 
         expect(propertyValue(entity.billboard.pixelOffset).x).toBe(-10)
+        expect(propertyValue(entity.billboard.pixelOffset).y).toBe(-20)
         expect(propertyValue(entity.billboard.pixelOffsetScaleByDistance)).toMatchObject({
             near:      10000,
             nearValue: 1,

@@ -20,7 +20,8 @@
  * @param {HTMLElement} element - The DOM element captured into the billboard canvas.
  * @param {number} canvasWidth - The captured canvas width in CSS pixels.
  * @param {number} canvasHeight - The captured canvas height in CSS pixels.
- * @returns {{x: number, y: number}} Billboard pixel offset that aligns the geographic anchor.
+ * @returns {{x: number, y: number}} Billboard pixel offset that aligns the geographic anchor. Cesium uses screen
+ *     coordinates for pixel offsets, so positive y moves the image down.
  */
 export const calculatePOIContentPixelOffset = (element, canvasWidth, canvasHeight) => {
     const card = element.querySelector('.poi-card-inner')
@@ -50,6 +51,6 @@ export const calculatePOIContentPixelOffset = (element, canvasWidth, canvasHeigh
 
     return {
         x: canvasWidth * (0.5 - anchorRatio),
-        y: canvasHeight * (anchorVerticalRatio - 0.5),
+        y: canvasHeight * (0.5 - anchorVerticalRatio),
     }
 }
