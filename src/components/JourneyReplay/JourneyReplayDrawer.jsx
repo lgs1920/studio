@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -1080,9 +1080,7 @@ export const JourneyReplayDrawer = memo(() => {
         const replayEnabled = hideAllPoisDuringJourneyReplay
             ? false
             : activePoiVisibilityOverrides[poi.id] ?? settings.visible !== false
-        const animated = hideAllPoisDuringJourneyReplay
-            ? false
-            : animateAllPoisDuringJourneyReplay || settings.animated !== false
+        const animated = animateAllPoisDuringJourneyReplay || settings.animated !== false
 
         return count + (replayEnabled || animated ? 1 : 0)
     }, 0), [
@@ -2063,16 +2061,14 @@ export const JourneyReplayDrawer = memo(() => {
                                                     >
                                                         {'Hide all POIs during replay'}
                                                     </WaSwitch>
-                                                    {!hideAllPoisDuringJourneyReplay && (
-                                                        <WaSwitch
-                                                            size="xs"
-                                                            label-at-start
-                                                            checked={animateAllPoisDuringJourneyReplay}
-                                                            onInput={updateAnimateAllPoisDuringJourneyReplay}
-                                                        >
-                                                            {'Animate all POIs during replay'}
-                                                        </WaSwitch>
-                                                    )}
+                                                    <WaSwitch
+                                                        size="xs"
+                                                        label-at-start
+                                                        checked={animateAllPoisDuringJourneyReplay}
+                                                        onInput={updateAnimateAllPoisDuringJourneyReplay}
+                                                    >
+                                                        {'Animate all POIs during replay'}
+                                                    </WaSwitch>
                                                 </div>
                                                 {nearbyPOIs.length === 0 ? (
                                                     <p className="replay-empty-state">{'No replay POI matches for the current journey.'}</p>
@@ -2088,9 +2084,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                               const replayEnabled = hideAllPoisDuringJourneyReplay
                                                                   ? false
                                                                   : activePoiVisibilityOverrides[poi.id] ?? settings.visible !== false
-                                                              const animated = hideAllPoisDuringJourneyReplay
-                                                                  ? false
-                                                                  : animateAllPoisDuringJourneyReplay || settings.animated !== false
+                                                              const animated = animateAllPoisDuringJourneyReplay || settings.animated !== false
                                                               const visibilityButtonId = `replay-poi-visibility-${poi.id}`
                                                               const animationButtonId = `replay-poi-animation-${poi.id}`
                                                               const toggleVisibility = event => {
@@ -2154,7 +2148,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                                                   size="s"
                                                                                   aria-label={animated ? 'Disable POI animation during replay' : 'Enable POI animation during replay'}
                                                                                   aria-pressed={animated}
-                                                                                  disabled={hideAllPoisDuringJourneyReplay || animateAllPoisDuringJourneyReplay}
+                                                                                  disabled={animateAllPoisDuringJourneyReplay}
                                                                                   onClick={toggleAnimation}
                                                                               >
                                                                                   <WaIcon
@@ -2175,7 +2169,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                                                     {'Show during replay'}
                                                                               </WaSwitch>
                                                                           </div>
-                                                                          {replayEnabled && (
+                                                                          {(replayEnabled || hideAllPoisDuringJourneyReplay) && (
                                                                               <div
                                                                                   key={`replay-poi-options-${poi.id}`}
                                                                                   className="replay-poi-options">
@@ -2185,7 +2179,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                                                           size="xs"
                                                                                           label-at-start
                                                                                           checked={settings.animated !== false}
-                                                                                          disabled={hideAllPoisDuringJourneyReplay || animateAllPoisDuringJourneyReplay}
+                                                                                          disabled={animateAllPoisDuringJourneyReplay}
                                                                                           onInput={event => updatePOIJourneyReplaySettings(poi.id, {
                                                                                               animated: getChecked(event),
                                                                                           })}

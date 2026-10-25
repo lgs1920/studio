@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-03-01
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -418,7 +418,7 @@ export class POIUtils {
      * @returns {boolean}
      *
      */
-    static setPOIVisibility = (poi, visibility) => {
+    static setPOIVisibility = (poi, visibility, {allowReplayAnimation = false} = {}) => {
         if (poi?.tooClose === true) {
             return false
         }
@@ -442,10 +442,10 @@ export class POIUtils {
                 const behavior = normalizeReplayPOIBehavior(replaySettings?.basic)
                 const endpoint = isReplayPOIEndpoint(poi)
                 forceShowDuringReplay = behavior.poiVisibilityMode === 'yes' && !endpoint
-                if (behavior.poiVisibilityMode === 'no' && !endpoint) {
+                if (behavior.poiVisibilityMode === 'no' && !endpoint && !allowReplayAnimation) {
                     return false
                 }
-                if ((endpoint || behavior.poiVisibilityMode === 'user')
+                if (!allowReplayAnimation && (endpoint || behavior.poiVisibilityMode === 'user')
                     && normalizeJourneyReplayPOISettings(poi?.replay).visible === false) {
                     return false
                 }
@@ -453,10 +453,10 @@ export class POIUtils {
             else {
                 const hideAllPOIs = replay?.hideAllPoisDuringJourneyReplay === true
                     || replaySettings?.hideAllPoisDuringJourneyReplay === true
-                if (hideAllPOIs && !isReplayPOIEndpoint(poi)) {
+                if (hideAllPOIs && !isReplayPOIEndpoint(poi) && !allowReplayAnimation) {
                     return false
                 }
-                if (normalizeJourneyReplayPOISettings(poi?.replay).visible === false) {
+                if (!allowReplayAnimation && normalizeJourneyReplayPOISettings(poi?.replay).visible === false) {
                     return false
                 }
             }

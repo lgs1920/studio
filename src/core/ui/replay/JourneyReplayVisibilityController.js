@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -179,12 +179,12 @@ export const poiEntities =  (mode, poi) => {
         return entities
     }
 
-export const setPOIEntityVisibility = (mode, poi, visible) => {
+export const setPOIEntityVisibility = (mode, poi, visible, {allowReplayAnimation = false} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         call.poiEntities(poi).forEach(entity => {
-            const effectiveVisibility = POIUtils.setPOIVisibility(poi, visible)
+            const effectiveVisibility = POIUtils.setPOIVisibility(poi, visible, {allowReplayAnimation})
             entity.show = effectiveVisibility
             if (entity.billboard) {
                 entity.billboard.show = effectiveVisibility
@@ -300,7 +300,9 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
 
             const visibleBeforePlayback = state.replayPOIVisibilityState.get(poi.id)?.visible
                 ?? call.isPOIVisibleBeforePlayback(poi)
-            const visibleDuringPlayback = (visibilityMode === 'yes' && !isReplayPOIEndpoint(poi))
+            const animationActive = state.replayPoiTriggered.has(poi.id)
+            const visibleDuringPlayback = animationActive
+                || (visibilityMode === 'yes' && !isReplayPOIEndpoint(poi))
                 || (poi.visible !== false
                 && (visibilityMode === 'yes'
                     || (visibilityMode === 'user' && visibleBeforePlayback && settings.visible !== false))
@@ -312,7 +314,7 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
                 })
             }
 
-            call.setPOIEntityVisibility(poi, visibleDuringPlayback)
+            call.setPOIEntityVisibility(poi, visibleDuringPlayback, {allowReplayAnimation: animationActive})
         }
     }
 

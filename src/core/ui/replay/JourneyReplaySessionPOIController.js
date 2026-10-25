@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -179,6 +179,11 @@ export const closeJourneyReplayOpenedPOIsBeforeStopClips = (mode, ) => {
 export const prepareNearbyPOIsForPlayback = async (mode, sample = null) => {
         const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
         const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        const {poiVisibilityMode: initialVisibilityMode} = currentJourneyReplayPoiBehavior()
+        if (initialVisibilityMode === 'no') {
+            state.replayPoiTriggered.clear()
+            call.applyJourneyReplayPOIVisibility()
+        }
         await call.restoreNearbyPOIsAfterPlayback()
 
         const store = replayStore()
@@ -240,13 +245,13 @@ export const openNearbyPOIForPlayback = async (mode, poiId) => {
         const behavior = currentJourneyReplayPoiBehavior()
         const shouldAnimate = behavior.basicMode
             ? behavior.animatePoisDuringJourneyReplay
-            : !behavior.hideAllPoisDuringJourneyReplay
-                && (behavior.animateAllPoisDuringJourneyReplay || settings.animated !== false)
+            : behavior.animateAllPoisDuringJourneyReplay || settings.animated !== false
         if (!poi || isReplayPOIEndpoint(poi) || !shouldAnimate) {
             return
         }
         await call.updatePOIExpandedState(poiId, true)
         state.replayPoiTriggered.add(poiId)
+        call.setPOIEntityVisibility(poi, true, {allowReplayAnimation: true})
     }
 
 export const syncNearbyPOIsForSample = async (mode, sample = null) => {
@@ -268,7 +273,6 @@ export const syncNearbyPOIsForSample = async (mode, sample = null) => {
         const {
             basicMode,
             poiVisibilityMode,
-            hideAllPoisDuringJourneyReplay,
             animatePoisDuringJourneyReplay,
             poiAnimationDurationSeconds,
             animateAllPoisDuringJourneyReplay,
@@ -282,7 +286,7 @@ export const syncNearbyPOIsForSample = async (mode, sample = null) => {
         const shouldAnimatePOIs = replayDurationSeconds > 0 && totalDistance > 0
         const expandedIds = new Set()
 
-        if (shouldAnimatePOIs && poiVisibilityMode !== 'no') {
+        if (shouldAnimatePOIs) {
             for (const entry of nearbyPois) {
                 const poiId = entry?.poi?.id
                 const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId) ?? entry?.poi
@@ -291,11 +295,12 @@ export const syncNearbyPOIsForSample = async (mode, sample = null) => {
                 }
 
                 const poiSettings = normalizeJourneyReplayPOISettings(poi.replay)
-                const visibleForReplay = poiVisibilityMode === 'yes' || poiSettings.visible !== false
                 const animateThisPOI = basicMode
                     ? animatePoisDuringJourneyReplay
-                    : !hideAllPoisDuringJourneyReplay
-                        && (animateAllPoisDuringJourneyReplay || poiSettings.animated !== false)
+                    : animateAllPoisDuringJourneyReplay || poiSettings.animated !== false
+                const visibleForReplay = poiVisibilityMode === 'no'
+                    || poiVisibilityMode === 'yes'
+                    || poiSettings.visible !== false
                 if (!visibleForReplay || !animateThisPOI) {
                     continue
                 }
@@ -322,6 +327,9 @@ export const syncNearbyPOIsForSample = async (mode, sample = null) => {
             ...collapsedIds.map(poiId => call.updatePOIExpandedState(poiId, false)),
             ...newlyExpandedIds.map(poiId => call.updatePOIExpandedState(poiId, true)),
         ])
+        if (collapsedIds.length > 0 || newlyExpandedIds.length > 0) {
+            call.applyJourneyReplayPOIVisibility?.()
+        }
     }
 
     /**

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -1296,9 +1296,9 @@ describe('JourneyReplayDrawer', () => {
         await waitFor(() => {
             expect(globalThis.lgs.settings.ui.replay.hideAllPoisDuringJourneyReplay).toBe(true)
             expect(globalThis.lgs.stores.replay.hideAllPoisDuringJourneyReplay).toBe(true)
-            expect(view.queryByLabelText('Animate all POIs during replay')).toBeNull()
+            expect(view.getByLabelText('Animate all POIs during replay')).toBeTruthy()
             expect(view.getByLabelText('Show during replay').disabled).toBe(true)
-            expect(view.queryByLabelText('Animate during replay')).toBeNull()
+            expect(view.getByLabelText('Animate during replay').disabled).toBe(false)
         })
 
         fireEvent.click(view.getByLabelText('Hide all POIs during replay'))
