@@ -3891,3 +3891,139 @@
 ## 2026-10-23 — [`Merge pull request #550 from lgs1920/codex/388-fit-tcx-1.0.0`](https://github.com/lgs1920/studio/commit/f36d441ce4920c98bd97f712087370d7db500289)
 
 - feat: support FIT and TCX journey imports
+
+## 2026-10-22 — [`style: darken Fix Path area selection fill`](https://github.com/lgs1920/studio/commit/4f527bbcaaf3af14a1aec8d9122ab16c6ae4f53b)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`style: improve map cursor visibility`](https://github.com/lgs1920/studio/commit/ff9ed23f66481796d42ee31fa53a3b6f45d48bdb)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`style: align Replay guide menu typography`](https://github.com/lgs1920/studio/commit/823972ece4238702bcb234daabe1294461c11be2)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`docs: add Fix Path follow-up requests`](https://github.com/lgs1920/studio/commit/3f88d57b53bb734f70be670d233c449745a7640a)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`docs: standardize Web Awesome form layout rules`](https://github.com/lgs1920/studio/commit/4ac1a0dbe0a2ebaa7a17c51e5d1034b464f5f3e9)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`feat: add Basic Replay trace sampling and caps`](https://github.com/lgs1920/studio/commit/b95c74cfec0ece7a83ef26d978f26ca89447929a)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`fix: round styled journey track outlines`](https://github.com/lgs1920/studio/commit/7e2e4e0f76a93e4da01cd83425ad0e24ebf3179e)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`fix: reduce Basic Replay sampling toolbar icon`](https://github.com/lgs1920/studio/commit/02885f24cecff2cb08df22fc96bc0f546ce00313)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`fix: orient semicircular trace end caps`](https://github.com/lgs1920/studio/commit/dc380f2b3527bb25133425a4ec4e8b3a509a6b4e)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`fix: narrow Basic Replay sampling selector`](https://github.com/lgs1920/studio/commit/58cb253eeff4cd47ec77fddcade307fceaacd064)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/a9e2358ed7e9391762eaa7cecbda88a7696ed96a)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`fix: pause journey orbit during startup loading`](https://github.com/lgs1920/studio/commit/dc64d0116d48009e7255fedddff97697fc93a4e2)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`fix: respect journey replay duration`](https://github.com/lgs1920/studio/commit/726932cc8012c4aa81ead119ec1a7a6f2a8f21f4)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`docs: add FIT and TCX import samples`](https://github.com/lgs1920/studio/commit/7f39e6649c496a7906ab6673364301b64b63fead)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`fix: scale replay camera tracking by duration`](https://github.com/lgs1920/studio/commit/7db5209ca7fe9df3e79b532ee4ae504868e71ce7)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`fix: display journey times in local time zones`](https://github.com/lgs1920/studio/commit/fcdde625db85c31975bc49b5b9f56c574475b821)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`fix: simplify elevation profile drawer axes`](https://github.com/lgs1920/studio/commit/3b72a66265c0c8de73683a8501bc78cf2a3f03f1)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`style: remove default elevation profile frame`](https://github.com/lgs1920/studio/commit/9401c718fc6fc7d841a04b90e83381139a61eb40)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`fix: support single-point Fix Path sections`](https://github.com/lgs1920/studio/commit/e387b41c869c9349a8dbadde4651e1bb286bb719)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`style: refine replay video settings controls`](https://github.com/lgs1920/studio/commit/22e34122fd948c997bd5007c37dcd75169df8932)
+
+- Recorded automatically from Git history.
+
+## 2026-10-23 — [`fix: refine replay settings labels and spacing`](https://github.com/lgs1920/studio/commit/2f2b12ee84a47a8ccc3cd35487ec2b51c4b7f362)
+
+- Recorded automatically from Git history.
+
+## 2026-10-24 — [`fix: keep Cesium and Replay guide scaling consistent`](https://github.com/lgs1920/studio/commit/57305e45cc6e21e940467652356a3d5dad487f95)
+
+- Recorded automatically from Git history.
+
+## 2026-10-24 — [`feat: configure Basic Replay end focus`](https://github.com/lgs1920/studio/commit/9d4a714356fb2b68db57a3cc85ba93775f6a6ccc)
+
+- Recorded automatically from Git history.
+
+## 2026-10-24 — [`docs: track Fix Path handle alignment follow-up`](https://github.com/lgs1920/studio/commit/c854f24d7eda2cf5e2dce4465163aff629034d01)
+
+- Recorded automatically from Git history.
+
+## 2026-10-24 — [`fix: stabilize Basic Replay end-focus controls`](https://github.com/lgs1920/studio/commit/74c2a7f46966eba6264990612aeb2f5206315c03)
+
+- Recorded automatically from Git history.
+
+## 2026-10-24 — [`feat: add Basic Replay trace appearance controls`](https://github.com/lgs1920/studio/commit/36fbf4ca71f82ad24274e4a4c7d54dff309f59a4)
+
+- Recorded automatically from Git history.
+
+## 2026-10-24 — [`fix: honor Journey Basic Replay duration`](https://github.com/lgs1920/studio/commit/be04c82035dfa6cbb6b2f8a693588ef06a594c26)
+
+- Recorded automatically from Git history.
+
+## 2026-10-24 — [`fix: keep Replay Navigation moving between corrections`](https://github.com/lgs1920/studio/commit/444cb8a68fa129e7fa76834db33d5a48bb8375b4)
+
+- Recorded automatically from Git history.
+
+## 2026-10-24 — [`fix: set Basic Replay focus to one turn per five seconds`](https://github.com/lgs1920/studio/commit/730d746db5480e3789060290c00e7e146dc5472e)
+
+- Recorded automatically from Git history.
+
+## 2026-10-24 — [`feat: configure expanded Map POI display`](https://github.com/lgs1920/studio/commit/c2986de52418df5236505370bb5106281dcf91bf)
+
+- Recorded automatically from Git history.
+
+## 2026-10-24 — [`fix: preserve Replay marker sizing on high-DPI canvas`](https://github.com/lgs1920/studio/commit/65c03e13479b2c6ea0f892fb99444a53cdd5abc4)
+
+- Recorded automatically from Git history.
+
+## 2026-10-24 — [`feat: add practical POI categories`](https://github.com/lgs1920/studio/commit/f2c4194104da55615b313869c38592c421e5d44b)
+
+- Recorded automatically from Git history.
+
+## 2026-10-24 — [`feat: map imported POI categories`](https://github.com/lgs1920/studio/commit/ce708de9be03d4adfa9615b28183f5875e5ef1d8)
+
+- Recorded automatically from Git history.
+
+## 2026-10-24 — [`feat: configure POI display in Basic Replay`](https://github.com/lgs1920/studio/commit/4dda4534803382a939fea9707dfa695f36402495)
+
+- Recorded automatically from Git history.
