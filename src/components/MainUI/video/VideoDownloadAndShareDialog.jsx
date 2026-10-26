@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-04
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -94,6 +94,7 @@ export const VideoDownloadAndShareDialog = () => {
     const _shareInFlight = useRef(false)
     const _dialogCleanupDone = useRef(true)
     const _replayScenePreFocused = useRef(false)
+    const _mediaRequestToken = useRef(0)
     const releaseMediaUrl = useCallback(() => {
         const url = _mediaBlob.current.url
         if (url) {
@@ -110,8 +111,6 @@ export const VideoDownloadAndShareDialog = () => {
     const getMediaFilenameStem = useCallback((fallback = DEFAULT_VIDEO_FILENAME) => (
         sanitizeFilenameStem(__.mediaCapture.filename?.({}) || fallback, fallback)
     ), [])
-    const isReplayVideoLinked = lgs.stores?.replay?.recordingSync === true
-                                || lgs.stores?.replay?.basicPreparationActive === true
     const getVideoFilenameStem = useCallback(() => (
         sanitizeFilenameStem(_mediaBlob.current.filename || getMediaFilenameStem(), DEFAULT_VIDEO_FILENAME)
     ), [getMediaFilenameStem])
@@ -129,13 +128,16 @@ export const VideoDownloadAndShareDialog = () => {
         }
 
         try {
+            // Read live lifecycle state without reconnecting the media subscription or releasing its URL.
+            const isReplayVideoLinked = lgs.stores?.replay?.recordingSync === true
+                || lgs.stores?.replay?.basicPreparationActive === true
             await preFocusVideoReplayScene({linked: isReplayVideoLinked})
             _replayScenePreFocused.current = true
         }
         catch (error) {
             console.error('Unable to pre-focus the replay scene:', error)
         }
-    }, [isReplayVideoLinked])
+    }, [])
 
     /**
      * Safely accesses media data with fallback values.
@@ -195,7 +197,9 @@ export const VideoDownloadAndShareDialog = () => {
     }, [deferredMediaData])
 
     useEffect(() => {
+        /** Replace pending video handoff with a completed screenshot. */
         const handleCapture = (event) => {
+            _mediaRequestToken.current += 1
             try {
                 const imageBlob = event.detail?.blob
                 if (!(imageBlob instanceof Blob) || imageBlob.size === 0) {
@@ -228,13 +232,22 @@ export const VideoDownloadAndShareDialog = () => {
             }
         }
 
+        /** Present only the latest still-current recording after scene restoration settles. */
         const handleDeferredReplayExport = async (event) => {
-            const {blob, filename = DEFAULT_VIDEO_FILENAME, mediaData = {}} = event.detail ?? {}
+            const {blob, filename = DEFAULT_VIDEO_FILENAME, mediaData = {}, mediaHandoffRevision} = event.detail ?? {}
+            /** Keep delivered media valid across producer unmounts until capture or cancellation supersedes it. */
+            const isCurrentMedia = () => mediaHandoffRevision === undefined
+                || mediaHandoffRevision === lgs.stores.ui.video.mediaHandoffRevision
+            if (!isCurrentMedia()) {
+                return
+            }
             if (!(blob instanceof Blob) || blob.size <= 0) {
                 UIToast.error({caption: 'Replay video', text: 'The generated video is empty.'})
                 return
             }
 
+            const requestToken = ++_mediaRequestToken.current
+            _replayScenePreFocused.current = false
             releaseMediaUrl()
             const url = URL.createObjectURL(blob)
             const safeFilename = sanitizeFilenameStem(`${filename}`.replace(/\.[^.]+$/, ''), DEFAULT_VIDEO_FILENAME)
@@ -253,6 +266,20 @@ export const VideoDownloadAndShareDialog = () => {
             setFilename(safeFilename)
             setCanDownloadAndShare(true)
             await prepareReplaySceneForDialog()
+            if (requestToken !== _mediaRequestToken.current) {
+                return
+            }
+            if (!isCurrentMedia()) {
+                releaseMediaUrl()
+                _mediaBlob.current = {blob: null, url: null, filename: ''}
+                _dialogCleanupDone.current = true
+                setMediaUrl(null)
+                setDeferredMediaData(null)
+                setCanDownloadAndShare(false)
+                setDialogOpen(false)
+                void __.mediaCapture?.releaseMedia?.()
+                return
+            }
             setDialogOpen(true)
         }
 
@@ -261,6 +288,7 @@ export const VideoDownloadAndShareDialog = () => {
         globalThis.window?.addEventListener(REPLAY_DEFERRED_EXPORT_READY_EVENT, handleDeferredReplayExport)
 
         return () => {
+            _mediaRequestToken.current += 1
             __.mediaCapture.removeEventListener(ReplayMediaCapture.events.CAPTURED, handleCapture)
             globalThis.window?.removeEventListener(REPLAY_DEFERRED_EXPORT_READY_EVENT, handleDeferredReplayExport)
             releaseMediaUrl()
@@ -495,7 +523,11 @@ export const VideoDownloadAndShareDialog = () => {
             return
         }
         _dialogCleanupDone.current = true
+        const requestToken = ++_mediaRequestToken.current
         await prepareReplaySceneForDialog()
+        if (requestToken !== _mediaRequestToken.current) {
+            return
+        }
         _replayScenePreFocused.current = false
         clearVideoReplayRuntimeState()
         setDialogOpen(false)

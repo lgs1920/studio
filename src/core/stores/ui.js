@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-06-30
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -97,6 +97,8 @@ export const ui = {
         snapshot: false,
         paused:          false,
         finalizing: false,
+        // Transient capture identity survives capture-surface remounts and is never a saved video preference.
+        mediaHandoffRevision: 0,
         size:       0,
         toolbarPosition: {},
         step:    null,

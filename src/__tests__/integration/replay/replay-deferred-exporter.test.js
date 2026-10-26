@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -1957,6 +1957,96 @@ describe('ReplayDeferredExporter', () => {
         expect(restorePlaybackScene).toHaveBeenCalledTimes(2)
         expect(restorePlaybackScene).toHaveBeenNthCalledWith(1, {force: true})
         expect(restorePlaybackScene).toHaveBeenNthCalledWith(2, {force: true})
+    })
+})
+
+describe('Replay export terminal cleanup', () => {
+    it.each([false, true])('preserves the encoding outcome and continues cleanup after restoration errors (encoder fails: %s)', async encoderFails => {
+        Output.instances.length = 0
+        const sceneError = new Error('Terminal scene restoration failed')
+        const refreshError = new Error('Preparation refresh failed')
+        const restorePlaybackScene = vi.fn().mockResolvedValueOnce(true).mockRejectedValueOnce(sceneError)
+        const refresh = vi.fn(() => { throw refreshError })
+        const restoreTileCache = vi.fn()
+        const prepareTileCache = vi.spyOn(replayTileReadiness, 'prepareReplaySceneTileCache').mockReturnValue(restoreTileCache)
+        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const consoleInfo = vi.spyOn(console, 'info').mockImplementation(() => {})
+        const consoleTable = vi.spyOn(console, 'table').mockImplementation(() => {})
+        const sourceCanvas = document.createElement('canvas')
+        sourceCanvas.width = 320
+        sourceCanvas.height = 180
+        sourceCanvas.getBoundingClientRect = () => ({left: 0, top: 0, width: 320, height: 180})
+        const scene = {render: vi.fn(), requestRender: vi.fn()}
+        const viewer = {scene, useDefaultRenderLoop: true, render: vi.fn(), resize: vi.fn()}
+        const replay = {
+            durationMillis: 1000, progress: 0, readiness: {enabled: false},
+            clips: {catalog: {}, start: [], stop: []},
+        }
+        const replayMode = {
+            restorePlaybackScene,
+            preparePlaybackSceneForExport: vi.fn(async () => true),
+            renderReplayExportFrame: vi.fn(async () => ({})),
+            cesiumScene: () => scene,
+            refresh,
+        }
+        const uiToast = {success: vi.fn(), warning: vi.fn()}
+        globalThis.lgs = {
+            scene, viewer, canvas: sourceCanvas,
+            stores: {ui: {video: {fps: 0, quality: 0}}},
+            settings: {ui: {replay: {userMode: 'expert'}}},
+            theJourney: {slug: 'journey-cleanup'},
+        }
+        globalThis.__ = {
+            device: {browser: 'chromium'},
+            ui: {
+                replay: replayMode,
+                widgetCache: {getAll: () => new Map()},
+                widgetManager: {getElementById: () => null, getWidgetConfig: () => ({})},
+            },
+        }
+        mediabunnyMocks.failNextCanvasAdd = encoderFails
+
+        try {
+            const exportPromise = runReplayDeferredMp4Export({
+                replay,
+                journey: {slug: 'journey-cleanup'},
+                controller: {duration: 1, progress: 0, seek: vi.fn(), currentSample: () => ({progress: 0})},
+                replayMode, sourceCanvas, dimensions: {width: 320, height: 180}, fps: 2,
+                buildCanvas: dimensions => ({...dimensions, getContext: () => ({clearRect: vi.fn(), drawImage: vi.fn()})}),
+                download: null, uiToast,
+            })
+            if (encoderFails) {
+                await expect(exportPromise).rejects.toThrow('Codec reclaimed due to inactivity.')
+            }
+            else {
+                const result = await exportPromise
+                expect(result.blob.size).toBeGreaterThan(0)
+                expect(result.recordingPerformance.status).toBe('completed')
+                expect(Output.instances.at(-1).finalize).toHaveBeenCalledOnce()
+                expect(result.cleanupErrors).toEqual([
+                    {stage: 'playback-scene', message: sceneError.message},
+                    {stage: 'preparation-refresh', message: refreshError.message},
+                ])
+            }
+
+            expect(restorePlaybackScene).toHaveBeenCalledTimes(2)
+            expect(refresh).toHaveBeenCalledOnce()
+            expect(restoreTileCache).toHaveBeenCalledOnce()
+            expect(CanvasOverlayComposer.instances.at(-1).dispose).toHaveBeenCalledOnce()
+            expect(viewer.useDefaultRenderLoop).toBe(true)
+            expect(getReplayRecordingMonitorSnapshot().active).toBe(false)
+            expect(replay.deferredExportPlan.runtime.cleanupErrors).toHaveLength(2)
+            expect(uiToast.warning).toHaveBeenCalledOnce()
+            expect(uiToast.warning.mock.calls[0][0].caption).toBe('Replay video cleanup')
+            expect(consoleError).toHaveBeenCalledTimes(2)
+            expect(scene.requestRender.mock.invocationCallOrder.at(-1)).toBeGreaterThan(restoreTileCache.mock.invocationCallOrder[0])
+        }
+        finally {
+            prepareTileCache.mockRestore()
+            consoleError.mockRestore()
+            consoleInfo.mockRestore()
+            consoleTable.mockRestore()
+        }
     })
 })
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-17
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -459,6 +459,74 @@ describe('VideoDownloadAndShareDialog', () => {
         await openDialog()
 
         expect(screen.getByTestId('recording-info').getAttribute('data-metadata-status')).toBe('published')
+    })
+
+    it('retains the displayed media when Replay preparation flags change', async () => {
+        const {rerender} = render(<VideoDownloadAndShareDialog/>)
+        await act(async () => {
+            window.dispatchEvent(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
+                detail: {blob: new Blob(['video'], {type: 'video/mp4'}), filename: 'retained.mp4'},
+            }))
+        })
+        expect(screen.queryByTestId('video-preview-dialog')).not.toBeNull()
+
+        globalThis.lgs.stores.replay.recordingSync = false
+        rerender(<VideoDownloadAndShareDialog/>)
+
+        expect(screen.queryByTestId('video-preview-dialog')).not.toBeNull()
+        expect(globalThis.URL.revokeObjectURL).not.toHaveBeenCalled()
+        expect(recorder.releaseMedia).not.toHaveBeenCalled()
+        const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+        await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Download'})))
+        expect(anchorClick.mock.instances[0]?.href).toBe('blob:recording')
+    })
+
+    it('discards a recording cancelled while its dialog scene is being restored', async () => {
+        let resolveRestore
+        globalThis.lgs.stores.ui.video.mediaHandoffRevision = 1
+        __.ui.replay.restorePlaybackScene.mockImplementationOnce(() => new Promise(resolve => {
+            resolveRestore = resolve
+        }))
+        render(<VideoDownloadAndShareDialog/>)
+        await act(async () => {
+            window.dispatchEvent(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
+                detail: {
+                    blob: new Blob(['video'], {type: 'video/mp4'}),
+                    mediaHandoffRevision: 1,
+                },
+            }))
+        })
+        globalThis.lgs.stores.ui.video.mediaHandoffRevision = 2
+        await act(async () => resolveRestore())
+
+        expect(screen.queryByTestId('video-preview-dialog')).toBeNull()
+        expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:recording')
+        expect(recorder.releaseMedia).toHaveBeenCalledOnce()
+    })
+
+    it('ignores a previous pending result after a newer media dialog has closed', async () => {
+        let resolveFirstRestore
+        __.ui.replay.restorePlaybackScene.mockImplementationOnce(() => new Promise(resolve => {
+            resolveFirstRestore = resolve
+        }))
+        render(<VideoDownloadAndShareDialog/>)
+        await act(async () => {
+            window.dispatchEvent(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
+                detail: {blob: new Blob(['first'], {type: 'video/mp4'}), filename: 'first.mp4'},
+            }))
+        })
+        await act(async () => {
+            window.dispatchEvent(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
+                detail: {blob: new Blob(['second'], {type: 'video/mp4'}), filename: 'second.mp4'},
+            }))
+        })
+        expect(screen.getByLabelText('File name input').value).toBe('second')
+        await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Close'})))
+        expect(screen.queryByTestId('video-preview-dialog')).toBeNull()
+        await act(async () => resolveFirstRestore())
+
+        expect(screen.queryByTestId('video-preview-dialog')).toBeNull()
+        expect(recorder.releaseMedia).toHaveBeenCalledOnce()
     })
 
 })

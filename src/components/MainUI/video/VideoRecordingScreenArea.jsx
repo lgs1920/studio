@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-30
- * Last modified: 2026-10-22
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -53,17 +53,21 @@ export const VideoRecordingScreenArea = memo(() => {
     const _cropZone = useRef(null)
     const _pendingFinish = useRef(null)
     const _recordingStartToken = useRef(0)
+    const _recordingAbortController = useRef(null)
     const [mountTimeoutOpen, setMountTimeoutOpen] = useState(false)
     const [mountTimeoutError, setMountTimeoutError] = useState({missing: [], timeoutMs: WIDGET_MOUNT_TIMEOUT})
     const [mountTimeoutAction, setMountTimeoutAction] = useState('record')
 
     /**
-     * Invalidate pending export completion updates before cancellation tears down this screen.
+     * Abort active work and invalidate pending completion updates before cancellation or screen teardown.
      * @returns {void} Nothing.
      */
     const invalidateRecording = useCallback(() => {
         _recordingStartToken.current += 1
+        _recordingAbortController.current?.abort()
     }, [])
+
+    useEffect(() => () => invalidateRecording(), [invalidateRecording])
 
     /**
      * Cancel the active browser recording and restore Replay preparation.
@@ -147,8 +151,14 @@ export const VideoRecordingScreenArea = memo(() => {
         || lgs.stores.replay.basicPreparationActive === true
     ), [])
 
-    const exportJourneyReplayFrameByFrame = useCallback(async ({renderSpec, startToken}) => {
+    /** Export a recording and hand its media to the dialog only while this start still owns the screen. */
+    const exportJourneyReplayFrameByFrame = useCallback(async ({renderSpec, startToken, mediaHandoffRevision}) => {
         const abortController = new AbortController()
+        _recordingAbortController.current = abortController
+        /** Only the live recording may publish a completed media result. */
+        const isCurrentRecording = () => startToken === _recordingStartToken.current
+            && !abortController.signal.aborted
+            && mediaHandoffRevision === $video.mediaHandoffRevision
         const dryRun = $video.dryRun === true
         const recordingDate = new Date()
         const journeyTitle = lgs.theJourney?.title?.trim() || ''
@@ -197,7 +207,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 exportRuntime.exportPromise = exportPromise
             }
             const result = await exportPromise
-            if (dryRun) {
+            if (!isCurrentRecording() || dryRun) {
                 return
             }
 
@@ -213,6 +223,7 @@ export const VideoRecordingScreenArea = memo(() => {
                                           : result.plan?.outputDurationMillis ?? result.plan?.videoTimeline?.durationMillis ?? 0
             globalThis.window?.dispatchEvent?.(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
                 detail: {
+                    mediaHandoffRevision,
                     blob: result.blob,
                     filename: result.filename,
                     mediaData: {
@@ -232,7 +243,7 @@ export const VideoRecordingScreenArea = memo(() => {
             }))
         }
         catch (error) {
-            if (error?.name !== 'AbortError') {
+            if (isCurrentRecording() && error?.name !== 'AbortError') {
                 console.error(
                     '[Replay video] Export failed before showing the error toast:',
                     error,
@@ -259,8 +270,11 @@ export const VideoRecordingScreenArea = memo(() => {
                     dryRun:       false,
                 })
                 restoreVideoCaptureUi()
+                stopReplayRecordingMonitor()
             }
-            stopReplayRecordingMonitor()
+            if (_recordingAbortController.current === abortController) {
+                _recordingAbortController.current = null
+            }
         }
     }, [$video])
 
@@ -281,9 +295,13 @@ export const VideoRecordingScreenArea = memo(() => {
         return isReplayVideoWidgetReady(widgetId)
     }, [])
 
+    /** Replace any pending recording start before preparing the current capture dimensions. */
     const handleStartRecording = useCallback(async () => {
-        const startToken = _recordingStartToken.current + 1
-        _recordingStartToken.current = startToken
+        invalidateRecording()
+        const startToken = _recordingStartToken.current
+        // Completed media belongs to the dialog. Only a new capture or explicit cancellation supersedes it.
+        const mediaHandoffRevision = ($video.mediaHandoffRevision ?? 0) + 1
+        $video.mediaHandoffRevision = mediaHandoffRevision
         if (!isJourneyReplaySyncRequested()) {
             Object.assign($video, {preRecording: false, finalizing: false, editing: true})
             UIToast.error({caption: 'Replay video', text: 'Video export requires an active Replay preparation.'})
@@ -315,7 +333,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 device: __.device,
                 sourceCanvas: lgs.canvas,
             })
-            void exportJourneyReplayFrameByFrame({renderSpec, startToken})
+            void exportJourneyReplayFrameByFrame({renderSpec, startToken, mediaHandoffRevision})
         }
         catch (error) {
             if (startToken === _recordingStartToken.current) {
@@ -324,7 +342,7 @@ export const VideoRecordingScreenArea = memo(() => {
             }
             UIToast.error({caption: 'Replay video', text: error?.message ?? 'Replay video could not be started.'})
         }
-    }, [$video, exportJourneyReplayFrameByFrame, isJourneyReplaySyncRequested, syncVideoCropFrame])
+    }, [$video, exportJourneyReplayFrameByFrame, invalidateRecording, isJourneyReplaySyncRequested, syncVideoCropFrame])
 
     const handlePhotoSnapshot = useCallback(async () => {
         prepareVideoCaptureUi()
@@ -464,7 +482,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 _pendingFinish.current = null
             }
         }
-    }, [handleStartRecording, handlePhotoSnapshot, $video.preRecording, $video.snapshot, isWidgetReadyForRecording, waitingForAllWidgets])
+    }, [$video, handleStartRecording, handlePhotoSnapshot, video.preRecording, video.snapshot, isWidgetReadyForRecording, waitingForAllWidgets])
 
     useEffect(() => {
         __.ui.widgetManager.windowResizing = false

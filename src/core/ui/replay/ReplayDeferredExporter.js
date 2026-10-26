@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -2559,6 +2559,7 @@ export const runReplayDeferredMp4Export = async ({
                                 }
                                 : null
     let exportSucceeded = false
+    const cleanupErrors = []
     let replayComposer = null
     let replayComposerFallback = false
     const captureMirrors = new Set()
@@ -3237,16 +3238,28 @@ export const runReplayDeferredMp4Export = async ({
             ...result,
             plan,
             filename: exportFilename,
+            cleanupErrors,
         }
     }
     finally {
+        /** Preserve an encoded artifact or the primary export error while releasing every independent resource. */
+        const cleanup = async (stage, action) => {
+            try {
+                await action()
+            }
+            catch (error) {
+                cleanupErrors.push({stage, message: error?.message ?? String(error)})
+                console.error(`[Replay video] Export cleanup failed (${stage}):`, error)
+            }
+        }
+
         // Restore normal scene scheduling before any other teardown can fail.
-        exportRenderLoop?.release()
+        await cleanup('viewer-render-loop', () => exportRenderLoop?.release())
         exportRenderLoop = null
-        replayFrameSampleWorker?.dispose?.()
-        stopReplayRecordingMonitor()
+        await cleanup('sample-worker', () => replayFrameSampleWorker?.dispose?.())
+        await cleanup('recording-monitor', stopReplayRecordingMonitor)
         for (const mirror of captureMirrors) {
-            mirror.setFrameDriven(false)
+            await cleanup('widget-capture', () => mirror.setFrameDriven(false))
         }
         captureMirrors.clear()
         overlayMetricsCache.clear()
@@ -3259,19 +3272,23 @@ export const runReplayDeferredMp4Export = async ({
             aborted: signal?.aborted === true,
             runtimeStatus: exportRuntimeStatus(),
         })
-        replayMode?.endReplayCameraExport?.()
-        if (controller?.seek && originalProgress !== null) {
-            controller.seek(originalProgress)
-        }
-        else if (typeof replay?.progress === 'number' && originalProgress !== null) {
-            replay.progress = originalProgress
-        }
-        if (originalRunning && controller?.start && !controller?.running) {
-            controller.start({progress: originalProgress ?? 0})
-            if (originalPaused) {
-                controller.pause?.()
+        await cleanup('camera-export', () => replayMode?.endReplayCameraExport?.())
+        await cleanup('playback-progress', () => {
+            if (controller?.seek && originalProgress !== null) {
+                controller.seek(originalProgress)
             }
-        }
+            else if (typeof replay?.progress === 'number' && originalProgress !== null) {
+                replay.progress = originalProgress
+            }
+        })
+        await cleanup('playback-transport', () => {
+            if (originalRunning && controller?.start && !controller?.running) {
+                controller.start({progress: originalProgress ?? 0})
+                if (originalPaused) {
+                    controller.pause?.()
+                }
+            }
+        })
         if (plan.runtime) {
             if (signal?.aborted) {
                 plan.runtime.status = 'warm'
@@ -3291,40 +3308,39 @@ export const runReplayDeferredMp4Export = async ({
             plan.runtime.exportPaused = false
             plan.runtime.exportPausedAt = null
         }
-        clearReplayExportFrameState(plan)
-        replaySceneTileReadinessCoordinator?.dispose?.()
+        await cleanup('frame-state', () => clearReplayExportFrameState(plan))
+        await cleanup('tile-readiness', () => replaySceneTileReadinessCoordinator?.dispose?.())
         replaySceneTileReadinessCoordinator = null
         if (isolatedRenderTarget) {
-            try {
-                replayMode?.clearRenderTarget?.(isolatedRenderTarget)
-            }
-            catch (error) {
-                replayVideoTraceDebug('export.render-host.isolated.clear.error', {
-                    message: error?.message ?? String(error),
-                })
-            }
+            await cleanup('isolated-render-target', () => replayMode?.clearRenderTarget?.(isolatedRenderTarget))
             isolatedRenderTarget = null
         }
-        try {
-            isolatedRenderHost?.destroy?.()
-        }
-        catch (error) {
-            replayVideoTraceDebug('export.render-host.isolated.destroy.error', {
-                message: error?.message ?? String(error),
-            })
-        }
+        await cleanup('isolated-render-host', () => isolatedRenderHost?.destroy?.())
         isolatedRenderHost = null
-        if (typeof replayMode?.restorePlaybackScene === 'function') {
-            await replayMode.restorePlaybackScene({force: true})
-        }
-        if (replay && originalReplayState) {
-            Object.assign(replay, originalReplayState)
-        }
-        globalThis.__?.ui?.replay?.refresh?.({camera: true, suppressMoveEvents: true})
-        restoreReplaySceneTileCache?.()
+        await cleanup('playback-scene', () => replayMode?.restorePlaybackScene?.({force: true}))
+        await cleanup('replay-store', () => {
+            if (replay && originalReplayState) {
+                Object.assign(replay, originalReplayState)
+            }
+        })
+        await cleanup('preparation-refresh', () => globalThis.__?.ui?.replay?.refresh?.({camera: true, suppressMoveEvents: true}))
+        await cleanup('tile-cache', () => restoreReplaySceneTileCache?.())
         restoreReplaySceneTileCache = null
-        replayComposer?.dispose?.()
-        globalThis.lgs?.scene?.requestRender?.()
+        await cleanup('frame-composer', () => replayComposer?.dispose?.())
+        await cleanup('scene-render', () => globalThis.lgs?.scene?.requestRender?.())
+        if (cleanupErrors.length > 0) {
+            await cleanup('cleanup-warning', () => uiToast?.warning?.({
+                caption: isDryRun ? 'Replay dry run cleanup' : 'Replay video cleanup',
+                text: exportSucceeded
+                    ? isDryRun
+                        ? 'Dry run completed, but the scene could not be fully restored.'
+                        : 'Your video is ready, but the scene could not be fully restored.'
+                    : 'Replay stopped, but the scene could not be fully restored.',
+            }))
+        }
+        if (plan.runtime) {
+            plan.runtime.cleanupErrors = cleanupErrors
+        }
     }
 }
 

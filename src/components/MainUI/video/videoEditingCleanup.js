@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,6 +61,7 @@ export const restoreVideoCaptureUi = () => {
  */
 export const cancelVideoEditing = () => {
     const videoStore = lgs.stores.ui.video
+    videoStore.mediaHandoffRevision = (videoStore.mediaHandoffRevision ?? 0) + 1
     const linkedTimelinePreparation = videoStore.timelinePreviewActive === true
     const basicPreparation = lgs.stores.replay.basicPreparationActive === true
     if (linkedTimelinePreparation || basicPreparation) {
@@ -90,6 +91,10 @@ export const cancelVideoEditing = () => {
 export const cancelVideoRecording = async ({invalidateRecording = null} = {}) => {
     const replayStore = globalThis.lgs?.stores?.replay
     const videoStore = globalThis.lgs?.stores?.ui?.video
+    if (videoStore) {
+        // Explicit cancellation invalidates media already handed to the dialog as well as active encoding.
+        videoStore.mediaHandoffRevision = (videoStore.mediaHandoffRevision ?? 0) + 1
+    }
     invalidateRecording?.()
     const exportCompletion = replayStore?.deferredExportPlan?.runtime?.abortExport?.()
     if (replayStore) {
