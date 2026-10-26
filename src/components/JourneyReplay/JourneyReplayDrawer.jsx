@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -48,7 +48,10 @@ import {
     normalizeJourneyReplayReadiness, toGlobalReplayCameraSettings,
 }                 from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
-import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
+import {
+    normalizeJourneyReplayPOISettings,
+    normalizeReplayPOIBehavior,
+} from '@Core/ui/replay/JourneyReplayPOISettings'
 import { REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT } from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
 import {currentReplayJourney} from '@Core/ui/replay/ReplayUserModeConstants'
 import {getBasicReplaySettings, writeBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
@@ -501,6 +504,7 @@ export const JourneyReplayDrawer = memo(() => {
     }, [activeTab, replayState.nearbyPois, poiList])
     const hideAllPoisDuringJourneyReplay = effectiveReplaySettings.hideAllPoisDuringJourneyReplay === true
     const animateAllPoisDuringJourneyReplay = effectiveReplaySettings.animateAllPoisDuringJourneyReplay === true
+    const animatePOIsInBasicMode = normalizeReplayPOIBehavior(effectiveReplaySettings.basic).animatePoisDuringJourneyReplay
     const cameraPresetKey = getJourneyReplayCameraPresetKey(camera)
     const marker = normalizeJourneyReplayMarker(effectiveReplaySettings.marker)
     const hideOtherJourneys = !isExpertMode || (replayState.inheritHideOtherJourneys === false
@@ -1080,12 +1084,13 @@ export const JourneyReplayDrawer = memo(() => {
         const replayEnabled = hideAllPoisDuringJourneyReplay
             ? false
             : activePoiVisibilityOverrides[poi.id] ?? settings.visible !== false
-        const animated = animateAllPoisDuringJourneyReplay || settings.animated !== false
+        const animated = settings.animated !== false && (isExpertMode || animatePOIsInBasicMode)
 
         return count + (replayEnabled || animated ? 1 : 0)
     }, 0), [
-        animateAllPoisDuringJourneyReplay,
+        animatePOIsInBasicMode,
         hideAllPoisDuringJourneyReplay,
+        isExpertMode,
         nearbyPOIsForBadge,
         poiList,
         activePoiVisibilityOverrides,
@@ -2084,7 +2089,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                               const replayEnabled = hideAllPoisDuringJourneyReplay
                                                                   ? false
                                                                   : activePoiVisibilityOverrides[poi.id] ?? settings.visible !== false
-                                                              const animated = animateAllPoisDuringJourneyReplay || settings.animated !== false
+                                                              const animated = settings.animated !== false
                                                               const visibilityButtonId = `replay-poi-visibility-${poi.id}`
                                                               const animationButtonId = `replay-poi-animation-${poi.id}`
                                                               const toggleVisibility = event => {
@@ -2148,7 +2153,6 @@ export const JourneyReplayDrawer = memo(() => {
                                                                                   size="s"
                                                                                   aria-label={animated ? 'Disable POI animation during replay' : 'Enable POI animation during replay'}
                                                                                   aria-pressed={animated}
-                                                                                  disabled={animateAllPoisDuringJourneyReplay}
                                                                                   onClick={toggleAnimation}
                                                                               >
                                                                                   <WaIcon
@@ -2179,7 +2183,6 @@ export const JourneyReplayDrawer = memo(() => {
                                                                                           size="xs"
                                                                                           label-at-start
                                                                                           checked={settings.animated !== false}
-                                                                                          disabled={animateAllPoisDuringJourneyReplay}
                                                                                           onInput={event => updatePOIJourneyReplaySettings(poi.id, {
                                                                                               animated: getChecked(event),
                                                                                           })}

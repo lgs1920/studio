@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-25
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,8 +32,8 @@ import {
     ELEVATION_UNITS, UnitUtils,
 }                  from '@Utils/UnitUtils'
 import {
-    WaButton, WaCallout, WaColorPicker, WaCopyButton, WaDivider, WaIcon, WaInput, WaTab, WaTabGroup, WaTabPanel,
-    WaTextarea, WaTooltip,
+    WaButton, WaCallout, WaColorPicker, WaCopyButton, WaDivider, WaIcon, WaInput, WaSwitch, WaTab, WaTabGroup,
+    WaTabPanel, WaTextarea, WaTooltip,
 }                  from '@awesome.me/webawesome/dist/react'
 import classNames  from 'classnames'
 import parse       from 'html-react-parser'
@@ -113,6 +113,30 @@ export const MapPOIEditContent = memo(({poi}) => {
 
                                               void __.ui.poiManager.updatePOI(poi, {[field]: event.target.checked}, {immediate: true})
                                                   .catch(error => console.error(`[MapPOIEditContent] Failed to save ${field}:`, error))
+                                          }, [poi])
+
+                                          /** Persist the Replay animation preference with the rest of this POI. */
+                                          const handleReplayAnimationChange = useCallback((event) => {
+                                              if (!window.isOK) {
+                                                  return
+                                              }
+
+                                              const currentPoint = lgs.stores.main.components.pois.list.get(poi)
+                                              if (!currentPoint) {
+                                                  return
+                                              }
+
+                                              const currentReplaySettings = currentPoint.replay
+                                                  && typeof currentPoint.replay === 'object'
+                                                  ? currentPoint.replay
+                                                  : {}
+                                              void __.ui.poiManager.updatePOI(poi, {
+                                                  replay: {
+                                                      ...currentReplaySettings,
+                                                      animated: event.target.checked === true,
+                                                  },
+                                              }, {immediate: true})
+                                                  .catch(error => console.error('[MapPOIEditContent] Failed to save Replay animation preference:', error))
                                           }, [poi])
 
                                           if (!point.id) {
@@ -524,6 +548,17 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                           </WaTab>
                                                           <WaTabPanel name={`poi-edit-${id}`}>
                                                               <div className="edit-map-poi-wrapper">
+                                                                  <div className="map-poi-replay-animation-row">
+                                                                      <WaSwitch
+                                                                          size="xs"
+                                                                          label-at-start
+                                                                          checked={point.replay?.animated !== false}
+                                                                          disabled={!visible}
+                                                                          onInput={handleReplayAnimationChange}
+                                                                      >
+                                                                          {'Animate during Replay'}
+                                                                      </WaSwitch>
+                                                                  </div>
                                                                   <MapPOICategorySelector point={point} disabled={!visible}/>
                                                                   <WaInput appearance="filled"
                                                                       size="s"

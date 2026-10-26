@@ -42,6 +42,9 @@ export const normalizeReplayPOIBehavior = settings => {
 /** Return whether the POI is an endpoint whose visibility remains user-controlled. */
 export const isReplayPOIEndpoint = poi => ['start', 'stop', 'starter'].includes(poi?.type)
 
+/** Return whether a POI marks a journey boundary that must not animate. */
+export const isReplayPOIAnimationEndpoint = poi => ['start', 'stop'].includes(poi?.type)
+
 /** Check whether a normalized replay sample falls inside the POI's centered animation window. */
 export const isReplayPOIAnimationActiveAtProgress = ({
     progress,
@@ -133,7 +136,7 @@ export const resolveReplayPOIPresentation = (poi, {
 } = {}) => {
     const active = isReplayPOIPresentationActive(replay)
     const endpoint = isReplayPOIEndpoint(poi)
-    const animationActive = active && !endpoint && (allowReplayAnimation
+    const animationActive = active && !isReplayPOIAnimationEndpoint(poi) && (allowReplayAnimation
         || replay?.animatedPOIIds?.includes(poi?.id) === true)
     const basicMode = isJourneyReplayBasicMode({settings, replay})
     const behavior = normalizeReplayPOIBehavior(settings?.basic)

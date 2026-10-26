@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -1318,7 +1318,7 @@ describe('JourneyReplayDrawer', () => {
         })
     })
 
-    it('exposes header shortcuts to toggle POI visibility and animation', async () => {
+    it('lets a POI opt out of animation while global POI animation is enabled', async () => {
         const view = render(<JourneyReplayDrawer/>)
 
         fireEvent.click(view.getByText('POIs'))
@@ -1326,6 +1326,13 @@ describe('JourneyReplayDrawer', () => {
         await waitFor(() => {
             expect(view.getByLabelText('Hide POI during replay')).toBeTruthy()
             expect(view.getByLabelText('Disable POI animation during replay')).toBeTruthy()
+        })
+
+        fireEvent.click(view.getByLabelText('Animate all POIs during replay'))
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.replay.animateAllPoisDuringJourneyReplay).toBe(true)
+            expect(view.getByLabelText('Disable POI animation during replay').disabled).toBe(false)
         })
 
         fireEvent.click(view.getByLabelText('Disable POI animation during replay'))

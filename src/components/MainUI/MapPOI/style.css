@@ -524,6 +524,12 @@
     gap: var(--lgs-gutter-s);
 }
 
+.map-poi-replay-animation-row {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
 .map-poi-edit-wrapper {
     display: flex;
     flex-direction: column;

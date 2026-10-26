@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-13
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -815,7 +815,7 @@ export class POIManager {
         return lgs.getJourneyByTrackSlug?.(poi.parent)?.slug === journey.slug
     }
 
-    getJourneyReplayPOIsForJourney = (journey, maxDistanceMeters = this.journeyAssociationDistance) => {
+    getJourneyReplayPOIsForJourney = (journey, maxDistanceMeters = this.journeyAssociationDistance, {includeHidden = false} = {}) => {
         const maxDistance = finiteNumber(maxDistanceMeters) ?? POI_JOURNEY_ASSOCIATION_DISTANCE
         if (!journey?.slug || maxDistance <= 0) {
             return []
@@ -832,7 +832,7 @@ export class POIManager {
 
         for (const poi of allPois) {
             const normalizedPoi = normalizeCoordinate(poi)
-            if (!normalizedPoi || poi.visible === false || poi.tooClose === true) {
+            if (!normalizedPoi || (!includeHidden && poi.visible === false) || poi.tooClose === true) {
                 continue
             }
 
@@ -1046,6 +1046,13 @@ export class POIManager {
 
         if (poi.type === POI_STARTER_TYPE) {
             return includeStarter && poi.visible !== false
+        }
+
+        // Global POIs do not belong to a journey, but Replay can project them
+        // onto the selected route. Keep them in the runtime list even when
+        // hidden so the Basic "show all" mode can include them as well.
+        if (!poi.parent || poi.parent === GLOBAL_PARENT) {
+            return true
         }
 
         return this.isPOIVisibleForJourney(poi, journey)
