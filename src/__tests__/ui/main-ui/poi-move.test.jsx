@@ -398,6 +398,27 @@ describe('POI move interaction', () => {
         },
     )
 
+    it('passes Shift-clicks on non-POI map features through to other map tools', () => {
+        const poi = createPOI()
+        const {canvas, scene} = createMapFixture(poi)
+        scene.pick.mockReturnValue(undefined)
+        scene.pickAsync = vi.fn()
+        const mapToolPointerDown = vi.fn()
+        canvas.addEventListener('pointerdown', mapToolPointerDown)
+        render(<MapPOIMoveOverlay/>)
+
+        const handled = fireEvent.pointerDown(canvas, {
+            pointerId: 9, button: 0, buttons: 1, shiftKey: true, clientX: 100, clientY: 50,
+        })
+
+        expect(handled).toBe(true)
+        expect(scene.pick).toHaveBeenCalledOnce()
+        expect(scene.pickAsync).not.toHaveBeenCalled()
+        expect(mapToolPointerDown).toHaveBeenCalledOnce()
+        expect(canvas.setPointerCapture).not.toHaveBeenCalled()
+        expect($poiMove.session).toBeNull()
+    })
+
     it('keeps the source POI styling, clamps the marker to the map, and saves the picked terrain position', async () => {
         const poi = createPOI({expanded: false})
         const {camera, entity, scene} = createMapFixture(poi, undefined, {left: 20, top: 10}, 2)
