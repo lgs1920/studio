@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-22
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -119,18 +119,11 @@ export class CanvasEventManager {
     #touchTapActions = null
 
     /**
-     * Tracks the last click time for click-related events.
-     * @type {number}
+     * Keeps double-click detection separate for each modifier gesture and picked entity.
+     * @type {Map<string, {time: number, timeout: ReturnType<typeof setTimeout>}>}
      * @private
      */
-    #lastClickTime = 0
-
-    /**
-     * Timeout for click-related events.
-     * @type {number|null}
-     * @private
-     */
-    #clickTimeout = null
+    #clickStates = new Map()
 
     /**
      * Tracks the last mouse position for keyboard events.
@@ -650,25 +643,30 @@ export class CanvasEventManager {
                 return
             }
 
-            const now = Date.now()
-            const timeDiff = now - this.#lastClickTime
-            this.#lastClickTime = now
+            const clickEventName = this.#eventNameForModifier(EVENTS.CLICK, modifier)
+            const clickKey = `${clickEventName}:${entityId ?? ''}`
 
             if (eventType === 'CLICK') {
-                clearTimeout(this.#clickTimeout)
-                this.#clickTimeout = setTimeout(() => {
-                    if (timeDiff > DOUBLE_CLICK_TIMEOUT) {
+                const previous = this.#clickStates.get(clickKey)
+                const now = Date.now()
+                const isDoubleClick = previous && now - previous.time <= DOUBLE_CLICK_TIMEOUT
+                clearTimeout(previous?.timeout)
+                const timeout = setTimeout(() => {
+                    this.#clickStates.delete(clickKey)
+                    if (!isDoubleClick) {
                         this.#emit(eventName, event, entityId)
                     }
                 }, DOUBLE_CLICK_TIMEOUT + 50)
+                this.#clickStates.set(clickKey, {time: now, timeout})
             }
             else if (eventType === EVENTS.DOUBLE_CLICK) {
-                clearTimeout(this.#clickTimeout)
-                this.#clickTimeout = null
+                clearTimeout(this.#clickStates.get(clickKey)?.timeout)
+                this.#clickStates.delete(clickKey)
                 this.#emit(eventName, event, entityId)
             }
             else if (eventType === EVENTS.RIGHT_CLICK) {
-                clearTimeout(this.#clickTimeout)
+                clearTimeout(this.#clickStates.get(clickKey)?.timeout)
+                this.#clickStates.delete(clickKey)
                 this.#emit(eventName, event, entityId)
             }
             else if (eventType === EVENTS.DOWN || eventType === EVENTS.UP ||
@@ -891,16 +889,8 @@ export class CanvasEventManager {
                     handler = this.#setupMouseEvents(eventType, modifier, modifiers)
                 }
                 if (!this.#handlers.has(eventName) && !this.#isMouseMotionEvent(eventType)) {
-                    if (modifier && modifier.value) {
-                        this.#screenSpaceEventHandler.setInputAction(
-                            handler,
-                            this.#events[eventType].event,
-                            modifier.value,
-                        )
-                    }
-                    else {
-                        this.#screenSpaceEventHandler.setInputAction(handler, this.#events[eventType].event)
-                    }
+                    // SHIFT is the valid enum value 0, so never test the modifier value for truthiness.
+                    this.#screenSpaceEventHandler.setInputAction(handler, this.#events[eventType].event, modifier?.value)
                 }
             }
             else {
@@ -929,7 +919,15 @@ export class CanvasEventManager {
         const {eventType, modifier} = this.#parseEventName(eventName)
         const handlers = this.#handlers.get(eventName)
 
-        const removeHandler = (handler) => {
+        const removeHandler = () => {
+            if (eventType === EVENTS.CLICK) {
+                this.#clickStates.forEach((state, key) => {
+                    if (key.startsWith(`${eventName}:`)) {
+                        clearTimeout(state.timeout)
+                        this.#clickStates.delete(key)
+                    }
+                })
+            }
             if (this.#isMouseMotionEvent(eventType)) {
                 if (this.#hasMouseMotionHandlers(modifier)) {
                     return
@@ -955,24 +953,24 @@ export class CanvasEventManager {
                 this.#touchTapActions = null
             }
             else if (this.#events[eventType]) {
-                this.#screenSpaceEventHandler.removeInputAction(this.#events[eventType].event, handler)
+                this.#screenSpaceEventHandler.removeInputAction(this.#events[eventType].event, modifier?.value)
             }
         }
 
         if (callback) {
             const index = handlers.findIndex((h) => h.callback === callback)
             if (index !== -1) {
-                const [removedHandler] = handlers.splice(index, 1)
+                handlers.splice(index, 1)
                 if (handlers.length === 0) {
                     this.#handlers.delete(eventName)
-                    removeHandler(removedHandler.handler)
+                    removeHandler()
                 }
             }
         }
         else {
             if (this.#handlers.get(eventName)) {
                 this.#handlers.delete(eventName)
-                removeHandler(handlers[0]?.handler)
+                removeHandler()
             }
         }
     }

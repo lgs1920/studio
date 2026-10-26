@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-22
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,7 +21,9 @@ const {FakeScreenSpaceEventHandler, inputActions} = vi.hoisted(() => {
     const inputActions = new Map()
     class FakeScreenSpaceEventHandler {
         destroy = vi.fn()
-        removeInputAction = vi.fn()
+        removeInputAction = vi.fn((type, modifier) => {
+            inputActions.delete(`${type}:${modifier ?? ''}`)
+        })
         setInputAction = vi.fn((handler, type, modifier) => {
             inputActions.set(`${type}:${modifier ?? ''}`, handler)
         })
@@ -39,8 +41,8 @@ vi.mock('cesium', async importOriginal => {
 })
 
 import {CanvasEventManager} from '@Core/events/CanvasEventManager'
-import {ScreenSpaceEventType} from 'cesium'
-import {DOUBLE_TAP_TIMEOUT, LONG_TAP_TIMEOUT} from '@Core/constants'
+import {KeyboardEventModifier, ScreenSpaceEventType} from 'cesium'
+import {DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, LONG_TAP_TIMEOUT} from '@Core/constants'
 import {proxy} from 'valtio'
 
 describe('CanvasEventManager', () => {
@@ -107,6 +109,92 @@ describe('CanvasEventManager', () => {
 
         expect(down).toHaveBeenCalledOnce()
         expect(up).toHaveBeenCalledOnce()
+    })
+
+    it('keeps Shift+click separate from a regular POI click, including closely spaced clicks', () => {
+        vi.useFakeTimers()
+        vi.setSystemTime(0)
+        const regularClick = vi.fn()
+        const shiftClick = vi.fn()
+        viewer.scene.pick.mockReturnValue({id: {id: 'poi-1'}})
+        manager.onClick(regularClick, {entity: 'poi-1'})
+        manager.on('SHIFT#CLICK', shiftClick, {entity: 'poi-1'})
+
+        const click = inputActions.get(`${ScreenSpaceEventType.LEFT_CLICK}:`)
+        const shiftedClick = inputActions.get(`${ScreenSpaceEventType.LEFT_CLICK}:${KeyboardEventModifier.SHIFT}`)
+        expect(shiftedClick).toBeTypeOf('function')
+        expect(shiftedClick).not.toBe(click)
+        click({position: {x: 10, y: 20}})
+        vi.advanceTimersByTime(10)
+        shiftedClick({position: {x: 10, y: 20}})
+        vi.advanceTimersByTime(DOUBLE_CLICK_TIMEOUT + 51)
+
+        expect(regularClick).toHaveBeenCalledOnce()
+        expect(shiftClick).toHaveBeenCalledOnce()
+        expect(shiftClick).toHaveBeenCalledWith(expect.any(Object), 'poi-1', expect.any(Object), null)
+    })
+
+    it('does not classify mouse down and up events as an earlier Shift+click', () => {
+        vi.useFakeTimers()
+        const shiftClick = vi.fn()
+        manager.on('SHIFT#DOWN', vi.fn())
+        manager.on('SHIFT#UP', vi.fn())
+        manager.on('SHIFT#CLICK', shiftClick)
+        const event = {position: {x: 10, y: 20}}
+
+        inputActions.get(`${ScreenSpaceEventType.LEFT_DOWN}:${KeyboardEventModifier.SHIFT}`)(event)
+        inputActions.get(`${ScreenSpaceEventType.LEFT_UP}:${KeyboardEventModifier.SHIFT}`)(event)
+        inputActions.get(`${ScreenSpaceEventType.LEFT_CLICK}:${KeyboardEventModifier.SHIFT}`)(event)
+        vi.advanceTimersByTime(DOUBLE_CLICK_TIMEOUT + 51)
+
+        expect(shiftClick).toHaveBeenCalledOnce()
+    })
+
+    it('preserves normal double-click handling without cancelling a pending Shift+click', () => {
+        vi.useFakeTimers()
+        const regularClick = vi.fn()
+        const doubleClick = vi.fn()
+        const shiftClick = vi.fn()
+        manager.onClick(regularClick)
+        manager.onDoubleClick(doubleClick)
+        manager.on('SHIFT#CLICK', shiftClick)
+        const event = {position: {x: 10, y: 20}}
+        const click = inputActions.get(`${ScreenSpaceEventType.LEFT_CLICK}:`)
+
+        click(event)
+        vi.advanceTimersByTime(10)
+        inputActions.get(`${ScreenSpaceEventType.LEFT_CLICK}:${KeyboardEventModifier.SHIFT}`)(event)
+        vi.advanceTimersByTime(10)
+        click(event)
+        inputActions.get(`${ScreenSpaceEventType.LEFT_DOUBLE_CLICK}:`)(event)
+        vi.advanceTimersByTime(DOUBLE_CLICK_TIMEOUT + 51)
+
+        expect(regularClick).not.toHaveBeenCalled()
+        expect(doubleClick).toHaveBeenCalledOnce()
+        expect(shiftClick).toHaveBeenCalledOnce()
+    })
+
+    it('removes the Shift action and pending click before registering a replacement listener', () => {
+        vi.useFakeTimers()
+        const regularClick = vi.fn()
+        const oldShiftClick = vi.fn()
+        const replacement = vi.fn()
+        manager.onClick(regularClick)
+        manager.on('SHIFT#CLICK', oldShiftClick)
+        const shiftKey = `${ScreenSpaceEventType.LEFT_CLICK}:${KeyboardEventModifier.SHIFT}`
+        inputActions.get(shiftKey)({position: {x: 10, y: 20}})
+
+        manager.off('SHIFT#CLICK', oldShiftClick)
+        expect(inputActions.has(shiftKey)).toBe(false)
+        expect(inputActions.has(`${ScreenSpaceEventType.LEFT_CLICK}:`)).toBe(true)
+        manager.on('SHIFT#CLICK', replacement)
+        vi.advanceTimersByTime(DOUBLE_CLICK_TIMEOUT + 51)
+        expect(oldShiftClick).not.toHaveBeenCalled()
+        expect(replacement).not.toHaveBeenCalled()
+
+        inputActions.get(shiftKey)({position: {x: 10, y: 20}})
+        vi.advanceTimersByTime(DOUBLE_CLICK_TIMEOUT + 51)
+        expect(replacement).toHaveBeenCalledOnce()
     })
 
     it('handles Cesium wheel deltas without trying to pick a position', () => {
