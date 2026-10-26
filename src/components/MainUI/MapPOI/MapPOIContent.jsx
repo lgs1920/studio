@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -397,6 +397,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
 
                     {point?.expanded && !useInMenu ? (
                         <div className={classNames(
+            data-poi-canvas-source={!useInMenu ? pointId : undefined}
                             'poi-card-content',
                             !(point.location && displayLocation) && !displayCategory && !displayCoordinateDetails
                             && 'poi-card-content--title-only',

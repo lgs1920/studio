@@ -589,6 +589,13 @@
     - Tap
   reference: true
   scope: Map objects
+- action: Move POI
+  description: Hold Shift and drag a point of interest directly on the map. Release to save its new position, or press Escape to cancel.
+  id: poi-move
+  keys:
+    - Shift+Left drag
+  reference: true
+  scope: Map objects
 - action: Edit POI
   description: Opens the editor for a point of interest on the map.
   id: poi-edit

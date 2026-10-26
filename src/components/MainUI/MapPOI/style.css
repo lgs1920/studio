@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -967,4 +967,103 @@
     justify-content: space-between;
     gap: var(--lgs-gutter-xs);
 
+}
+
+.poi-move-overlay-root {
+    position: absolute;
+    z-index: 1000001;
+    overflow: hidden;
+    pointer-events: none;
+
+    & wa-button.poi-move-marker {
+        /* Keep the drag target centered on the map anchor while cloned contents define its visible bounds. */
+        --dimension: calc(0.8 * var(--poi-reduce-dimension));
+        --lgs-button-plain-bg-hover-color: transparent; /* Keep the theme's important hover background transparent. */
+        --lgs-card-on-map-selected-bg-color: transparent; /* Dragging must not paint the theme's selected button fill. */
+        --lgs-card-on-map-selected-bg-image: none; /* Suppress the selected button backdrop during dragging. */
+        --wa-button-transform-hover: none; /* Keep the geographic anchor fixed when the button is hovered. */
+        --wa-button-transform-active: none; /* Keep the geographic anchor fixed while the pointer is pressed. */
+
+        position: absolute;
+        display: block;
+        width: var(--dimension);
+        height: var(--dimension);
+        transform: translate(-50%, -50%);
+    }
+
+    & wa-button.poi-move-marker {
+        min-width: var(--dimension);
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        cursor: grab;
+        z-index: 0;
+        pointer-events: auto;
+        touch-action: none;
+    }
+
+    & wa-button.poi-move-marker[aria-pressed="true"] {
+        cursor: grabbing;
+    }
+
+    & .poi-move-marker-content {
+        display: contents;
+    }
+
+    & wa-button.poi-move-marker::part(base) {
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        padding: 0;
+        color: var(--lgs-poi-color);
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    & .poi-icon-wrapper.poi-move-preview {
+        position: relative;
+        top: auto;
+        left: auto;
+        pointer-events: none;
+
+        /* MapPOIContent captures .poi-card without its wrapper's inverse rotation. */
+        &.poi-shrinked {
+            transform: none;
+        }
+    }
+
+    & wa-button.poi-move-marker:focus-visible::part(base) {
+        outline: 2px solid var(--wa-color-brand);
+        outline-offset: 2px;
+    }
+
+    & .poi-move-details {
+        font-size: var(--lgs-font-size-s);
+        font-weight: normal;
+        position: absolute;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--lgs-gutter-xs) var(--lgs-gutter-s);
+        max-width: calc(100% - 2 * var(--lgs-gutter-s));
+        flex-wrap: wrap;
+        white-space: normal;
+        text-align: center;
+        color: var(--wa-color-brand-on-quiet);
+        border: 0;
+        border-radius: var(--lgs-border-radius-s);
+        background: color-mix(in oklab, var(--wa-color-brand-fill-quiet) 15%, transparent);
+        text-shadow: 0 1px 4px color-mix(in oklab, black 34%, transparent);
+        backdrop-filter: blur(var(--lgs-blur));
+        pointer-events: none;
+        gap: var(--lgs-gutter-xs);
+    }
+}
+
+body.poi-move-hiding-system-cursor,
+body.poi-move-hiding-system-cursor * {
+    cursor: none !important;
 }

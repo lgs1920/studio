@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-10-20
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ import { MapPointContextMenuTrigger } from '@Components/MainUI/context-menu/MapP
 import { GeocodingButton }   from '@Components/MainUI/geocoding/GeocodingButton'
 import { GeocodingWidget } from '@Components/MainUI/geocoding/GeocodingWidget'
 import { MapPOIMonitor }     from '@Components/MainUI/MapPOI/MapPOIMonitor'
+import { MapPOIMoveOverlay } from '@Components/MainUI/MapPOI/MapPOIMoveOverlay'
 import { PanoramaWidget } from '@Components/MainUI/PanoramaWidget'
 import { OrbitWidget }       from '@Components/MainUI/OrbitWidget'
 import { OrbitButton }       from '@Components/MainUI/OrbitButton'
@@ -333,6 +334,7 @@ export const MainUI = memo(() => {
             )}
             {video.editing && !videoCaptureActive && <CameraAdjustmentOverlay/>}
             <ContextMenuRenderer/>
+            <MapPOIMoveOverlay/>
             <VideoDownloadAndShareDialog/>
             <ReplayRecordingMonitorWidget/>
 

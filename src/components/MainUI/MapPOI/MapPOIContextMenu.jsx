@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,7 @@ import { openPOIEditor } from '@Components/MainUI/MapPOI/openPOIEditor'
 import { DEFAULT_PANORAMA_HEIGHT_OFFSET, DEFAULT_PANORAMA_PITCH, getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
 import { ELEVATION_UNITS, UnitUtils }       from '@Utils/UnitUtils'
 import { UIToast }                                from '@Utils/UIToast'
+import { startPOIMove } from '@Components/MainUI/MapPOI/poiMoveStore'
 import { WaDivider, WaIcon } from '@awesome.me/webawesome/dist/react'
 import { useCallback, useEffect, useMemo } from 'react'
 import { proxy, useSnapshot } from 'valtio'
@@ -170,6 +171,12 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
         hideMenu()
     }, [hideMenu])
 
+    /** Starts a cancellable move session without changing the POI model. */
+    const startMovingPOI = useCallback(() => {
+        startPOIMove(currentPoi)
+        hideMenu()
+    }, [currentPoi, hideMenu])
+
     // --- Menu Rendering Logic ---
 
     // Ensure the menu element is initialized in the ContextMenu singleton on first mount/ref set.
@@ -218,6 +225,11 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
         currentPoi?.type !== POI_FLAG_START &&
         currentPoi?.type !== POI_FLAG_STOP
     const canEdit = currentPoi?.type !== POI_TMP_TYPE
+    const canMove = currentPoi?.type !== POI_TMP_TYPE
+        && currentPoi?.latitude != null
+        && currentPoi?.longitude != null
+        && Number.isFinite(Number(currentPoi?.latitude))
+        && Number.isFinite(Number(currentPoi?.longitude))
     const showOrbitItem = isPOIRotating || isPOIPanoramic
     const latitudeLabel = useMemo(
         () => currentPoi?.latitude != null ? __.convert(currentPoi.latitude).to(coordinateSystem) : '',
@@ -289,6 +301,12 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
                 {canEdit && (
                     <li onClick={openEditDrawer}>
                         <WaIcon name="location-pen" variant="regular"/>{'Edit'}
+                    </li>
+                )}
+
+                {canMove && (
+                    <li onClick={startMovingPOI}>
+                        <WaIcon name="location-dot" variant="solid"/>{'Move'}
                     </li>
                 )}
 
