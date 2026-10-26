@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -240,6 +240,7 @@ describe('startup data loader', () => {
             const loader = new StartupDataLoader('studio-db', client)
             await loader.loadPOIs({currentOnly: true})
 
+            expect(client.request.mock.calls[0][0].globalParent).toBe('__global__')
             expect(ensurePersistedDisplaySettings).toHaveBeenCalledWith(data)
             expect(list.get(data.id)).toMatchObject({
                 display: {category: true, titleCategoryIcon: false, maxWidth: 200},

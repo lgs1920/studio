@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import {CustomDataSource, GeoJsonDataSource} from 'cesium'
 import {
-    CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, DRAWING_FROM_DB, POI_STARTER_TYPE,
+    CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, DRAWING_FROM_DB, GLOBAL_PARENT, POI_STARTER_TYPE,
 } from '@Core/constants'
 import {Journey} from '@Core/Journey'
 import {MapPOI} from '@Core/MapPOI'
@@ -281,6 +281,7 @@ export class StartupDataLoader {
             key,
             currentTrackKey,
             excluded:    [...(__.ui.poiManager.list?.keys?.() ?? [])],
+            globalParent: GLOBAL_PARENT,
             includeStarter: false,
             primary:     current,
             starterType: POI_STARTER_TYPE,
@@ -497,6 +498,7 @@ export class StartupDataLoader {
                 currentOnly,
                 database:    this.#database,
                 excluded:    [...(__.ui.poiManager.list?.keys?.() ?? [])],
+                globalParent: GLOBAL_PARENT,
                 includeStarter,
                 parents:     [...parents],
                 type:        'pois',

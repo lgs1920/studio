@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-09-20
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -155,15 +155,27 @@ export const streamStartupJourney = async (value, emit, options = {}) => {
     await emit({type: 'journey-end'})
 }
 
-const isVisibleForRequest = (poi, request) => {
-    if (!poi || poi.visible === false) {
+/**
+ * Match worker POI batches to the selected journey or complete startup inventory.
+ * @param {Object|null|undefined} poi - POI record from the startup database.
+ * @param {Object} request - Current-journey and worker filtering options.
+ * @returns {boolean} Whether the POI belongs in the emitted startup batches.
+ */
+const shouldIncludePOIForRequest = (poi, request) => {
+    if (!poi) {
         return false
-    }
-    if (poi.type === request.starterType) {
-        return request.includeStarter !== false
     }
     if (!request.currentOnly) {
         return true
+    }
+    if (poi.type === request.starterType) {
+        return request.includeStarter !== false && poi.visible !== false
+    }
+    if (!poi.parent || poi.parent === request.globalParent) {
+        return true
+    }
+    if (poi.visible === false) {
+        return false
     }
     return request.parents?.has?.(poi.parent) ?? request.parents?.includes?.(poi.parent) ?? false
 }
@@ -171,6 +183,7 @@ const isVisibleForRequest = (poi, request) => {
 export const streamStartupPOIs = async (values, emit, request = {}) => {
     const parents = request.parents instanceof Set ? request.parents : new Set(request.parents ?? [])
     const excluded = request.excluded instanceof Set ? request.excluded : new Set(request.excluded ?? [])
+    const poiRequest = {...request, parents, starterType: request.starterType ?? 'starter'}
     const records = []
     const source = values?.[Symbol.asyncIterator]
         ? values
@@ -180,7 +193,7 @@ export const streamStartupPOIs = async (values, emit, request = {}) => {
         for (const value of valueBatch ?? []) {
             const poi = decodeStartupJourney(value)
             if (excluded.has(poi?.id)
-                || !isVisibleForRequest(poi, {...request, parents, starterType: request.starterType ?? 'starter'})) {
+                || !shouldIncludePOIForRequest(poi, poiRequest)) {
                 continue
             }
             records.push(poi)

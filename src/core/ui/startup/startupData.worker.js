@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -138,6 +138,7 @@ self.onmessage = async event => {
                     })(), emitForRequest, {
                         currentOnly:  true,
                         excluded:     message.excluded,
+                        globalParent: message.globalParent,
                         includeStarter: message.includeStarter,
                         onBatch:      async () => {
                             if (firstBatch) {

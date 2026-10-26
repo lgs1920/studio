@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-09-20
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -95,5 +95,35 @@ describe('startup data streaming', () => {
 
         expect(packets).toEqual([{type: 'pois', items: [{id: 'poi-a', parent: 'journey-a', visible: true}]}])
         expect(batches).toEqual([['poi-a']])
+    })
+
+    it('includes global POIs in current-journey batches and hidden POIs in full batches', async () => {
+        const currentPackets = []
+        const allPackets = []
+        const pois = [
+            {id: 'journey-visible', parent: 'journey-a', visible: true},
+            {id: 'journey-hidden', parent: 'journey-a', visible: false},
+            {id: 'other-journey', parent: 'journey-b', visible: true},
+            {id: 'global-visible', parent: null, visible: true},
+            {id: 'global-hidden', parent: '__global__', visible: false},
+            {id: 'starter-hidden', parent: null, type: 'starter', visible: false},
+        ]
+
+        await streamStartupPOIs(pois, async packet => currentPackets.push(packet), {
+            currentOnly:  true,
+            globalParent: '__global__',
+            includeStarter: false,
+            parents:      ['journey-a'],
+        })
+        await streamStartupPOIs(pois, async packet => allPackets.push(packet), {
+            currentOnly: false,
+        })
+
+        expect(currentPackets.flatMap(packet => packet.items.map(poi => poi.id))).toEqual([
+            'journey-visible',
+            'global-visible',
+            'global-hidden',
+        ])
+        expect(allPackets.flatMap(packet => packet.items.map(poi => poi.id))).toEqual(pois.map(poi => poi.id))
     })
 })
