@@ -126,7 +126,7 @@ export const shouldDisplayPOIField = (field, settings, replayActive = false) => 
         return false
     }
 
-    if (replayActive && field !== 'category' && field !== 'titleCategoryIcon') {
+    if (replayActive && field !== 'category' && field !== 'titleCategoryIcon' && field !== 'titleAltitude') {
         return false
     }
 

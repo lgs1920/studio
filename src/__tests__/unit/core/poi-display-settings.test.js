@@ -115,7 +115,7 @@ describe('POI display settings', () => {
         })
     })
 
-    it('allows only enabled category among configurable fields during Replay', () => {
+    it('keeps enabled title altitude and category fields visible during Replay', () => {
         const settings = {
             category:    true,
             titleCategoryIcon: true,
@@ -128,7 +128,8 @@ describe('POI display settings', () => {
 
         expect(shouldDisplayPOIField('category', settings, true)).toBe(true)
         expect(shouldDisplayPOIField('titleCategoryIcon', settings, true)).toBe(true)
-        expect(shouldDisplayPOIField('titleAltitude', settings, true)).toBe(false)
+        expect(shouldDisplayPOIField('titleAltitude', settings, true)).toBe(true)
+        expect(shouldDisplayPOIField('titleAltitude', {...settings, titleAltitude: false}, true)).toBe(false)
         expect(shouldDisplayPOIField('titleCategoryIcon', {...settings, titleCategoryIcon: false}, true)).toBe(false)
         expect(shouldDisplayPOIField('category', {category: false}, true)).toBe(false)
         expect(shouldDisplayPOIField('location', settings, true)).toBe(false)

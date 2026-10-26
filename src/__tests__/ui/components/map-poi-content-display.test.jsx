@@ -129,6 +129,7 @@ describe('MapPOIContent display settings', () => {
                 onRightClick: vi.fn(),
                 onLongTap: vi.fn(),
                 removeAllListenersByEntity: vi.fn(),
+                offKeyUp: vi.fn(),
             },
             convert: value => ({to: () => String(value)}),
             requestAnimationFrame,
@@ -222,19 +223,32 @@ describe('MapPOIContent display settings', () => {
         expect(screen.getByRole('heading', {name: 'River stop (175 m)'})).toBeTruthy()
     })
 
-    it('keeps only title and enabled category visible during Replay, even when every flag is enabled', () => {
+    it('keeps the title altitude and enabled category visible while hiding other fields during Replay', () => {
         globalThis.lgs.stores.replay.active = true
         poiList.get('poi-1').display.titleAltitude = true
 
         render(<MapPOIContent poi="poi-1"/>)
 
-        expect(screen.getByRole('heading', {name: 'River stop'})).toBeTruthy()
+        expect(screen.getByRole('heading', {name: 'River stop (125 m)'})).toBeTruthy()
         expect(document.querySelector('.poi-category-title-icon')?.getAttribute('data-icon-name')).toBe('location-dot')
         expect(screen.getByText('standard')).toBeTruthy()
         expect(screen.queryByText('Riverside')).toBeNull()
         expect(screen.queryByText('Altitude: 125')).toBeNull()
         expect(screen.queryByText('48.2, 2.3')).toBeNull()
         expect(screen.queryByTestId('poi-date-time')).toBeNull()
+    })
+
+    it('hides title altitude when Replay hides altitude for a nearby global POI', () => {
+        globalThis.lgs.stores.replay.active = true
+        const poi = poiList.get('poi-1')
+        poi.parent = null
+        poi.display.titleAltitude = true
+        poi.replay.hiddenFields.altitude = true
+        globalThis.lgs.stores.replay.nearbyPois = [{poi}]
+
+        render(<MapPOIContent poi="poi-1"/>)
+
+        expect(screen.getByRole('heading', {name: 'River stop'})).toBeTruthy()
     })
 
     it('reactively updates an expanded POI and schedules a fresh canvas snapshot', async () => {
