@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { REPLAY_DEFERRED_EXPORT_READY_EVENT } from '@Core/ui/replay/ReplayRecordingMonitor'
 
@@ -83,7 +83,7 @@ vi.mock('@awesome.me/webawesome/dist/react', async () => {
         }
 
         return (
-            <div data-testid="video-preview-dialog" {...props}>
+            <div data-testid={props.id} {...props}>
                 <button
                     type="button"
                     aria-label="Native dialog close"
@@ -93,6 +93,7 @@ vi.mock('@awesome.me/webawesome/dist/react', async () => {
                             target:        dialogElement,
                             currentTarget: dialogElement,
                             detail:        {source: 'close-button'},
+                            preventDefault: vi.fn(),
                         })
                     }}
                 />
@@ -105,6 +106,7 @@ vi.mock('@awesome.me/webawesome/dist/react', async () => {
                             target:        dialogElement,
                             currentTarget: dialogElement,
                             detail:        {source: 'keyboard'},
+                            preventDefault: vi.fn(),
                         })
                     }}
                 />
@@ -117,6 +119,7 @@ vi.mock('@awesome.me/webawesome/dist/react', async () => {
                             target:        dialogElement,
                             currentTarget: dialogElement,
                             detail:        {source: dialogElement},
+                            preventDefault: vi.fn(),
                         })
                     }}
                 />
@@ -294,6 +297,19 @@ describe('VideoDownloadAndShareDialog', () => {
     }
 
     const expectDialogCleanup = async () => {
+        expect(screen.getByText('If you close this window, you will lose your video. Download it first if you want to keep it.')).toBeTruthy()
+        expect(cancelVideoEditing).not.toHaveBeenCalled()
+        expect(URL.revokeObjectURL).not.toHaveBeenCalled()
+        expect(recorder.releaseMedia).not.toHaveBeenCalled()
+        const confirmation = screen.getByTestId('video-preview-close-confirmation')
+        const buttons = within(confirmation).getAllByRole('button').filter(button => (
+            ['Yes I confirm', 'Cancel'].includes(button.textContent)
+        ))
+        expect(buttons.map(button => button.textContent)).toEqual(['Yes I confirm', 'Cancel'])
+        expect(buttons[0].getAttribute('appearance')).toBe('outlined')
+        expect(buttons[0].querySelector('[data-icon="check"]')).not.toBeNull()
+        expect(buttons[1].querySelector('[data-icon="xmark"]')).not.toBeNull()
+        await act(async () => fireEvent.click(within(confirmation).getByRole('button', {name: 'Yes I confirm'})))
         await waitFor(() => {
             expect(screen.queryByTestId('video-preview-dialog')).toBeNull()
         })
@@ -304,7 +320,28 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(recorder.releaseMedia).toHaveBeenCalledTimes(1)
         expect(globalThis.lgs.stores.ui.video.finalizing).toBe(false)
         expect(screen.queryByTestId('video-preview-dialog')).toBeNull()
+        expect(screen.queryByTestId('video-preview-close-confirmation')).toBeNull()
     }
+
+    it.each(['Cancel', 'Escape dialog close', 'Native dialog close'])(
+        'keeps the video available when dismissing the confirmation with %s',
+        async (action) => {
+            await openDialog()
+            fireEvent.click(screen.getByRole('button', {name: 'Close'}))
+            const confirmation = screen.getByTestId('video-preview-close-confirmation')
+            const button = within(confirmation).getByRole('button', {name: action})
+            fireEvent.click(action === 'Cancel' ? button.querySelector('[data-icon="xmark"]') : button)
+
+            expect(screen.queryByTestId('video-preview-close-confirmation')).toBeNull()
+            expect(screen.getByTestId('video-preview-dialog')).toBeTruthy()
+            expect(cancelVideoEditing).not.toHaveBeenCalled()
+            expect(URL.revokeObjectURL).not.toHaveBeenCalled()
+            expect(recorder.releaseMedia).not.toHaveBeenCalled()
+            const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+            await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Download'})))
+            expect(anchorClick.mock.instances[0]?.download).toBe('recording.mp4')
+        },
+    )
 
     it('uses the same cleanup for the footer close button', async () => {
         await openDialog()
@@ -399,6 +436,8 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(globalThis.navigator.share).toHaveBeenCalledTimes(1)
         expect(globalThis.navigator.share.mock.calls[0][0].files[0]).toBeInstanceOf(File)
         expect(globalThis.navigator.share.mock.calls[0][0].files[0].name).toBe('recording.mp4')
+        fireEvent.click(screen.getByRole('button', {name: 'Close'}))
+        expect(screen.getByTestId('video-preview-close-confirmation')).toBeTruthy()
     })
 
     it('downloads the available Replay video without a version suffix', async () => {
@@ -413,6 +452,46 @@ describe('VideoDownloadAndShareDialog', () => {
 
         expect(anchorClick).toHaveBeenCalledOnce()
         expect(anchorClick.mock.instances[0]?.download).toBe('recording.mp4')
+    })
+
+    it.each(['Close', 'Native dialog close', 'Escape dialog close'])(
+        'closes without confirmation through %s after the video has been downloaded', async (action) => {
+            await openDialog()
+            vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+            await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Download'})))
+            await act(async () => fireEvent.click(screen.getByRole('button', {name: action})))
+
+            expect(screen.queryByTestId('video-preview-close-confirmation')).toBeNull()
+            expect(screen.queryByTestId('video-preview-dialog')).toBeNull()
+            expect(recorder.releaseMedia).toHaveBeenCalledOnce()
+        },
+    )
+
+    it('still confirms closure when the download fails', async () => {
+        await openDialog()
+        vi.spyOn(console, 'error').mockImplementation(() => undefined)
+        vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {
+            throw new Error('Download failed')
+        })
+        await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Download'})))
+        fireEvent.click(screen.getByRole('button', {name: 'Close'}))
+
+        await expectDialogCleanup()
+    })
+
+    it('requires a new confirmation for a replacement video after downloading the previous one', async () => {
+        await openDialog()
+        vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+        await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Download'})))
+        await act(async () => {
+            window.dispatchEvent(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
+                detail: {blob: new Blob(['new video'], {type: 'video/mp4'}), filename: 'new-video.mp4'},
+            }))
+        })
+        fireEvent.click(screen.getByRole('button', {name: 'Close'}))
+
+        expect(screen.getByTestId('video-preview-close-confirmation')).toBeTruthy()
+        expect(recorder.releaseMedia).not.toHaveBeenCalled()
     })
 
     it('previews and downloads the frame-by-frame Replay export', async () => {
@@ -522,6 +601,7 @@ describe('VideoDownloadAndShareDialog', () => {
         })
         expect(screen.getByLabelText('File name input').value).toBe('second')
         await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Close'})))
+        await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Yes I confirm'})))
         expect(screen.queryByTestId('video-preview-dialog')).toBeNull()
         await act(async () => resolveFirstRestore())
 

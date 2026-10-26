@@ -81,6 +81,7 @@ const buildMediaFilename = (stem, extension, fallback = DEFAULT_VIDEO_FILENAME) 
 
 export const VideoDownloadAndShareDialog = () => {
     const [dialogOpen, setDialogOpen] = useState(false)
+    const [closeConfirmationOpen, setCloseConfirmationOpen] = useState(false)
     const [filename, setFilename] = useState('')
     const [canDownloadAndShare, setCanDownloadAndShare] = useState(false)
     const [isRecordingInfoOpen, setIsRecordingInfoOpen] = useState(false)
@@ -91,11 +92,14 @@ export const VideoDownloadAndShareDialog = () => {
     const _recordingInfoButton = useRef(null)
     const _recordingInfoPopup = useRef(null)
     const _mediaBlob = useRef({blob: null, url: null, filename: ''})
+    const _mediaDownloaded = useRef(false)
     const _shareInFlight = useRef(false)
     const _dialogCleanupDone = useRef(true)
     const _replayScenePreFocused = useRef(false)
     const _mediaRequestToken = useRef(0)
+    /** Release the previous preview URL and reset its download status. */
     const releaseMediaUrl = useCallback(() => {
+        _mediaDownloaded.current = false
         const url = _mediaBlob.current.url
         if (url) {
             _mediaBlob.current.url = null
@@ -502,6 +506,7 @@ export const VideoDownloadAndShareDialog = () => {
                 else {
                     await __.mediaCapture.download({filename: downloadFilename})
                 }
+                _mediaDownloaded.current = true
             }
             else {
                 await __.mediaCapture.download({
@@ -518,6 +523,7 @@ export const VideoDownloadAndShareDialog = () => {
      * Handle cancel and cleanup.
      */
     const handleCancel = useCallback(async () => {
+        setCloseConfirmationOpen(false)
         if (_dialogCleanupDone.current) {
             setDialogOpen(false)
             return
@@ -551,15 +557,42 @@ export const VideoDownloadAndShareDialog = () => {
     }, [prepareReplaySceneForDialog, releaseMediaUrl])
 
     /**
-     * Keep the cleanup aligned with the native dialog close flow.
+     * Confirm video disposal before releasing the preview and its media.
+     */
+    const requestClose = useCallback(() => {
+        if (_dialogCleanupDone.current) {
+            return
+        }
+        if (__.mediaCapture.isVideo() && !_mediaDownloaded.current) {
+            setCloseConfirmationOpen(true)
+            return
+        }
+        void handleCancel()
+    }, [handleCancel])
+
+    /**
+     * Cancel disposal while keeping the exported video available.
+     */
+    const cancelCloseConfirmation = useCallback((event) => {
+        if (event?.target && event?.currentTarget && event.target !== event.currentTarget) {
+            return
+        }
+        setCloseConfirmationOpen(false)
+    }, [])
+
+    /**
+     * Intercept native close requests before they can discard the video.
      */
     const handleDialogHide = useCallback((event) => {
         if (event?.target && event?.currentTarget && event.target !== event.currentTarget) {
             return
         }
 
-        void handleCancel()
-    }, [handleCancel])
+        if (!_dialogCleanupDone.current) {
+            event.preventDefault()
+            requestClose()
+        }
+    }, [requestClose])
 
     return (
         <>
@@ -673,7 +706,7 @@ export const VideoDownloadAndShareDialog = () => {
                             id="video-preview-close"
                             className="video-preview-close-button"
                             appearance="outlined"
-                            onClick={handleCancel}
+                            onClick={requestClose}
                         >
                             <WaIcon slot="start" className="video-preview-action-icon" name="xmark" variant="regular"/>
                             {'Close'}
@@ -708,6 +741,28 @@ export const VideoDownloadAndShareDialog = () => {
                 </div>
             </div>
             </WaDialog>
+            {closeConfirmationOpen && (
+                <WaDialog
+                    id="video-preview-close-confirmation"
+                    open
+                    label="Close without saving your video?"
+                    lightDismiss={false}
+                    onWaHide={cancelCloseConfirmation}
+                    className="lgs-theme"
+                >
+                    <p>{'If you close this window, you will lose your video. Download it first if you want to keep it.'}</p>
+                    <div slot="footer" className="video-preview-close-confirmation-actions">
+                        <WaButton appearance="outlined" variant="danger" onClick={() => void handleCancel()}>
+                            <WaIcon slot="start" name="check" variant="regular"/>
+                            {'Yes I confirm'}
+                        </WaButton>
+                        <WaButton autoFocus onClick={() => setCloseConfirmationOpen(false)}>
+                            <WaIcon slot="start" name="xmark" variant="regular"/>
+                            {'Cancel'}
+                        </WaButton>
+                    </div>
+                </WaDialog>
+            )}
         </>
     )
 }
