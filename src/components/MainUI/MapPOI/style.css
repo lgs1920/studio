@@ -310,7 +310,8 @@
     transform: rotate(-45deg);
 }
 
-.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner .poi-title .poi-category-title-icon::part(svg) {
+.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner .poi-title .poi-category-title-icon::part(svg),
+.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner .poi-title svg.poi-category-title-icon {
     transform: none;
 }
 

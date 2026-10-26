@@ -342,7 +342,42 @@ export const MapPOIMoveOverlay = () => {
         clone.removeAttribute('data-poi-canvas-source')
         clone.classList.add('poi-move-preview')
 
-        clone.querySelectorAll('wa-icon').forEach(icon => {
+        const sourceSvgLoadListeners = []
+        const sourceSvgInlineCallbacks = []
+        const sourceIcons = source.querySelectorAll('wa-icon')
+        clone.querySelectorAll('wa-icon').forEach((icon, index) => {
+            const sourceIcon = sourceIcons[index]
+            if (sourceIcon && icon.getAttribute('src')?.toLowerCase().endsWith('.svg')) {
+                /** Inline the loaded source SVG because cloneNode does not copy a custom element's shadow root. */
+                const inlineSourceSvg = () => {
+                    if (!icon.isConnected) {
+                        return
+                    }
+                    const sourceSvg = sourceIcon.shadowRoot?.querySelector('[part="svg"]')
+                    if (!sourceSvg) {
+                        return
+                    }
+
+                    const svg = sourceSvg.cloneNode(true)
+                    svg.setAttribute('class', icon.getAttribute('class') ?? '')
+                    svg.style.height = '1em'
+                    svg.style.width = 'auto'
+                    svg.style.overflow = 'visible'
+                    icon.replaceWith(svg)
+                }
+
+                /** Reuse the source SVG's loaded and styled vector paths in the move preview. */
+                const styleAndInlineSourceSvg = () => {
+                    void stylePOIDuotoneIcon(sourceIcon)
+                        .then(inlineSourceSvg)
+                        .catch(error => console.error('Error inlining cloned POI SVG:', error))
+                }
+                sourceIcon.addEventListener('wa-load', styleAndInlineSourceSvg, {once: true})
+                sourceSvgLoadListeners.push([sourceIcon, styleAndInlineSourceSvg])
+                sourceSvgInlineCallbacks.push(styleAndInlineSourceSvg)
+                return
+            }
+
             /** Style both immediately available icons and SVG assets after their asynchronous load. */
             const styleIcon = () => {
                 void stylePOIDuotoneIcon(icon)
@@ -352,8 +387,12 @@ export const MapPOIMoveOverlay = () => {
             styleIcon()
         })
         markerContent.replaceChildren(clone)
+        sourceSvgInlineCallbacks.forEach(inlineSvg => inlineSvg())
 
         return () => {
+            sourceSvgLoadListeners.forEach(([sourceIcon, listener]) => {
+                sourceIcon.removeEventListener('wa-load', listener)
+            })
             if (clone.parentElement === markerContent) {
                 markerContent.removeChild(clone)
             }

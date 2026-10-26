@@ -482,7 +482,7 @@ describe('POI move interaction', () => {
         expect($poiMove.session).toBeNull()
     })
 
-    it('styles a custom SVG category icon when it finishes loading in a transparent move preview', async () => {
+    it('inlines the loaded custom SVG category icon in a transparent move preview', async () => {
         const poi = createPOI({
             expanded: false,
             noBackground: true,
@@ -490,22 +490,23 @@ describe('POI move interaction', () => {
             categoryIcon: () => 'house-bed.svg',
         })
         createMapFixture(poi)
-        startMoveSession(poi)
         mocks.stylePOIDuotoneIcon.mockClear()
 
-        render(<><MapPOIContent poi={poi.id}/><MapPOIMoveOverlay/></>)
+        const {rerender} = render(<><MapPOIContent poi={poi.id}/>{$poiMove.session && <MapPOIMoveOverlay/>}</>)
+        const sourceIcon = document.querySelector(`[data-poi-canvas-source="${poi.id}"] wa-icon[src]`)
+        const sourceIconRoot = sourceIcon.attachShadow({mode: 'open'})
+        sourceIconRoot.innerHTML = '<svg part="svg" viewBox="0 0 576 512"><path data-duotone-primary=""/></svg>'
+
+        startMoveSession(poi)
+        rerender(<><MapPOIContent poi={poi.id}/><MapPOIMoveOverlay/></>)
 
         const clonedPOI = document.querySelector('.poi-move-preview')
-        const clonedIcon = clonedPOI.querySelector('wa-icon')
-        expect(clonedPOI.querySelector('.poi-card-inner').classList.contains('poi-card-inner--no-background')).toBe(true)
-        expect(clonedIcon.getAttribute('src')).toMatch(/house-bed\.svg$/)
-
         await act(async () => {
-            clonedIcon.dispatchEvent(new Event('wa-load'))
             await Promise.resolve()
         })
-
-        expect(mocks.stylePOIDuotoneIcon).toHaveBeenCalledWith(clonedIcon)
+        expect(clonedPOI.querySelector('.poi-card-inner').classList.contains('poi-card-inner--no-background')).toBe(true)
+        expect(clonedPOI.querySelector('svg.poi-as-flag path[data-duotone-primary]')).toBeTruthy()
+        expect(mocks.stylePOIDuotoneIcon).toHaveBeenCalledWith(sourceIcon)
     })
 
     it('cancels with Escape and restores the POI state without saving coordinates', () => {
