@@ -24,6 +24,7 @@ import { proxyMap } from 'valtio/utils'
 const mocks = vi.hoisted(() => ({
     entityContainer: null,
     poiManager: null,
+    stylePOIDuotoneIcon: vi.fn(() => Promise.resolve(false)),
 }))
 
 vi.mock('@awesome.me/webawesome/dist/react', async () => {
@@ -34,11 +35,23 @@ vi.mock('@awesome.me/webawesome/dist/react', async () => {
             <button ref={ref} {...props}>{children}</button>
         )),
         WaDivider: () => <hr/>,
-        WaIcon: ({name, className, style, 'aria-hidden': ariaHidden}) => (
-            <span className={className} style={style} aria-hidden={ariaHidden} data-icon={name}/>
+        WaIcon: ({name, src, className, style, 'aria-hidden': ariaHidden}) => (
+            <wa-icon
+                name={name}
+                src={src}
+                className={className}
+                style={style}
+                aria-hidden={ariaHidden}
+                data-icon={name}
+            />
         ),
     }
 })
+
+vi.mock('@Components/MainUI/MapPOI/duotoneIconUtils', () => ({
+    stylePOIDuotoneIcon: mocks.stylePOIDuotoneIcon,
+    applyPOIDuotoneIconStyles: vi.fn(),
+}))
 
 vi.mock('@Utils/cesium/POIUtils', () => ({
     POIUtils: {
@@ -188,6 +201,7 @@ const createMapFixture = (
             onLongTap: vi.fn(),
             onRightClick: vi.fn(),
             onTap: vi.fn(),
+            offKeyUp: vi.fn(),
             removeAllListenersByEntity: vi.fn(),
         },
         convert: value => ({to: () => `coordinate-${Number(value).toFixed(4)}`}),
@@ -466,6 +480,32 @@ describe('POI move interaction', () => {
         expect(marker.isConnected).toBe(false)
         expect(document.body.classList.contains('poi-move-hiding-system-cursor')).toBe(false)
         expect($poiMove.session).toBeNull()
+    })
+
+    it('styles a custom SVG category icon when it finishes loading in a transparent move preview', async () => {
+        const poi = createPOI({
+            expanded: false,
+            noBackground: true,
+            category: 'refuge',
+            categoryIcon: () => 'house-bed.svg',
+        })
+        createMapFixture(poi)
+        startMoveSession(poi)
+        mocks.stylePOIDuotoneIcon.mockClear()
+
+        render(<><MapPOIContent poi={poi.id}/><MapPOIMoveOverlay/></>)
+
+        const clonedPOI = document.querySelector('.poi-move-preview')
+        const clonedIcon = clonedPOI.querySelector('wa-icon')
+        expect(clonedPOI.querySelector('.poi-card-inner').classList.contains('poi-card-inner--no-background')).toBe(true)
+        expect(clonedIcon.getAttribute('src')).toMatch(/house-bed\.svg$/)
+
+        await act(async () => {
+            clonedIcon.dispatchEvent(new Event('wa-load'))
+            await Promise.resolve()
+        })
+
+        expect(mocks.stylePOIDuotoneIcon).toHaveBeenCalledWith(clonedIcon)
     })
 
     it('cancels with Escape and restores the POI state without saving coordinates', () => {

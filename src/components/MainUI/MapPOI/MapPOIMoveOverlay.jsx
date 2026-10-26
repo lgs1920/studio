@@ -331,8 +331,9 @@ export const MapPOIMoveOverlay = () => {
             return undefined
         }
 
-        const source = Array.from(document.querySelectorAll('[data-poi-canvas-source]'))
-            .find(element => element.dataset.poiCanvasSource === session.poiId)
+        const sourceId = globalThis.CSS?.escape?.(session.poiId)
+            ?? String(session.poiId).replaceAll('\\', '\\\\').replaceAll('"', '\\"')
+        const source = document.querySelector(`[data-poi-canvas-source="${sourceId}"]`)
         if (!source) {
             return undefined
         }
@@ -340,12 +341,17 @@ export const MapPOIMoveOverlay = () => {
         const clone = source.cloneNode(true)
         clone.removeAttribute('data-poi-canvas-source')
         clone.classList.add('poi-move-preview')
-        markerContent.replaceChildren(clone)
 
         clone.querySelectorAll('wa-icon').forEach(icon => {
-            void stylePOIDuotoneIcon(icon)
-                .catch(error => console.error('Error styling cloned POI icon:', error))
+            /** Style both immediately available icons and SVG assets after their asynchronous load. */
+            const styleIcon = () => {
+                void stylePOIDuotoneIcon(icon)
+                    .catch(error => console.error('Error styling cloned POI icon:', error))
+            }
+            icon.addEventListener('wa-load', styleIcon, {once: true})
+            styleIcon()
         })
+        markerContent.replaceChildren(clone)
 
         return () => {
             if (clone.parentElement === markerContent) {
@@ -443,19 +449,18 @@ export const MapPOIMoveOverlay = () => {
                 _suppressClick.current = false
             }
             if (_drag.current || getPOIMoveSession() || event.button !== 0 || event.isPrimary === false
-                || !event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || isCesiumInputBlocked()) {
+                || !event.shiftKey || event.ctrlKey || event.altKey
+                || event.metaKey || isCesiumInputBlocked()) {
                 return
             }
             const rect = canvas.getBoundingClientRect()
             if (!rect.width || !rect.height) {
                 return
             }
-            const picked = viewer.scene.pick(new Cartesian2(
+            const position = new Cartesian2(
                 (event.clientX - rect.left) * canvas.clientWidth / rect.width,
                 (event.clientY - rect.top) * canvas.clientHeight / rect.height,
-            ))
-            const poiId = typeof picked?.id === 'string' ? picked.id : picked?.id?.id
-            const currentPOI = $pois.list.get(poiId)
+            )
             const drag = {
                 pointerId: event.pointerId,
                 offsetX: 0,
@@ -464,22 +469,89 @@ export const MapPOIMoveOverlay = () => {
                 startY: event.clientY,
                 moved: false,
                 captureElement: canvas,
+                pickPending: false,
+                pendingEvents: [],
             }
             _drag.current = drag
-            if (!startPOIMove(currentPOI)) {
-                _drag.current = null
+
+            /** Start the POI session once Cesium resolves the original Shift-press pick. */
+            const startPickedMove = picked => {
+                if (_drag.current !== drag) {
+                    return false
+                }
+                const poiId = typeof picked?.id === 'string' ? picked.id : picked?.id?.id
+                const currentPOI = $pois.list.get(poiId)
+                if (!startPOIMove(currentPOI)) {
+                    _pointerHandlers.current.cancelMove()
+                    _suppressClick.current = false
+                    return false
+                }
+                drag.pickPending = false
+                setDragging(true)
+                if (drag.pendingEvents.length > 0) {
+                    requestAnimationFrame(() => {
+                        if (_drag.current !== drag) {
+                            return
+                        }
+                        const pendingEvents = drag.pendingEvents.splice(0)
+                        for (const pendingEvent of pendingEvents) {
+                            const handler = pendingEvent.type === 'pointermove' ? 'handlePointerMove'
+                                : pendingEvent.type === 'pointerup' ? 'handlePointerUp' : 'handlePointerCancel'
+                            _pointerHandlers.current[handler](pendingEvent)
+                            if (_drag.current !== drag) {
+                                break
+                            }
+                        }
+                    })
+                }
+                return true
+            }
+
+            const scene = viewer.scene
+            if (typeof scene.pickAsync !== 'function') {
+                if (!startPickedMove(scene.pick(position))) {
+                    _drag.current = null
+                    return
+                }
+                event.preventDefault()
+                event.stopImmediatePropagation()
+                _suppressClick.current = true
+                canvas.setPointerCapture?.(event.pointerId)
                 return
             }
+
             event.preventDefault()
             event.stopImmediatePropagation()
             _suppressClick.current = true
-            setDragging(true)
+            drag.pickPending = true
             canvas.setPointerCapture?.(event.pointerId)
+            void Promise.resolve()
+                .then(() => scene.pickAsync(position))
+                .then(startPickedMove)
+                .catch(() => {
+                    if (_drag.current === drag) {
+                        _pointerHandlers.current.cancelMove()
+                        _suppressClick.current = false
+                    }
+                })
         }
 
         /** Route only the owned pointer to the overlay, even before it appears beneath the pointer. */
         const routePointer = event => {
-            if (!_drag.current || _drag.current.pointerId !== event.pointerId) {
+            const drag = _drag.current
+            if (!drag || drag.pointerId !== event.pointerId) {
+                return
+            }
+            if (drag.pickPending) {
+                drag.pendingEvents.push({
+                    type: event.type,
+                    pointerId: event.pointerId,
+                    clientX: event.clientX,
+                    clientY: event.clientY,
+                    buttons: event.buttons,
+                    preventDefault: () => {},
+                    stopPropagation: () => {},
+                })
                 return
             }
             const handler = event.type === 'pointermove' ? 'handlePointerMove'

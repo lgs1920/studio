@@ -44,6 +44,7 @@ const queuePOICanvasRender = createPOICanvasRenderQueue(2)
 const MAX_POI_CANVAS_SIDE = 4096
 const MAX_POI_CANVAS_PIXELS = 8_388_608
 const POI_EXPANDED_LEADER_ANGLES = [-45, 0, 45]
+const DISABLE_POI_SHIFT_HOVER_FOR_DIAGNOSTIC = true
 
 const assertPOICanvasDimensions = (element, scale, ratio) => {
     const bounds = element.getBoundingClientRect()
@@ -218,10 +219,12 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, style
         __.canvasEvents.onDoubleTap(handleEditor, {entity: poiId, preventLowerPriority: true})
         __.canvasEvents.onRightClick(openContextMenu, {entity: poiId, preventLowerPriority: true})
         __.canvasEvents.onLongTap(openContextMenu, {entity: poiId, preventLowerPriority: true})
-        __.canvasEvents.on('SHIFT#MOUSE_ENTER', handleShiftHover, {entity: poiId})
-        __.canvasEvents.on('SHIFT#MOUSE_LEAVE', handleShiftHoverEnd, {entity: poiId})
-        __.canvasEvents.onKeyDown(handleShiftDown, {entity: poiId, keys: ['shift']})
-        __.canvasEvents.onKeyUp(handleShiftUp, {entity: false, keys: ['shift']})
+        if (!DISABLE_POI_SHIFT_HOVER_FOR_DIAGNOSTIC) {
+            __.canvasEvents.on('SHIFT#MOUSE_ENTER', handleShiftHover, {entity: poiId})
+            __.canvasEvents.on('SHIFT#MOUSE_LEAVE', handleShiftHoverEnd, {entity: poiId})
+            __.canvasEvents.onKeyDown(handleShiftDown, {entity: poiId, keys: ['shift']})
+            __.canvasEvents.onKeyUp(handleShiftUp, {entity: false, keys: ['shift']})
+        }
     }, [handleEditor, handlePOIClick, handleShiftDown, handleShiftHover, handleShiftHoverEnd, handleShiftUp, openContextMenu])
 
     const removeEventListeners = useCallback((poiId) => {
