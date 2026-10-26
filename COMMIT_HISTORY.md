@@ -4027,3 +4027,23 @@
 ## 2026-10-24 — [`feat: configure POI display in Basic Replay`](https://github.com/lgs1920/studio/commit/4dda4534803382a939fea9707dfa695f36402495)
 
 - Recorded automatically from Git history.
+
+## 2026-10-24 — [`fix: ignore stale map point picks`](https://github.com/lgs1920/studio/commit/d5b93a958fc4ac45e8302368e9a6722c2009ab12)
+
+- Recorded automatically from Git history.
+
+## 2026-10-24 — [`style: refine Basic Replay video settings`](https://github.com/lgs1920/studio/commit/4a6979ccf76b0769a314d4bd0cb2fed293f7b431)
+
+- Recorded automatically from Git history.
+
+## 2026-10-24 — [`feat: reorganize POI drawer editing tabs`](https://github.com/lgs1920/studio/commit/64287395c923eb51fc1715bfbb1f89b65ebe925b)
+
+- Recorded automatically from Git history.
+
+## 2026-10-25 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/07ad700bab395b7a8150de774a09b4bbc7799e8a)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-10-25 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/3b2f9c856c25ceedc94811130babd60b7718573c)
+
+- Recorded automatically from Git history.
