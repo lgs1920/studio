@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,12 @@ import {act, cleanup, fireEvent, render, screen} from '@testing-library/react'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
 vi.mock('@Components/MainUI/LogoSvg', () => ({
-    LogoSvg: () => <div aria-label="Logo"/>,
+    LogoSvg: ({src, className}) => (
+        <svg aria-label="Logo" data-src={src} className={className}>
+            <g className="lgs--logo-clapper"/>
+            <path className="lgs--logo-clapper-occlusion"/>
+        </svg>
+    ),
 }))
 
 vi.mock('@Components/MainUI/WelcomeHeroControls', () => ({
@@ -198,6 +203,126 @@ describe('WelcomeHero', () => {
         expect(document.querySelector('.welcome-enter-call-for-action')).toBeTruthy()
     })
 
+    it('marks the welcome branding ready for the clapper animation with the CTA', () => {
+        const splashElement = document.createElement('div')
+        splashElement.id = 'lgs-boot-splash'
+        document.body.append(splashElement)
+        globalThis.lgs = {versions: {studio: '1.0.0'}}
+
+        const {unmount} = render(<WelcomeHero initComplete appReady/>)
+
+        expect(splashElement.classList.contains('lgs-boot-splash-cta-ready')).toBe(true)
+
+        unmount()
+
+        expect(splashElement.classList.contains('lgs-boot-splash-cta-ready')).toBe(false)
+        splashElement.remove()
+    })
+
+    it('plays once on readiness and waits for sound completion before the next cycle', async () => {
+        vi.useFakeTimers({now: 0})
+        const sources = []
+        const audioContext = {
+            state: 'running',
+            sampleRate: 1000,
+            currentTime: 0,
+            destination: {},
+            createBuffer: () => ({getChannelData: () => new Float32Array(160)}),
+            createBufferSource: () => {
+                const source = {connect: vi.fn(), disconnect: vi.fn(), start: vi.fn(), stop: vi.fn()}
+                sources.push(source)
+                return source
+            },
+            createBiquadFilter: () => ({
+                type: '',
+                frequency: {value: 0},
+                Q: {value: 0},
+                connect: vi.fn(),
+                disconnect: vi.fn(),
+            }),
+            createGain: () => ({
+                gain: {setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn()},
+                connect: vi.fn(),
+                disconnect: vi.fn(),
+            }),
+            createOscillator: () => {
+                const oscillator = {
+                    type: '',
+                    frequency: {
+                        setValueAtTime: vi.fn(),
+                        exponentialRampToValueAtTime: vi.fn(),
+                    },
+                    connect: vi.fn(),
+                    disconnect: vi.fn(),
+                    start: vi.fn(),
+                    stop: vi.fn(),
+                }
+                sources.push(oscillator)
+                return oscillator
+            },
+            close: vi.fn().mockResolvedValue(undefined),
+        }
+        const MockAudioContext = class {
+            static instances = 0
+
+            constructor() {
+                Object.assign(this, audioContext)
+                MockAudioContext.instances++
+            }
+        }
+        vi.stubGlobal('AudioContext', MockAudioContext)
+        globalThis.lgs = {versions: {studio: '1.0.0'}}
+
+        /** Renders the same branding while startup readiness changes. */
+        const view = ready => <>
+            <WelcomeBranding/>
+            <WelcomeHero initComplete={ready} appReady={ready}/>
+        </>
+        const {unmount, rerender} = render(view(false))
+        const animations = [...document.querySelectorAll('.lgs--logo-clapper, .lgs--logo-clapper-occlusion')]
+            .map(element => {
+                const animation = {
+                    animationName: 'lgs-logo-clapper-close',
+                    currentTime: 0,
+                    effect: {getTiming: () => ({duration: 1200})},
+                    pause: vi.fn(),
+                    play: vi.fn(),
+                }
+                element.getAnimations = () => [animation]
+                return animation
+            })
+        rerender(view(true))
+
+        expect(animations.length).toBeGreaterThan(1)
+        expect(animations.every(animation => animation.currentTime === 456)).toBe(true)
+        expect(animations.every(animation => animation.pause.mock.calls.length === 1)).toBe(true)
+        expect(MockAudioContext.instances).toBe(1)
+        expect(sources).toHaveLength(4)
+        expect(sources[3].frequency.setValueAtTime).toHaveBeenCalledWith(175, 0)
+
+        act(() => vi.advanceTimersByTime(359))
+        expect(sources).toHaveLength(4)
+
+        // No new impact may start while the previous sound is still active.
+        act(() => vi.advanceTimersByTime(3000))
+        expect(sources).toHaveLength(4)
+        expect(animations.every(animation => animation.play.mock.calls.length === 0)).toBe(true)
+        await act(async () => sources[3].onended())
+        expect(animations.every(animation => animation.play.mock.calls.length === 1)).toBe(true)
+        act(() => vi.advanceTimersByTime(1200))
+        expect(sources).toHaveLength(8)
+        expect(sources[7].frequency.setValueAtTime).toHaveBeenCalledWith(155, 0)
+        expect(sources.every(source => source.start.mock.calls.length === 1)).toBe(true)
+
+        unmount()
+        const playbackCounts = animations.map(animation => animation.play.mock.calls.length)
+        await act(async () => sources[7].onended())
+        expect(animations.map(animation => animation.play.mock.calls.length)).toEqual(playbackCounts)
+        act(() => vi.advanceTimersByTime(5000))
+        expect(sources).toHaveLength(8)
+        expect(audioContext.close).toHaveBeenCalledTimes(1)
+    })
+
     it('leaves startup media and branding to the static splash', () => {
         globalThis.lgs = {
             configuration: {website: {domain: 'lgs1920.fr', protocol: 'https'}},
@@ -329,10 +454,10 @@ describe('WelcomeBranding', () => {
     it('renders the logo, slogan, and loading spinner while the CTA enters', () => {
         render(<WelcomeBranding/>)
 
-        expect(document.querySelector('.welcome-branding-logo img')?.getAttribute('src'))
-            .toBe('/assets/logo/logo-horizontal.png')
-        expect(document.querySelector('.welcome-branding-logo source')?.getAttribute('srcset'))
-            .toBe('/assets/logo/logo-vertical.png')
+        expect(document.querySelector('.welcome-branding-logo-horizontal')?.getAttribute('data-src'))
+            .toBe('/assets/logo/logo-horizontal.svg')
+        expect(document.querySelector('.welcome-branding-logo-vertical')?.getAttribute('data-src'))
+            .toBe('/assets/logo/logo-vertical.svg')
         expect(document.querySelector('.welcome-branding-spinner wa-spinner')).toBeTruthy()
         expect(document.querySelector('.welcome-branding')?.classList.contains('welcome-branding-cta-visible')).toBe(false)
         expect(screen.getByLabelText('LGS1920 slogan')).toBeTruthy()

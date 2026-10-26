@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-09
- * Last modified: 2026-07-09
+ * Created on: 2026-07-07
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -60,6 +60,10 @@
 
 .lgs--logo-mark {
   shape-rendering: geometricPrecision;
+}
+
+.lgs--logo-clapper {
+  transform-box: view-box;
 }
 
 .lgs--logo-part {

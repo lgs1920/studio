@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -770,6 +770,33 @@ body.mobile .orbit-widget-body {
     }
 }
 
+@keyframes lgs-logo-clapper-close {
+    0%, 22%, 84%, 100% {
+        transform: rotate(0deg);
+    }
+
+    38%, 68% {
+        transform: rotate(var(--lgs--logo-close-angle));
+    }
+}
+
+.welcome-branding-logo {
+    & .lgs--logo-clapper,
+    & .lgs--logo-clapper-occlusion {
+        transform-box: view-box;
+        animation: lgs-logo-clapper-close 1200ms cubic-bezier(.2, .75, .3, 1) infinite;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .welcome-branding-logo {
+        & .lgs--logo-clapper,
+        & .lgs--logo-clapper-occlusion {
+            animation: none;
+        }
+    }
+}
+
 .welcome-hero-media,
 .welcome-hero-route,
 .welcome-hero-shell {
@@ -841,9 +868,18 @@ body.mobile .orbit-widget-body {
         margin: 0;
         transform: translate(-50%, -50%);
         filter: drop-shadow(0 0 18px rgba(0, 0, 0, .55));
+
+        & .welcome-branding-logo-horizontal,
+        & .welcome-branding-logo-vertical {
+            display: block;
+        }
+
+        & .welcome-branding-logo-vertical {
+            display: none;
+        }
     }
 
-    & .welcome-branding-logo img {
+    & .welcome-branding-logo svg {
         display: block;
         width: 100%;
         height: auto;
@@ -1194,6 +1230,14 @@ body.mobile .orbit-widget-body {
 
     .welcome-branding-logo {
         width: min(150px, calc(100vw - 2rem));
+
+        & .welcome-branding-logo-horizontal {
+            display: none;
+        }
+
+        & .welcome-branding-logo-vertical {
+            display: block;
+        }
     }
 
     .welcome-branding-slogan {

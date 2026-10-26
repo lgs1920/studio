@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-21
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { SloganSvg } from '@Components/MainUI/SloganSvg'
+import { LogoSvg } from '@Components/MainUI/LogoSvg'
 import { WaSpinner } from '@awesome.me/webawesome/dist/react'
 import { useLayoutEffect } from 'react'
 
@@ -33,10 +34,10 @@ export const WelcomeBranding = () => {
 
     return (
         <div className="welcome-branding" aria-label="LGS1920 Studio">
-            <picture className="welcome-branding-logo">
-                <source media="(max-width: 700px)" srcSet="/assets/logo/logo-vertical.png"/>
-                <img src="/assets/logo/logo-horizontal.png" alt="LGS1920 Studio logo"/>
-            </picture>
+            <div className="welcome-branding-logo" role="img" aria-label="LGS1920 Studio logo">
+                <LogoSvg src="/assets/logo/logo-horizontal.svg" className="welcome-branding-logo-horizontal"/>
+                <LogoSvg src="/assets/logo/logo-vertical.svg" className="welcome-branding-logo-vertical"/>
+            </div>
             <span className="welcome-branding-spinner" aria-hidden="true">
                 <WaSpinner/>
             </span>
