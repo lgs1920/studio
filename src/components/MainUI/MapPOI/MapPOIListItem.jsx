@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-20
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -106,6 +106,7 @@ export const MapPOIListItem = memo(({id, canSelect}) => {
             {canSelect && <POIBulkToggle id={id}/>}
             <WaDetails
                 className={classNames('edit-map-poi-item', {'map-poi-hidden': !poi.visible}, 'lgs--details-hoverable')}
+                data-ui-state-persist="false"
                 open={isCurrent}
                 onWaShow={handleDetailsShow}
                 onWaAfterShow={scrollIntoView}

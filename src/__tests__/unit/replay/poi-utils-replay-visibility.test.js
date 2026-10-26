@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-12
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -144,6 +144,37 @@ describe('POIUtils replay visibility', () => {
         globalThis.lgs.settings = {ui: {replay: {userMode: 'basic', basic: {poiVisibilityMode: 'yes'}}}}
 
         expect(POIUtils.setPOIVisibility({visible: false, replay: {visible: false}}, true)).toBe(true)
+    })
+
+    it.each([
+        {clipSequenceActive: true},
+        {deferredExportPlan: {runtime: {status: 'exporting'}}},
+    ])('keeps Hide all applied to a billboard redraw without a running wall clock: %j', async context => {
+        Object.assign(globalThis.lgs.stores.replay, context, {
+            userMode: 'expert', hideAllPoisDuringJourneyReplay: true,
+        })
+        globalThis.lgs.settings = {ui: {replay: {userMode: 'expert', hideAllPoisDuringJourneyReplay: true}}}
+        const poi = {id: 'animated', type: 'poi', longitude: 2, latitude: 48, height: 100,
+            visible: true, replay: {visible: false}, image: {src: 'canvas', width: 40, height: 20}}
+
+        const hiddenEntity = await POIUtils.draw(poi)
+        expect(hiddenEntity.show).toBe(false)
+        globalThis.lgs.stores.replay.animatedPOIIds = [poi.id]
+        const animatedEntity = await POIUtils.draw(poi)
+        expect(animatedEntity.show).toBe(true)
+        expect(propertyValue(animatedEntity.billboard.show)).toBe(true)
+        globalThis.lgs.stores.replay.animatedPOIIds = []
+        await POIUtils.draw(poi)
+        expect(animatedEntity.show).toBe(false)
+        expect(poi.replay.visible).toBe(false)
+    })
+
+    it('does not apply Replay masks just because linked recording is prepared', () => {
+        Object.assign(globalThis.lgs.stores.replay, {
+            recordingSync: true, hideAllPoisDuringJourneyReplay: true,
+            deferredExportPlan: {runtime: {status: 'ready'}},
+        })
+        expect(POIUtils.setPOIVisibility({visible: true, replay: {visible: false}}, true)).toBe(true)
     })
 
     it('keeps Basic Replay Start and Stop visibility under user control even when all POIs are hidden', () => {

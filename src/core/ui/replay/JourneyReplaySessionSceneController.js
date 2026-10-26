@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -686,16 +686,43 @@ export const restorePlaybackSceneInternal = (mode, ) => {
                 return
             }
             state.deferPlaybackCameraRestore = false
-            // Reapply captured visibility after asynchronous scene cleanup.
-            call.restoreCurrentJourneyVisibility()
-            call.reapplyHideAllPOIVisibilityAfterAnimations()
-            // Hand back the normal view before allowing map persistence again.
-            call.restoreCameraState()
-            state.cameraStateRestoredBeforeSceneCleanup = false
-            call.restorePlaybackCameraSettings({force: true})
-            state.replayEntryCameraState = null
-            state.sceneRestorePromise = null
-            releaseReplaySessionOwnership(mode, replaySessionLease)
+            let restorationError = null
+            const restorationSteps = [
+                ['journey-visibility', () => call.restoreCurrentJourneyVisibility()],
+                ['poi-visibility', () => call.reapplyHideAllPOIVisibilityAfterAnimations?.()],
+                ['camera-state', () => call.restoreCameraState()],
+                ['camera-settings', () => call.restorePlaybackCameraSettings({force: true})],
+            ]
+
+            try {
+                // Attempt each handback step so one failed POI or camera callback
+                // cannot leave the remaining scene state owned by Replay.
+                for (const [stage, restore] of restorationSteps) {
+                    try {
+                        await restore()
+                    }
+                    catch (error) {
+                        restorationError ??= error
+                        console.error(`[Replay] Failed to restore playback ${stage}.`, error)
+                    }
+                }
+                state.cameraStateRestoredBeforeSceneCleanup = false
+                if (!restorationError) {
+                    state.replayEntryCameraState = null
+                }
+            }
+            finally {
+                // A rejected handback must not poison later exports with a stale
+                // promise or keep the Replay session lease indefinitely.
+                if (state.sceneRestorePromise === restorePromise) {
+                    state.sceneRestorePromise = null
+                    releaseReplaySessionOwnership(mode, replaySessionLease)
+                }
+            }
+
+            if (restorationError) {
+                throw restorationError
+            }
         })
         state.sceneRestorePromise = restorePromise
         return restorePromise

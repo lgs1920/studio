@@ -8,14 +8,16 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-23
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { MapPOIContent }                   from '@Components/MainUI/MapPOI/MapPOIContent'
-import { normalizeJourneyReplayPOISettings }  from '@Core/ui/replay/JourneyReplayPOISettings'
+import {
+    normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
+} from '@Core/ui/replay/JourneyReplayPOISettings'
 import { POIUtils }                                       from '@Utils/cesium/POIUtils'
 import { memo, useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                    from 'valtio'
@@ -40,11 +42,9 @@ export const MapPOI = memo(({point}) => {
     const replayEntry = Array.isArray(replay.nearbyPois)
                             ? replay.nearbyPois.find(entry => entry?.poi?.id === thePOI?.id)
                             : null
-    const replayActive = Boolean(replay.active || replay.playing || replay.paused)
+    const presentation = resolveReplayPOIPresentation(thePOI, {replay})
+    const replayActive = presentation.active
     const replaySettings = normalizeJourneyReplayPOISettings(thePOI?.replay)
-    const replayMasked = thePOI?.visible === false
-        || thePOI?.tooClose === true
-        || (replayActive && replaySettings.visible === false)
     useEffect(() => {
         let cancelled = false
         let rafId = null
@@ -131,13 +131,13 @@ export const MapPOI = memo(({point}) => {
                         '--lgs-poi-background-color': thePOI.noBackground ? 'transparent' : thePOI.bgColor ?? lgs.colors.poiDefaultBackground,
                         '--lgs-poi-border-color':     thePOI.color ?? lgs.colors.poiDefault,
                         '--lgs-poi-color':            thePOI.color ?? lgs.colors.poiDefault,
-                        display:                      replayMasked ? 'none' : undefined,
                         zIndex:                       viewable.get(thePOI.id),
                     }}
                     onPointerMove={__.ui.sceneManager.propagateEventToCanvas}
                     onWheel={hideMenu}
                 >
-                    {thePOI.visible && !tooFar &&
+                    {/* Source cards stay off screen and measurable while transient masks change. */}
+                    {!tooFar &&
                         <div className="lgs-slide-in-from-top-bounced">
                             <MapPOIContent
                                 poi={thePOI.id}

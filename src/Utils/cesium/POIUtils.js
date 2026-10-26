@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-03-01
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,11 +18,9 @@ import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { faLocationDot } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
 import {
-    isReplayPOIEndpoint,
-    normalizeJourneyReplayPOISettings,
-    normalizeReplayPOIBehavior,
+    isReplayPOIPresentationActive,
+    resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
-import {isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
 
 import { Canvg, Property } from 'canvg'
 import {
@@ -58,7 +56,7 @@ const finiteNumber = value => {
 const journeyPOIVisibilityFilter = () => {
     const lgs = globalThis.lgs
     const replay = lgs?.stores?.replay
-    const replayActive = Boolean(replay?.active || replay?.playing || replay?.paused)
+    const replayActive = isReplayPOIPresentationActive(replay)
     const replaySettings = lgs?.settings?.ui?.replay
     let enabled = lgs?.settings?.journey?.hideOtherJourneys === true
 
@@ -438,37 +436,7 @@ export class POIUtils {
             return false
         }
 
-        const replay = globalThis.lgs?.stores?.replay
-        const replayActive = Boolean(replay?.active || replay?.playing || replay?.paused)
-        let forceShowDuringReplay = false
-        if (replayActive) {
-            const replaySettings = globalThis.lgs?.settings?.ui?.replay ?? replay
-            const basicMode = isJourneyReplayBasicMode({settings: replaySettings, replay})
-            if (basicMode) {
-                const behavior = normalizeReplayPOIBehavior(replaySettings?.basic)
-                const endpoint = isReplayPOIEndpoint(poi)
-                forceShowDuringReplay = behavior.poiVisibilityMode === 'yes' && !endpoint
-                if (behavior.poiVisibilityMode === 'no' && !endpoint && !allowReplayAnimation) {
-                    return false
-                }
-                if (!allowReplayAnimation && (endpoint || behavior.poiVisibilityMode === 'user')
-                    && normalizeJourneyReplayPOISettings(poi?.replay).visible === false) {
-                    return false
-                }
-            }
-            else {
-                const hideAllPOIs = replay?.hideAllPoisDuringJourneyReplay === true
-                    || replaySettings?.hideAllPoisDuringJourneyReplay === true
-                if (hideAllPOIs && !isReplayPOIEndpoint(poi) && !allowReplayAnimation) {
-                    return false
-                }
-                if (!allowReplayAnimation && normalizeJourneyReplayPOISettings(poi?.replay).visible === false) {
-                    return false
-                }
-            }
-        }
-
-        return visibility ? forceShowDuringReplay || poi?.visible !== false : false
+        return Boolean(visibility) && resolveReplayPOIPresentation(poi, {allowReplayAnimation}).visible
     }
 
     /**

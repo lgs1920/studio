@@ -8,16 +8,20 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { proxyMap } from 'valtio/utils'
+
+const {drawPOI} = vi.hoisted(() => ({drawPOI: vi.fn().mockResolvedValue()}))
+
+vi.mock('@zumer/snapdom', () => ({snapdom: vi.fn()}))
 
 vi.mock('@Components/DataDisplay/NameValueUnit', () => ({
     NameValueUnit: ({text, value}) => <div>{text} {value}</div>,
@@ -39,7 +43,7 @@ vi.mock('@Core/MapPOI', () => ({
     MapPOI: class {
         constructor(poi) {
             Object.assign(this, poi)
-            this.utils = {draw: vi.fn().mockResolvedValue()}
+            this.utils = {draw: drawPOI}
         }
     },
 }))
@@ -49,6 +53,7 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
 }))
 
 import { MapPOIContent } from '@Components/MainUI/MapPOI/MapPOIContent'
+import {snapdom} from '@zumer/snapdom'
 
 /**
  * Create a fully populated expanded POI fixture.
@@ -61,7 +66,7 @@ const createPOI = display => ({
     title:          'River stop',
     category:       'standard',
     categoryIcon:   () => 'location-dot',
-    display,
+    display:        {schemaVersion: 1, ...display},
     expanded:       true,
     height:         125,
     simulatedHeight: 0,
@@ -79,6 +84,8 @@ describe('MapPOIContent display settings', () => {
     let requestAnimationFrame
 
     beforeEach(() => {
+        drawPOI.mockClear()
+        vi.mocked(snapdom).mockReset()
         poiList = proxyMap([['poi-1', createPOI({
             category:    true,
             titleCategoryIcon: true,
@@ -114,6 +121,7 @@ describe('MapPOIContent display settings', () => {
 
         globalThis.__ = {
             canvasEvents: {
+                on: vi.fn(),
                 onClick: vi.fn(),
                 onTap: vi.fn(),
                 onDoubleClick: vi.fn(),
@@ -126,7 +134,7 @@ describe('MapPOIContent display settings', () => {
             requestAnimationFrame,
             ui: {
                 contextMenu: {hide: vi.fn()},
-                poiManager: {ensurePOILocation: vi.fn()},
+                poiManager: {ensurePOILocation: vi.fn(), updatePOI: vi.fn()},
             },
         }
     })
@@ -136,6 +144,16 @@ describe('MapPOIContent display settings', () => {
         vi.restoreAllMocks()
         globalThis.lgs = undefined
         globalThis.__ = undefined
+    })
+
+    it('keeps regular clicks for expansion without arming movement on Shift+click', () => {
+        const canvasEvents = globalThis.__.canvasEvents
+        render(<MapPOIContent poi="poi-1"/>)
+
+        expect(canvasEvents.on.mock.calls.some(([name]) => name === 'SHIFT#CLICK')).toBe(false)
+        act(canvasEvents.onClick.mock.calls[0][0])
+
+        expect(globalThis.__.ui.poiManager.updatePOI).toHaveBeenCalledWith('poi-1', {expanded: false})
     })
 
     it('renders configured fields on the expanded map POI', () => {
@@ -271,5 +289,77 @@ describe('MapPOIContent display settings', () => {
 
         expect(document.querySelector('.poi-card-content--title-only')).not.toBeNull()
         expect(screen.getByRole('heading', {name: 'River stop'})).toBeTruthy()
+    })
+
+    it('commits an animated bitmap while Hide all masks the normal POI presentation', async () => {
+        const replay = globalThis.lgs.stores.replay
+        globalThis.lgs.settings.ui = {replay: {userMode: 'expert', hideAllPoisDuringJourneyReplay: true}}
+        replay.clipSequenceActive = true
+        replay.animatedPOIIds = ['poi-1']
+        poiList.get('poi-1').replay.visible = false
+        const canvas = document.createElement('canvas')
+        canvas.width = 200
+        canvas.height = 80
+        vi.mocked(snapdom).mockResolvedValue({toCanvas: async () => canvas})
+        render(<MapPOIContent poi="poi-1"/>)
+        vi.spyOn(document.querySelector('.poi-card'), 'getBoundingClientRect')
+            .mockReturnValue({width: 100, height: 40})
+
+        await act(async () => {})
+        await act(async () => {
+            requestAnimationFrame.mock.calls.map(([callback]) => callback).forEach(callback => callback())
+        })
+
+        expect(drawPOI).toHaveBeenCalledWith(expect.objectContaining({id: 'poi-1', image: {src: canvas, width: 100, height: 40}}))
+    })
+
+    it.each(['global-mask', 'animation-end', 'stop'])('rejects a pending canvas when presentation changes: %s', async transition => {
+        const replay = globalThis.lgs.stores.replay
+        globalThis.lgs.settings.ui = {replay: {userMode: 'expert', hideAllPoisDuringJourneyReplay: transition === 'animation-end'}}
+        replay.clipSequenceActive = true
+        if (transition === 'animation-end') {
+            replay.animatedPOIIds = ['poi-1']
+            poiList.get('poi-1').replay.visible = false
+        }
+        let finishCanvas
+        const canvas = document.createElement('canvas')
+        canvas.width = 200
+        canvas.height = 80
+        const pendingCanvas = new Promise(resolve => {finishCanvas = resolve})
+        vi.mocked(snapdom).mockResolvedValue({toCanvas: () => pendingCanvas})
+        render(<MapPOIContent poi="poi-1"/>)
+        const element = document.querySelector('.poi-card')
+        vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({width: 100, height: 40})
+
+        // Let mount-time DOM mutations publish their replacement capture requests.
+        await act(async () => {})
+        await act(async () => {
+            const callbacks = requestAnimationFrame.mock.calls.map(([callback]) => callback)
+            requestAnimationFrame.mockClear()
+            callbacks.forEach(callback => callback())
+        })
+        try {
+            expect(snapdom).toHaveBeenCalled()
+            await act(async () => {
+                if (transition === 'global-mask') {
+                    globalThis.lgs.settings.ui.replay.hideAllPoisDuringJourneyReplay = true
+                    replay.hideAllPoisDuringJourneyReplay = true
+                }
+                else if (transition === 'animation-end') {
+                    replay.animatedPOIIds = []
+                    poiList.get('poi-1').expanded = false
+                }
+                else {
+                    replay.clipSequenceActive = false
+                }
+                finishCanvas(canvas)
+                await pendingCanvas
+            })
+            expect(drawPOI.mock.calls.filter(([point]) => point.visible !== false)).toEqual([])
+        }
+        finally {
+            finishCanvas(canvas)
+            await pendingCanvas
+        }
     })
 })

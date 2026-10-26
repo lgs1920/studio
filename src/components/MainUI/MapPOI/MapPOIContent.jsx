@@ -24,7 +24,9 @@ import { MapPOI }                                  from '@Core/MapPOI'
 import {
     normalizePOIDisplaySettings, shouldDisplayPOIField,
 }                                                   from '@Core/POIDisplaySettings'
-import { normalizeJourneyReplayPOISettings }          from '@Core/ui/replay/JourneyReplayPOISettings'
+import {
+    normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
+} from '@Core/ui/replay/JourneyReplayPOISettings'
 import { ELEVATION_UNITS, UnitUtils }               from '@Utils/UnitUtils'
 import { WaIcon }                                  from '@awesome.me/webawesome/dist/react'
 import { snapdom }                                 from '@zumer/snapdom'
@@ -56,7 +58,17 @@ const assertPOICanvasDimensions = (element, scale, ratio) => {
 }
 
 /**
+ * @typedef {Object} MapPOIContentProps
+ * @property {string} poi - ID of the POI to display.
+ * @property {boolean} [useInMenu=false] - Render the compact menu version.
+ * @property {object} [style] - Additional styles for the POI content wrapper.
+ */
+
+/**
  * Renders the content of a Point of Interest (POI) for the map canvas or UI lists.
+ *
+ * @param {MapPOIContentProps} props - POI content options.
+ * @returns {import('react').ReactNode} The POI content.
  */
 export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     const _poiContent = useRef(null)
@@ -75,6 +87,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     /** * Direct reactive access to the point from the snapshot.
      */
     const point = useMemo(() => poisSnap.list.get(poi), [poisSnap.list, poi])
+    const isEmbedded = useInMenu
     const pointId = point?.id
     const pointParent = point?.parent
     const pointType = point?.type
@@ -85,10 +98,13 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     const replayEntry = Array.isArray(replay.nearbyPois)
         ? replay.nearbyPois.find(entry => entry?.poi?.id === point?.id)
         : null
-    const replayActive = Boolean(replay.active || replay.playing || replay.paused)
+    const presentation = resolveReplayPOIPresentation(point, {replay})
+    const replayActive = presentation.active
     const displaySettings = normalizePOIDisplaySettings(point?.display)
     const replaySettings = normalizeJourneyReplayPOISettings(point?.replay)
-    const replayMasked = replayActive && replaySettings.visible === false
+    const replayMasked = !presentation.visible
+    const replayAnimationActive = presentation.animationActive
+    const iconVisible = isEmbedded ? point?.visible : presentation.visible
     const hiddenBecauseTooClose = point?.tooClose === true
     const hideJourneyReplayField = key => replayActive && replayEntry && replaySettings.hiddenFields[key] === true
     const displayCategory = shouldDisplayPOIField('category', displaySettings, replayActive)
@@ -122,16 +138,16 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
 
     /** Handles drawer opening for editing */
     const handleEditor = useCallback(async (event, entity) => {
-        if (useInMenu || !point) {
+        if (isEmbedded || !point) {
             return
         }
         __.ui.contextMenu.hide()
         await openPOIEditor(entity)
-    }, [useInMenu, point])
+    }, [isEmbedded, point])
 
     /** Global POI menu trigger */
     const openContextMenu = useCallback((event) => {
-        if (useInMenu || !pointId) {
+        if (isEmbedded || !pointId) {
             return
         }
 
@@ -145,15 +161,15 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         contextMenu.visible = true
         contextMenu.position = {x: position.x, y: position.y}
         contextMenu.targetId = point
-    }, [useInMenu, point, pointId])
+    }, [isEmbedded, point, pointId])
 
     const handlePOIClick = useCallback(() => {
-        if (useInMenu || !point?.id) {
+        if (isEmbedded || !point?.id) {
             return
         }
 
         void __.ui.poiManager.updatePOI(point.id, {expanded: !point.expanded})
-    }, [useInMenu, point])
+    }, [isEmbedded, point])
 
     const addEventListeners = useCallback((poiId) => {
         __.canvasEvents.onClick(handlePOIClick, {entity: poiId, preventLowerPriority: true})
@@ -169,13 +185,13 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     }, [])
 
     useEffect(() => {
-        if (useInMenu || !pointId || !__.ui.poiManager?.ensurePOILocation) {
+        if (isEmbedded || !pointId || !__.ui.poiManager?.ensurePOILocation) {
             return
         }
 
         void __.ui.poiManager.ensurePOILocation(pointId)
     }, [
-                  useInMenu,
+                  isEmbedded,
                   pointId,
                   pointParent,
                   pointType,
@@ -187,15 +203,24 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
 
     /** Synchronizes DOM content to map canvas */
     const renderToCanvas = useCallback(() => {
-        if (useInMenu || !point?.visible || replayMasked || hiddenBecauseTooClose || !pointId) {
+        // Invalidate pending captures even when this update masks the POI.
+        const renderRequestId = ++_renderRequestId.current
+        if (isEmbedded || replayMasked || hiddenBecauseTooClose || !pointId) {
             return
         }
 
-        const renderRequestId = ++_renderRequestId.current
+        const expanded = point?.expanded === true
         __.requestAnimationFrame(() => {
             queuePOICanvasRender(_poiContent, async () => {
-                const isCurrentRender = () => renderRequestId === _renderRequestId.current
-                    && Boolean($pois.list.get(pointId))
+                /** Reject captures whose logical presentation changed while rasterizing. */
+                const isCurrentRender = () => {
+                    const currentPoint = $pois.list.get(pointId)
+                    const currentPresentation = resolveReplayPOIPresentation(currentPoint)
+                    return renderRequestId === _renderRequestId.current && Boolean(currentPoint)
+                        && (currentPoint.expanded === true) === expanded && currentPresentation.visible
+                        && currentPresentation.active === replayActive
+                        && currentPresentation.animationActive === replayAnimationActive
+                }
 
                 if (!isCurrentRender()) {
                     return
@@ -213,9 +238,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                     const snap = await snapdom(element, {scale})
                     const canvas = await snap.toCanvas()
                     const currentPoint = $pois.list.get(pointId)
-                    if (!isCurrentRender()
-                        || !currentPoint?.visible
-                        || currentPoint.tooClose === true) {
+                    if (!isCurrentRender() || _poiContent.current !== element) {
                         return
                     }
 
@@ -236,10 +259,10 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                 }
             })
         })
-    }, [useInMenu, point?.visible, replayMasked, hiddenBecauseTooClose, pointId, $pois.list])
+    }, [isEmbedded, point?.expanded, replayActive, replayAnimationActive, replayMasked, hiddenBecauseTooClose, pointId, $pois.list])
 
     useEffect(() => {
-        if (useInMenu || !pointId || (point?.visible !== false && !replayMasked && !hiddenBecauseTooClose)) {
+        if (isEmbedded || !pointId || (!replayMasked && !hiddenBecauseTooClose)) {
             return
         }
 
@@ -253,7 +276,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
             visible: false,
         })
         void mapPOI.utils.draw(mapPOI)
-    }, [useInMenu, pointId, point?.visible, replayMasked, hiddenBecauseTooClose, $pois.list])
+    }, [isEmbedded, pointId, replayMasked, hiddenBecauseTooClose, $pois.list])
 
     const renderToCanvasAfterIconLoad = useCallback((event = null) => {
         const icon = event?.target ?? _icon.current
@@ -264,7 +287,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     }, [renderToCanvas])
 
     useEffect(() => {
-        if (useInMenu || !pointId) {
+        if (isEmbedded || !pointId) {
             return
         }
 
@@ -288,7 +311,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
             removeEventListeners(poi)
         }
     }, [
-                  useInMenu,
+                  isEmbedded,
                   pointId,
                   point?.title,
                   point?.category,
@@ -350,7 +373,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
 
     useEffect(() => {
         const leaderSpace = _leaderSpace.current
-        if (!pointId || !point?.expanded || useInMenu || !leaderSpace) {
+        if (!pointId || !point?.expanded || isEmbedded || !leaderSpace) {
             return
         }
 
@@ -364,7 +387,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         leaderSpace.style.setProperty('--poi-expanded-leader-y', `${Math.cos(radians)}rem`)
         // Capture only after the random anchor geometry is set so canvas and billboard offsets agree.
         renderToCanvas()
-    }, [pointId, point?.expanded, useInMenu, renderToCanvas])
+    }, [pointId, point?.expanded, isEmbedded, renderToCanvas])
 
     return (
         <div
@@ -374,30 +397,32 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                 !point?.expanded && 'lgs--location-pin',
                 useInMenu && 'used-in-menu',
             )}
+            data-poi-canvas-source={!useInMenu ? pointId : undefined}
             style={{
-                '--lgs-poi-background-color': point?.noBackground ? 'transparent' : point?.bgColor ?? lgs.colors.poiDefaultBackground,
+                '--lgs-poi-background-color': point?.noBackground
+                    ? 'transparent'
+                    : point?.bgColor ?? lgs.colors.poiDefaultBackground,
                 '--lgs-poi-border-color':     point?.color ?? lgs.colors.poiDefault,
                 '--lgs-poi-color':            point?.color ?? lgs.colors.poiDefault,
-                ...(point?.expanded && !useInMenu
+                ...(point?.expanded && !isEmbedded
                     ? {'--poi-expanded-dimension': `${displaySettings.maxWidth}px`}
                     : {}),
                 ...style,
             }}
         >
             <div
-                className={classNames('poi-card', point?.expanded && !useInMenu && 'poi-card--expanded')}
+                className={classNames('poi-card', point?.expanded && !isEmbedded && 'poi-card--expanded')}
                 ref={_poiContent}
             >
                 <div className={classNames(
                     'poi-card-inner',
-                    point?.expanded && !useInMenu && point?.pill !== false && 'poi-card-inner--pill',
+                    point?.expanded && !isEmbedded && point?.pill !== false && 'poi-card-inner--pill',
                     point?.noBackground && 'poi-card-inner--no-background',
                 )}>
                     <div className="poi-card-inner-background"/>
 
-                    {point?.expanded && !useInMenu ? (
+                    {point?.expanded && !isEmbedded ? (
                         <div className={classNames(
-            data-poi-canvas-source={!useInMenu ? pointId : undefined}
                             'poi-card-content',
                             !(point.location && displayLocation) && !displayCategory && !displayCoordinateDetails
                             && 'poi-card-content--title-only',
@@ -476,8 +501,8 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                         <WaIcon
                             ref={_icon}
                              key={point?.category}
-                            name={point?.visible ? (!isSvgIcon ? iconName : '') : 'mask'}
-                            src={point?.visible && isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
+                            name={iconVisible ? (!isSvgIcon ? iconName : '') : 'mask'}
+                            src={iconVisible && isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
                             className="poi-as-flag poi-duotone-icon"
                             variant="regular"
                             family="duotone"
@@ -485,7 +510,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                         />
                      )}
                 </div>
-                {point?.expanded && !useInMenu && (
+                {point?.expanded && !isEmbedded && (
                     <div
                         className="poi-expanded-leader-space"
                         aria-hidden="true"

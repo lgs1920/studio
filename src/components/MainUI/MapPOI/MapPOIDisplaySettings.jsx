@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,12 +17,15 @@
 import {
     normalizePOIDisplaySettings, POI_DISPLAY_MAX_WIDTH, POI_DISPLAY_MIN_WIDTH, POI_DISPLAY_WIDTH_STEP,
 }                                    from '@Core/POIDisplaySettings'
-import { WaSlider, WaSwitch }       from '@awesome.me/webawesome/dist/react'
+import { WaDivider, WaSlider, WaSwitch } from '@awesome.me/webawesome/dist/react'
 import { memo }                     from 'react'
 
-const DISPLAY_OPTIONS = [
-    {key: 'titleCategoryIcon', label: 'Category icon in title'},
-    {key: 'titleAltitude', label: 'Add Altitude to title'},
+const TITLE_OPTIONS = [
+    {key: 'titleCategoryIcon', label: 'Add Category'},
+    {key: 'titleAltitude', label: 'Add Altitude'},
+]
+
+const CONTENT_OPTIONS = [
     {key: 'category', label: 'Category'},
     {key: 'location', label: 'Location'},
     {key: 'altitude', label: 'Altitude'},
@@ -55,50 +58,77 @@ export const MapPOIDisplaySettings = memo(({
 
     return (
         <section className="map-poi-display-settings" aria-label={`POI style settings for ${poi}`}>
-            <div className="map-poi-display-controls">
-                {[...DISPLAY_OPTIONS, ...(hasDateTime ? [{key: 'dateTime', label: 'Date-Time'}] : [])].map(({key, label}) => (
+            <section className="map-poi-display-group" aria-label="Title">
+                <h3>{'Title'}</h3>
+                <div className="map-poi-display-controls">
+                    {TITLE_OPTIONS.map(({key, label}) => (
+                        <WaSwitch
+                            key={key}
+                            className="map-poi-style-switch"
+                            size="xs"
+                            label-at-start
+                            checked={displaySettings[key]}
+                            onChange={event => onDisplayChange(key, event)}
+                        >
+                            {label}
+                        </WaSwitch>
+                    ))}
+                </div>
+            </section>
+            <WaDivider/>
+            <section className="map-poi-display-group" aria-label="Content">
+                <h3>{'Content'}</h3>
+                <div className="map-poi-display-controls">
+                    {[...CONTENT_OPTIONS, ...(hasDateTime ? [{key: 'dateTime', label: 'Date-Time'}] : [])].map(({key, label}) => (
+                        <WaSwitch
+                            key={key}
+                            className="map-poi-style-switch"
+                            size="xs"
+                            label-at-start
+                            checked={displaySettings[key]}
+                            onChange={event => onDisplayChange(key, event)}
+                        >
+                            {label}
+                        </WaSwitch>
+                    ))}
+                </div>
+            </section>
+            <WaDivider/>
+            <section className="map-poi-display-group" aria-label="Appearance">
+                <h3>{'Appearance'}</h3>
+                <div className="map-poi-display-controls">
                     <WaSwitch
-                        key={key}
                         className="map-poi-style-switch"
                         size="xs"
                         label-at-start
-                        checked={displaySettings[key]}
-                        onChange={event => onDisplayChange(key, event)}
+                        checked={pill}
+                        onChange={event => onStyleChange('pill', event)}
                     >
-                        {label}
+                        {'Pill'}
                     </WaSwitch>
-                ))}
-                <WaSwitch
-                    className="map-poi-style-switch"
-                    size="xs"
+                    <WaSwitch
+                        className="map-poi-style-switch"
+                        size="xs"
+                        label-at-start
+                        checked={noBackground}
+                        onChange={event => onStyleChange('noBackground', event)}
+                    >
+                        {'No background'}
+                    </WaSwitch>
+                </div>
+                <WaSlider
+                    className="map-poi-display-width-slider"
+                    label="Width"
                     label-at-start
-                    checked={pill}
-                    onChange={event => onStyleChange('pill', event)}
-                >
-                    {'Pill'}
-                </WaSwitch>
-                <WaSwitch
-                    className="map-poi-style-switch"
-                    size="xs"
-                    label-at-start
-                    checked={noBackground}
-                    onChange={event => onStyleChange('noBackground', event)}
-                >
-                    {'No background'}
-                </WaSwitch>
-            </div>
-            <WaSlider
-                className="map-poi-display-width-slider"
-                label="Width"
-                label-at-start
-                min={POI_DISPLAY_MIN_WIDTH}
-                max={POI_DISPLAY_MAX_WIDTH}
-                step={POI_DISPLAY_WIDTH_STEP}
-                value={displaySettings.maxWidth}
-                valueFormatter={value => `${value} px`}
-                withTooltip
-                onInput={event => onDisplayChange('maxWidth', event)}
-            />
+                    min={POI_DISPLAY_MIN_WIDTH}
+                    max={POI_DISPLAY_MAX_WIDTH}
+                    step={POI_DISPLAY_WIDTH_STEP}
+                    value={displaySettings.maxWidth}
+                    valueFormatter={value => `${value} px`}
+                    withTooltip
+                    onInput={event => onDisplayChange('maxWidth', event)}
+                />
+            </section>
         </section>
     )
 })

@@ -8,11 +8,28 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
+/**
+ * Resolve the POI geographic anchor from the same DOM bounds used by the Cesium billboard.
+ *
+ * @param {{left: number, top: number, right: number, bottom: number}} elementBounds - POI wrapper bounds.
+ * @param {{left: number, right: number}|undefined} cardBounds - POI card bounds, when present.
+ * @param {{left: number, top: number}|undefined} anchorBounds - Explicit expanded POI anchor, when present.
+ * @returns {{x: number|null, y: number}} Geographic anchor in viewport pixels.
+ */
+export const calculatePOIContentAnchor = (elementBounds, cardBounds, anchorBounds) => ({
+    x: anchorBounds
+        ? anchorBounds.left
+        : cardBounds
+            ? (cardBounds.left + cardBounds.right) / 2
+            : null,
+    y: anchorBounds ? anchorBounds.top : elementBounds.bottom,
+})
 
 /**
  * Align the geographic POI anchor with its Cesium billboard position after canvas capture.
@@ -24,17 +41,10 @@
  *     coordinates for pixel offsets, so positive y moves the image down.
  */
 export const calculatePOIContentPixelOffset = (element, canvasWidth, canvasHeight) => {
-    const card = element.querySelector('.poi-card-inner')
-    const anchor = element.querySelector('.poi-geographic-anchor')
     const elementBounds = element.getBoundingClientRect()
-    const cardBounds = card?.getBoundingClientRect()
-    const anchorBounds = anchor?.getBoundingClientRect()
-    const anchorX = anchorBounds
-        ? anchorBounds.left
-        : cardBounds
-            ? (cardBounds.left + cardBounds.right) / 2
-            : null
-    const anchorY = anchorBounds ? anchorBounds.top : elementBounds.bottom
+    const cardBounds = element.querySelector('.poi-card-inner')?.getBoundingClientRect()
+    const anchorBounds = element.querySelector('.poi-geographic-anchor')?.getBoundingClientRect()
+    const {x: anchorX, y: anchorY} = calculatePOIContentAnchor(elementBounds, cardBounds, anchorBounds)
 
     if (anchorX === null
         || !elementBounds.width

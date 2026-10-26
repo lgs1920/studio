@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-06
- * Last modified: 2026-10-22
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,8 @@ export const replay = {
     playing:       false,
     paused:        false,
     nearbyPois:    [],
+    // Active animation IDs are transient scene state, never persisted POI preferences.
+    animatedPOIIds: [],
     journeySlug:    null,
     trackSlug:      null,
     progress:       0,

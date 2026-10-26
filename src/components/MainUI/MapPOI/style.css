@@ -188,6 +188,10 @@
 
 }
 
+.poi-shrinked .poi-card-inner .poi-as-flag::part(svg) {
+    transform: rotate(-45deg);
+}
+
 .used-in-menu .poi-card-inner {
     border-radius: var(--lgs-border-radius-xs);
 }
@@ -588,12 +592,26 @@
     flex-direction: column;
     width: 100%;
     min-width: 0;
-    gap: var(--lgs-gutter-xs);
+    gap: 0;
 
     & .map-poi-display-width-slider {
         box-sizing: border-box;
         width: calc(100% - var(--lgs-gutter-s));
         margin-inline-end: var(--lgs-gutter-s);
+    }
+}
+
+.map-poi-display-group {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+
+    & > h3 {
+        margin: 0;
+        font-size: var(--lgs-font-size-s);
+        font-weight: var(--wa-font-weight-bold);
     }
 }
 
@@ -1021,6 +1039,11 @@
         border: 0;
         background: transparent;
         box-shadow: none;
+    }
+
+    & wa-button.poi-move-marker[aria-pressed="true"]::part(base) {
+        /* Highlight the active POI with the normal brand color and Web Awesome elevation. */
+        box-shadow: 0 0 0 0.25rem color-mix(in oklab, var(--wa-color-brand-fill-normal) 38%, transparent), var(--wa-shadow-m);
     }
 
     & .poi-icon-wrapper.poi-move-preview {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -990,7 +990,6 @@ export const preparePlaybackSceneForExport = async (mode, {
                 options: {smoothedGuide: call.smoothedGuide()},
             })
         }
-        void call.prepareNearbyPOIsForPlayback(sample)
         if (hideReplayMarker) {
             state.renderer.hideCursor?.()
         }
@@ -1001,6 +1000,8 @@ export const preparePlaybackSceneForExport = async (mode, {
             runtimeStore.mainUiHidden = true
             runtimeStore.clipSequenceActive = true
         }
+        // Complete POI preparation before the first fixed frame can choose its phase.
+        await call.prepareNearbyPOIsForPlayback()
         call.hideMainUI()
         ensureReplayVideoDiagnosticsOverlay(mode)
         const renderScene = call.cesiumScene?.() ?? globalThis.lgs?.scene ?? globalThis.lgs?.viewer?.scene
@@ -1338,6 +1339,9 @@ export const renderReplayExportFrame = async (mode, {
             return sample
         }
 
+        // Export phase changes do not emit the interactive end event that closes POIs.
+        await call.closeJourneyReplayOpenedPOIsBeforeStopClips?.()
+        call.applyJourneyReplayPOIVisibility?.()
         state.renderingReplayExportFrame = true
         let sample = null
         try {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,8 @@ import { MapPOI } from '@Core/MapPOI'
 import { POI_STANDARD_TYPE } from '@Core/constants'
 import { POIManager } from '@Core/ui/POIManager'
 import {
-    getDefaultPOIDisplaySettings, normalizePOIDisplaySettings, POI_DISPLAY_DEFAULT_WIDTH, shouldDisplayPOIField,
+    getDefaultPOIDisplaySettings, normalizePOIDisplaySettings, POI_DISPLAY_DEFAULT_WIDTH,
+    POI_DISPLAY_SETTINGS_SCHEMA_VERSION, shouldDisplayPOIField,
 }                 from '@Core/POIDisplaySettings'
 import {
     afterEach, beforeEach, describe, expect, it, vi,
@@ -28,6 +29,15 @@ import {readFileSync} from 'node:fs'
 import {parse} from 'yaml'
 
 const settings = parse(readFileSync(new URL('../../../../public/settings.yaml', import.meta.url), 'utf8'))
+const legacyDisplayDefaults = {
+    category:          false,
+    titleCategoryIcon: true,
+    location:          false,
+    altitude:          false,
+    coordinates:       false,
+    dateTime:          false,
+    maxWidth:          POI_DISPLAY_DEFAULT_WIDTH,
+}
 
 beforeEach(() => {
     vi.stubGlobal('lgs', {
@@ -44,11 +54,12 @@ afterEach(() => {
 
 describe('POI display settings', () => {
     it('defaults category on and every other display field off', () => {
-        const expected = {...settings.poi.displayDefaults, maxWidth: POI_DISPLAY_DEFAULT_WIDTH}
+        const expectedDefaults = {...settings.poi.displayDefaults, maxWidth: POI_DISPLAY_DEFAULT_WIDTH}
+        const expectedDisplay = {...expectedDefaults, schemaVersion: POI_DISPLAY_SETTINGS_SCHEMA_VERSION}
 
-        expect(getDefaultPOIDisplaySettings()).toEqual(expected)
-        expect(normalizePOIDisplaySettings()).toEqual(expected)
-        expect(new MapPOI({id: 'legacy-poi'}).display).toEqual(expected)
+        expect(getDefaultPOIDisplaySettings()).toEqual(expectedDefaults)
+        expect(normalizePOIDisplaySettings()).toEqual(expectedDisplay)
+        expect(new MapPOI({id: 'new-poi'}).display).toEqual(expectedDisplay)
     })
 
     it('uses saved YAML defaults instead of stale values from persisted runtime settings', () => {
@@ -73,9 +84,35 @@ describe('POI display settings', () => {
             coordinates: false,
             dateTime:    false,
             maxWidth:    POI_DISPLAY_DEFAULT_WIDTH,
+            schemaVersion: POI_DISPLAY_SETTINGS_SCHEMA_VERSION,
         })
         expect(normalizePOIDisplaySettings({maxWidth: 900}).maxWidth).toBe(400)
         expect(normalizePOIDisplaySettings({maxWidth: 245}).maxWidth).toBe(250)
+    })
+
+    it('migrates unversioned legacy defaults while preserving custom choices and versioned settings', () => {
+        const expectedDisplay = {
+            ...settings.poi.displayDefaults,
+            maxWidth: POI_DISPLAY_DEFAULT_WIDTH,
+            schemaVersion: POI_DISPLAY_SETTINGS_SCHEMA_VERSION,
+        }
+
+        expect(normalizePOIDisplaySettings(legacyDisplayDefaults)).toEqual({
+            ...expectedDisplay,
+        })
+        expect(normalizePOIDisplaySettings({...legacyDisplayDefaults, location: true, titleAltitude: false})).toEqual({
+            ...expectedDisplay,
+            location: true,
+        })
+        expect(normalizePOIDisplaySettings({
+            ...legacyDisplayDefaults,
+            titleAltitude: false,
+            schemaVersion: POI_DISPLAY_SETTINGS_SCHEMA_VERSION,
+        })).toEqual({
+            ...expectedDisplay,
+            category: false,
+            titleCategoryIcon: true,
+        })
     })
 
     it('allows only enabled category among configurable fields during Replay', () => {
@@ -129,6 +166,7 @@ describe('POI display settings', () => {
             coordinates: false,
             dateTime:    false,
             maxWidth:    340,
+            schemaVersion: POI_DISPLAY_SETTINGS_SCHEMA_VERSION,
         })
         expect(databasePut).toHaveBeenCalledOnce()
         expect(databasePut.mock.calls[0][1].display).toEqual(poi.display)
@@ -153,6 +191,7 @@ describe('POI display settings', () => {
             coordinates: false,
             dateTime:    false,
             maxWidth:    POI_DISPLAY_DEFAULT_WIDTH,
+            schemaVersion: POI_DISPLAY_SETTINGS_SCHEMA_VERSION,
         })
     })
 
@@ -191,8 +230,86 @@ describe('POI display settings', () => {
             coordinates: false,
             dateTime:    false,
             maxWidth:    POI_DISPLAY_DEFAULT_WIDTH,
+            schemaVersion: POI_DISPLAY_SETTINGS_SCHEMA_VERSION,
         }
         expect(manager.list.get(legacyPOI.id).display).toEqual(expectedDisplay)
+        expect(databasePut).toHaveBeenCalledOnce()
+        expect(databasePut.mock.calls[0][1].display).toEqual(expectedDisplay)
+    })
+
+    it('replaces legacy code defaults when POIs are loaded in the POI editor', async () => {
+        const databasePut = vi.fn().mockResolvedValue()
+        const legacyPOI = {
+            id:      'legacy-poi-defaults',
+            type:    POI_STANDARD_TYPE,
+            display: legacyDisplayDefaults,
+        }
+
+        vi.stubGlobal('lgs', {
+            savedConfiguration: settings,
+            configuration: settings,
+            settings,
+            stores: {main: {components: {pois: {list: proxyMap()}}}},
+            db: {
+                lgs1920: {
+                    keys: vi.fn().mockResolvedValue([legacyPOI.id]),
+                    get: vi.fn().mockResolvedValue(legacyPOI),
+                    put: databasePut,
+                },
+            },
+        })
+        vi.stubGlobal('__', {app: {deepClone: value => value}, ui: {}})
+
+        const manager = new POIManager()
+        await manager.readAllFromDB({ensureLocations: false})
+
+        const expectedDisplay = {
+            ...settings.poi.displayDefaults,
+            maxWidth: POI_DISPLAY_DEFAULT_WIDTH,
+            schemaVersion: POI_DISPLAY_SETTINGS_SCHEMA_VERSION,
+        }
+        expect(manager.list.get(legacyPOI.id).display).toEqual(expectedDisplay)
+        expect(databasePut).toHaveBeenCalledOnce()
+        expect(databasePut.mock.calls[0][1].display).toEqual(expectedDisplay)
+    })
+
+    it('migrates the same legacy defaults when the Journey editor loads its POIs', async () => {
+        const journey = {slug: 'journey-legacy-poi', visible: true, POIsVisible: true}
+        const databasePut = vi.fn().mockResolvedValue()
+        const legacyPOI = {
+            id:      'journey-legacy-poi',
+            parent:  journey.slug,
+            type:    POI_STANDARD_TYPE,
+            display: legacyDisplayDefaults,
+        }
+
+        vi.stubGlobal('lgs', {
+            savedConfiguration: settings,
+            configuration: settings,
+            settings,
+            theJourney: journey,
+            getJourneyByTrackSlug: () => journey,
+            stores: {main: {components: {pois: {list: proxyMap()}}}},
+            db: {
+                lgs1920: {
+                    keys: vi.fn().mockResolvedValue([legacyPOI.id]),
+                    get: vi.fn().mockResolvedValue(legacyPOI),
+                    put: databasePut,
+                },
+            },
+        })
+        vi.stubGlobal('__', {app: {deepClone: value => value}, ui: {}})
+
+        const manager = new POIManager()
+        const loaded = await manager.readStartupPOIsFromDB({journey})
+
+        const expectedDisplay = {
+            ...settings.poi.displayDefaults,
+            maxWidth: POI_DISPLAY_DEFAULT_WIDTH,
+            schemaVersion: POI_DISPLAY_SETTINGS_SCHEMA_VERSION,
+        }
+        expect(loaded).toHaveLength(1)
+        expect(loaded[0].display).toEqual(expectedDisplay)
         expect(databasePut).toHaveBeenCalledOnce()
         expect(databasePut.mock.calls[0][1].display).toEqual(expectedDisplay)
     })

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -464,6 +464,7 @@ export const resetRuntimeProgress = store => {
     store.toolbarVisible = false
     store.mainUiHidden = false
     store.clipSequenceActive = false
+    store.animatedPOIIds = []
     store.orbitAllowed = true
     store.cameraUserAdjusted = false
     store.cameraUpdateSource = null

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-24
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -56,5 +56,33 @@ describe('Map POI style', () => {
         expect(css).toContain('box-sizing: border-box;')
         expect(titleIconOverride).toBeGreaterThan(genericRotation)
         expect(css.slice(titleIconOverride, overrideEnd)).toContain('transform: none;')
+    })
+
+    it('keeps one source-styled POI DOM as the move cursor', () => {
+        const css = loadMapPOIStyle()
+        const moveStyles = css.slice(css.indexOf('.poi-move-overlay-root {'))
+        const pressedMarkerStyle = moveStyles.slice(moveStyles.indexOf('& wa-button.poi-move-marker[aria-pressed="true"]'))
+        const previewStyle = moveStyles.slice(moveStyles.indexOf('& .poi-icon-wrapper.poi-move-preview {'))
+        const shrinkedWrapper = css.slice(
+            css.indexOf('.poi-icon-wrapper.poi-shrinked {'),
+            css.indexOf('}', css.indexOf('.poi-icon-wrapper.poi-shrinked {')),
+        )
+        const shrinkedIconRotation = css.indexOf('.poi-shrinked .poi-card-inner .poi-as-flag::part(svg)')
+
+        expect(shrinkedIconRotation).toBeGreaterThan(-1)
+        expect(shrinkedWrapper).toContain('transform: rotate(-45deg);')
+        expect(css.slice(shrinkedIconRotation, css.indexOf('}', shrinkedIconRotation))).toContain('transform: rotate(-45deg);')
+        expect(moveStyles).not.toContain('.poi-move-cursor')
+        expect(moveStyles).toContain('& .poi-move-marker-content {\n        display: contents;')
+        expect(pressedMarkerStyle).not.toContain('opacity: 0;')
+        expect(previewStyle).toContain('position: relative;')
+        expect(previewStyle).toContain('&.poi-shrinked {\n            transform: none;')
+        expect(moveStyles).not.toContain('.poi-card-inner--move-preview')
+        expect(moveStyles).not.toContain('poi-card-inner-background {\n            display: none;')
+        expect(moveStyles).toContain('transform: translate(-50%, -50%);')
+        expect(moveStyles).toContain('background: transparent;')
+        expect(moveStyles).toContain('--lgs-button-plain-bg-hover-color: transparent;')
+        expect(moveStyles).toContain('--lgs-card-on-map-selected-bg-color: transparent;')
+        expect(moveStyles).toContain('--lgs-card-on-map-selected-bg-image: none;')
     })
 })

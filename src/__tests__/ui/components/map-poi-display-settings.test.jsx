@@ -8,17 +8,17 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
-    WaDivider: () => <hr/>,
+    WaDivider:  () => <hr/>,
     WaSlider:  ({label, value, min, max, step, onInput}) => (
         <input
             type="range"
@@ -72,12 +72,8 @@ describe('MapPOIDisplaySettings', () => {
         render(<MapPOIDisplaySettings poi="poi-1" hasDateTime onDisplayChange={vi.fn()}/>)
 
         expect(screen.getByRole('checkbox', {name: 'Category'}).checked).toBe(true)
-        expect(screen.getByRole('checkbox', {name: 'Category icon in title'}).checked).toBe(false)
-        expect(screen.getByRole('checkbox', {name: 'Add Altitude to title'}).checked).toBe(false)
-        expect(screen.getAllByRole('checkbox').slice(0, 2).map(input => input.getAttribute('aria-label'))).toEqual([
-            'Category icon in title',
-            'Add Altitude to title',
-        ])
+        expect(screen.getByRole('checkbox', {name: 'Add Category'}).checked).toBe(false)
+        expect(screen.getByRole('checkbox', {name: 'Add Altitude'}).checked).toBe(false)
         expect(screen.getByRole('checkbox', {name: 'Location'}).checked).toBe(false)
         expect(screen.getByRole('checkbox', {name: 'Altitude'}).checked).toBe(false)
         expect(screen.getByRole('checkbox', {name: 'Coordinates'}).checked).toBe(false)
@@ -85,11 +81,48 @@ describe('MapPOIDisplaySettings', () => {
         expect(screen.getByRole('slider', {name: 'Width'}).value).toBe('200')
     })
 
+    it('shows YAML defaults for a POI saved with the previous code defaults', () => {
+        render(<MapPOIDisplaySettings
+            poi="legacy-poi"
+            display={{
+                category:          false,
+                titleCategoryIcon: true,
+                titleAltitude:     false,
+                location:          false,
+                altitude:          false,
+                coordinates:       false,
+                dateTime:          false,
+                maxWidth:          200,
+            }}
+            onDisplayChange={vi.fn()}
+        />)
+
+        expect(screen.getByRole('checkbox', {name: 'Category'}).checked).toBe(true)
+        expect(screen.getByRole('checkbox', {name: 'Add Category'}).checked).toBe(false)
+    })
+
+    it('groups title, content, and appearance settings with separators', () => {
+        render(<MapPOIDisplaySettings poi="poi-1" hasDateTime onDisplayChange={vi.fn()} onStyleChange={vi.fn()}/>)
+
+        const titleGroup = screen.getByRole('region', {name: 'Title'})
+        const contentGroup = screen.getByRole('region', {name: 'Content'})
+        const appearanceGroup = screen.getByRole('region', {name: 'Appearance'})
+
+        expect(within(titleGroup).getByRole('checkbox', {name: 'Add Category'})).toBeTruthy()
+        expect(within(titleGroup).getByRole('checkbox', {name: 'Add Altitude'})).toBeTruthy()
+        expect(within(contentGroup).getByRole('checkbox', {name: 'Category'})).toBeTruthy()
+        expect(within(contentGroup).getByRole('checkbox', {name: 'Date-Time'})).toBeTruthy()
+        expect(within(appearanceGroup).getByRole('checkbox', {name: 'Pill'})).toBeTruthy()
+        expect(within(appearanceGroup).getByRole('checkbox', {name: 'No background'})).toBeTruthy()
+        expect(within(appearanceGroup).getByRole('slider', {name: 'Width'})).toBeTruthy()
+        expect(screen.getAllByRole('separator')).toHaveLength(2)
+    })
+
     it('notifies the editor when the category icon choice changes', () => {
         const onDisplayChange = vi.fn()
 
         render(<MapPOIDisplaySettings poi="poi-1" onDisplayChange={onDisplayChange}/>)
-        fireEvent.click(screen.getByRole('checkbox', {name: 'Category icon in title'}))
+        fireEvent.click(screen.getByRole('checkbox', {name: 'Add Category'}))
 
         expect(onDisplayChange).toHaveBeenCalledOnce()
         expect(onDisplayChange.mock.calls[0][0]).toBe('titleCategoryIcon')
@@ -100,7 +133,7 @@ describe('MapPOIDisplaySettings', () => {
         const onDisplayChange = vi.fn()
 
         render(<MapPOIDisplaySettings poi="poi-1" onDisplayChange={onDisplayChange}/>)
-        fireEvent.click(screen.getByRole('checkbox', {name: 'Add Altitude to title'}))
+        fireEvent.click(screen.getByRole('checkbox', {name: 'Add Altitude'}))
 
         expect(onDisplayChange).toHaveBeenCalledOnce()
         expect(onDisplayChange.mock.calls[0][0]).toBe('titleAltitude')

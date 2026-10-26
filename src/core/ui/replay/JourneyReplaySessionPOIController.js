@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -65,6 +65,8 @@ import {
     isReplayPOIEndpoint,
     normalizeJourneyReplayPOISettings,
 }                                                                                          from './JourneyReplayPOISettings'
+import {projectReplayPOIsOnSampler} from './JourneyReplayPOIProjection'
+
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION,
@@ -119,6 +121,18 @@ import {
     safeCartesian3Lerp,
 } from './JourneyReplaySessionShared'
 
+/** Publish animation ownership only when its observable ID set changes. */
+const publishAnimatedPOIs = ids => {
+    const store = replayStore()
+    if (!store) {
+        return
+    }
+    const current = store.animatedPOIIds ?? []
+    if (current.length !== ids.size || current.some(id => !ids.has(id))) {
+        store.animatedPOIIds = Array.from(ids)
+    }
+}
+
 export const syncRuntimeNearbyPOIs = (mode, journey = globalThis.lgs?.theJourney ?? null) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -159,6 +173,7 @@ export const restoreNearbyPOIsAfterPlayback = async (mode, ) => {
         const restoreEntries = Array.from(state.replayPoiExpandedState.entries())
         state.replayPoiExpandedState.clear()
         state.replayPoiTriggered.clear()
+        publishAnimatedPOIs(state.replayPoiTriggered)
         state.sortedNearbyPois = []
 
         await Promise.all(restoreEntries.map(([poiId, expanded]) => call.updatePOIExpandedState(poiId, expanded === true)))
@@ -169,11 +184,27 @@ export const closeJourneyReplayOpenedPOIsBeforeStopClips = (mode, ) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         const openedPOIIds = Array.from(state.replayPoiTriggered)
         state.replayPoiTriggered.clear()
+        publishAnimatedPOIs(state.replayPoiTriggered)
+        try {
+            call.applyJourneyReplayPOIVisibility?.()
+        }
+        catch (error) {
+            console.error('[Replay POI] Failed to apply visibility before stop clips.', error)
+        }
         if (openedPOIIds.length === 0) {
             return null
         }
 
-        return Promise.all(openedPOIIds.map(poiId => call.updatePOIExpandedState(poiId, false)))
+        return Promise.all(openedPOIIds.map(async poiId => {
+            try {
+                return await call.updatePOIExpandedState(poiId, false)
+            }
+            catch (error) {
+                // Closing an animated POI is cosmetic and must not abort video finalization.
+                console.error(`[Replay POI] Failed to close POI ${poiId} before stop clips.`, error)
+                return null
+            }
+        }))
     }
 
 export const prepareNearbyPOIsForPlayback = async (mode, sample = null) => {
@@ -193,7 +224,7 @@ export const prepareNearbyPOIsForPlayback = async (mode, sample = null) => {
         const nearbyPois = Array.isArray(store?.nearbyPois) && store.nearbyPois.length > 0
             ? store.nearbyPois
             : call.syncRuntimeNearbyPOIs(journey)
-        const sortedNearbyPois = [...nearbyPois].sort((left, right) => {
+        const sortedNearbyPois = [...projectReplayPOIsOnSampler(nearbyPois, state.sampler)].sort((left, right) => {
             const leftDistance = finiteNumber(left?.projectedAbscissa)
             const rightDistance = finiteNumber(right?.projectedAbscissa)
             if (leftDistance === null && rightDistance === null) {
@@ -230,7 +261,7 @@ export const prepareNearbyPOIsForPlayback = async (mode, sample = null) => {
         }
 
         if (sample) {
-            void call.syncNearbyPOIsForSample(sample)
+            await call.syncNearbyPOIsForSample(sample)
         }
     }
 
@@ -252,6 +283,7 @@ export const openNearbyPOIForPlayback = async (mode, poiId) => {
         }
         await call.updatePOIExpandedState(poiId, true)
         state.replayPoiTriggered.add(poiId)
+        publishAnimatedPOIs(state.replayPoiTriggered)
         state.replayPOIAnimationOccurred = true
         call.setPOIEntityVisibility(poi, true, {allowReplayAnimation: true})
     }
@@ -268,7 +300,11 @@ export const syncNearbyPOIsForSample = async (mode, sample = null) => {
             ? state.sortedNearbyPois
             : replayStore()?.nearbyPois ?? []
         if (!Array.isArray(nearbyPois) || nearbyPois.length === 0) {
+            const collapsedIds = Array.from(state.replayPoiTriggered)
             state.replayPoiTriggered.clear()
+            publishAnimatedPOIs(state.replayPoiTriggered)
+            await Promise.all(collapsedIds.map(poiId => call.updatePOIExpandedState(poiId, false)))
+            call.applyJourneyReplayPOIVisibility?.()
             return
         }
 
@@ -325,6 +361,7 @@ export const syncNearbyPOIsForSample = async (mode, sample = null) => {
         const collapsedIds = Array.from(state.replayPoiTriggered).filter(poiId => !expandedIds.has(poiId))
         const newlyExpandedIds = Array.from(expandedIds).filter(poiId => !state.replayPoiTriggered.has(poiId))
         state.replayPoiTriggered = expandedIds
+        publishAnimatedPOIs(expandedIds)
         if (newlyExpandedIds.length > 0) {
             state.replayPOIAnimationOccurred = true
         }

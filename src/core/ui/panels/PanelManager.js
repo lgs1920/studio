@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-09
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -225,6 +225,13 @@ export class PanelManager {
         return `${fallbackPrefix}:${index >= 0 ? index : 0}`
     }
 
+    /**
+     * Checks whether a details element delegates its state to another owner.
+     * @param {Element} details - Details element to inspect.
+     * @returns {boolean} Whether the drawer manager should persist its state.
+     */
+    #shouldPersistDetails = (details) => details?.getAttribute?.('data-ui-state-persist') !== 'false'
+
     #resolveTabPanelName = (tabGroup, tabName) => {
         if (!tabGroup || !tabName) {
             return null
@@ -278,6 +285,10 @@ export class PanelManager {
         }
 
         for (const [index, details] of detailsGroups.entries()) {
+            if (!this.#shouldPersistDetails(details)) {
+                continue
+            }
+
             const key = this.#getGroupKey(details, 'wa-details', `details:${index}`)
             state.details.set(key, Boolean(details.open))
         }
@@ -327,6 +338,10 @@ export class PanelManager {
         const detailsGroups = Array.from(drawer.querySelectorAll('wa-details'))
 
         for (const [index, details] of detailsGroups.entries()) {
+            if (!this.#shouldPersistDetails(details)) {
+                continue
+            }
+
             const key = this.#getGroupKey(details, 'wa-details', `details:${index}`)
             if (!state.details.has(key)) {
                 continue
@@ -409,7 +424,7 @@ export class PanelManager {
         })
 
         Array.from(drawer.querySelectorAll('wa-details')).forEach((details) => {
-            if (this.#detailsAttached.has(details)) {
+            if (!this.#shouldPersistDetails(details) || this.#detailsAttached.has(details)) {
                 return
             }
 

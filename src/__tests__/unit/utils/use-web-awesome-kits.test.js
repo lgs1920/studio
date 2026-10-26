@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-11
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -103,6 +103,32 @@ describe('useWebAwesomeKits', () => {
             ([libraryName]) => libraryName === 'default',
         )
         const source = options.resolver(name, 'classic', 'solid')
+
+        expect(source).toMatch(/^data:image\/svg\+xml,/)
+        expect(decodeURIComponent(source.slice('data:image/svg+xml,'.length))).toContain('data-prefix="fas"')
+        expect(mocks.defaultResolver).not.toHaveBeenCalled()
+    })
+
+    it('bundles the solid location-pin icon used by POI movement independently of the remote Kit', () => {
+        registerLGS1920IconLibrary()
+
+        const [, options] = mocks.registerIconLibrary.mock.calls.find(
+            ([libraryName]) => libraryName === 'default',
+        )
+        const source = options.resolver('location-pin', 'classic', 'solid')
+
+        expect(source).toMatch(/^data:image\/svg\+xml,/)
+        expect(decodeURIComponent(source.slice('data:image/svg+xml,'.length))).toContain('data-prefix="fas"')
+        expect(mocks.defaultResolver).not.toHaveBeenCalled()
+    })
+
+    it('bundles the solid location-dot cursor icon independently of the remote Kit', () => {
+        registerLGS1920IconLibrary()
+
+        const [, options] = mocks.registerIconLibrary.mock.calls.find(
+            ([libraryName]) => libraryName === 'default',
+        )
+        const source = options.resolver('location-dot', 'classic', 'solid')
 
         expect(source).toMatch(/^data:image\/svg\+xml,/)
         expect(decodeURIComponent(source.slice('data:image/svg+xml,'.length))).toContain('data-prefix="fas"')

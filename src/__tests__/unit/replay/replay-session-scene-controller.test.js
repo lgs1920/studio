@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-10-18
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,7 +30,7 @@ vi.mock('@Components/Toast', () => ({
 
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {REPLAY_EVENT_PAUSE, REPLAY_EVENT_START, REPLAY_EVENT_UPDATE} from '@Core/ui/replay/JourneyReplayPlaybackController'
-import {beginReplaySessionOwnership} from '@Core/ui/replay/ReplaySessionOwnership'
+import {beginReplaySessionOwnership, currentReplaySessionOwnership} from '@Core/ui/replay/ReplaySessionOwnership'
 import {
     abortPlaybackAfterListenerError, bindRenderer, captureCameraState, restoreCameraState, restorePlaybackScene, restorePlaybackSceneInternal,
     setReplayPreparationPivot, restorePlaybackCameraSettings,
@@ -261,6 +261,49 @@ describe('JourneyReplaySessionSceneController', () => {
         expect(call.restoreCameraState).toHaveBeenCalledTimes(1)
         expect(state.savedCameraState).toBeNull()
         expect(state.replayEntryCameraState).toBeNull()
+    })
+
+    it('releases a failed scene restoration and allows a later retry', async () => {
+        const state = {
+            renderer: {clear: vi.fn()},
+            sceneRestorePromise: null,
+            deferPlaybackCameraRestore: true,
+        }
+        const poiError = new Error('POI visibility restore failed')
+        const call = {
+            removeToleranceZoneOverlay: vi.fn(),
+            restoreOtherJourneysVisibility: vi.fn(),
+            restoreCurrentJourneyVisibility: vi.fn(),
+            setJourneyReplayOrbitAllowed: vi.fn(),
+            setToleranceZoneOverlayVisible: vi.fn(),
+            restoreJourneyToolbarVisibility: vi.fn(),
+            restoreJourneyReplayDrawerAfterPlayback: vi.fn(),
+            restoreMainUI: vi.fn(),
+            restoreNearbyPOIsAfterPlayback: vi.fn(() => Promise.resolve()),
+            resetCameraController: vi.fn(),
+            focusJourneyAfterPlayback: vi.fn(() => Promise.resolve()),
+            reapplyHideAllPOIVisibilityAfterAnimations: vi.fn()
+                .mockImplementationOnce(() => { throw poiError }),
+            restoreCameraState: vi.fn(),
+            restorePlaybackCameraSettings: vi.fn(),
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]: call,
+            [JOURNEY_REPLAY_INTERNAL_STATE]: state,
+        }
+        globalThis.lgs = {stores: {replay: {active: true}}}
+        beginReplaySessionOwnership(mode)
+
+        await expect(restorePlaybackSceneInternal(mode)).rejects.toBe(poiError)
+
+        expect(call.restoreCameraState).toHaveBeenCalledOnce()
+        expect(call.restorePlaybackCameraSettings).toHaveBeenCalledOnce()
+        expect(state.sceneRestorePromise).toBeNull()
+        expect(currentReplaySessionOwnership(mode)).toBeNull()
+
+        await expect(restorePlaybackSceneInternal(mode)).resolves.toBeUndefined()
+        expect(call.focusJourneyAfterPlayback).toHaveBeenCalledTimes(2)
+        expect(state.sceneRestorePromise).toBeNull()
     })
 
     it('keeps newer preparation edits when the previous playback cleanup finishes', async () => {
