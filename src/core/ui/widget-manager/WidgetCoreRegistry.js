@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-26
- * Last modified: 2026-10-22
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { LGS_VISUAL_WIDGET, LGS_WIDGET, SCENE_WIDGETS_BOARD, SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
 import { getWidgetInstanceStats } from './widgetInstancePolicy'
 import { isNonDistortingWidget } from './widgetResizeUtils'
+import {restoreJourneyReplayCrop} from '@Core/ui/replay/ReplayCropSettings'
 import { v4 as uuid }                                      from 'uuid'
 
 /**
@@ -797,6 +798,8 @@ export class WidgetCoreRegistry {
         }
 
         this.#widgets.set(elementId, config)
+        // Journey Replay crop settings take precedence over shared widget geometry.
+        restoreJourneyReplayCrop(config)
         return config
     }
 

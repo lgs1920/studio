@@ -62,6 +62,13 @@ JourneyReplay clip definitions are loaded from `public/replay.yaml`, which is th
 The JavaScript defaults in `JourneyReplayProgressionStyle.js` are normalization defaults for non-catalog settings only.
 Clip instances are stored on the current journey as `journey.replay.start` and `journey.replay.stop`.
 
+The crop width, height, and ratio belong to `journey.replay.cropZone`, shared by
+Basic and Expert preparation for that Journey. Completed resize, drag, and ratio
+edits use the Journey persistence API. Restoring a Journey takes precedence over
+shared widget geometry and updates the crop overlay and export rectangle. An
+unconfigured Journey starts from its own centered orientation default. A saved
+crop is fitted to a smaller viewport without rewriting its original dimensions.
+
 Basic Replay's rendered trace uses a configurable point budget: Basic is 1,024
 (the default), Medium is 2,048, and High is 4,096. The global preference is
 `replay.basic.sampleCount`; an explicit `journey.replay.basic.sampleCount`

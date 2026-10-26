@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-15
- * Last modified: 2026-07-15
+ * Created on: 2026-07-16
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -109,6 +109,28 @@ describe('WidgetCropper syncCropDimensionsFromElement', () => {
             y: (30 + 360 / 2) / 450,
         })
         expect(widgetManager.setConfig).toHaveBeenCalledWith('video-crop-zone', config)
+    })
+
+    it('restores Journey geometry after reading a shared widget position and persists resize completion', async () => {
+        const {WidgetCoreRegistry} = await import('@Core/ui/widget-manager/WidgetCoreRegistry')
+        const journey = {slug: 'journey-a', replay: {cropZone: {
+            width: 400, height: 225, ratio: {value: '16x9', aspectRatio: 16 / 9, locked: true},
+        }}, persistToDatabase: vi.fn(async () => undefined)}
+        lgs.theJourney = journey
+        lgs.configuration = {widgetRatio: '1x1', videoFormats: [{value: '1x1', aspectRatio: 1, locked: true}]}
+        widgetManager.getWidgetPosition = vi.fn(async () => ({leftRatio: 50, topRatio: 50, width: 300, height: 300}))
+        __.ui = {widgetManager}
+        const registry = new WidgetCoreRegistry()
+        const restored = await registry.retrieveConfig(config.element, {...config, persist: true})
+
+        expect(widgetManager.getWidgetPosition).toHaveBeenCalledWith('video-crop-zone')
+        expect(restored.cropDimensions).toMatchObject({width: 400, height: 225})
+        expect(restored.ratio.value).toBe('16x9')
+        restored.cropDimensions = {left: 80, top: 45, width: 640, height: 360}
+        const written = new Promise(resolve => journey.persistToDatabase.mockImplementationOnce(async () => resolve()))
+        new WidgetCropper(widgetManager).dispatchCropUpdate(restored, 'end')
+        await written
+        expect(journey.replay.cropZone).toMatchObject({width: 640, height: 360})
     })
 
     it('persists the logical inline size when the rendered rect is transformed', async () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-19
- * Last modified: 2026-10-22
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,6 +38,7 @@ export const ToolsUI = () => {
     const {usage} = useSnapshot(lgs.settings.ui.journeyToolbar)
     const {video} = useSnapshot(lgs.stores.ui)
     const replay = useSnapshot(lgs.stores.replay)
+    const main = useSnapshot(lgs.stores.main)
     const widget = useSnapshot(lgs.stores.ui.widget)
     const $cropper = lgs.stores.ui.video.cropper
     const _journeyToolbarHiddenByVideoCapture = useRef(false)
@@ -120,7 +121,7 @@ export const ToolsUI = () => {
         <div id="lgs-tools-ui">
             {video.editing ? (
                 <>
-                    <Cropper overlay source={lgs.canvas}
+                    <Cropper key={main.theJourney?.slug ?? 'no-journey'} overlay source={lgs.canvas}
                              context={$cropper} className="video-cropper"
                              hideWidgetPanel={replay.basicPreparationActive === true}
                              basicPreparationActive={replay.basicPreparationActive === true}

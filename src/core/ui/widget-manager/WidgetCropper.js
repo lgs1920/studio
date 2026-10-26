@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2025-10-12
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import {persistJourneyReplayCrop} from '@Core/ui/replay/ReplayCropSettings'
 
 /**
  * Singleton class that manages cropping functionality for widgets.
@@ -377,6 +378,7 @@ export class WidgetCropper {
      */
     dispatchCropUpdate = (config, phase, previousCrop = null) => {
         try {
+            void persistJourneyReplayCrop(config, phase)
             if (config.id === VIDEO_CROP_ZONE) {
                 this.#widgetManager.repositionWidgetsForBoard?.(
                     VIDEO_WIDGETS_BOARD,

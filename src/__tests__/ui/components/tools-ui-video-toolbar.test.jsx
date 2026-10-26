@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-22
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -47,6 +47,10 @@ vi.mock('@Components/MainUI/video/VideoSettingsInfo', () => ({
     VideoSettingsInfo: () => null,
 }))
 
+vi.mock('@Components/MainUI/video/ReplayWidgetGuides', () => ({
+    ReplayWidgetGuides: () => null,
+}))
+
 vi.mock('@Components/MainUI/video/VideoSceneWidgetsPortal', () => ({
     VideoSceneWidgetsPortal: ({hidden}) => hidden ? null : <div data-testid="video-widget-host"/>,
 }))
@@ -64,7 +68,7 @@ vi.mock('@Components/MainUI/widgets/WidgetContextMenu', () => ({
 }))
 
 vi.mock('@Components/ToolsUI/cropper/Cropper', () => ({
-    Cropper: () => null,
+    Cropper: () => <div data-testid="video-cropper"/>,
 }))
 
 vi.mock('@Core/constants', async importOriginal => ({
@@ -103,6 +107,7 @@ describe('ToolsUI linked replay video editing', () => {
                 },
             },
             stores: {
+                main: proxy({theJourney: null}),
                 replay: proxy({
                     active:         false,
                     paused:         false,
@@ -129,6 +134,17 @@ describe('ToolsUI linked replay video editing', () => {
         document.getElementById('lgs1920-container')?.remove()
         globalThis.__ = undefined
         globalThis.lgs = undefined
+    })
+
+    it('remounts crop preparation when the active Journey changes', async () => {
+        lgs.stores.main.theJourney = {slug: 'a'}
+        lgs.stores.ui.video.editing = true
+        const view = render(<ToolsUI/>)
+        const previousCrop = view.getByTestId('video-cropper')
+        await act(async () => {
+            lgs.stores.main.theJourney = {slug: 'b'}
+        })
+        expect(view.getByTestId('video-cropper')).not.toBe(previousCrop)
     })
 
     it('keeps the Journey toolbar hidden from pre-recording through export and restores it afterward', async () => {

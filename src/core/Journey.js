@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-08
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,6 +41,7 @@ import { MapElement }         from './MapElement'
 import { getOrbitSettings }   from './OrbitSettings'
 import {getBasicReplaySettings, migrateLegacyBasicReplaySettings} from './ui/replay/ReplayModeSettings'
 import {normalizeJourneyReplayVideoTimeline} from './ui/replay/ReplayTimelinePersistence'
+import {normalizeReplayCropZone} from './ui/replay/ReplayCropSettings'
 import { Track }              from './Track'
 
 const START_STOP_TOO_CLOSE_DISTANCE = 100
@@ -354,10 +355,12 @@ export class Journey extends MapElement {
         const replay = instance.replay ?? {}
         const basic = getBasicReplaySettings(replay)
         const videoTimeline = normalizeJourneyReplayVideoTimeline(replay.videoTimeline)
+        const cropZone = normalizeReplayCropZone(replay.cropZone)
         instance.replay = {
             start: Array.isArray(replay.start) ? replay.start : [],
             stop:  Array.isArray(replay.stop) ? replay.stop : [],
             ...(videoTimeline ? {videoTimeline} : {}),
+            ...(cropZone ? {cropZone} : {}),
             ...(basic ? {basic}
                 : {}),
             ...(replay.expert && typeof replay.expert === 'object'
