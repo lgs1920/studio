@@ -20,7 +20,7 @@ import { stylePOIDuotoneIcon }                     from '@Components/MainUI/MapP
 import { openPOIEditor }                           from '@Components/MainUI/MapPOI/openPOIEditor'
 import { calculatePOIContentPixelOffset }          from '@Components/MainUI/MapPOI/poiCanvasGeometry'
 import {
-    clearPOIHoverPreview, isPOIHoverPreviewActive, showPOIHoverPreview,
+    clearPOIHoverPreview, isPOIHoverPreviewActive, isPointerNearPOIHoverPreview, showPOIHoverPreview,
 } from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
 import { ICONS_PATH }                              from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
@@ -184,7 +184,20 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, style
     }, [isEmbedded, point])
 
     /** Hide this POI's preview after the pointer or Shift modifier leaves it. */
-    const handleShiftHoverEnd = useCallback(() => {
+    const handleShiftHoverEnd = useCallback((event) => {
+        const position = event?.endPosition ?? event?.position
+        const canvasRect = lgs.viewer?.canvas?.getBoundingClientRect()
+        if (position && canvasRect) {
+            const stillOverPOI = isPointerNearPOIHoverPreview(
+                pointId,
+                canvasRect.left + position.x,
+                canvasRect.top + position.y,
+            )
+            if (stillOverPOI !== false) {
+                return
+            }
+        }
+
         clearPOIHoverPreview(pointId)
     }, [pointId])
 

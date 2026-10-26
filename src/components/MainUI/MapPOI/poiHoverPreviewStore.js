@@ -17,18 +17,56 @@
 import { POIUtils } from '@Utils/cesium/POIUtils'
 
 let activePOIId = null
-const listeners = new Set()
+let activePOIPosition = null
+const listenersByPOI = new Map()
 
-/** Notify React subscribers after the active preview changes. */
-const notify = () => listeners.forEach(listener => listener())
+/** Notify only the POI components whose preview state changed. */
+const notify = (...poiIds) => {
+    new Set(poiIds.filter(Boolean)).forEach(poiId => {
+        listenersByPOI.get(poiId)?.forEach(listener => listener())
+    })
+}
 
 /** Get the ID of the POI currently shown as an expanded DOM preview. */
-export const getPOIHoverPreview = () => activePOIId
+export const getPOIHoverPreview = poiId => activePOIId === poiId
+
+/** Get the owner of the single active hover preview, if any. */
+export const getActivePOIHoverPreviewId = () => activePOIId
 
 /** Subscribe to changes in the active expanded POI preview. */
-export const subscribeToPOIHoverPreview = listener => {
+export const subscribeToPOIHoverPreview = (poiId, listener) => {
+    if (!poiId) {
+        return () => {}
+    }
+
+    const listeners = listenersByPOI.get(poiId) ?? new Set()
     listeners.add(listener)
-    return () => listeners.delete(listener)
+    listenersByPOI.set(poiId, listeners)
+    return () => {
+        listeners.delete(listener)
+        if (!listeners.size) {
+            listenersByPOI.delete(poiId)
+        }
+    }
+}
+
+/** Keep the screen anchor current without triggering a React render. */
+export const setPOIHoverPreviewPosition = (poiId, x, y) => {
+    if (activePOIId === poiId) {
+        activePOIPosition = {x, y}
+    }
+}
+
+/** Check whether a pointer event remains close to the hidden billboard anchor. */
+export const isPointerNearPOIHoverPreview = (poiId, x, y, radius = 30) => {
+    if (activePOIId !== poiId) {
+        return false
+    }
+    if (!activePOIPosition) {
+        return null
+    }
+
+    return Math.hypot(x - activePOIPosition.x, y - activePOIPosition.y) <= radius
 }
 
 /** Check whether a POI currently owns the expanded DOM preview. */
@@ -79,7 +117,8 @@ export const showPOIHoverPreview = poi => {
     }
 
     activePOIId = poi.id
-    notify()
+    activePOIPosition = null
+    notify(activePOIId)
     globalThis.lgs?.scene?.requestRender?.()
     return true
 }
@@ -97,12 +136,13 @@ export const clearPOIHoverPreview = (poiId = null) => {
 
     const previousPOIId = activePOIId
     activePOIId = null
+    activePOIPosition = null
     const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get(previousPOIId)
     if (poi) {
         restorePOIEntity(poi)
     }
 
-    notify()
+    notify(previousPOIId)
     globalThis.lgs?.scene?.requestRender?.()
     return true
 }

@@ -19,10 +19,10 @@ import {
     normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
 import {
-    clearPOIHoverPreview, getPOIHoverPreview, subscribeToPOIHoverPreview,
+    clearPOIHoverPreview, getPOIHoverPreview, setPOIHoverPreviewPosition, subscribeToPOIHoverPreview,
 } from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
 import { POIUtils }                                       from '@Utils/cesium/POIUtils'
-import { memo, useEffect, useState, useSyncExternalStore } from 'react'
+import { memo, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { useSnapshot }                                    from 'valtio'
 import { proxy }                           from 'valtio'
 
@@ -41,18 +41,21 @@ export const MapPOI = memo(({point}) => {
     const [pixels, setPixels] = useState(null)
     const [scale, setScale] = useState(1)
     const [tooFar, setTooFar] = useState(false)
-    const hoverPreviewPOIId = useSyncExternalStore(
-        subscribeToPOIHoverPreview,
-        getPOIHoverPreview,
-        getPOIHoverPreview,
+    const subscribeHoverPreview = useCallback(
+        listener => subscribeToPOIHoverPreview(thePOI?.id, listener),
+        [thePOI?.id],
     )
+    const getHoverPreviewSnapshot = useCallback(
+        () => getPOIHoverPreview(thePOI?.id),
+        [thePOI?.id],
+    )
+    const hoverPreviewActive = useSyncExternalStore(subscribeHoverPreview, getHoverPreviewSnapshot, () => false)
     const replayEntry = Array.isArray(replay.nearbyPois)
                             ? replay.nearbyPois.find(entry => entry?.poi?.id === thePOI?.id)
                             : null
     const presentation = resolveReplayPOIPresentation(thePOI, {replay})
     const replayActive = presentation.active
     const replaySettings = normalizeJourneyReplayPOISettings(thePOI?.replay)
-    const hoverPreviewActive = hoverPreviewPOIId === thePOI?.id
 
     useEffect(() => {
         if (hoverPreviewActive && (thePOI?.expanded || tooFar || !presentation.visible)) {
@@ -84,6 +87,7 @@ export const MapPOI = memo(({point}) => {
 
             if (coords?.visible) {
                 setPixels({x: coords.x, y: coords.y})
+                setPOIHoverPreviewPosition(currentPOI.id, coords.x, window.innerHeight - coords.y)
             }
             else {
                 setPixels(null)

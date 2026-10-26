@@ -16,7 +16,9 @@
 
 import { MapPOIContent } from '@Components/MainUI/MapPOI/MapPOIContent'
 import { POIS_EDITOR_DRAWER } from '@Core/constants'
-import { clearPOIHoverPreview } from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
+import {
+    clearPOIHoverPreview, getActivePOIHoverPreviewId, isPointerNearPOIHoverPreview,
+} from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
 import { useSnapshot }        from 'valtio'
 import { useEffect, useRef }  from 'react'
 import { updatedDiff }        from 'deep-object-diff'
@@ -47,6 +49,18 @@ export const MapPOIMonitor = () => {
         const canvas = lgs.viewer?.canvas
         /** Clear the transient preview before map picking handles a click or drag. */
         const clearPreview = () => clearPOIHoverPreview()
+        /** Keep the preview over its original screen anchor after hiding its Cesium billboard. */
+        const clearPreviewOutsidePOI = event => {
+            const poiId = getActivePOIHoverPreviewId()
+            if (!poiId) {
+                return
+            }
+
+            const nearPOI = isPointerNearPOIHoverPreview(poiId, event.clientX, event.clientY)
+            if (nearPOI === false) {
+                clearPOIHoverPreview(poiId)
+            }
+        }
         /** Clear the transient preview when Shift is released outside the focused canvas. */
         const clearPreviewOnShiftUp = event => {
             if (event.key.toLowerCase() === 'shift') {
@@ -55,12 +69,14 @@ export const MapPOIMonitor = () => {
         }
 
         document.addEventListener('pointerdown', clearPreview, true)
+        document.addEventListener('pointermove', clearPreviewOutsidePOI, true)
         document.addEventListener('keyup', clearPreviewOnShiftUp, true)
         canvas?.addEventListener('pointerleave', clearPreview)
         window.addEventListener('blur', clearPreview)
 
         return () => {
             document.removeEventListener('pointerdown', clearPreview, true)
+            document.removeEventListener('pointermove', clearPreviewOutsidePOI, true)
             document.removeEventListener('keyup', clearPreviewOnShiftUp, true)
             canvas?.removeEventListener('pointerleave', clearPreview)
             window.removeEventListener('blur', clearPreview)
