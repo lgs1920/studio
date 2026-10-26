@@ -489,7 +489,8 @@ export const MapPOIMoveOverlay = () => {
             }
             if (_drag.current || getPOIMoveSession() || event.button !== 0 || event.isPrimary === false
                 || !event.shiftKey || event.ctrlKey || event.altKey
-                || event.metaKey || isCesiumInputBlocked()) {
+                || event.metaKey || isCesiumInputBlocked()
+                || globalThis.lgs?.stores?.journeyEditor?.fixPathEditorOpen === true) {
                 return
             }
             const rect = canvas.getBoundingClientRect()

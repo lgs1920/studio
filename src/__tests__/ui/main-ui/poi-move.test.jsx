@@ -419,6 +419,24 @@ describe('POI move interaction', () => {
         expect($poiMove.session).toBeNull()
     })
 
+    it('leaves Shift gestures to Fix Path while its editor is open', () => {
+        const poi = createPOI()
+        const {canvas, scene} = createMapFixture(poi)
+        lgs.stores.journeyEditor = {fixPathEditorOpen: true}
+        const fixPathPointerDown = vi.fn()
+        canvas.addEventListener('pointerdown', fixPathPointerDown)
+        render(<MapPOIMoveOverlay/>)
+
+        fireEvent.pointerDown(canvas, {
+            pointerId: 10, button: 0, buttons: 1, shiftKey: true, clientX: 100, clientY: 50,
+        })
+
+        expect(scene.pick).not.toHaveBeenCalled()
+        expect(fixPathPointerDown).toHaveBeenCalledOnce()
+        expect(canvas.setPointerCapture).not.toHaveBeenCalled()
+        expect($poiMove.session).toBeNull()
+    })
+
     it('keeps the source POI styling, clamps the marker to the map, and saves the picked terrain position', async () => {
         const poi = createPOI({expanded: false})
         const {camera, entity, scene} = createMapFixture(poi, undefined, {left: 20, top: 10}, 2)
