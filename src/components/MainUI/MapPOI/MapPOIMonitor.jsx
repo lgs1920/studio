@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-26
- * Last modified: 2026-04-26
+ * Created on: 2025-05-09
+ * Last modified: 2026-10-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { MapPOIContent } from '@Components/MainUI/MapPOI/MapPOIContent'
 import { POIS_EDITOR_DRAWER } from '@Core/constants'
+import { clearPOIHoverPreview } from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
 import { useSnapshot }        from 'valtio'
 import { useEffect, useRef }  from 'react'
 import { updatedDiff }        from 'deep-object-diff'
@@ -41,6 +42,31 @@ export const MapPOIMonitor = () => {
     const _previousList = useRef(new Map())
     let current = null
     const _menuMonitor = useRef(null)
+
+    useEffect(() => {
+        const canvas = lgs.viewer?.canvas
+        /** Clear the transient preview before map picking handles a click or drag. */
+        const clearPreview = () => clearPOIHoverPreview()
+        /** Clear the transient preview when Shift is released outside the focused canvas. */
+        const clearPreviewOnShiftUp = event => {
+            if (event.key.toLowerCase() === 'shift') {
+                clearPreview()
+            }
+        }
+
+        document.addEventListener('pointerdown', clearPreview, true)
+        document.addEventListener('keyup', clearPreviewOnShiftUp, true)
+        canvas?.addEventListener('pointerleave', clearPreview)
+        window.addEventListener('blur', clearPreview)
+
+        return () => {
+            document.removeEventListener('pointerdown', clearPreview, true)
+            document.removeEventListener('keyup', clearPreviewOnShiftUp, true)
+            canvas?.removeEventListener('pointerleave', clearPreview)
+            window.removeEventListener('blur', clearPreview)
+            clearPreview()
+        }
+    }, [])
 
     /**
      * Get POI by id and set current poi.

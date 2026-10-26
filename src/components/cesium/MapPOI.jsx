@@ -18,8 +18,11 @@ import { MapPOIContent }                   from '@Components/MainUI/MapPOI/MapPO
 import {
     normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
+import {
+    clearPOIHoverPreview, getPOIHoverPreview, subscribeToPOIHoverPreview,
+} from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
 import { POIUtils }                                       from '@Utils/cesium/POIUtils'
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useState, useSyncExternalStore } from 'react'
 import { useSnapshot }                                    from 'valtio'
 import { proxy }                           from 'valtio'
 
@@ -35,16 +38,27 @@ export const MapPOI = memo(({point}) => {
     const hasPOI = Boolean(thePOI)
     const hasCoordinates = Number.isFinite(thePOI?.latitude) && Number.isFinite(thePOI?.longitude)
 
-    const _poi = useRef(null)
     const [pixels, setPixels] = useState(null)
     const [scale, setScale] = useState(1)
     const [tooFar, setTooFar] = useState(false)
+    const hoverPreviewPOIId = useSyncExternalStore(
+        subscribeToPOIHoverPreview,
+        getPOIHoverPreview,
+        getPOIHoverPreview,
+    )
     const replayEntry = Array.isArray(replay.nearbyPois)
                             ? replay.nearbyPois.find(entry => entry?.poi?.id === thePOI?.id)
                             : null
     const presentation = resolveReplayPOIPresentation(thePOI, {replay})
     const replayActive = presentation.active
     const replaySettings = normalizeJourneyReplayPOISettings(thePOI?.replay)
+    const hoverPreviewActive = hoverPreviewPOIId === thePOI?.id
+
+    useEffect(() => {
+        if (hoverPreviewActive && (thePOI?.expanded || tooFar || !presentation.visible)) {
+            clearPOIHoverPreview(thePOI.id)
+        }
+    }, [hoverPreviewActive, presentation.visible, thePOI?.expanded, thePOI?.id, tooFar])
     useEffect(() => {
         let cancelled = false
         let rafId = null
@@ -52,12 +66,14 @@ export const MapPOI = memo(({point}) => {
         const tick = async () => {
             if (cancelled || !hasPOI || !hasCoordinates) {
                 setPixels(null)
+                clearPOIHoverPreview(point)
                 return
             }
 
             const currentPOI = list.get(point)
             if (!currentPOI?.id || !Number.isFinite(currentPOI.latitude) || !Number.isFinite(currentPOI.longitude)) {
                 setPixels(null)
+                clearPOIHoverPreview(point)
                 return
             }
 
@@ -71,6 +87,7 @@ export const MapPOI = memo(({point}) => {
             }
             else {
                 setPixels(null)
+                clearPOIHoverPreview(currentPOI.id)
             }
 
             const scaleInfo = POIUtils.adaptScaleToDistance(currentPOI)
@@ -80,7 +97,7 @@ export const MapPOI = memo(({point}) => {
             rafId = __.requestAnimationFrame(tick)
         }
 
-        tick()
+        void tick()
 
         return () => {
             cancelled = true
@@ -105,25 +122,19 @@ export const MapPOI = memo(({point}) => {
                   point,
               ])
 
-    const hideMenu = (event) => {
-        lgs.stores.main.components.pois.context.visible = false
-        if (event) {
-            __.ui.sceneManager.propagateEventToCanvas(event)
-        }
-    }
-
     if (!hasPOI || !hasCoordinates) {
         return null
     }
 
     return (
         <>
-            {pixels &&
+            {pixels && hoverPreviewActive && !tooFar && presentation.visible &&
                 <div
                     className="poi-screen-wrapper"
-                    ref={_poi}
                     id={thePOI.id}
                     style={{
+                        position:                     'absolute',
+                        pointerEvents:                 'none',
                         bottom:                       window.innerHeight - pixels.y,
                         left:                         pixels.x,
                         transform: `translate( -50%,calc(-4 * var(--poi-border-width))) scale(${scale ?? 1})`,
@@ -133,18 +144,19 @@ export const MapPOI = memo(({point}) => {
                         '--lgs-poi-color':            thePOI.color ?? lgs.colors.poiDefault,
                         zIndex:                       viewable.get(thePOI.id),
                     }}
-                    onPointerMove={__.ui.sceneManager.propagateEventToCanvas}
-                    onWheel={hideMenu}
                 >
-                    {/* Source cards stay off screen and measurable while transient masks change. */}
-                    {!tooFar &&
-                        <div className="lgs-slide-in-from-top-bounced">
-                            <MapPOIContent
-                                poi={thePOI.id}
-                                hide={hideMenu}
-                            />
-                        </div>
-                    }
+                    <MapPOIContent
+                        poi={thePOI.id}
+                        domPreview
+                        style={{
+                            position: 'relative',
+                            top: 0,
+                            left: 0,
+                            transform: 'none',
+                            pointerEvents: 'none',
+                            '--poi-expanded-dimension': `${thePOI.display?.maxWidth ?? 200}px`,
+                        }}
+                    />
                 </div>
             }
         </>

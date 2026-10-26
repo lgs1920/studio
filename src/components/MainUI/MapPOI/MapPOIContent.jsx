@@ -19,6 +19,9 @@ import { DateTimeDisplay }                         from '@Components/DateTimeDis
 import { stylePOIDuotoneIcon }                     from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import { openPOIEditor }                           from '@Components/MainUI/MapPOI/openPOIEditor'
 import { calculatePOIContentPixelOffset }          from '@Components/MainUI/MapPOI/poiCanvasGeometry'
+import {
+    clearPOIHoverPreview, isPOIHoverPreviewActive, showPOIHoverPreview,
+} from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
 import { ICONS_PATH }                              from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
 import {
@@ -61,6 +64,7 @@ const assertPOICanvasDimensions = (element, scale, ratio) => {
  * @typedef {Object} MapPOIContentProps
  * @property {string} poi - ID of the POI to display.
  * @property {boolean} [useInMenu=false] - Render the compact menu version.
+ * @property {boolean} [domPreview=false] - Render a transient expanded DOM preview without map event handlers.
  * @property {object} [style] - Additional styles for the POI content wrapper.
  */
 
@@ -70,7 +74,7 @@ const assertPOICanvasDimensions = (element, scale, ratio) => {
  * @param {MapPOIContentProps} props - POI content options.
  * @returns {import('react').ReactNode} The POI content.
  */
-export const MapPOIContent = ({poi, useInMenu = false, style}) => {
+export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, style}) => {
     const _poiContent = useRef(null)
     const _icon = useRef(null)
     const _leaderSpace = useRef(null)
@@ -87,7 +91,8 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
     /** * Direct reactive access to the point from the snapshot.
      */
     const point = useMemo(() => poisSnap.list.get(poi), [poisSnap.list, poi])
-    const isEmbedded = useInMenu
+    const isEmbedded = useInMenu || domPreview
+    const isExpanded = !useInMenu && (domPreview || point?.expanded === true)
     const pointId = point?.id
     const pointParent = point?.parent
     const pointType = point?.type
@@ -171,6 +176,28 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         void __.ui.poiManager.updatePOI(point.id, {expanded: !point.expanded})
     }, [isEmbedded, point])
 
+    /** Show this collapsed POI while Shift is held over its Cesium billboard. */
+    const handleShiftHover = useCallback(() => {
+        if (!isEmbedded && !point?.expanded) {
+            showPOIHoverPreview(point)
+        }
+    }, [isEmbedded, point])
+
+    /** Hide this POI's preview after the pointer or Shift modifier leaves it. */
+    const handleShiftHoverEnd = useCallback(() => {
+        clearPOIHoverPreview(pointId)
+    }, [pointId])
+
+    /** Start a preview when Shift is pressed after the pointer is already over this POI. */
+    const handleShiftDown = useCallback(() => {
+        handleShiftHover()
+    }, [handleShiftHover])
+
+    /** Stop the preview when Shift is released while the pointer remains over this POI. */
+    const handleShiftUp = useCallback(() => {
+        clearPOIHoverPreview()
+    }, [])
+
     const addEventListeners = useCallback((poiId) => {
         __.canvasEvents.onClick(handlePOIClick, {entity: poiId, preventLowerPriority: true})
         __.canvasEvents.onTap(handlePOIClick, {entity: poiId, preventLowerPriority: true})
@@ -178,11 +205,16 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         __.canvasEvents.onDoubleTap(handleEditor, {entity: poiId, preventLowerPriority: true})
         __.canvasEvents.onRightClick(openContextMenu, {entity: poiId, preventLowerPriority: true})
         __.canvasEvents.onLongTap(openContextMenu, {entity: poiId, preventLowerPriority: true})
-    }, [handleEditor, handlePOIClick, openContextMenu])
+        __.canvasEvents.on('SHIFT#MOUSE_ENTER', handleShiftHover, {entity: poiId})
+        __.canvasEvents.on('SHIFT#MOUSE_LEAVE', handleShiftHoverEnd, {entity: poiId})
+        __.canvasEvents.onKeyDown(handleShiftDown, {entity: poiId, keys: ['shift']})
+        __.canvasEvents.onKeyUp(handleShiftUp, {entity: false, keys: ['shift']})
+    }, [handleEditor, handlePOIClick, handleShiftDown, handleShiftHover, handleShiftHoverEnd, handleShiftUp, openContextMenu])
 
     const removeEventListeners = useCallback((poiId) => {
         __.canvasEvents.removeAllListenersByEntity(poiId)
-    }, [])
+        __.canvasEvents.offKeyUp(handleShiftUp)
+    }, [handleShiftUp])
 
     useEffect(() => {
         if (isEmbedded || !pointId || !__.ui.poiManager?.ensurePOILocation) {
@@ -220,6 +252,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                         && (currentPoint.expanded === true) === expanded && currentPresentation.visible
                         && currentPresentation.active === replayActive
                         && currentPresentation.animationActive === replayAnimationActive
+                        && !isPOIHoverPreviewActive(pointId)
                 }
 
                 if (!isCurrentRender()) {
@@ -309,6 +342,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
             renderRequestRef.current++
             observer.disconnect()
             removeEventListeners(poi)
+            clearPOIHoverPreview(pointId)
         }
     }, [
                   isEmbedded,
@@ -353,7 +387,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
               ])
 
     useEffect(() => {
-        if (useInMenu || point?.expanded || !_icon.current) {
+        if (isEmbedded || isExpanded || !_icon.current) {
             return
         }
 
@@ -369,11 +403,11 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         return () => {
             cancelled = true
         }
-    }, [useInMenu, point?.expanded, iconName, isSvgIcon, point?.visible, renderToCanvas])
+    }, [isEmbedded, isExpanded, iconName, isSvgIcon, point?.visible, renderToCanvas])
 
     useEffect(() => {
         const leaderSpace = _leaderSpace.current
-        if (!pointId || !point?.expanded || isEmbedded || !leaderSpace) {
+        if (!pointId || !isExpanded || isEmbedded || !leaderSpace) {
             return
         }
 
@@ -387,41 +421,41 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
         leaderSpace.style.setProperty('--poi-expanded-leader-y', `${Math.cos(radians)}rem`)
         // Capture only after the random anchor geometry is set so canvas and billboard offsets agree.
         renderToCanvas()
-    }, [pointId, point?.expanded, isEmbedded, renderToCanvas])
+    }, [pointId, isExpanded, isEmbedded, renderToCanvas])
 
     return (
         <div
             className={classNames(
                 'poi-icon-wrapper',
-                (!point?.expanded || useInMenu) && 'poi-shrinked',
-                !point?.expanded && 'lgs--location-pin',
+                (!isExpanded || useInMenu) && 'poi-shrinked',
+                !isExpanded && 'lgs--location-pin',
                 useInMenu && 'used-in-menu',
             )}
-            data-poi-canvas-source={!useInMenu ? pointId : undefined}
+            data-poi-canvas-source={!isEmbedded ? pointId : undefined}
             style={{
                 '--lgs-poi-background-color': point?.noBackground
                     ? 'transparent'
                     : point?.bgColor ?? lgs.colors.poiDefaultBackground,
                 '--lgs-poi-border-color':     point?.color ?? lgs.colors.poiDefault,
                 '--lgs-poi-color':            point?.color ?? lgs.colors.poiDefault,
-                ...(point?.expanded && !isEmbedded
+                ...(isExpanded && !isEmbedded
                     ? {'--poi-expanded-dimension': `${displaySettings.maxWidth}px`}
                     : {}),
                 ...style,
             }}
         >
             <div
-                className={classNames('poi-card', point?.expanded && !isEmbedded && 'poi-card--expanded')}
+                className={classNames('poi-card', isExpanded && !useInMenu && 'poi-card--expanded')}
                 ref={_poiContent}
             >
                 <div className={classNames(
                     'poi-card-inner',
-                    point?.expanded && !isEmbedded && point?.pill !== false && 'poi-card-inner--pill',
+                    isExpanded && !useInMenu && point?.pill !== false && 'poi-card-inner--pill',
                     point?.noBackground && 'poi-card-inner--no-background',
                 )}>
                     <div className="poi-card-inner-background"/>
 
-                    {point?.expanded && !isEmbedded ? (
+                    {isExpanded && !useInMenu ? (
                         <div className={classNames(
                             'poi-card-content',
                             !(point.location && displayLocation) && !displayCategory && !displayCoordinateDetails
@@ -510,7 +544,7 @@ export const MapPOIContent = ({poi, useInMenu = false, style}) => {
                         />
                      )}
                 </div>
-                {point?.expanded && !isEmbedded && (
+                {isExpanded && !isEmbedded && (
                     <div
                         className="poi-expanded-leader-space"
                         aria-hidden="true"
