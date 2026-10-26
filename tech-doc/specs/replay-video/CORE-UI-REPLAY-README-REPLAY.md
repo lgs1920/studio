@@ -32,6 +32,7 @@ The implementation is split into a small set of focused modules:
 - `JourneyReplayCameraBinding`: provides the live Cesium camera bridge and transition plumbing, and re-exports the active tracking entry points.
 - `JourneyReplayCameraOverlay`: renders the replay diagnostics canvas used by export to capture Z1/Z2 and camera timing traces.
 - `JourneyReplaySessionSceneController`: logs the replay update phases at a finer granularity so camera timing, renderer work, and POI sync can be separated in the browser console and trace buffer.
+- `JourneyReplaySessionPOIController` and `JourneyReplayPOIProjection`: project POI triggers onto the active Replay sampler and track transient animation ownership; the shared POI presentation resolver keeps React cards and Cesium billboards in sync, and fixed-frame export closes Replay-opened POIs before non-Replay clips.
 - `ReplayVideoOverlayComposer`: builds the Replay export overlay list and includes replay diagnostics canvases even when hidden in the DOM.
 - `ReplayFrameTimeline`: generates deterministic replay frames from duration and fps.
 - `ReplayVideoRenderSession`: renders replay frames through a caller-provided pipeline.
@@ -40,8 +41,8 @@ The implementation is split into a small set of focused modules:
 - `warmReplayDeferredExportPlan`: pre-resolves the MP4 codec/config before export.
 - `resolveReplayDeferredExportPlan`: reuses the warm plan only when the export context still matches, including the captured camera snapshot.
 - `exportReplayDeferredMp4`: renders the master MP4 and returns the blob without forcing a download.
-- `runReplayDeferredMp4Export`: prepares, renders, encodes, and downloads a master MP4 export. The initial scene restore preserves the interactive focus snapshot so the export starts from the same visual target.
-- The final video dialog previews the completed Replay export and provides share/download actions.
+- `runReplayDeferredMp4Export`: prepares, renders, encodes, and downloads a master MP4 export. Independent cleanup steps preserve a completed MP4 if another scene-restoration step fails; the recording handoff is accepted only while its originating capture is current.
+- The final video dialog previews the completed Replay export and provides share/download actions. Its transient `mediaHandoffRevision` survives the normal capture-screen unmount; only a new capture or explicit cancellation supersedes delivered media. Component-local start tokens and abort signals guard encoding before the handoff.
 - `ReplayRecordingMonitorWidget` is the single transient transport surface hosted by
   the generic Widget manager: it hosts ordinary replay controls, then switches
   to the final composed Replay frame, export metrics, and icon-only

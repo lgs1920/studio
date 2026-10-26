@@ -241,7 +241,7 @@ subject to the validation gates below.
 | TODO | 1.1.0 | Replace separated clip controls with the normalized editable multi-track replay timeline | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
 | TODO | 1.1.0 | Replace the preparation snapshot and existing clip adapter with a canonical persisted timeline domain model consumed by Replay playback and export | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
 | PARTIAL | Unplanned | Finish Basic/Expert settings ownership, effective-mode propagation, and consistent Basic defaults | [Replay user modes](#replay-user-modes) |
-| TODO | 1.1.0 | Drive POI animation and displayed fields from canonical replay time | [POI animation](../../todo/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md) |
+| PARTIAL / TODO | 1.1.0 | Complete pause-aware POI animation lifecycle and displayed fields on canonical Replay time | [POI animation](../../todo/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md) |
 | TODO | 1.1.0 | Align clip altitude inputs and continuity across reordered sequences | [Clip altitude alignment](../../todo/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md) |
 | TODO | 1.1.0 | Add explicit Automatic, 720p, 1080p, and 4K Replay output profiles with capability checks | [Replay resolution profiles](../../todo/REPLAY_VIDEO_RESOLUTION_PROFILES_SPEC.md) |
 | TODO | 1.1.0 | Implement the replay-synchronized repeatable Video Widget | [Video Widget](../../todo/VIDEO_WIDGET_SPEC.md) |
