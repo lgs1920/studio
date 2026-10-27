@@ -34,7 +34,7 @@ import { ELEVATION_UNITS, UnitUtils }               from '@Utils/UnitUtils'
 import { WaIcon }                                  from '@awesome.me/webawesome/dist/react'
 import { snapdom }                                 from '@zumer/snapdom'
 import classNames                                  from 'classnames'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { proxy, useSnapshot }                      from 'valtio'
 import { createPOICanvasRenderQueue }              from '@Components/MainUI/MapPOI/poiCanvasRenderQueue'
 import './style.css'
@@ -311,6 +311,35 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         })
     }, [isEmbedded, point?.expanded, replayActive, replayAnimationActive, replayMasked, hiddenBecauseTooClose, pointId, $pois.list])
 
+    /** Keep pill content clear of its curved ends as its rendered dimensions change. */
+    useLayoutEffect(() => {
+        const card = _poiContent.current
+        const pill = _poiContent.current?.querySelector('.poi-card-inner.poi-card-inner--pill')
+        if (!card || !pill) {
+            return
+        }
+
+        /** Set symmetric side insets to the measured pill radius. */
+        const updatePillSideInset = () => {
+            const height = pill.getBoundingClientRect().height
+            if (!height) {
+                return
+            }
+
+            const insetValue = `${Math.round(height / 2 * 100) / 100}px`
+            if (card.style.getPropertyValue('--poi-pill-side-inset') !== insetValue) {
+                card.style.setProperty('--poi-pill-side-inset', insetValue)
+            }
+        }
+
+        updatePillSideInset()
+        const observer = typeof ResizeObserver === 'undefined'
+            ? null
+            : new ResizeObserver(updatePillSideInset)
+        observer?.observe(pill)
+        return () => observer?.disconnect()
+    }, [isEmbedded, isExpanded, point])
+
     useEffect(() => {
         if (isEmbedded || !pointId || (!replayMasked && !hiddenBecauseTooClose)) {
             return
@@ -462,7 +491,11 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             }}
         >
             <div
-                className={classNames('poi-card', isExpanded && !useInMenu && 'poi-card--expanded')}
+                className={classNames(
+                    'poi-card',
+                    isExpanded && !useInMenu && 'poi-card--expanded',
+                    isExpanded && !useInMenu && point?.pill !== false && 'poi-card--pill',
+                )}
                 ref={_poiContent}
             >
                 <div className={classNames(

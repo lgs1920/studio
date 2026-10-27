@@ -107,6 +107,15 @@
     }
 }
 
+.poi-card.poi-card--pill {
+    --poi-pill-side-inset: calc(3 * var(--poi-padding)); /* Measured half-height inset around the pill content. */
+}
+
+.poi-icon-wrapper:not(.poi-shrinked) .poi-card.poi-card--pill {
+    width: calc(var(--poi-expanded-dimension) + var(--poi-menu-icons-column-width) + 2 * var(--poi-pill-side-inset));
+    max-width: calc(var(--poi-expanded-dimension) + var(--poi-menu-icons-column-width) + 2 * var(--poi-pill-side-inset));
+}
+
 .used-in-menu .poi-card {
     width: var(--dimension);
     margin-right: var(--lgs-gutter-xs);
@@ -225,6 +234,13 @@
     flex-direction: column;
     padding: var(--poi-padding);
     color: var(--lgs-poi-color);
+
+    &.poi-card-inner--pill {
+        width: calc(var(--poi-expanded-dimension) + 2 * var(--poi-pill-side-inset));
+        max-width: calc(var(--poi-expanded-dimension) + 2 * var(--poi-pill-side-inset));
+        padding-block: calc(2 * var(--poi-padding));
+        padding-inline: var(--poi-pill-side-inset);
+    }
 }
 
 .poi-card-content {
@@ -595,6 +611,11 @@
 .map-poi-edit-preview-open .poi-card {
     width: var(--poi-expanded-dimension);
     max-width: var(--poi-expanded-dimension);
+}
+
+.map-poi-edit-preview-open .poi-icon-wrapper:not(.poi-shrinked) .poi-card.poi-card--pill {
+    width: calc(var(--poi-expanded-dimension) + 2 * var(--poi-pill-side-inset));
+    max-width: calc(var(--poi-expanded-dimension) + 2 * var(--poi-pill-side-inset));
 }
 
 .map-poi-edit-preview-open .poi-card-inner {
