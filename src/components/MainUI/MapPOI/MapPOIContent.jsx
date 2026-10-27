@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -66,6 +66,7 @@ const assertPOICanvasDimensions = (element, scale, ratio) => {
  * @property {string} poi - ID of the POI to display.
  * @property {boolean} [useInMenu=false] - Render the compact menu version.
  * @property {boolean} [domPreview=false] - Render a transient expanded DOM preview without map event handlers.
+ * @property {boolean} [collapsedPreview=false] - Render a transient collapsed DOM preview without map event handlers.
  * @property {object} [style] - Additional styles for the POI content wrapper.
  */
 
@@ -75,7 +76,7 @@ const assertPOICanvasDimensions = (element, scale, ratio) => {
  * @param {MapPOIContentProps} props - POI content options.
  * @returns {import('react').ReactNode} The POI content.
  */
-export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, style}) => {
+export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, collapsedPreview = false, style}) => {
     const _poiContent = useRef(null)
     const _icon = useRef(null)
     const _leaderSpace = useRef(null)
@@ -92,8 +93,8 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, style
     /** * Direct reactive access to the point from the snapshot.
      */
     const point = useMemo(() => poisSnap.list.get(poi), [poisSnap.list, poi])
-    const isEmbedded = useInMenu || domPreview
-    const isExpanded = !useInMenu && (domPreview || point?.expanded === true)
+    const isEmbedded = useInMenu || domPreview || collapsedPreview
+    const isExpanded = !useInMenu && !collapsedPreview && (domPreview || point?.expanded === true)
     const pointId = point?.id
     const pointParent = point?.parent
     const pointType = point?.type

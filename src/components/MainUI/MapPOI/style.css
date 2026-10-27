@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -555,6 +555,110 @@
     align-items: center;
     flex: 0 0 auto;
     gap: var(--lgs-gutter-xs);
+}
+
+.map-poi-edit-preview {
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+    height: 125px;
+    min-height: 125px;
+    max-height: 50vh;
+    overflow: hidden;
+    border: 1px solid var(--wa-color-surface-border);
+    border-radius: var(--lgs-border-radius);
+    background-color: var(--lgs-bg-color);
+    background-position: center;
+    background-size: cover;
+}
+
+.map-poi-edit-preview-open-area {
+    position: absolute;
+    top: var(--lgs-gutter-s);
+    right: var(--lgs-gutter-s);
+    bottom: var(--lgs-gutter-s);
+    left: var(--lgs-gutter-s);
+    display: flex;
+    overflow: hidden;
+    align-items: center;
+    justify-content: center;
+}
+
+.map-poi-edit-preview-open {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+}
+
+.map-poi-edit-preview-open .poi-card {
+    width: var(--poi-expanded-dimension);
+    max-width: var(--poi-expanded-dimension);
+}
+
+.map-poi-edit-preview-open .poi-card-inner {
+    margin-left: 0;
+}
+
+.map-poi-edit-preview-closed {
+    position: absolute;
+    z-index: 1;
+    top: var(--lgs-gutter-s);
+    right: var(--lgs-gutter-s);
+
+    & .poi-icon-wrapper.poi-shrinked {
+        /* The map billboard captures the card without the wrapper rotation. */
+        transform: none;
+    }
+}
+
+.map-poi-edit-preview-fit {
+    position: absolute;
+    z-index: 4;
+    bottom: var(--lgs-gutter-s);
+    left: var(--lgs-gutter-s);
+}
+
+.map-poi-edit-preview-reset {
+    position: absolute;
+    z-index: 4;
+    right: var(--lgs-gutter-s);
+    bottom: var(--lgs-gutter-s);
+}
+
+.map-poi-edit-preview-resize {
+    position: absolute;
+    z-index: 3;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 1.25rem;
+    cursor: ns-resize;
+    touch-action: none;
+    opacity: 0;
+    color: var(--wa-color-brand-on-loud);
+    background-color: var(--wa-color-brand-fill-loud);
+    transition: opacity 120ms ease;
+
+    & wa-icon {
+        font-size: var(--lgs-font-size-s);
+        color: var(--wa-color-brand-on-loud);
+    }
+
+    &:focus-visible {
+        opacity: 1;
+        outline: 2px solid var(--wa-color-brand-border-normal);
+        outline-offset: -2px;
+    }
+}
+
+.map-poi-edit-preview:hover .map-poi-edit-preview-resize,
+.map-poi-edit-preview:focus-within .map-poi-edit-preview-resize {
+    opacity: 1;
 }
 
 .map-poi-edit-tabs {

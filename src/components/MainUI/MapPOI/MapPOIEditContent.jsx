@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-25
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { MapPOICategorySelector } from '@Components/MainUI/MapPOI/MapPOICategorySelector'
 import { MapPOIDisplaySettings }  from '@Components/MainUI/MapPOI/MapPOIDisplaySettings'
+import { MapPOIEditPreview }      from '@Components/MainUI/MapPOI/MapPOIEditPreview'
 import { DateTimeDisplay }        from '@Components/DateTimeDisplay'
 import { MapPOIEditMenu }         from '@Components/MainUI/MapPOI/MapPOIEditMenu'
 import {
@@ -534,6 +535,8 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                           </div>
                                                           <MapPOIEditMenu poiId={id}/>
                                                       </div>
+
+                                                      <MapPOIEditPreview poi={id}/>
 
                                                       <WaTabGroup
                                                           className="map-poi-edit-tabs"
