@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-20
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,79 +22,12 @@
  ******************************************************************************/
 
 import { MapPOIListItem }        from '@Components/MainUI/MapPOI/MapPOIListItem'
+import { filterAndSortPOIs }    from '@Components/MainUI/MapPOI/filterAndSortPOIs'
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
 import { useProxyValue }         from '@Utils/ValtioUtils'
 import { WaCallout, WaIcon } from '@awesome.me/webawesome/dist/react'
-import { useEffect, useMemo }          from 'react'
+import { useEffect, useMemo }   from 'react'
 import { useSnapshot }           from 'valtio'
-
-/**
- * Filter and sort logic that preserves hidden POIs for UI management
- * @param {boolean} onlyJourney
- * @param {object} filterSettings
- * @param {Map} list
- * @returns {string[]}
- */
-const filterAndSortPois = (onlyJourney, filterSettings, list) => {
-    const {
-              journey      = false,
-              global       = false,
-              byName       = '',
-              byCategories = [],
-              exclude      = false,
-              alphabetic = true,
-          } = filterSettings
-    const {theJourney} = lgs
-
-    const ids = new Set()
-    const journeySlug = theJourney?.slug ?? null
-
-    for (const [id, poi] of list) {
-        if (!poi?.id || poi.tooClose === true) {
-            continue
-        }
-        const isGlobal = poi.parent == null
-        let isJourney = false
-        if (!isGlobal && journeySlug) {
-            const journeyRef = lgs.getJourneyByTrackSlug(poi.parent)
-            isJourney = journeyRef?.slug === journeySlug
-        }
-        if (!onlyJourney && global && isGlobal) {
-            ids.add(id)
-        }
-        if ((onlyJourney || journey) && isJourney) {
-            ids.add(id)
-        }
-    }
-
-    const lowerName = byName.trim().toLowerCase()
-    const sorted = []
-    let hasEmptyTitle = false
-
-    for (const id of ids) {
-        const poi = list.get(id)
-        const displayTitle = `${poi?.title ?? poi?.name ?? poi?.id ?? ''}`.trim()
-        if (!`${poi?.title ?? ''}`.trim()) {
-            hasEmptyTitle = true
-        }
-        if (lowerName && !displayTitle.toLowerCase().includes(lowerName)) {
-            continue
-        }
-        if (byCategories.length) {
-            const inCategory = poi.category && byCategories.includes(poi.category)
-            if (exclude ? inCategory : !inCategory) {
-                continue
-            }
-        }
-        sorted.push({id, title: displayTitle})
-    }
-
-    if (sorted.length > 1 && alphabetic && !hasEmptyTitle) {
-        sorted.sort((a, b) => alphabetic ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title))
-    }
-
-    return sorted.map(p => p.id)
-}
 
 export const MapPOIFilteredList = () => {
     const $pois = lgs.stores.main.components.pois
@@ -111,7 +44,13 @@ export const MapPOIFilteredList = () => {
     const filteredPois = useMemo(
         () => {
             void journeySlug
-            return filterAndSortPois(onlyJourney, settings.filter, pois.list)
+            return filterAndSortPOIs({
+                onlyJourney,
+                filterSettings: settings.filter,
+                list: pois.list,
+                journeySlug,
+                getJourneyByTrackSlug: lgs.getJourneyByTrackSlug,
+            })
         },
         [onlyJourney, journeySlug, settings.filter, pois.list],
     )

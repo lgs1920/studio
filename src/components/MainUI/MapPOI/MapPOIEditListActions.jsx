@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-03-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,8 +17,6 @@
 import { MapPOIBulkActionsMenu }               from '@Components/MainUI/MapPOI/MapPOIBulkActionsMenu'
 import { MapPOIEditFilterButton }              from '@Components/MainUI/MapPOI/MapPOIEditFilterButton'
 import { MapPOIEditFilterPopup }               from '@Components/MainUI/MapPOI/MapPOIEditFilterPopup'
-import { PopupAnchor }                         from '@Components/PopupAnchor'
-import { LGSPopup }                   from '@Components/LGSPopup'
 import { JOURNEY_EDITOR_DRAWER }               from '@Core/constants'
 import { WaIcon, WaSwitch }           from '@awesome.me/webawesome/dist/react'
 import classNames                              from 'classnames'
@@ -27,16 +25,13 @@ import { useSnapshot }                         from 'valtio'
 
 /**
  * MapPOIEditListActions component for POI edition.
- * Manages bulk actions, focus settings, and filter popup.
+ * Manages bulk actions, focus settings, and the inline filter panel.
  *
  * @param {Object} props - Component properties.
  * @param {boolean} [props.globals=true] - Context flag.
  * @returns {JSX.Element} The rendered settings component.
  */
 export const MapPOIEditListActions = memo(() => {
-    const $poi = lgs.settings.poi
-    const poi = useSnapshot($poi)
-
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
 
@@ -135,19 +130,8 @@ export const MapPOIEditListActions = memo(() => {
                     <MapPOIEditFilterButton/>
                 </div>
 
-                <LGSPopup
-                    active={poi.filter.open}
-                    anchor="map-poi-edit-popup-anchor"
-                    onRequestClose={() => {
-                        $poi.filter.open = false
-                    }}
-                    placement="bottom"
-                >
-                    <MapPOIEditFilterPopup/>
-                </LGSPopup>
+                <MapPOIEditFilterPopup/>
             </div>
-
-            <PopupAnchor id="map-poi-edit-popup-anchor"/>
         </>
     )
 })

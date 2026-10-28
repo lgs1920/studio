@@ -8,15 +8,17 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-03-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { MapPOICategorySelectorFilter }          from '@Components/MainUI/MapPOI/MapPOICategorySelectorFilter'
+import { filterAndSortPOIs }                     from '@Components/MainUI/MapPOI/filterAndSortPOIs'
 import { ToggleStateIcon }                       from '@Components/ToggleStateIcon'
 import { JOURNEY_EDITOR_DRAWER }                 from '@Core/constants'
+import { useProxyValue }                          from '@Utils/ValtioUtils'
 import {
     WaButton, WaCallout, WaCard, WaIcon, WaInput, WaSwitch, WaTooltip,
 }                                                from '@awesome.me/webawesome/dist/react'
@@ -32,55 +34,23 @@ export const MapPOIEditFilterPopup = memo(() => {
     const store = lgs.stores.main.components.pois
     const pois = useSnapshot(store)
     const drawers = useSnapshot(lgs.stores.ui.drawers)
+    const journeySlug = useProxyValue(lgs.mainProxy, main => main.theJourney?.slug ?? null, null)
 
     const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
 
-    const enoughPOIs = useCallback(() => {
-        return Array.from(pois.list.values()).some(obj => obj.type !== undefined && obj.tooClose !== true)
-    }, [pois.list])
+    const filteredPOIs = useMemo(() => filterAndSortPOIs({
+        onlyJourney,
+        filterSettings: poi.filter,
+        list: pois.list,
+        journeySlug,
+        getJourneyByTrackSlug: lgs.getJourneyByTrackSlug,
+    }), [onlyJourney, poi.filter, pois.list, journeySlug])
 
-    const applyFilter = useCallback(() => {
-        if (!enoughPOIs()) {
-            $poi.filter.active = false
-            $poi.filter.count = 0
-            return
-        }
-
-        const {byName, byCategories, global, journey, exclude} = lgs.settings.poi.filter
-        const search = byName.toLowerCase().trim()
-        const allPois = Array.from(pois.list.values()).filter(item => item.tooClose !== true)
-
-        const filtered = allPois.filter(item => {
-            // 1. Name Filter
-            const matchesName = search === '' || (item.title && item.title.trim().toLowerCase().includes(search))
-
-            if (!matchesName) {
-                return false
-            }
-
-            // 2. Category Filter (Inclusion/Exclusion)
-            let matchesCategory = true
-            if (byCategories.length > 0) {
-                const isInCategory = byCategories.includes(item.type)
-                matchesCategory = exclude ? !isInCategory : isInCategory
-                if (!matchesCategory) {
-                    return false
-                }
-            }
-
-            // 3. Type Filter (Global vs Journey)
-            const isGlobalItem = item.parent === null || item.parent === undefined
-            if (onlyJourney) {
-                return !isGlobalItem
-            }
-
-            return (isGlobalItem && global) || (!isGlobalItem && journey)
-        })
-
-        $poi.filter.count = filtered.length
-        $poi.filter.active = search !== '' || byCategories.length > 0 || exclude || !poi.filter.alphabetic
-
-    }, [enoughPOIs, onlyJourney, pois.list, poi.filter.alphabetic])
+    useEffect(() => {
+        const {byName, byCategories, exclude, alphabetic} = poi.filter
+        $poi.filter.count = filteredPOIs.length
+        $poi.filter.active = byName.trim() !== '' || byCategories.length > 0 || exclude || !alphabetic
+    }, [filteredPOIs.length, poi.filter.byName, poi.filter.byCategories, poi.filter.exclude, poi.filter.alphabetic])
 
     const resetFilter = useCallback(() => {
         $poi.filter.byName = ''
@@ -133,16 +103,12 @@ export const MapPOIEditFilterPopup = memo(() => {
         }
     }, [])
 
-    useEffect(() => {
-        applyFilter()
-    }, [poi.filter.byName, poi.filter.byCategories, poi.filter.global, poi.filter.journey, poi.filter.exclude, pois.list.size, applyFilter])
-
     if (!poi.filter.open) {
         return null
     }
 
     return (
-        <WaCard className="lgs--popup-in-drawer lgs-slide-down">
+        <WaCard className="map-poi-filter-panel lgs-slide-down">
             <WaButton appearance="plain" slot="header-actions" onClick={handleClose}>
                 <WaIcon size="s" name="xmark" variant="regular"/>
             </WaButton>
@@ -176,7 +142,6 @@ export const MapPOIEditFilterPopup = memo(() => {
                 exclude={poi.filter.exclude}
                 handleExclusion={handleExclusion}
                 handleCategories={handleCategories}
-                onChange={applyFilter}
             />
 
             <div className="map-poi-filter-by-type">

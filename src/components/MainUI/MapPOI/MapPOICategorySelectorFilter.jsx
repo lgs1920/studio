@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-15
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaIcon, WaOption, WaSelect, WaSwitch } from '@awesome.me/webawesome/dist/react'
-import { memo, useEffect, useMemo }               from 'react'
+import { memo, useMemo }                          from 'react'
 import { useSnapshot }                            from 'valtio'
 import { ICONS_PATH, POI_CATEGORY_ICONS }         from '@Core/constants'
 import { applyPOIDuotoneIconStyles }            from '@Components/MainUI/MapPOI/duotoneIconUtils'
@@ -24,7 +24,6 @@ import { applyPOIDuotoneIconStyles }            from '@Components/MainUI/MapPOI/
  * A memoized React component for selecting and filtering POI categories.
  */
 export const MapPOICategorySelectorFilter = memo(({
-                                                      onChange,
                                                       handleCategories,
                                                       handleExclusion,
                                                       exclude,
@@ -63,48 +62,33 @@ export const MapPOICategorySelectorFilter = memo(({
         '--secondary-opacity': 'var(--poi-secondary-default-opacity)',
     }), [])
 
-    const labelSlot = useMemo(() => (
-        <div
-            slot="label"
-            className="map-poi-category-filter"
-            style={{
-                display:        'flex',
-                justifyContent: 'space-between',
-                alignItems:     'center',
-                width:          '100%',
-            }}
-        >
-            <span>{'By Categories'}</span>
-            {settings.filter.byCategories.length > 0 && (
-                <WaSwitch
-                    size="xs"
-                    checked={exclude}
-                    label-at-start
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={handleExclusion}
-                > {'Exclude'}
-                </WaSwitch>
-            )}
-        </div>
-    ), [settings.filter.byCategories.length, exclude, handleExclusion])
-
-    useEffect(() => {
-        onChange()
-    }, [settings.filter.byCategories, exclude, onChange])
-
     return (
-        <WaSelect appearance="filled"
-            value={settings.filter.byCategories}
-            size={size}
-            className="map-poi-category-selector"
-            style={duotoneVars}
-            multiple
-            onChange={handleCategories}
-            placeholder="Select categories"
-            with-clear
-        >
-            {labelSlot}
-            {categoryOptions}
-        </WaSelect>
+        <>
+            <WaSelect appearance="filled"
+                label="By Categories"
+                value={settings.filter.byCategories}
+                size={size}
+                className="map-poi-category-selector"
+                style={duotoneVars}
+                multiple
+                onChange={handleCategories}
+                placeholder="Select categories"
+                with-clear
+            >
+                {categoryOptions}
+            </WaSelect>
+            {settings.filter.byCategories.length > 0 && (
+                <div className="map-poi-category-exclusion">
+                    <WaSwitch
+                        size="xs"
+                        checked={exclude}
+                        label-at-start
+                        width-auto
+                        onChange={handleExclusion}
+                    > {'Exclude'}
+                    </WaSwitch>
+                </div>
+            )}
+        </>
     )
 })

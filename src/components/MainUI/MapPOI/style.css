@@ -983,8 +983,21 @@
     margin-left: var(--lgs-gutter-xs);
 }
 
-.map-poi-edit-filter::part(body) {
-    gap: var(--lgs-gutter-s);
+.map-poi-filter-panel {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-top: var(--lgs-gutter-xs);
+    --spacing: var(--lgs-gutter-s); /* Keep the inline filter card compact. */
+
+    &::part(body) {
+        display: flex;
+        align-items: stretch;
+        flex-direction: column;
+        gap: var(--lgs-gutter-s);
+    }
 }
 
 #map-poi-edit-filter-trigger {
@@ -1104,17 +1117,10 @@
     margin-left: auto;
 }
 
-.map-poi-category-filter {
+.map-poi-category-exclusion {
     display: flex;
-    align-content: center;
-    align-items: center;
-    gap: var(--lgs-gutter-s);
-}
-
-.map-poi-category-filter wa-switch {
-    font-weight: normal;
-    width: 25% !important;
-    margin-left: auto;
+    justify-content: flex-end;
+    width: 100%;
 }
 
 .map-poi-category-selector {
@@ -1159,10 +1165,6 @@
 .map-poi-category-selector::part(form-control-label),
 .map-poi-journey-selector::part(form-control-label) {
     width: 100%;
-}
-
-.map-poi-category-selector wa-switch {
-    width: 30%;
 }
 
 [slot="clear-icon"] {
