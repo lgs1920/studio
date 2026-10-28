@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-07
- * Last modified: 2026-07-07
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { memo, useEffect, useId, useMemo, useState } from 'react'
+import { memo, useEffect, useId, useLayoutEffect, useMemo, useState } from 'react'
 
 const LOGO_STYLE_URL = '/assets/logo/style.css'
 const LOGO_STANDALONE_URL = '/assets/logo/logo.svg'
@@ -138,6 +138,7 @@ const LogoSvgComponent = ({
     style = null,
     title = null,
     ariaHidden = true,
+    onLoaded = null,
 }) => {
     const reactId = useId()
     const [markup, setMarkup] = useState('')
@@ -191,6 +192,12 @@ const LogoSvgComponent = ({
             active = false
         }
     }, [dimensions, idPrefix, primaryColor, secondaryColor, secondaryOpacity, src, textPrimaryColor, textSecondaryColor, title])
+
+    useLayoutEffect(() => {
+        if (markup) {
+            onLoaded?.()
+        }
+    }, [markup, onLoaded])
 
     if (!markup) {
         return null

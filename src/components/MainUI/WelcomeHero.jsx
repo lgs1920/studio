@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,15 +36,11 @@ const WELCOME_READY_MESSAGE_DURATION = 5000
 const WELCOME_READY_MESSAGE = 'LGS1920 Studio playground is ready...'
 const WELCOME_LOGO_ANIMATION_DURATION = 1200
 const WELCOME_LOGO_CLOSE_PROGRESS = 0.38
-const CLAPPER_SOUND_VARIANTS = [
-    {snapFrequency: 2300, snapLevel: 0.36, bodyFrequency: 175, bodyEndFrequency: 105, bodyLevel: 0.10, secondaryDelay: 0.018},
-    {snapFrequency: 2750, snapLevel: 0.33, bodyFrequency: 155, bodyEndFrequency: 95, bodyLevel: 0.12, secondaryDelay: 0.024},
-    {snapFrequency: 2050, snapLevel: 0.39, bodyFrequency: 195, bodyEndFrequency: 120, bodyLevel: 0.09, secondaryDelay: 0.014},
-]
+const CLAPPER_SOUND = {snapFrequency: 2300, snapLevel: 0.36, bodyFrequency: 175, bodyEndFrequency: 105, bodyLevel: 0.10, secondaryDelay: 0.018}
 
 /** Plays one wooden impact and resolves after its final audio source has ended. */
-const playClapperCue = (audioContext, variantIndex) => {
-    const variant = CLAPPER_SOUND_VARIANTS[variantIndex % CLAPPER_SOUND_VARIANTS.length]
+const playClapperCue = (audioContext) => {
+    const variant = CLAPPER_SOUND
     const now = audioContext.currentTime
     let finishCue
     const completion = new Promise(resolve => { finishCue = resolve })
@@ -110,7 +106,7 @@ const playClapperCue = (audioContext, variantIndex) => {
     return completion
 }
 
-/** Returns the visible logo clapper and the animations that share its close timing. */
+/** Returns the visible logo clapper and its synchronized flap and mountain animations. */
 const getVisibleClapperAnimation = () => {
     const clappers = [...document.querySelectorAll('.welcome-branding-logo .lgs--logo-clapper')]
     if (clappers.length === 0) {
@@ -119,36 +115,20 @@ const getVisibleClapperAnimation = () => {
 
     const clapper = clappers.find(candidate => {
         const svg = candidate.closest('svg')
-        return !svg || globalThis.getComputedStyle?.(svg)?.display !== 'none'
+        const responsiveLogo = candidate.closest('.welcome-branding-logo-horizontal, .welcome-branding-logo-vertical')
+        const visibleElement = responsiveLogo ?? svg
+        return !visibleElement || globalThis.getComputedStyle?.(visibleElement)?.display !== 'none'
     }) ?? clappers[0]
-    const animation = clapper.getAnimations?.().find(candidate => (
-        candidate.animationName === 'lgs-logo-clapper-close'
-    )) ?? null
-    // Synchronize every responsive logo and its geometric occlusion, including hidden variants.
-    const synchronizedAnimations = [...document.querySelectorAll(
-        '.welcome-branding-logo .lgs--logo-clapper, .welcome-branding-logo .lgs--logo-clapper-occlusion',
-    )].flatMap(element => element.getAnimations?.() ?? [])
+    const logo = clapper.closest('.welcome-branding-logo')
+    const synchronizedAnimations = [...(logo?.querySelectorAll(
+        '.lgs--logo-clapper, .lgs--logo-clapper-occlusion',
+    ) ?? [])].flatMap(element => element.getAnimations?.() ?? [])
         .filter(candidate => candidate.animationName === 'lgs-logo-clapper-close')
+    const animation = synchronizedAnimations.find(candidate => candidate.effect?.target === clapper)
+        ?? clapper.getAnimations?.()[0]
+        ?? null
 
-    return {animation, clapper, synchronizedAnimations}
-}
-
-/** Calculates the wait until the next closed pose in the repeating CSS animation. */
-const getDelayUntilClapperCloses = (animation, hasPlayedCue) => {
-    const timing = animation?.effect?.getTiming?.()
-    const duration = Number(timing?.duration) || WELCOME_LOGO_ANIMATION_DURATION
-    const animationTime = animation?.currentTime
-    const currentTime = animationTime === null || animationTime === undefined ? Number.NaN : Number(animationTime)
-
-    if (!Number.isFinite(currentTime)) {
-        return hasPlayedCue ? duration : duration * WELCOME_LOGO_CLOSE_PROGRESS
-    }
-
-    const phase = ((currentTime % duration) + duration) % duration
-    const closeTime = duration * WELCOME_LOGO_CLOSE_PROGRESS
-    const delay = (closeTime - phase + duration) % duration
-
-    return delay < 20 ? duration : delay
+    return {animation, clapper, logo, synchronizedAnimations}
 }
 
 /** Maps startup phases to clear welcome-screen status messages. */
@@ -258,11 +238,11 @@ export const WelcomeHero = ({
 
         let active = true
         let cueTimer = null
-        let soundVariantIndex = 0
-        let hasPlayedCue = false
         let holdingClosed = false
         let heldAnimations = []
+        let animatedLogo = null
         let clapperObserver = null
+        let hasPlayedCue = false
         let audioContext
         try {
             audioContext = new AudioContextConstructor()
@@ -271,107 +251,80 @@ export const WelcomeHero = ({
             return undefined
         }
 
+        /** Clears the pending single clapper sound timer. */
         const clearCueTimer = () => {
             if (cueTimer !== null) {
                 window.clearTimeout(cueTimer)
                 cueTimer = null
             }
         }
-        const scheduleNextClapperCue = () => {
-            clearCueTimer()
-            if (!active || holdingClosed || audioContext.state !== 'running' || document.hidden) {
+        /** Resumes the one-shot animation after the impact finishes or audio is unavailable. */
+        const finishClapperCue = () => {
+            if (!holdingClosed) {
                 return
             }
 
-            const {animation, clapper, synchronizedAnimations = []} = getVisibleClapperAnimation() ?? {}
-            if (!clapper) {
+            heldAnimations.forEach(candidate => candidate.play?.())
+            heldAnimations = []
+            holdingClosed = false
+        }
+
+        /** Schedules the one clapper impact at the close point of the active logo animation. */
+        const scheduleClapperCue = () => {
+            if (!active || hasPlayedCue || cueTimer !== null || document.hidden) {
                 return
             }
 
-            /** Holds the closed pose until the complete audio impact has ended. */
-            const closeAndPlay = () => {
-                if (!active || holdingClosed) return
-                holdingClosed = true
-                heldAnimations = [...new Set([animation, ...synchronizedAnimations].filter(Boolean))]
-                heldAnimations.forEach(candidate => {
-                    const duration = Number(candidate.effect?.getTiming?.().duration) || WELCOME_LOGO_ANIMATION_DURATION
-                    candidate.currentTime = duration * WELCOME_LOGO_CLOSE_PROGRESS
-                    candidate.pause?.()
-                })
-                hasPlayedCue = true
-                clapperObserver?.disconnect()
-                void playClapperCue(audioContext, soundVariantIndex++).then(() => {
-                    if (!active) return
-                    heldAnimations.forEach(candidate => candidate.play?.())
-                    heldAnimations = []
-                    holdingClosed = false
-                    scheduleNextClapperCue()
-                })
-            }
-
-            if (!hasPlayedCue) {
-                closeAndPlay()
+            animatedLogo = document.querySelector('.welcome-branding-logo')
+            animatedLogo?.classList.add('welcome-branding-logo-animated')
+            const {animation, logo, synchronizedAnimations = []} = getVisibleClapperAnimation() ?? {}
+            if (!animation || !logo) {
                 return
             }
 
-            const delay = getDelayUntilClapperCloses(animation, hasPlayedCue)
+            const duration = Number(animation.effect?.getTiming?.().duration) || WELCOME_LOGO_ANIMATION_DURATION
+            const currentTime = Number(animation.currentTime) || 0
+            const closeTime = duration * WELCOME_LOGO_CLOSE_PROGRESS
+            const delay = Math.max(0, closeTime - currentTime)
             cueTimer = window.setTimeout(() => {
                 cueTimer = null
-                if (!active || audioContext.state !== 'running') {
-                    scheduleNextClapperCue()
+                if (!active || hasPlayedCue) {
                     return
                 }
 
-                closeAndPlay()
-            }, Math.max(1, delay))
+                holdingClosed = true
+                hasPlayedCue = true
+                clapperObserver?.disconnect()
+                heldAnimations = [...new Set([animation, ...synchronizedAnimations])]
+                heldAnimations.forEach(candidate => {
+                    candidate.currentTime = duration * WELCOME_LOGO_CLOSE_PROGRESS
+                    candidate.pause?.()
+                })
+
+                if (audioContext.state !== 'running') {
+                    finishClapperCue()
+                    return
+                }
+
+                void playClapperCue(audioContext).then(finishClapperCue).catch(finishClapperCue)
+            }, delay)
         }
 
-        const resumeAudio = () => {
-            if (audioContext.state === 'running') {
-                scheduleNextClapperCue()
-                return
-            }
-
-            audioContext.resume().then(scheduleNextClapperCue).catch(() => {})
+        scheduleClapperCue()
+        if (!hasPlayedCue) {
+            clapperObserver = new MutationObserver(scheduleClapperCue)
+            clapperObserver.observe(animatedLogo ?? document.body, {childList: true, subtree: true})
         }
-        const handleAudioStateChange = () => {
-            if (audioContext.state === 'running') {
-                scheduleNextClapperCue()
-            }
-            else {
-                clearCueTimer()
-            }
+        if (audioContext.state !== 'running') {
+            void audioContext.resume().catch(() => {})
         }
-        const handleVisibilityChange = () => {
-            if (document.hidden) {
-                clearCueTimer()
-            }
-            else {
-                scheduleNextClapperCue()
-            }
-        }
-
-        clapperObserver = new MutationObserver(scheduleNextClapperCue)
-        clapperObserver.observe(document.body, {childList: true, subtree: true})
-
-        audioContext.addEventListener?.('statechange', handleAudioStateChange)
-        window.addEventListener('pointerdown', resumeAudio)
-        window.addEventListener('keydown', resumeAudio)
-        window.addEventListener('resize', scheduleNextClapperCue)
-        document.addEventListener('visibilitychange', handleVisibilityChange)
-        void resumeAudio()
 
         return () => {
             active = false
-            heldAnimations.forEach(candidate => candidate.play?.())
-            heldAnimations = []
             clearCueTimer()
-            audioContext.removeEventListener?.('statechange', handleAudioStateChange)
-            clapperObserver.disconnect()
-            window.removeEventListener('pointerdown', resumeAudio)
-            window.removeEventListener('keydown', resumeAudio)
-            window.removeEventListener('resize', scheduleNextClapperCue)
-            document.removeEventListener('visibilitychange', handleVisibilityChange)
+            finishClapperCue()
+            clapperObserver?.disconnect()
+            animatedLogo?.classList.remove('welcome-branding-logo-animated')
             if (audioContext.state !== 'closed') {
                 void audioContext.close().catch(() => {})
             }

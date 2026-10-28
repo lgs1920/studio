@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-21
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,6 +20,7 @@ import {describe, expect, it} from 'vitest'
 
 const indexDocument = new JSDOM(readFileSync('index.html', 'utf8')).window.document
 const startupStyle = readFileSync('src/assets/css/startup-shell.css', 'utf8')
+const mainUiStyle = readFileSync('src/components/MainUI/style.css', 'utf8')
 const lgs1920Source = readFileSync('src/components/LGS1920.jsx', 'utf8')
 const mainSource = readFileSync('src/main.jsx', 'utf8')
 const startupBackgroundSource = readFileSync('src/assets/media/welcome-startup-background.js', 'utf8')
@@ -65,7 +66,7 @@ const registerBootSplashMediaLoadingTests = () => {
         const splashSpinner = indexDocument.querySelector('#lgs-boot-splash .welcome-branding-spinner wa-spinner')
         const splashStatus = indexDocument.querySelector('#lgs-boot-splash-status')
         const startupStylesheet = indexDocument.querySelector('link[rel="stylesheet"][href="/src/assets/css/startup-shell.css"]')
-        expect(splashLogo?.getAttribute('src')).toBe('/assets/logo/logo-horizontal.png')
+        expect(splashLogo).toBeNull()
         expect(splashSlogan?.querySelector('title')).toBeNull()
         expect(splashSlogan?.querySelector('text')?.textContent.trim()).toBe('Replay Your World Outdoors.')
         expect(splashSpinner).not.toBeNull()
@@ -128,3 +129,16 @@ const registerBootSplashMediaLoadingTests = () => {
 }
 
 describe('boot splash media loading', registerBootSplashMediaLoadingTests)
+
+describe('welcome logo animation', () => {
+    it('uses a one-shot SVG clapper animation when the startup CTA becomes ready', () => {
+        expect(mainUiStyle).toContain(
+            'animation: lgs-logo-clapper-close 1200ms cubic-bezier(.2, .75, .3, 1) 1 both;'
+        )
+        expect(mainUiStyle).toContain('.welcome-branding-logo-animated .lgs--logo-clapper')
+        expect(mainUiStyle).not.toContain('lgs-logo-clapper-close 1200ms cubic-bezier(.2, .75, .3, 1) infinite')
+        expect(mainUiStyle).not.toContain(
+            '.lgs-boot-splash-cta-ready ~ #lgs1920-container .welcome-branding-logo .lgs--logo-clapper'
+        )
+    })
+})

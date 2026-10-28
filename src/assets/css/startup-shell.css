@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-29
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -189,19 +189,10 @@ body:not(.lgs-app-booting) {
         opacity: 0;
     }
 
-    & #lgs-boot-splash-logo,
     & #lgs-boot-splash-slogan {
         position: absolute;
         z-index: 3;
         left: 50%;
-    }
-
-    & #lgs-boot-splash-logo {
-        top: 42%;
-        width: min(220px, calc(100vw - 2rem));
-        height: auto;
-        transform: translate(-50%, -50%);
-        filter: drop-shadow(0 0 18px rgba(0, 0, 0, 0.55));
     }
 
     & #lgs-boot-splash-slogan {
@@ -213,7 +204,6 @@ body:not(.lgs-app-booting) {
         filter: drop-shadow(0 0 14px rgba(0, 0, 0, 0.72));
     }
 
-    &.lgs-boot-splash-react-ready #lgs-boot-splash-logo,
     &.lgs-boot-splash-react-ready #lgs-boot-splash-slogan {
         opacity: 0;
         visibility: hidden;
@@ -355,10 +345,6 @@ body:not(.lgs-app-booting) {
 
 @media (max-width: 700px) {
     #lgs-boot-splash {
-        & #lgs-boot-splash-logo {
-            width: min(150px, calc(100vw - 2rem));
-        }
-
         & #lgs-boot-splash-slogan {
             top: calc(42% + 3.4rem);
         }
