@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { proxyMap } from 'valtio/utils'
@@ -64,5 +64,36 @@ describe('MapPOIFilteredList', () => {
         render(<MapPOIFilteredList/>)
 
         expect(screen.getAllByTestId('poi-list-item').map(item => item.textContent)).toEqual(['trailhead-1'])
+    })
+
+    it('refreshes journey POIs when the current journey changes while the list stays open', async () => {
+        const journeyA = proxy({slug: 'journey-a', tracks: proxyMap()})
+        const journeyB = proxy({slug: 'journey-b', tracks: proxyMap()})
+        const {list} = globalThis.lgs.stores.main.components.pois
+        globalThis.lgs.stores.ui.drawers.open = 'journey-editor-drawer'
+        globalThis.lgs.mainProxy.theJourney = journeyA
+        globalThis.lgs.getJourneyByTrackSlug = slug => ({slug: slug === 'track-a' ? 'journey-a' : 'journey-b'})
+        list.set('journey-a-poi', {
+            id:       'journey-a-poi',
+            title:    'Journey A',
+            category: 'trailhead',
+            parent:   'track-a',
+        })
+        list.set('journey-b-poi', {
+            id:       'journey-b-poi',
+            title:    'Journey B',
+            category: 'trailhead',
+            parent:   'track-b',
+        })
+
+        render(<MapPOIFilteredList/>)
+
+        expect(await screen.findByText('journey-a-poi')).not.toBeNull()
+        await act(async () => {
+            globalThis.lgs.mainProxy.theJourney = journeyB
+        })
+
+        expect(await screen.findByText('journey-b-poi')).not.toBeNull()
+        expect(screen.queryByText('journey-a-poi')).toBeNull()
     })
 })

@@ -37,22 +37,23 @@ export const MapPOIFilteredList = () => {
     const pois = useSnapshot($pois)
     const settings = useSnapshot($settings)
     const drawers = useSnapshot($drawers)
-    const journeySlug = useProxyValue(lgs.mainProxy, main => main.theJourney?.slug ?? null, null)
+    const journey = useProxyValue(lgs.mainProxy, main => main.theJourney ?? null, null)
+    const journeySlug = journey?.slug ?? null
 
     const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
 
     const filteredPois = useMemo(
         () => {
-            void journeySlug
             return filterAndSortPOIs({
                 onlyJourney,
                 filterSettings: settings.filter,
                 list: pois.list,
                 journeySlug,
+                journey,
                 getJourneyByTrackSlug: lgs.getJourneyByTrackSlug,
             })
         },
-        [onlyJourney, journeySlug, settings.filter, pois.list],
+        [onlyJourney, journey, journeySlug, settings.filter, pois.list],
     )
 
     /**

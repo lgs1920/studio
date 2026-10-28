@@ -14,9 +14,12 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { createJourneyProximityMatcher } from '@Components/MainUI/MapPOI/poiJourneyProximity'
+import { GLOBAL_PARENT } from '@Core/constants'
+
 /**
  * Filters and sorts POIs using the same rules for the editor list and its count.
- * @param {{onlyJourney: boolean, filterSettings: object, list: Map, journeySlug: string|null, getJourneyByTrackSlug: (slug: string) => object|null}} options
+ * @param {{onlyJourney: boolean, filterSettings: object, list: Map, journeySlug: string|null, journey: object|null, getJourneyByTrackSlug: (slug: string) => object|null}} options
  * @returns {string[]}
  */
 export const filterAndSortPOIs = ({
@@ -24,17 +27,23 @@ export const filterAndSortPOIs = ({
     filterSettings,
     list,
     journeySlug,
+    journey,
     getJourneyByTrackSlug,
 }) => {
     const {
-        journey = false,
+        journey: showJourney = false,
         global = false,
         byName = '',
         byCategories = [],
         exclude = false,
         alphabetic = true,
+        allPOIs = false,
     } = filterSettings
 
+    const environmentFilterActive = !allPOIs && Boolean(journeySlug)
+    const isNearCurrentJourney = environmentFilterActive
+        ? createJourneyProximityMatcher(journey)
+        : () => false
     const lowerName = byName.trim().toLowerCase()
     const sorted = []
     let hasEmptyTitle = false
@@ -44,14 +53,14 @@ export const filterAndSortPOIs = ({
             continue
         }
 
-        const isGlobal = poi.parent == null
+        const isGlobal = poi.parent == null || poi.parent === GLOBAL_PARENT
         const poiJourneySlug = !isGlobal && journeySlug
             ? getJourneyByTrackSlug(poi.parent)?.slug ?? null
             : null
         const isJourney = Boolean(journeySlug) && poiJourneySlug === journeySlug
         const isIncludedByScope = onlyJourney
-            ? isJourney
-            : (global && isGlobal) || (journey && isJourney)
+            ? isJourney || (isGlobal && isNearCurrentJourney(poi))
+            : (global && isGlobal && (!environmentFilterActive || isNearCurrentJourney(poi))) || (showJourney && isJourney)
 
         if (!isIncludedByScope) {
             continue

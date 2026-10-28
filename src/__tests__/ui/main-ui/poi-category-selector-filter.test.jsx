@@ -22,9 +22,7 @@ import { proxyMap } from 'valtio/utils'
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaIcon:   () => <span/>,
     WaOption: ({children}) => <div>{children}</div>,
-    WaSelect: ({label, children, ...props}) => (
-        <div data-testid="category-select" data-label={label} {...props}>{children}</div>
-    ),
+    WaSelect: ({children, ...props}) => <div data-testid="category-select" {...props}>{children}</div>,
     WaSwitch: ({children, ...props}) => <div data-testid="exclude-switch" {...props}>{children}</div>,
 }))
 
@@ -50,7 +48,7 @@ describe('MapPOICategorySelectorFilter', () => {
         cleanup()
     })
 
-    it('keeps the category label on the select row and puts exclusion on its own row', () => {
+    it('places the exclusion switch on the right side of the category label row', () => {
         const {container} = render(
             <MapPOICategorySelectorFilter
                 exclude={false}
@@ -60,9 +58,11 @@ describe('MapPOICategorySelectorFilter', () => {
         )
         const select = screen.getByTestId('category-select')
         const exclusion = screen.getByTestId('exclude-switch')
+        const categoryLabel = screen.getByText('By Categories')
 
-        expect(select.dataset.label).toBe('By Categories')
-        expect(exclusion.closest('.map-poi-category-exclusion')).not.toBeNull()
-        expect(container.querySelector('.map-poi-category-filter')).toBeNull()
+        expect(categoryLabel.closest('.map-poi-category-label-row')).not.toBeNull()
+        expect(exclusion.closest('.map-poi-category-label-row')).toBe(categoryLabel.parentElement)
+        expect(select.contains(categoryLabel)).toBe(true)
+        expect(container.querySelector('.map-poi-category-exclusion')).toBeNull()
     })
 })

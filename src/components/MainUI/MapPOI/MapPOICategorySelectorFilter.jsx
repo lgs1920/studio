@@ -65,7 +65,6 @@ export const MapPOICategorySelectorFilter = memo(({
     return (
         <>
             <WaSelect appearance="filled"
-                label="By Categories"
                 value={settings.filter.byCategories}
                 size={size}
                 className="map-poi-category-selector"
@@ -75,20 +74,23 @@ export const MapPOICategorySelectorFilter = memo(({
                 placeholder="Select categories"
                 with-clear
             >
+                <div slot="label" className="map-poi-category-label-row">
+                    <span>{'By Categories'}</span>
+                    {settings.filter.byCategories.length > 0 && (
+                        <WaSwitch
+                            size="xs"
+                            checked={exclude}
+                            label-at-start
+                            width-auto
+                            onClick={event => event.stopPropagation()}
+                            onChange={handleExclusion}
+                        >
+                            {'Exclude'}
+                        </WaSwitch>
+                    )}
+                </div>
                 {categoryOptions}
             </WaSelect>
-            {settings.filter.byCategories.length > 0 && (
-                <div className="map-poi-category-exclusion">
-                    <WaSwitch
-                        size="xs"
-                        checked={exclude}
-                        label-at-start
-                        width-auto
-                        onChange={handleExclusion}
-                    > {'Exclude'}
-                    </WaSwitch>
-                </div>
-            )}
         </>
     )
 })

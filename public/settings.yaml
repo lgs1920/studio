@@ -291,6 +291,7 @@ poi:
     alphabetic: true
     byCategories: false               # in fact, empty array but need false instead
     exclude: false
+    allPOIs: false
     open: false
     active: false
     global: true

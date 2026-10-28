@@ -998,6 +998,11 @@
         flex-direction: column;
         gap: var(--lgs-gutter-s);
     }
+
+    & .map-poi-filter-all {
+        display: flex;
+        width: 100%;
+    }
 }
 
 #map-poi-edit-filter-trigger {
@@ -1117,10 +1122,20 @@
     margin-left: auto;
 }
 
-.map-poi-category-exclusion {
+.map-poi-category-label-row {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     width: 100%;
+
+    & > span {
+        margin-right: auto;
+    }
+
+    & wa-switch {
+        flex: 0 0 auto;
+        margin: 0;
+    }
 }
 
 .map-poi-category-selector {

@@ -64,4 +64,59 @@ describe('filterAndSortPOIs', () => {
 
         expect(ids).toEqual([])
     })
+
+    it('includes journey POIs and only global POIs within 500 meters in environment mode', () => {
+        const journey = {
+            slug:   'journey-a',
+            tracks: new Map([['track-a', {
+                content: {
+                    geometry: {
+                        type:        'LineString',
+                        coordinates: [[0, 0], [0.01, 0]],
+                    },
+                },
+            }]]),
+        }
+        const environmentPois = new Map([
+            ['journey-poi', {id: 'journey-poi', title: 'Journey POI', parent: 'track-a'}],
+            ['nearby-global', {id: 'nearby-global', title: 'Nearby', longitude: 0.005, latitude: 0.004}],
+            ['nearby-global-sentinel', {id: 'nearby-global-sentinel', title: 'Nearby Sentinel', longitude: 0.005, latitude: -0.003, parent: '__global__'}],
+            ['distant-global', {id: 'distant-global', title: 'Distant', longitude: 0.005, latitude: 0.006}],
+        ])
+
+        const ids = filterAndSortPOIs({
+            onlyJourney: true,
+            filterSettings: {allPOIs: false},
+            list: environmentPois,
+            journeySlug: 'journey-a',
+            journey,
+            getJourneyByTrackSlug: () => ({slug: 'journey-a'}),
+        })
+
+        expect(ids).toEqual(['journey-poi', 'nearby-global', 'nearby-global-sentinel'])
+
+        const globalIds = filterAndSortPOIs({
+            onlyJourney: false,
+            filterSettings: {global: true, allPOIs: false},
+            list: environmentPois,
+            journeySlug: 'journey-a',
+            journey,
+            getJourneyByTrackSlug: () => ({slug: 'journey-a'}),
+        })
+
+        expect(globalIds).toEqual(['nearby-global', 'nearby-global-sentinel'])
+    })
+
+    it('keeps global POIs visible when no current journey exists', () => {
+        const ids = filterAndSortPOIs({
+            onlyJourney: false,
+            filterSettings: {global: true, allPOIs: false},
+            list,
+            journeySlug: null,
+            journey: null,
+            getJourneyByTrackSlug,
+        })
+
+        expect(ids).toEqual(['global-summit'])
+    })
 })

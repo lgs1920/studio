@@ -34,7 +34,8 @@ export const MapPOIEditFilterPopup = memo(() => {
     const store = lgs.stores.main.components.pois
     const pois = useSnapshot(store)
     const drawers = useSnapshot(lgs.stores.ui.drawers)
-    const journeySlug = useProxyValue(lgs.mainProxy, main => main.theJourney?.slug ?? null, null)
+    const journey = useProxyValue(lgs.mainProxy, main => main.theJourney ?? null, null)
+    const journeySlug = journey?.slug ?? null
 
     const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
 
@@ -43,20 +44,22 @@ export const MapPOIEditFilterPopup = memo(() => {
         filterSettings: poi.filter,
         list: pois.list,
         journeySlug,
+        journey,
         getJourneyByTrackSlug: lgs.getJourneyByTrackSlug,
-    }), [onlyJourney, poi.filter, pois.list, journeySlug])
+    }), [onlyJourney, poi.filter, pois.list, journey, journeySlug])
 
     useEffect(() => {
-        const {byName, byCategories, exclude, alphabetic} = poi.filter
+        const {byName, byCategories, alphabetic, allPOIs} = poi.filter
         $poi.filter.count = filteredPOIs.length
-        $poi.filter.active = byName.trim() !== '' || byCategories.length > 0 || exclude || !alphabetic
-    }, [filteredPOIs.length, poi.filter.byName, poi.filter.byCategories, poi.filter.exclude, poi.filter.alphabetic])
+        $poi.filter.active = byName.trim() !== '' || byCategories.length > 0 || !alphabetic || (!allPOIs && Boolean(journeySlug))
+    }, [filteredPOIs.length, poi.filter.byName, poi.filter.byCategories, poi.filter.alphabetic, poi.filter.allPOIs, journeySlug])
 
     const resetFilter = useCallback(() => {
         $poi.filter.byName = ''
         $poi.filter.alphabetic = true
         $poi.filter.byCategories = []
         $poi.filter.exclude = false
+        $poi.filter.allPOIs = false
         $poi.filter.global = !onlyJourney
         $poi.filter.journey = onlyJourney
         $poi.filter.active = false
@@ -78,6 +81,10 @@ export const MapPOIEditFilterPopup = memo(() => {
 
     const handleExclusion = useCallback((event) => {
         $poi.filter.exclude = event.target.checked
+    }, [])
+
+    const handleAllPOIs = useCallback((event) => {
+        $poi.filter.allPOIs = event.target.checked
     }, [])
 
     const handleGlobal = useCallback(() => {
@@ -159,6 +166,20 @@ export const MapPOIEditFilterPopup = memo(() => {
                     </>
                 )}
             </div>
+
+            {journey && (
+                <div className="map-poi-filter-all">
+                    <WaSwitch
+                        size="xs"
+                        label-at-start
+                        width-auto
+                        checked={poi.filter.allPOIs === true}
+                        onChange={handleAllPOIs}
+                    >
+                        {'Show all POIs'}
+                    </WaSwitch>
+                </div>
+            )}
 
             <WaCallout
                 size="s"
