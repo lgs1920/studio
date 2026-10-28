@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-14
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,8 @@ import {
     resolveBasicReplaySettings,
     syncJourneyBasicReplayPresentation,
 } from '@Core/ui/replay/ReplayUserModes'
+import {hasVisibleColorAlpha} from '@Utils/ColorUtils'
+import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAwesomeKits'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import {useSnapshot} from 'valtio'
 
@@ -59,6 +61,13 @@ export const BasicReplayAppearanceSettings = () => {
         __.ui.replay?.refresh?.({camera: false})
         lgs.scene?.requestRender?.()
     }
+    const canSwapColors = hasVisibleColorAlpha(fill.color) && hasVisibleColorAlpha(border.color)
+    /** Swap the trace fill and border colors when both have a visible alpha. */
+    const handleSwapColors = () => {
+        if (canSwapColors) {
+            updatePresentation({fillColor: border.color, borderColor: fill.color})
+        }
+    }
     const baseFillWidth = Math.max(REPLAY_MIN_TRACE_WIDTH, fill.width)
     const baseBorderWidth = Math.max(0, border.width)
     // Keep the preview camera-independent and match the renderer's minimum projected marker diameter.
@@ -74,6 +83,13 @@ export const BasicReplayAppearanceSettings = () => {
                 <WaColorPicker id="basic-replay-fill-color" size="s" aria-label="Replay fill color"
                                value={fill.color} swatches={swatches}
                                onInput={event => updatePresentation({fillColor: event.currentTarget.value})}/>
+                {canSwapColors && (
+                    <WaButton className="square-button small basic-replay-appearance__swap" size="s" appearance="plain"
+                              aria-label="Swap Replay fill and border colors" title="Swap Replay fill and border colors"
+                              onClick={handleSwapColors}>
+                        <WaIcon name="arrow-right-arrow-left" variant="regular" library={LGS1920_ICON_LIBRARY} size="s" aria-hidden="true"/>
+                    </WaButton>
+                )}
             </div>
             <WaRadioGroup className="basic-replay-appearance__border-mode wa-visually-hidden-label"
                           label="Replay trace border" orientation="horizontal" size="s"

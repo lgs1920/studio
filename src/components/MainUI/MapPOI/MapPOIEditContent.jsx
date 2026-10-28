@@ -28,6 +28,8 @@ import {
 }                                 from '@Core/constants'
 import { normalizePOIDisplaySettings } from '@Core/POIDisplaySettings'
 
+import {hasVisibleColorAlpha} from '@Utils/ColorUtils'
+import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAwesomeKits'
 import { UIToast } from '@Utils/UIToast'
 import {
     ELEVATION_UNITS, UnitUtils,
@@ -160,6 +162,9 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                     time,
                                                     visible     = true,
                                                 } = point
+                                          const canSwapColors = !noBackground
+                                              && hasVisibleColorAlpha(bgColor ?? lgs.colors.poiDefaultBackground)
+                                              && hasVisibleColorAlpha(color ?? lgs.colors.poiDefault)
 
                                           const [coordinateDraft, setCoordinateDraft] = useState({
                                                                                                      latitude:  UnitUtils.formatCoordinate(latitude, coordinateSystem),
@@ -255,6 +260,29 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                   await __.ui.poiManager.updatePOI(poi, update)
                                               }
                                           }, [poi])
+
+                                          /** Swap the POI background and foreground colors when both remain visible. */
+                                          const handleSwapColors = async () => {
+                                              if (!window.isOK) {
+                                                  return
+                                              }
+
+                                              const currentPoint = lgs.stores.main.components.pois.list.get(poi)
+                                              if (!currentPoint || currentPoint.noBackground) {
+                                                  return
+                                              }
+
+                                              const backgroundColor = currentPoint.bgColor ?? lgs.colors.poiDefaultBackground
+                                              const foregroundColor = currentPoint.color ?? lgs.colors.poiDefault
+                                              if (!hasVisibleColorAlpha(backgroundColor) || !hasVisibleColorAlpha(foregroundColor)) {
+                                                  return
+                                              }
+
+                                              await __.ui.poiManager.updatePOI(poi, {
+                                                  bgColor: foregroundColor,
+                                                  color:   backgroundColor,
+                                              })
+                                          }
 
                                           /**
                                            * Creates a handler for coordinate changes.
@@ -532,6 +560,19 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                   noFormatToggle
                                                                   ref={_poiColor}
                                                               />
+                                                              {canSwapColors && (
+                                                                  <WaButton
+                                                                      className="square-button small map-poi-edit-color-swap"
+                                                                      size="s"
+                                                                      appearance="plain"
+                                                                      aria-label="Swap POI background and foreground colors"
+                                                                      title="Swap POI background and foreground colors"
+                                                                      disabled={!visible}
+                                                                      onClick={handleSwapColors}
+                                                                  >
+                                                                      <WaIcon name="arrow-right-arrow-left" variant="regular" library={LGS1920_ICON_LIBRARY} size="s" aria-hidden="true"/>
+                                                                  </WaButton>
+                                                              )}
                                                           </div>
                                                           <MapPOIEditMenu poiId={id}/>
                                                       </div>
