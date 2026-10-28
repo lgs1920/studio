@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-04
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -299,6 +299,27 @@ export const VideoDownloadAndShareDialog = () => {
             void __.mediaCapture?.releaseMedia?.()
         }
     }, [getMediaFilenameStem, prepareReplaySceneForDialog, releaseMediaUrl])
+
+    useEffect(() => {
+        if (!dialogOpen) {
+            return
+        }
+
+        /** Protect an undownloaded video when the user leaves the page or closes its tab. */
+        const handleBeforeUnload = (event) => {
+            if (_dialogCleanupDone.current
+                || _mediaBlob.current.type !== ReplayMediaCapture.VIDEO
+                || _mediaDownloaded.current) {
+                return
+            }
+
+            event.preventDefault()
+            event.returnValue = ''
+        }
+
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+    }, [dialogOpen])
 
     /**
      * Sync blurred video with main video playback.
