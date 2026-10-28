@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ import {ReplayFrameTimeline} from './ReplayFrameTimeline'
 import {isReplayRenderPlan} from './ReplayRenderPlan'
 import {createReplayRenderModeContract, REPLAY_RENDER_MODE_INTERACTIVE} from './ReplayRenderModeContract'
 import {resolveReplayVideoFramePhase} from './ReplayVideoTimeline'
+import {replayPlaybackTimeAtRouteTime} from './ReplayPOISpeedProfile'
 
 /**
  * Return a null frame contribution.
@@ -146,6 +147,13 @@ export class ReplayFrameResolver {
         const localProgress = Number(this.#plan.timeline?.direction) < 0
                               ? 1 - safeProgress
                               : safeProgress
+        const speedProfile = this.#plan.timeline?.replayProgressProfile
+        if (speedProfile) {
+            const routeDuration = Math.max(0, Number(speedProfile.routeDurationMillis) || 0)
+            const routeTime = localProgress * routeDuration
+            return replayPhase.startMillis + replayPlaybackTimeAtRouteTime(speedProfile, routeTime)
+        }
+
         return replayPhase.startMillis + (localProgress * replayPhase.durationMillis)
     }
 

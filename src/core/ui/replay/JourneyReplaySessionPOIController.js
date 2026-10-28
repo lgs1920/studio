@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -122,6 +122,86 @@ import {
     safeCartesian3Lerp,
 } from './JourneyReplaySessionShared'
 
+const MAX_REPLAY_POI_APPEARANCES = 2
+
+/**
+ * Project a POI into the active Replay view and check its crop bounds.
+ * @param {object} mode - Replay session mode.
+ * @param {object} poi - POI being checked.
+ * @returns {boolean|null} Crop visibility, or null when no render target is available.
+ */
+const isPOIInsideVideoCrop = (mode, poi) => {
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const viewer = call.cesiumViewer?.()
+    const scene = call.cesiumScene?.() ?? viewer?.scene
+    const canvas = viewer?.canvas ?? scene?.canvas
+    if (!scene || !canvas || typeof call.poiEntities !== 'function') {
+        return null
+    }
+
+    const canvasBounds = canvas.getBoundingClientRect?.()
+    const canvasWidth = finiteNumber(canvasBounds?.width)
+        ?? finiteNumber(canvas.clientWidth)
+        ?? finiteNumber(canvas.width)
+    const canvasHeight = finiteNumber(canvasBounds?.height)
+        ?? finiteNumber(canvas.clientHeight)
+        ?? finiteNumber(canvas.height)
+    if (canvasWidth === null || canvasHeight === null || canvasWidth <= 0 || canvasHeight <= 0) {
+        return null
+    }
+
+    const isIsolatedTarget = viewer && viewer !== globalThis.lgs?.viewer
+    const configuredCrop = isIsolatedTarget ? null : call.videoCropRect?.()
+    const cropLeft = finiteNumber(configuredCrop?.left) ?? 0
+    const cropTop = finiteNumber(configuredCrop?.top) ?? 0
+    const cropWidth = finiteNumber(configuredCrop?.width) ?? canvasWidth
+    const cropHeight = finiteNumber(configuredCrop?.height) ?? canvasHeight
+    const right = cropLeft + cropWidth
+    const bottom = cropTop + cropHeight
+    if (cropWidth <= 0 || cropHeight <= 0) {
+        return false
+    }
+
+    const camera = viewer?.camera ?? scene.camera
+    const entities = call.poiEntities(poi)
+    for (const entity of entities) {
+        const position = entity.position?.getValue?.(JulianDate.now()) ?? entity.position
+        if (!position || ![position.x, position.y, position.z].every(Number.isFinite)) {
+            continue
+        }
+
+        if (camera?.positionWC && camera?.directionWC) {
+            const toPOI = Cartesian3.subtract(position, camera.positionWC, new Cartesian3())
+            if (Cartesian3.dot(toPOI, camera.directionWC) <= 0) {
+                continue
+            }
+        }
+
+        let windowPosition = null
+        try {
+            windowPosition = typeof scene.worldToWindowCoordinates === 'function'
+                ? scene.worldToWindowCoordinates(position)
+                : SceneTransforms.worldToWindowCoordinates(scene, position)
+        }
+        catch {
+            windowPosition = null
+        }
+        if (!windowPosition) {
+            windowPosition = scene.cartesianToCanvasCoordinates?.(position, new Cartesian2()) ?? null
+        }
+
+        if (windowPosition
+            && windowPosition.x >= cropLeft
+            && windowPosition.x <= right
+            && windowPosition.y >= cropTop
+            && windowPosition.y <= bottom) {
+            return true
+        }
+    }
+
+    return false
+}
+
 /** Publish animation ownership only when its observable ID set changes. */
 const publishAnimatedPOIs = ids => {
     const store = replayStore()
@@ -181,12 +261,15 @@ export const updatePOIExpandedState = async (mode, poiId, expanded) => {
         }) ?? null
     }
 
+/** Restore the POI expansion and appearance state saved before Replay playback. */
 export const restoreNearbyPOIsAfterPlayback = async (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         const restoreEntries = Array.from(state.replayPoiExpandedState.entries())
         state.replayPoiExpandedState.clear()
         state.replayPoiTriggered.clear()
+        state.replayPOIAppearanceState?.clear()
+        state.lastReplayPOIProgress = null
         publishAnimatedPOIs(state.replayPoiTriggered)
         state.sortedNearbyPois = []
 
@@ -221,9 +304,11 @@ export const closeJourneyReplayOpenedPOIsBeforeStopClips = (mode, ) => {
         }))
     }
 
-export const prepareNearbyPOIsForPlayback = async (mode, sample = null) => {
+/** Collapse replay-animated POIs and reset their crop-entry counters before playback. */
+export const prepareNearbyPOIsForPlayback = async mode => {
         const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
         const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        state.replayPOIAppearanceState ??= new Map()
         const {poiVisibilityMode: initialVisibilityMode} = currentJourneyReplayPoiBehavior()
         if (initialVisibilityMode === 'no') {
             state.replayPoiTriggered.clear()
@@ -251,6 +336,8 @@ export const prepareNearbyPOIsForPlayback = async (mode, sample = null) => {
         })
 
         state.sortedNearbyPois = sortedNearbyPois
+        state.replayPOIAppearanceState.clear()
+        state.lastReplayPOIProgress = null
 
         call.applyJourneyReplayPOIVisibility(sortedNearbyPois)
 
@@ -275,9 +362,6 @@ export const prepareNearbyPOIsForPlayback = async (mode, sample = null) => {
             await call.updatePOIExpandedState(poiId, false)
         }
 
-        if (sample) {
-            await call.syncNearbyPOIsForSample(sample)
-        }
     }
 
 export const openNearbyPOIForPlayback = async (mode, poiId) => {
@@ -301,9 +385,11 @@ export const openNearbyPOIForPlayback = async (mode, poiId) => {
         call.setPOIEntityVisibility(poi, true, {allowReplayAnimation: true})
     }
 
+/** Start POI display windows when their anchors enter the active crop. */
 export const syncNearbyPOIsForSample = async (mode, sample = null) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        state.replayPOIAppearanceState ??= new Map()
         const progress = finiteNumber(sample?.progress)
         if (progress === null) {
             return
@@ -318,6 +404,8 @@ export const syncNearbyPOIsForSample = async (mode, sample = null) => {
                 return normalizeJourneyReplayPOISettings(poi?.replay).animated !== false
             })
             state.replayPoiTriggered.clear()
+            state.replayPOIAppearanceState.clear()
+            state.lastReplayPOIProgress = progress
             publishAnimatedPOIs(state.replayPoiTriggered)
             await Promise.all(collapsedIds.map(poiId => call.updatePOIExpandedState(poiId, false)))
             call.applyJourneyReplayPOIVisibility?.()
@@ -340,8 +428,17 @@ export const syncNearbyPOIsForSample = async (mode, sample = null) => {
         const shouldAnimatePOIs = replayDurationSeconds > 0 && totalDistance > 0
         const expandedIds = new Set()
 
+        if (state.lastReplayPOIProgress !== null && progress < state.lastReplayPOIProgress) {
+            state.replayPOIAppearanceState.clear()
+        }
+        state.lastReplayPOIProgress = progress
+        const currentReplaySeconds = Math.max(0, Math.min(1, progress)) * replayDurationSeconds
+
         if (shouldAnimatePOIs) {
-            for (const entry of nearbyPois) {
+            const uniqueNearbyPois = new Map(nearbyPois
+                .map(entry => [entry?.poi?.id, entry])
+                .filter(([poiId]) => Boolean(poiId)))
+            for (const entry of uniqueNearbyPois.values()) {
                 const poiId = entry?.poi?.id
                 const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId) ?? entry?.poi
                 if (!poiId || !poi || isReplayPOIAnimationEndpoint(poi)) {
@@ -358,19 +455,40 @@ export const syncNearbyPOIsForSample = async (mode, sample = null) => {
                     || poiVisibilityMode === 'yes'
                     || poiSettings.visible !== false
                 if (!visibleForReplay || !animateThisPOI) {
+                    const appearance = state.replayPOIAppearanceState.get(poiId)
+                    if (appearance) {
+                        appearance.insideCrop = false
+                    }
                     continue
                 }
 
                 const displayDurationSeconds = basicMode
                     ? poiAnimationDurationSeconds
                     : poiSettings.displayDurationSeconds
-                if (isReplayPOIAnimationActiveAtProgress({
+                const cropVisibility = isPOIInsideVideoCrop(mode, poi)
+                const insideCrop = cropVisibility ?? isReplayPOIAnimationActiveAtProgress({
                     progress,
                     poiDistance: entry.projectedAbscissa,
                     totalDistance,
                     replayDurationSeconds,
                     animationDurationSeconds: displayDurationSeconds,
-                })) {
+                })
+                const appearance = state.replayPOIAppearanceState.get(poiId) ?? {
+                    insideCrop: false,
+                    startTimes: [],
+                }
+                if (insideCrop && !appearance.insideCrop
+                    && appearance.startTimes.length < MAX_REPLAY_POI_APPEARANCES) {
+                    // Start the display clock only on a crop-entry transition, never on route proximity.
+                    appearance.startTimes.push(currentReplaySeconds)
+                }
+                appearance.insideCrop = insideCrop
+                state.replayPOIAppearanceState.set(poiId, appearance)
+
+                if (appearance.startTimes.some(startTime => (
+                    currentReplaySeconds >= startTime
+                    && currentReplaySeconds < startTime + displayDurationSeconds
+                ))) {
                     expandedIds.add(poiId)
                 }
             }

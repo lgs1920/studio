@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -89,6 +89,8 @@ import {REPLAY_VIDEO_FPS} from '@Core/ui/replay/ReplayVideoSettings'
 import {currentReplayJourney, isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
 import {createBasicReplayTraceFocusClips} from '@Core/ui/replay/JourneyReplayBasicFocus'
 import {currentBasicReplaySettingsForJourney} from '@Core/ui/replay/ReplayUserModes'
+import {projectReplayPOIsOnSampler} from '@Core/ui/replay/JourneyReplayPOIProjection'
+import {createReplayPOISpeedProfile} from '@Core/ui/replay/ReplayPOISpeedProfile'
 import {
     normalizeMediabunnyMetadataTags,
 }                              from '@Core/ui/replay/ReplayMediaMetadata'
@@ -124,6 +126,30 @@ const finiteNumber = (value, fallback = null) => {
 }
 
 const clampProgress = value => Math.max(0, Math.min(1, Number(value) || 0))
+
+/**
+ * Build the Basic Replay POI speed profile from the active canonical sampler.
+ *
+ * @param {Object} options - Replay export timing inputs.
+ * @returns {Object|null} Basic Replay speed profile or null for Expert Replay.
+ */
+const resolveReplayPOISpeedProfile = ({replay, journey, controller, replayDurationMillis, direction} = {}) => {
+    if (!isJourneyReplayBasicMode({settings: globalThis.lgs?.settings?.ui?.replay, replay})) {
+        return null
+    }
+
+    const basicSettings = currentBasicReplaySettingsForJourney(journey)
+    const profile = createReplayPOISpeedProfile({
+        entries: projectReplayPOIsOnSampler(replay?.nearbyPois ?? [], controller?.sampler),
+        totalDistance: controller?.sampler?.totalDistance,
+        replayDurationMillis,
+        direction,
+        basicSettings,
+        enabled: true,
+    })
+
+    return profile.playbackDurationMillis !== profile.routeDurationMillis ? profile : null
+}
 
 /**
  * Resolve the selected video range from Replay preparation.
@@ -682,6 +708,7 @@ export const captureReplayDeferredExportContext = ({
                                                       fps = defaultReplayExportFps(),
                                                       renderSpec = null,
                                                       replayDurationMillis = null,
+                                                      replayProgressProfile = null,
                                                       sourceCanvas = defaultReplaySourceCanvas(),
                                                       widgetsBoard = VIDEO_WIDGETS_BOARD,
                                                   } = {}) => {
@@ -773,6 +800,13 @@ export const captureReplayDeferredExportContext = ({
         visibleOverlayIds,
         widgetSignature,
         clipSignature: replayClipSignature(resolveReplayExportClips({replay})),
+        ...(replayProgressProfile ? {
+            poiSpeedProfileSignature: JSON.stringify(replayProgressProfile.segments.map(segment => [
+                segment.routeStartMillis,
+                segment.routeEndMillis,
+                segment.speedFactor,
+            ])),
+        } : {}),
         renderContract: renderContext.contract,
     }
 
@@ -2102,12 +2136,21 @@ export const prepareReplayDeferredExportPlan = ({
                                 ? Math.max(0, Number(controller.duration) * 1000)
                                 : Math.max(0, Number(replay?.durationMillis) || 0)
     const direction = controller?.direction ?? replay?.direction ?? 1
+    const poiSpeedProfile = resolveReplayPOISpeedProfile({
+        replay,
+        journey,
+        controller,
+        replayDurationMillis,
+        direction,
+    })
+    const timelineReplayDurationMillis = poiSpeedProfile?.playbackDurationMillis ?? replayDurationMillis
     const replayClips = resolveReplayExportClips({replay, journey})
     const videoTimeline = buildReplayVideoTimeline({
-        replayDurationMillis,
+        replayDurationMillis: timelineReplayDurationMillis,
         fps,
         direction,
         clips: replayClips,
+        replayProgressProfile: poiSpeedProfile,
     })
     const exportWindow = resolveReplayExportWindow({replay, timeline: videoTimeline})
     const effectiveRenderSpec = renderSpec ?? buildReplayVideoRenderSpec({
@@ -2127,7 +2170,8 @@ export const prepareReplayDeferredExportPlan = ({
         captureMode,
         fps,
         renderSpec: effectiveRenderSpec,
-        replayDurationMillis,
+        replayDurationMillis: timelineReplayDurationMillis,
+        replayProgressProfile: poiSpeedProfile,
         sourceCanvas,
     })
     const trackPath = controller?.sampler?.logicalTrackPath ?? null
@@ -2219,6 +2263,7 @@ export const prepareReplayDeferredExportPlan = ({
         mediaMetadata,
         definition,
         renderPlan,
+        poiSpeedProfile,
         exportWindow,
         outputDurationMillis: exportWindow.durationMillis,
         renderContract: replayContext.context?.renderContract
@@ -2368,6 +2413,14 @@ export const resolveReplayDeferredExportPlan = ({
     const currentDurationMillis = Number.isFinite(Number(controller?.duration))
                                   ? Math.max(0, Number(controller.duration) * 1000)
                                   : Math.max(0, Number(replay?.durationMillis) || 0)
+    const poiSpeedProfile = resolveReplayPOISpeedProfile({
+        replay,
+        journey,
+        controller,
+        replayDurationMillis: currentDurationMillis,
+        direction: controller?.direction ?? replay?.direction ?? 1,
+    })
+    const effectiveReplayDurationMillis = poiSpeedProfile?.playbackDurationMillis ?? currentDurationMillis
     const currentRenderSpec = buildReplayVideoRenderSpec({
         cropRect: replay?.videoCropRect ?? existingPlan?.renderSpec?.cropRect ?? null,
         video: replay?.video ?? globalThis.lgs?.stores?.ui?.video ?? null,
@@ -2384,7 +2437,8 @@ export const resolveReplayDeferredExportPlan = ({
         captureMode: requestedCaptureMode,
         fps,
         renderSpec: currentRenderSpec,
-        replayDurationMillis: currentDurationMillis,
+        replayDurationMillis: effectiveReplayDurationMillis,
+        replayProgressProfile: poiSpeedProfile,
         sourceCanvas,
     })
     const existingExporter = existingPlan?.exporter ?? null

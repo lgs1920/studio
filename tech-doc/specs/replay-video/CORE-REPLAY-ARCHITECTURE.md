@@ -58,6 +58,12 @@ applies the path and marker factors at rendering time, after projection limits
 for the marker. Disabling the border hides it on the trace and marker while
 retaining the selected border color. Color inputs update every choice preview
 and the active Replay immediately. Expert appearance remains independent.
+When a POI display window starts, Basic Replay eases down from normal speed to
+half speed, holds for one second at the POI's closest route point, then eases
+back to normal by the time the POI disappears. Overlapping windows share one
+slowdown envelope rather than stacking speed changes; each distinct POI keeps
+its one-second hold. The replay timeline, Record duration, and playback toolbar
+include the added playback time.
 
 Basic and Expert MP4 recording temporarily suspend the main viewer's default render loop.
 Each capture flush calls `Viewer.render()` after resizing and requesting the

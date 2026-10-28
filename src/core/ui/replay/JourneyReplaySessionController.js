@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -272,6 +272,8 @@ export class JourneyReplaySessionController {
     #preparationTransitionToken = 0
     #replayPoiExpandedState = new Map()
     #replayPoiTriggered = new Set()
+    #replayPOIAppearanceState = new Map()
+    #lastReplayPOIProgress = null
     #replayPOIAnimationOccurred = false
     #replayPOIVisibilityState = new Map()
     #stopClipPOIMaskFrame = null
@@ -890,6 +892,20 @@ export class JourneyReplaySessionController {
             get: () => this.#replayPoiTriggered,
             set: value => {
                 this.#replayPoiTriggered = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayPOIAppearanceState', {
+            configurable: true,
+            get: () => this.#replayPOIAppearanceState,
+            set: value => {
+                this.#replayPOIAppearanceState = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'lastReplayPOIProgress', {
+            configurable: true,
+            get: () => this.#lastReplayPOIProgress,
+            set: value => {
+                this.#lastReplayPOIProgress = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayPOIAnimationOccurred', {

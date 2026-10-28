@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -357,6 +357,10 @@ export const configure = (mode, options = {}) => {
             store.clips = clips
         }
 
+        if (basicReplay) {
+            call.syncRuntimeNearbyPOIs(journey)
+        }
+
         state.controller.configure({
             sampler:    state.sampler,
             duration:   options.duration ?? replay.duration ?? store?.duration ?? DEFAULT_DURATION,
@@ -365,6 +369,7 @@ export const configure = (mode, options = {}) => {
             progress:   options.progress ?? store?.progress ?? 0,
             clips,
             captureFps: options.captureFps ?? store?.captureFps ?? 30,
+            replaySettings: replay,
         })
 
         call.bindCesiumCameraBridge()
@@ -1296,7 +1301,6 @@ export const renderReplayExportFrame = async (mode, {
                     hideTrace:     phase?.slot === REPLAY_CLIP_SLOT_START,
                     showTrace:     true,
                 })
-                await call.syncNearbyPOIsForSample(sample)
                 state.cameraAutoTrackingIgnoreUntil = call.now() + 180
                 const durationSeconds = finiteNumber(activeController?.duration ?? state.controller?.duration)
                 const logicalFrame = createJourneyReplayLogicalFrame({
@@ -1330,6 +1334,7 @@ export const renderReplayExportFrame = async (mode, {
                     logicalFrame,
                 })
                 call.recordReplayCameraAltitude()
+                await call.syncNearbyPOIsForSample(sample)
                 if (typeof call.currentReplayClipCameraState === 'function') {
                     state.clipCameraContinuity = call.currentReplayClipCameraState({
                         sample,

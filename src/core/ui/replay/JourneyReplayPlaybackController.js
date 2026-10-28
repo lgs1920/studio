@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,13 @@ import {createReplayRenderPlan} from './ReplayRenderPlan'
 import {createReplayTrackPathDescriptor} from './ReplayTrackPathDescriptor'
 import {publishReplayTimelineTime} from './ReplayFramePublisher'
 import {buildReplayVideoTimeline, resolveReplayVideoFramePhase} from './ReplayVideoTimeline'
+import {projectReplayPOIsOnSampler} from './JourneyReplayPOIProjection'
+import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
+import {
+    createReplayPOISpeedProfile,
+    replayPlaybackTimeAtRouteTime,
+    replayRouteTimeAtPlaybackTime,
+} from './ReplayPOISpeedProfile'
 
 export const REPLAY_EVENT_START = 'replay/start'
 export const REPLAY_EVENT_UPDATE = 'replay/update'
@@ -56,6 +63,7 @@ const safeDuration = duration => {
 export class JourneyReplayPlaybackController {
     #sampler = null
     #duration = DEFAULT_DURATION
+    #playbackProfile = null
     #direction = 1
     #loop = false
     #progress = 0
@@ -106,28 +114,50 @@ export class JourneyReplayPlaybackController {
                      clips = undefined,
                      captureFps = undefined,
                      videoTimeline = null,
+                     replaySettings = null,
                  } = {}) => {
         this.#sampler = sampler
         this.#duration = safeDuration(duration)
         this.#direction = Number(direction) < 0 ? -1 : 1
         this.#loop = Boolean(loop)
         this.#progress = clamp(Number(progress) || 0, 0, 1)
-        if (videoTimeline) {
+        const replayState = globalThis.lgs?.stores?.replay ?? null
+        const activeReplaySettings = replaySettings ?? globalThis.lgs?.settings?.ui?.replay ?? replayState
+        const nearbyPois = projectReplayPOIsOnSampler(replayState?.nearbyPois ?? [], this.#sampler)
+        this.#playbackProfile = createReplayPOISpeedProfile({
+            entries: nearbyPois,
+            totalDistance: this.#sampler?.totalDistance,
+            replayDurationMillis: this.#duration * MILLIS,
+            direction: this.#direction,
+            basicSettings: activeReplaySettings?.basic,
+            enabled: isJourneyReplayBasicMode({settings: activeReplaySettings, replay: replayState}),
+        })
+        if (replayState) {
+            replayState.poiPlaybackProfile = {
+                ...this.#playbackProfile,
+                journeySlug: this.#sampler?.journey?.slug ?? null,
+            }
+        }
+        if (videoTimeline && this.#playbackProfile.playbackDurationMillis === this.#duration * MILLIS
+            && !videoTimeline.replayProgressProfile) {
             this.#videoTimeline = videoTimeline
         }
-        else if (clips !== undefined || captureFps !== undefined || !this.#videoTimeline) {
+        else if (clips !== undefined || captureFps !== undefined || !this.#videoTimeline || videoTimeline) {
             this.#videoTimeline = buildReplayVideoTimeline({
-                replayDurationMillis: this.#duration * MILLIS,
+                replayDurationMillis: this.#playbackProfile.playbackDurationMillis,
                 fps: captureFps
+                      ?? videoTimeline?.fps
                       ?? globalThis.lgs?.stores?.replay?.captureFps
                       ?? 30,
                 direction: this.#direction,
-                clips: clips ?? null,
+                clips: clips ?? videoTimeline?.clips ?? null,
+                replayProgressProfile: this.#playbackProfile.playbackDurationMillis !== this.#duration * MILLIS
+                    ? this.#playbackProfile
+                    : null,
             })
         }
         const trackPath = this.#sampler?.logicalTrackPath ?? null
         const trackPathDescriptor = createReplayTrackPathDescriptor(trackPath)
-        const replayState = globalThis.lgs?.stores?.replay ?? null
         const startProgress = this.#direction < 0 ? 1 : 0
         const cameraDefinition = createReplayCameraDefinition({
             cameraSettings: replayState?.camera,
@@ -198,6 +228,11 @@ export class JourneyReplayPlaybackController {
 
     get duration() {
         return this.#duration
+    }
+
+    /** Return the current video's effective duration in seconds. */
+    get playbackDuration() {
+        return (this.#videoTimeline?.durationMillis ?? this.#playbackProfile?.playbackDurationMillis ?? this.#duration * MILLIS) / MILLIS
     }
 
     get direction() {
@@ -390,11 +425,14 @@ export class JourneyReplayPlaybackController {
 
     #elapsedFromProgress = progress => {
         const playbackProgress = this.#direction > 0 ? progress : 1 - progress
-        return clamp(playbackProgress, 0, 1) * this.#duration * MILLIS
+        return replayPlaybackTimeAtRouteTime(
+            this.#playbackProfile,
+            clamp(playbackProgress, 0, 1) * this.#duration * MILLIS,
+        )
     }
 
     #progressFromElapsed = elapsed => {
-        const playbackProgress = clamp(elapsed / (this.#duration * MILLIS), 0, 1)
+        const playbackProgress = replayRouteTimeAtPlaybackTime(this.#playbackProfile, elapsed) / (this.#duration * MILLIS)
         return this.#direction > 0 ? playbackProgress : 1 - playbackProgress
     }
 
@@ -421,7 +459,7 @@ export class JourneyReplayPlaybackController {
 
         try {
             const elapsed = this.#now() - this.#startedAt - this.#pauseDuration
-            const playbackProgress = elapsed / (this.#duration * MILLIS)
+            const playbackProgress = elapsed / (this.#playbackProfile?.playbackDurationMillis ?? this.#duration * MILLIS)
             const reachedEnd = playbackProgress >= 1
 
             this.#progress = this.#progressFromElapsed(elapsed)
@@ -528,24 +566,27 @@ export class JourneyReplayPlaybackController {
         this.#dynamicFrameId += 1
         const playbackProgress = this.#direction < 0 ? 1 - this.#progress : this.#progress
         const replayPhase = this.#videoTimeline?.replayPhase ?? null
-        const replayElapsedMillis = clamp(playbackProgress, 0, 1) * this.#duration * MILLIS
+        const replayElapsedMillis = replayPlaybackTimeAtRouteTime(
+            this.#playbackProfile,
+            clamp(playbackProgress, 0, 1) * this.#duration * MILLIS,
+        )
         const frameTimeMs = Math.min(
             this.#videoTimeline?.durationMillis ?? this.#duration * MILLIS,
             (replayPhase?.startMillis ?? 0) + replayElapsedMillis,
         )
-        const phase = this.videoFramePhaseAtTime(frameTimeMs)
+        const resolvedPhase = this.videoFramePhaseAtTime(frameTimeMs)
+        const phase = {
+            ...resolvedPhase,
+            progress: this.#progress,
+        }
         const frameIntervalMillis = this.#videoTimeline?.frameIntervalMs ?? (MILLIS / 30)
         const replayFrameIndex = phase.replayFrameIndex
         const replayFrameCount = phase.replayFrameCount
         const frameIndex = phase.frameIndex ?? 0
         const frameCount = phase.frameCount ?? 1
-        const hasClipPhases = this.#videoTimeline?.phases?.some(phaseItem => phaseItem.kind !== 'replay') === true
-        const logicalElapsedMillis = hasClipPhases
-                                     ? (phase.frameTimeMs ?? frameTimeMs)
-                                     : (sample?.journeyElapsedMillis ?? null)
-        const logicalDurationMillis = hasClipPhases
-                                      ? this.#videoTimeline.durationMillis
-                                      : (sample?.journeyDurationMillis ?? this.#sampler?.durationMillis ?? null)
+        const logicalElapsedMillis = phase.frameTimeMs ?? frameTimeMs
+        const logicalDurationMillis = this.#videoTimeline?.durationMillis
+                                      ?? (sample?.journeyDurationMillis ?? this.#sampler?.durationMillis ?? null)
         const deferredRenderContract = store.deferredExportPlan?.renderContract
                                       ?? store.deferredExportPlan?.runtime?.context?.renderContract
                                       ?? null
@@ -625,8 +666,10 @@ export class JourneyReplayPlaybackController {
         store.playing = this.#running && !this.#paused
         store.paused = this.#paused
         store.progress = this.#progress
-        store.elapsedMillis = sample?.journeyElapsedMillis ?? null
-        store.durationMillis = sample?.journeyDurationMillis ?? this.#sampler?.durationMillis ?? null
+        store.elapsedMillis = phase.frameTimeMs ?? frameTimeMs
+        store.durationMillis = this.#videoTimeline?.durationMillis
+                               ?? sample?.journeyDurationMillis
+                               ?? this.#sampler?.durationMillis
         store.sample = sample
         store.duration = this.#duration
         store.direction = this.#direction

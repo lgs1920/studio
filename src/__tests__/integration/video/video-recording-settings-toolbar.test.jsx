@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -282,6 +282,25 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(globalThis.lgs.settings.ui.replay.basic.camera.cameraAngle).toBe(0)
         expect(globalThis.lgs.settings.ui.replay).not.toHaveProperty('duration')
         expect(globalThis.lgs.stores.replay.duration).toBe(20)
+    })
+
+    it('includes merged POI slowdowns in the Basic video duration shown before Record', () => {
+        globalThis.lgs.stores.replay.basicPreparationActive = true
+        globalThis.lgs.stores.replay.totalDistance = 1000
+        globalThis.lgs.stores.replay.direction = 1
+        globalThis.lgs.stores.replay.nearbyPois = [
+            {projectedAbscissa: 500, poi: {id: 'first', type: 'poi', expanded: true, replay: {visible: true, animated: true}}},
+            {projectedAbscissa: 550, poi: {id: 'second', type: 'poi', expanded: true, replay: {visible: true, animated: true}}},
+        ]
+        globalThis.lgs.settings.ui.replay.basic = {
+            duration: 10,
+            animatePoisDuringJourneyReplay: true,
+            poiAnimationDurationSeconds: 2,
+        }
+
+        render(<VideoRecordingSettingsToolbar/>)
+
+        expect(document.querySelector('.basic-replay-settings-summary')?.textContent).toContain('17s')
     })
 
     it('shows themed sample levels with matching regular icons and saves the selection per Journey', async () => {

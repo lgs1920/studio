@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,6 +39,7 @@ import {
     writeBasicReplaySettings,
 } from '@Core/ui/replay/ReplayModeSettings'
 import {isJourneyReplayDryRunActive} from '@Core/ui/replay/JourneyReplayRuntime'
+import {createReplayPOISpeedProfile} from '@Core/ui/replay/ReplayPOISpeedProfile'
 import {currentReplayJourney} from '@Core/ui/replay/ReplayUserModeConstants'
 import {
     normalizeBasicReplaySettings,
@@ -124,7 +125,25 @@ export const VideoRecordingSettingsToolbar = memo(({
     const basicDuration = resolvedBasicSettings.duration
     const basicSampleCount = resolvedBasicSettings.sampleCount
     const basicEndFocus = resolvedBasicSettings.endFocus
-    const basicTotalDuration = basicDuration + (basicEndFocus.enabled ? basicEndFocus.duration : 0)
+    const runtimePOISpeedProfile = replay.poiPlaybackProfile
+    const hasCurrentRuntimePOISpeedProfile = runtimePOISpeedProfile?.journeySlug === basicJourney?.slug
+        && runtimePOISpeedProfile.routeDurationMillis === basicDuration * 1000
+        && runtimePOISpeedProfile.direction === (Number(replay.direction) < 0 ? -1 : 1)
+        && runtimePOISpeedProfile.shouldSlowdown === (
+            basicPreparation && resolvedBasicSettings.animatePoisDuringJourneyReplay
+        )
+    const basicPOISpeedProfile = hasCurrentRuntimePOISpeedProfile
+        ? runtimePOISpeedProfile
+        : createReplayPOISpeedProfile({
+            entries: replay.nearbyPois ?? [],
+            totalDistance: replay.totalDistance,
+            replayDurationMillis: basicDuration * 1000,
+            direction: replay.direction,
+            basicSettings: resolvedBasicSettings,
+            enabled: basicPreparation,
+        })
+    const basicTotalDuration = basicPOISpeedProfile.playbackDurationMillis / 1000
+                            + (basicEndFocus.enabled ? basicEndFocus.duration : 0)
     const basicSampleOption = REPLAY_SAMPLE_COUNT_OPTIONS.find(option => option.value === basicSampleCount)
         ?? REPLAY_SAMPLE_COUNT_OPTIONS[0]
 

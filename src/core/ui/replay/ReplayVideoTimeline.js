@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-01
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@
  */
 
 import {normalizeJourneyReplayClips, REPLAY_CLIP_SLOT_POST_REPLAY, REPLAY_CLIP_SLOT_PRE_REPLAY} from './JourneyReplayClips'
+import {replayRouteTimeAtPlaybackTime} from './ReplayPOISpeedProfile'
 
 const DEFAULT_FPS = 30
 
@@ -80,6 +81,21 @@ const finiteNumber = (value, fallback = null) => {
  */
 const clampProgress = value => Math.max(0, Math.min(1, Number(value) || 0))
 
+/** Map the Replay phase clock onto route progress when a speed profile exists. */
+const progressAtReplayPlaybackTime = (timeline, localMillis, localProgress) => {
+    const profile = timeline?.replayProgressProfile
+    if (!profile) {
+        return timeline?.direction < 0 ? 1 - localProgress : localProgress
+    }
+
+    const routeDuration = Math.max(0, Number(profile.routeDurationMillis) || 0)
+    const routeTime = replayRouteTimeAtPlaybackTime(profile, localMillis)
+    const traversalProgress = routeDuration > 0
+        ? clampProgress(routeTime / routeDuration)
+        : localProgress
+    return timeline.direction < 0 ? 1 - traversalProgress : traversalProgress
+}
+
 /**
  * Resolve a valid frame rate for the shared timeline.
  *
@@ -126,6 +142,7 @@ export const replayClipSignature = clips => JSON.stringify({
  * @param {number} options.fps - Timeline frame rate.
  * @param {number} options.direction - Playback direction.
  * @param {Object|null} options.clips - Replay clip lists.
+ * @param {Object|null} options.replayProgressProfile - Optional route-time mapping for Replay playback.
  * @returns {Object} Canonical replay video timeline.
  */
 export const buildReplayVideoTimeline = ({
@@ -133,6 +150,7 @@ export const buildReplayVideoTimeline = ({
     fps = DEFAULT_FPS,
     direction = 1,
     clips = null,
+    replayProgressProfile = null,
 } = {}) => {
     const normalizedClips = normalizeJourneyReplayClips(clips ?? {})
     const safeDirectionValue = Number(direction) < 0 ? -1 : 1
@@ -206,6 +224,7 @@ export const buildReplayVideoTimeline = ({
         frameIntervalMs,
         direction: safeDirectionValue,
         replayDurationMillis: safeReplayDuration,
+        replayProgressProfile,
         durationMillis,
         frameCount,
         phases,
@@ -292,8 +311,8 @@ export const resolveReplayVideoFramePhase = ({
     const localMillis = Math.max(0, Math.min(phase.durationMillis, timeMs - phase.startMillis))
     const localProgress = phase.durationMillis > 0 ? clampProgress(localMillis / phase.durationMillis) : 1
     const replayProgress = phase.kind === 'replay'
-                           ? (timeline.direction < 0 ? 1 - localProgress : localProgress)
-                           : phase.anchorProgress
+        ? progressAtReplayPlaybackTime(timeline, localMillis, localProgress)
+        : phase.anchorProgress
     const metrics = resolvePhaseFrameMetrics({phase, localMillis})
     const replayFrameIndex = phase.kind === 'replay' ? metrics.phaseFrameIndex : null
     const replayFrameCount = phase.kind === 'replay' ? metrics.phaseFrameCount : null

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -107,6 +107,9 @@ export const createReplayDefinition = ({
             durationMillis: Number(timeline?.durationMillis) || 0,
             fps: Number(timeline?.fps) || 0,
             clipSignature: timeline?.clipSignature ?? null,
+            ...(timeline?.replayProgressProfile
+                ? {replayProgressProfile: timeline.replayProgressProfile}
+                : {}),
         },
         cameraDefinition: cameraDefinition ?? null,
         initialCameraState: initialCameraState ?? null,

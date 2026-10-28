@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,6 +34,8 @@ import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/C
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import {WidgetDynamicRenderer} from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import {REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModeConstants'
+import {buildReplayVideoTimeline, resolveReplayVideoFramePhase} from '@Core/ui/replay/ReplayVideoTimeline'
+import {createReplayPOISpeedProfile, replayRouteTimeAtPlaybackTime} from '@Core/ui/replay/ReplayPOISpeedProfile'
 import {createReplayRecordingPerformance} from '@Core/ui/replay/ReplayRecordingPerformance'
 import * as replayOverlayComposer from '@Core/ui/replay/ReplayVideoOverlayComposer'
 import * as replayTileReadiness from '@Core/ui/replay/ReplaySceneTileReadiness'
@@ -335,6 +337,51 @@ describe('ReplayDeferredExporter', () => {
             dimensions: {width: 1920, height: 1080},
         })
         expect(replay.deferredExportPlan).toBe(result.plan)
+    })
+
+    it('extends the Basic Record timeline for merged POI display windows', () => {
+        const basic = {
+            duration: 10,
+            animatePoisDuringJourneyReplay: true,
+            poiAnimationDurationSeconds: 2,
+            endFocus: {enabled: false, duration: 0},
+        }
+        const nearbyPois = [
+            {projectedAbscissa: 500, poi: {id: 'first', type: 'poi', expanded: true, replay: {visible: true, animated: true}}},
+            {projectedAbscissa: 550, poi: {id: 'second', type: 'poi', expanded: true, replay: {visible: true, animated: true}}},
+        ]
+        const replay = {
+            userMode: 'basic',
+            basicPreparationActive: true,
+            duration: 10,
+            totalDistance: 1000,
+            nearbyPois,
+        }
+        const journey = {slug: 'poi-export-journey', replay: {basic}}
+        const sampler = {
+            totalDistance: 1000,
+            atProgress: progress => ({progress}),
+        }
+        globalThis.lgs = {
+            settings: {ui: {replay: {userMode: 'basic', basic}}},
+            stores: {replay},
+        }
+
+        const {plan} = prepareReplayDeferredExportPlan({
+            replay,
+            journey,
+            controller: {duration: 10, direction: 1, sampler},
+            fps: 10,
+            dimensions: {width: 1280, height: 720},
+            sourceCanvas: {width: 1280, height: 720},
+        })
+
+        expect(plan.poiSpeedProfile.playbackDurationMillis).toBeGreaterThan(12500)
+        expect(plan.poiSpeedProfile.segments.filter(segment => segment.poiHold)).toHaveLength(2)
+        expect(plan.videoTimeline.replayDurationMillis).toBe(plan.poiSpeedProfile.playbackDurationMillis)
+        expect(plan.outputDurationMillis).toBe(plan.poiSpeedProfile.playbackDurationMillis)
+        expect(resolveReplayVideoFramePhase({timeline: plan.videoTimeline, frameTimeMs: 6500}).progress)
+            .toBeCloseTo(replayRouteTimeAtPlaybackTime(plan.poiSpeedProfile, 6500) / 10000)
     })
 
     it('starts the exported Replay at the preparation range start', async () => {
@@ -901,6 +948,47 @@ describe('ReplayDeferredExporter', () => {
         expect(result.blob.size).toBeGreaterThan(0)
         expect(Output.instances.at(-1).finalize).toHaveBeenCalledTimes(1)
         expect(Output.instances.at(-1).cancel).not.toHaveBeenCalled()
+    })
+
+    it('finalizes an MP4 timeline that contains POI slowdown ramps and one-second holds', async () => {
+        Output.instances.length = 0
+        const profile = createReplayPOISpeedProfile({
+            entries: [
+                {projectedAbscissa: 500, poi: {id: 'poi-hold', expanded: true, replay: {animated: true, visible: true}}},
+            ],
+            totalDistance: 1000,
+            replayDurationMillis: 10000,
+            basicSettings: {
+                animatePoisDuringJourneyReplay: true,
+                poiAnimationDurationSeconds: 2,
+                poiVisibilityMode: 'user',
+            },
+            enabled: true,
+        })
+        const timeline = buildReplayVideoTimeline({
+            replayDurationMillis: profile.playbackDurationMillis,
+            replayProgressProfile: profile,
+            fps: 10,
+        })
+        const exporter = new ReplayDeferredExporter({
+            controller: {sampler: {atProgress: progress => ({progress})}},
+            timeline,
+        })
+
+        const result = await exporter.exportMp4({
+            dimensions: {width: 640, height: 360},
+            buildCanvas: () => ({
+                width: 0,
+                height: 0,
+                getContext: () => ({clearRect: vi.fn(), drawImage: vi.fn()}),
+            }),
+            renderFrame: async () => null,
+        })
+
+        expect(result.frameCount).toBe(timeline.frameCount)
+        expect(result.blob).toBeInstanceOf(Blob)
+        expect(result.blob.size).toBeGreaterThan(0)
+        expect(Output.instances.at(-1).finalize).toHaveBeenCalledOnce()
     })
 
     it('cancels the encoder output without finalizing or creating a video blob', async () => {

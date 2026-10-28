@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -201,6 +201,9 @@ const normalizeTimelineOptions = options => {
             fps:                options.fps ?? options.videoTimeline.fps ?? 30,
             direction:          options.direction ?? options.videoTimeline.direction ?? 1,
             clips:              options.clips ?? options.videoTimeline.clips,
+            replayProgressProfile: options.replayProgressProfile
+                ?? options.videoTimeline.replayProgressProfile
+                ?? null,
         })
 
         return refreshedTimeline.clipSignature === options.videoTimeline.clipSignature

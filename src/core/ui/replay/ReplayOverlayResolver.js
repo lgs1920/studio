@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-18
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -431,6 +431,11 @@ export const resolveReplayVisibilityState = ({
 
 export const getJourneyReplayRemainingMillis = (replay = defaultReplayStore()) => {
     const durationMillis = finiteNumber(replay?.durationMillis)
+    const elapsedMillis = finiteNumber(replay?.dynamicFrameState?.elapsedMillis ?? replay?.elapsedMillis)
+    if (durationMillis !== null && elapsedMillis !== null) {
+        return Math.max(0, durationMillis - elapsedMillis)
+    }
+
     const progress = finiteNumber(replay?.progress)
     if (durationMillis === null || progress === null) {
         return null

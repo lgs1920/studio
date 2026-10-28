@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -981,9 +981,6 @@ export const bindRenderer = (mode, ) => {
                         showTrace: isJourneyReplayTraceActive(),
                     })
                     traceStep('renderer.update.end')
-                    traceStep('sync-nearby-pois.begin')
-                    void call.syncNearbyPOIsForSample(startSample ?? detail.sample ?? null)
-                    traceStep('sync-nearby-pois.end')
                     if (!state.deferStartCameraRecenter) {
                         const preserveStartCameraComposition = state.preserveStartCameraComposition === true
                         traceStep('update-camera.begin')
@@ -1004,6 +1001,9 @@ export const bindRenderer = (mode, ) => {
                         const startProgress = finiteNumber(detail?.progress ?? startSample?.progress)
                         state.lastPlaybackUpdateProgressKey = Math.round((startProgress ?? 0) / CAMERA_UPDATE_MIN_PROGRESS_DELTA)
                     }
+                    traceStep('sync-nearby-pois.begin')
+                    void call.syncNearbyPOIsForSample(startSample ?? detail.sample ?? null)
+                    traceStep('sync-nearby-pois.end')
                 }
                 catch (error) {
                     listenerError = error
@@ -1053,13 +1053,13 @@ export const bindRenderer = (mode, ) => {
                         showTrace: isJourneyReplayTraceActive(),
                     })
                     traceUpdateStep('renderer.update.end')
-                    traceUpdateStep('sync-nearby-pois.begin')
-                    void call.syncNearbyPOIsForSample(detail.sample ?? null)
-                    traceUpdateStep('sync-nearby-pois.end')
                     if (!videoCaptureActive && detail.source !== 'scrub' && state.lastPlaybackUpdateProgressKey === playbackProgressKey) {
                         updateReplayFrameRenderContract({
                             logicalFrame: detail?.logicalFrame,
                         })
+                        traceUpdateStep('sync-nearby-pois.begin', {reason: 'unchanged-camera-progress'})
+                        void call.syncNearbyPOIsForSample(detail.sample ?? null)
+                        traceUpdateStep('sync-nearby-pois.end')
                         traceUpdateStep('update-camera.skip', {
                             reason: 'duplicate-progress-key',
                             playbackProgressKey,
@@ -1081,6 +1081,9 @@ export const bindRenderer = (mode, ) => {
                         logicalFrame: detail?.logicalFrame,
                     })
                     traceUpdateStep('update-camera.end')
+                    traceUpdateStep('sync-nearby-pois.begin')
+                    void call.syncNearbyPOIsForSample(detail.sample ?? null)
+                    traceUpdateStep('sync-nearby-pois.end')
                 }
                 catch (error) {
                     call.abortPlaybackAfterListenerError(error)

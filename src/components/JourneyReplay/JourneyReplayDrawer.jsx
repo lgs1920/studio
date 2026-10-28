@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,6 +54,7 @@ import {
 } from '@Core/ui/replay/JourneyReplayPOISettings'
 import { REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT } from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
 import {currentReplayJourney} from '@Core/ui/replay/ReplayUserModeConstants'
+import {createReplayPOISpeedProfile} from '@Core/ui/replay/ReplayPOISpeedProfile'
 import {getBasicReplaySettings, writeBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
 import {
     normalizeBasicReplaySettings,
@@ -526,6 +527,19 @@ export const JourneyReplayDrawer = memo(() => {
     const cameraUpdateSourceClearTimer = useRef(null)
     const nearbyPoisRefreshTimer = useRef(null)
     const totalVideoDurationSeconds = useMemo(() => {
+        const replayDurationSeconds = Math.max(0, finiteNumber(effectiveReplaySettings.duration) ?? 0)
+        const replayDurationMillis = replayDurationSeconds * 1000
+        const playbackProfile = createReplayPOISpeedProfile({
+            entries: (replayState.nearbyPois ?? []).map(entry => ({
+                ...entry,
+                poi: poiList.get(entry?.poi?.id) ?? entry?.poi,
+            })),
+            totalDistance: replayState.totalDistance,
+            replayDurationMillis,
+            direction: replayState.direction,
+            basicSettings: effectiveReplaySettings.basic,
+            enabled: !isExpertMode && animatePOIsInBasicMode,
+        })
         const clipDurationSeconds = isExpertMode
             ? [...(clips.start ?? []), ...(clips.stop ?? [])]
                 .reduce((total, clip) => total + Math.max(0, finiteNumber(clip?.params?.duration) ?? 0), 0)
@@ -533,15 +547,22 @@ export const JourneyReplayDrawer = memo(() => {
                 ? Math.max(0, finiteNumber(effectiveReplaySettings.basic.endFocus.duration) ?? 0)
                 : 0
 
-        return Math.max(0, finiteNumber(effectiveReplaySettings.duration) ?? 0) + clipDurationSeconds
+        return playbackProfile.playbackDurationMillis / 1000 + clipDurationSeconds
     }, [
+        animatePOIsInBasicMode,
         clips.start,
         clips.stop,
         effectiveReplaySettings.basic?.endFocus?.duration,
         effectiveReplaySettings.basic?.endFocus?.enabled,
+        effectiveReplaySettings.basic?.poiAnimationDurationSeconds,
+        effectiveReplaySettings.basic?.poiVisibilityMode,
+        effectiveReplaySettings.basic,
         effectiveReplaySettings.duration,
         isExpertMode,
-        replayState.duration,
+        poiList,
+        replayState.direction,
+        replayState.nearbyPois,
+        replayState.totalDistance,
     ])
 
     useEffect(() => {
