@@ -111,6 +111,20 @@
     --poi-pill-side-inset: calc(3 * var(--poi-padding)); /* Measured half-height inset around the pill content. */
 }
 
+.poi-card.poi-card--stick-above {
+    flex-direction: column-reverse;
+
+    & .poi-expanded-leader {
+        top: auto;
+        bottom: 0;
+        transform-origin: bottom center;
+    }
+
+    & .poi-geographic-anchor {
+        top: 0;
+    }
+}
+
 .poi-icon-wrapper:not(.poi-shrinked) .poi-card.poi-card--pill {
     width: calc(var(--poi-expanded-dimension) + var(--poi-menu-icons-column-width) + 2 * var(--poi-pill-side-inset));
     max-width: calc(var(--poi-expanded-dimension) + var(--poi-menu-icons-column-width) + 2 * var(--poi-pill-side-inset));
@@ -145,27 +159,30 @@
     border: var(--poi-border-width) solid var(--lgs-poi-border-color);
     border-radius: var(--lgs-border-radius-s);
     background-color: var(--lgs-poi-background-color);
+    /* POI-specific font variables keep typography local to the expanded card. */
+    font-family: var(--poi-font-family, inherit);
+    font-size: var(--poi-font-size, var(--lgs-font-size));
+    font-style: var(--poi-font-style, normal);
+    font-weight: var(--poi-font-weight, normal);
+    /* POI typography controls may request synthesized styles for fonts without matching variants. */
+    font-synthesis: weight style;
 }
 
 .poi-expanded-leader-space {
-    --poi-expanded-leader-angle: 0deg; /* Connector inclination selected for this expanded POI. */
-    --poi-expanded-leader-x: 0rem; /* Horizontal projection from the frame to the geographic endpoint. */
-    --poi-expanded-leader-y: 1rem; /* Vertical projection from the frame to the geographic endpoint. */
-
     position: relative;
     flex: 0 0 auto;
     width: var(--poi-expanded-dimension);
-    height: var(--poi-expanded-leader-y);
+    height: var(--poi-expanded-leader-y, 1rem);
     margin-left: var(--poi-menu-icons-column-width);
 
     & .poi-expanded-leader {
         /* --poi-expanded-leader-angle controls inclination; positive CSS angles move its lower endpoint left. */
         position: absolute;
         top: 0;
-        left: calc(50% - 1px);
-        width: 2px;
-        height: 1rem;
-        transform: rotate(var(--poi-expanded-leader-angle));
+        left: 50%;
+        width: var(--poi-border-width);
+        height: var(--poi-expanded-leader-length, 1rem);
+        transform: translateX(-50%) rotate(var(--poi-expanded-leader-angle, 0deg));
         transform-origin: top center;
         border-radius: 9999px;
         background-color: var(--lgs-poi-border-color);
@@ -175,7 +192,7 @@
         /* --poi-expanded-leader-x aligns the captured billboard with the connector endpoint. */
         position: absolute;
         top: 100%;
-        left: calc(50% + var(--poi-expanded-leader-x));
+        left: calc(50% + var(--poi-expanded-leader-x, 0px));
         width: 0;
         height: 0;
     }
@@ -209,7 +226,7 @@
     border-radius: 9999px;
 }
 
-.poi-card-inner.poi-card-inner--no-background {
+.poi-card-inner.poi-card-inner--background-hidden {
     /* Cesium discards billboard pixels below 0.005 alpha in its pick pass. Keep a visually imperceptible hit area. */
     background-color: rgba(0, 0, 0, 0.01);
 
@@ -336,8 +353,10 @@
 }
 
 .poi-card-inner h3 {
-    font-size: var(--lgs-font-size);
-    font-weight: 600;
+    font-family: inherit;
+    font-size: inherit;
+    font-style: inherit;
+    font-weight: var(--poi-font-weight, 600);
     line-height: normal;
     display: block;
     overflow: hidden;
@@ -348,7 +367,7 @@
 }
 
 .poi-card-inner .poi-location {
-    font-size: var(--lgs-font-size);
+    font-size: inherit;
     line-height: 1.4;
     display: flex;
     align-items: center;
@@ -375,7 +394,7 @@
 }
 
 .poi-card-inner .poi-full-coordinates {
-    font-size: calc(1.1 * var(--lgs-font-size-s));
+    font-size: inherit;
     line-height: 1;
     display: flex;
     flex-direction: column;
@@ -385,7 +404,7 @@
 }
 
 .poi-card-inner .poi-coordinates {
-    font-size: calc(var(--lgs-font-size-s));
+    font-size: inherit;
 }
 
 .poi-as-flag {
@@ -520,7 +539,7 @@
     min-height: 0;
 }
 
-.edit-map-poi-item [slot="summary"] > div:first-child span > span {
+.edit-map-poi-item [slot="summary"] > div:first-child .map-poi-summary-title {
     display: inline-block;
     overflow: hidden;
     width: min(15rem, 100%);
@@ -535,6 +554,28 @@
     justify-content: space-between;
     width: calc(100% - 2 * var(--spacing));
     gap: var(--lgs-gutter-xs);
+}
+
+.map-poi-summary-indicators {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--lgs-gutter-2xs, 0.25rem);
+}
+
+.map-poi-new-badge {
+    display: inline-flex;
+    flex: 0 0 1rem;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    color: #fff;
+    background: var(--lgs-error-color);
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1;
 }
 
 ::part(header) {
@@ -620,6 +661,10 @@
     max-width: var(--poi-expanded-dimension);
 }
 
+.map-poi-edit-preview-open > .poi-icon-wrapper {
+    z-index: var(--lgs-ui-layer-zindex);
+}
+
 .map-poi-edit-preview-open .poi-icon-wrapper:not(.poi-shrinked) .poi-card.poi-card--pill {
     width: calc(var(--poi-expanded-dimension) + 2 * var(--poi-pill-side-inset));
     max-width: calc(var(--poi-expanded-dimension) + 2 * var(--poi-pill-side-inset));
@@ -643,21 +688,21 @@
 
 .map-poi-edit-preview-fit {
     position: absolute;
-    z-index: 4;
+    z-index: calc(var(--lgs-ui-layer-zindex) + 2);
     bottom: var(--lgs-gutter-s);
     left: var(--lgs-gutter-s);
 }
 
 .map-poi-edit-preview-reset {
     position: absolute;
-    z-index: 4;
+    z-index: calc(var(--lgs-ui-layer-zindex) + 2);
     right: var(--lgs-gutter-s);
     bottom: var(--lgs-gutter-s);
 }
 
 .map-poi-edit-preview-resize {
     position: absolute;
-    z-index: 3;
+    z-index: calc(var(--lgs-ui-layer-zindex) + 1);
     bottom: 0;
     left: 0;
     display: flex;
@@ -760,6 +805,39 @@
     width: 100%;
     min-width: 0;
     row-gap: var(--lgs-gutter-xs);
+}
+
+.map-poi-display-font-style-row {
+    display: grid;
+    align-items: center;
+    min-width: 0;
+    gap: var(--lgs-gutter-xxs);
+    grid-template-columns: minmax(0, 1fr) auto;
+
+    & .map-poi-display-font-family {
+        width: 100%;
+        min-width: 0;
+    }
+
+    & .map-poi-display-font-style {
+        justify-self: end;
+
+        & wa-button::part(base) {
+            padding-inline: var(--lgs-gutter-xs);
+        }
+    }
+}
+
+.map-poi-display-font-size {
+    width: 100%;
+    min-width: 0;
+}
+
+.map-poi-display-stick-position,
+.map-poi-display-stick-angle,
+.map-poi-display-stick-length {
+    width: 100%;
+    min-width: 0;
 }
 
 .map-poi-style-switch {

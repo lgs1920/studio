@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-27
- * Last modified: 2026-10-27
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -83,7 +83,6 @@ export const MapPOIEditPreview = ({poi}) => {
     const [background, setBackground] = useState(null)
     const [fitRequested, setFitRequested] = useState(false)
     const [requiresFit, setRequiresFit] = useState(false)
-    const [requiresResize, setRequiresResize] = useState(false)
     const [isResizing, setIsResizing] = useState(false)
     const [previewScale, setPreviewScale] = useState(1)
     const [previewHeight, setPreviewHeight] = useState(null)
@@ -92,6 +91,8 @@ export const MapPOIEditPreview = ({poi}) => {
     const updatePreviewSizing = useCallback(() => {
         const area = _openArea.current
         const card = _openContent.current?.querySelector('.poi-card-inner')
+        const leaderSpace = _openContent.current?.querySelector('.poi-expanded-leader-space')
+        const poiWrapper = _openContent.current?.querySelector('.poi-icon-wrapper')
         const width = card?.offsetWidth
         const height = card?.offsetHeight
         const availableWidth = area?.clientWidth
@@ -100,12 +101,15 @@ export const MapPOIEditPreview = ({poi}) => {
             return
         }
 
-        const overflows = width > availableWidth || height > availableHeight
-        const needsResize = height > availableHeight
+        const angle = Number.parseFloat(poiWrapper?.style.getPropertyValue('--poi-expanded-leader-angle')) || 0
+        const length = Number.parseFloat(poiWrapper?.style.getPropertyValue('--poi-expanded-leader-length')) || 0
+        const horizontalExtension = Math.abs(Math.sin(angle * Math.PI / 180) * length)
+        const contentWidth = width + Math.max(0, horizontalExtension - width / 2)
+        const contentHeight = height + (leaderSpace?.offsetHeight ?? 0)
+        const overflows = contentWidth > availableWidth || contentHeight > availableHeight
         setRequiresFit(previous => previous === overflows ? previous : overflows)
-        setRequiresResize(previous => previous === needsResize ? previous : needsResize)
         const nextScale = fitRequested
-            ? Math.min(1, availableWidth / width, availableHeight > 0 ? availableHeight / height : 1)
+            ? Math.min(1, availableWidth / contentWidth, availableHeight > 0 ? availableHeight / contentHeight : 1)
             : 1
         setPreviewScale(previous => Math.abs(previous - nextScale) < 0.001 ? previous : nextScale)
     }, [fitRequested])
@@ -297,7 +301,7 @@ export const MapPOIEditPreview = ({poi}) => {
                     <WaIcon name="arrow-rotate-left" variant="regular"/>
                 </WaButton>
             )}
-            {(requiresResize && canIncreaseHeight || isResizing) && (
+            {(canIncreaseHeight || isResizing) && (
                 <div
                     className="map-poi-edit-preview-resize"
                     role="separator"

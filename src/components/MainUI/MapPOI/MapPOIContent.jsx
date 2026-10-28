@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-27
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,10 +22,16 @@ import { calculatePOIContentPixelOffset }          from '@Components/MainUI/MapP
 import {
     clearPOIHoverPreview, isPOIHoverPreviewActive, isPointerNearPOIHoverPreview, showPOIHoverPreview,
 } from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
-import { ICONS_PATH }                              from '@Core/constants'
+import { ICONS_PATH, WIDGET_SYSTEM_FONT_STACK }     from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
 import {
-    normalizePOIDisplaySettings, shouldDisplayPOIField,
+    normalizePOIDisplaySettings,
+    POI_DISPLAY_DEFAULT_FONT_FAMILY,
+    POI_DISPLAY_DEFAULT_STICK_ANGLE,
+    POI_DISPLAY_DEFAULT_STICK_LENGTH,
+    POI_DISPLAY_DEFAULT_STICK_POSITION,
+    resolvePOIStickAngle,
+    shouldDisplayPOIField,
 }                                                   from '@Core/POIDisplaySettings'
 import {
     normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
@@ -34,7 +40,7 @@ import { ELEVATION_UNITS, UnitUtils }               from '@Utils/UnitUtils'
 import { WaIcon }                                  from '@awesome.me/webawesome/dist/react'
 import { snapdom }                                 from '@zumer/snapdom'
 import classNames                                  from 'classnames'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { proxy, useSnapshot }                      from 'valtio'
 import { createPOICanvasRenderQueue }              from '@Components/MainUI/MapPOI/poiCanvasRenderQueue'
 import './style.css'
@@ -43,7 +49,6 @@ const EMPTY_REPLAY_PROXY = proxy({nearbyPois: []})
 const queuePOICanvasRender = createPOICanvasRenderQueue(2)
 const MAX_POI_CANVAS_SIDE = 4096
 const MAX_POI_CANVAS_PIXELS = 8_388_608
-const POI_EXPANDED_LEADER_ANGLES = [-45, 0, 45]
 const DISABLE_POI_SHIFT_HOVER_FOR_DIAGNOSTIC = true
 
 const assertPOICanvasDimensions = (element, scale, ratio) => {
@@ -79,7 +84,6 @@ const assertPOICanvasDimensions = (element, scale, ratio) => {
 export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, collapsedPreview = false, style}) => {
     const _poiContent = useRef(null)
     const _icon = useRef(null)
-    const _leaderSpace = useRef(null)
     const _renderRequestId = useRef(0)
 
     const unitSystem = useSnapshot(lgs.settings.unitSystem)
@@ -92,7 +96,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
 
     /** * Direct reactive access to the point from the snapshot.
      */
-    const point = useMemo(() => poisSnap.list.get(poi), [poisSnap.list, poi])
+    const point = poisSnap.list.get(poi)
     const isEmbedded = useInMenu || domPreview || collapsedPreview
     const isExpanded = !useInMenu && !collapsedPreview && (domPreview || point?.expanded === true)
     const pointId = point?.id
@@ -108,6 +112,14 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
     const presentation = resolveReplayPOIPresentation(point, {replay})
     const replayActive = presentation.active
     const displaySettings = normalizePOIDisplaySettings(point?.display)
+    const configuredStickAngle = displaySettings.stickAngle ?? POI_DISPLAY_DEFAULT_STICK_ANGLE
+    const stickPosition = displaySettings.stickPosition ?? POI_DISPLAY_DEFAULT_STICK_POSITION
+    const leaderAngle = resolvePOIStickAngle(configuredStickAngle, pointId)
+    const leaderLength = displaySettings.stickLength ?? POI_DISPLAY_DEFAULT_STICK_LENGTH
+    const leaderAngleRadians = leaderAngle * Math.PI / 180
+    const leaderOffsetX = (stickPosition === 'above' ? 1 : -1) * Math.sin(leaderAngleRadians) * leaderLength
+    const leaderOffsetY = Math.cos(leaderAngleRadians) * leaderLength
+    const fontFamily = displaySettings.fontFamily ?? POI_DISPLAY_DEFAULT_FONT_FAMILY
     const replaySettings = normalizeJourneyReplayPOISettings(point?.replay)
     const replayMasked = !presentation.visible
     const replayAnimationActive = presentation.animationActive
@@ -399,7 +411,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                   point?.color,
                   point?.bgColor,
                   point?.pill,
-                  point?.noBackground,
+                  point?.background,
                   point?.height,
                   point?.simulatedHeight,
                   point?.location,
@@ -407,6 +419,13 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                   point?.display?.titleCategoryIcon,
                   point?.display?.titleAltitude,
                   point?.display?.maxWidth,
+                  point?.display?.fontFamily,
+                  point?.display?.fontSize,
+                  point?.display?.bold,
+                  point?.display?.italic,
+                  point?.display?.stickAngle,
+                  point?.display?.stickPosition,
+                  point?.display?.stickLength,
                   point?.display?.location,
                   point?.display?.altitude,
                   point?.display?.coordinates,
@@ -451,24 +470,6 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         }
     }, [isEmbedded, isExpanded, iconName, isSvgIcon, point?.visible, renderToCanvas])
 
-    useEffect(() => {
-        const leaderSpace = _leaderSpace.current
-        if (!pointId || !isExpanded || isEmbedded || !leaderSpace) {
-            return
-        }
-
-        const angleIndex = Math.floor(Math.random() * POI_EXPANDED_LEADER_ANGLES.length)
-        const angle = POI_EXPANDED_LEADER_ANGLES[angleIndex]
-        const radians = angle * Math.PI / 180
-
-        leaderSpace.style.setProperty('--poi-expanded-leader-angle', `${angle}deg`)
-        // CSS positive rotation leans left in screen coordinates, so its lower endpoint uses -sin(angle).
-        leaderSpace.style.setProperty('--poi-expanded-leader-x', `${-Math.sin(radians)}rem`)
-        leaderSpace.style.setProperty('--poi-expanded-leader-y', `${Math.cos(radians)}rem`)
-        // Capture only after the random anchor geometry is set so canvas and billboard offsets agree.
-        renderToCanvas()
-    }, [pointId, isExpanded, isEmbedded, renderToCanvas])
-
     return (
         <div
             className={classNames(
@@ -479,11 +480,24 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             )}
             data-poi-canvas-source={!isEmbedded ? pointId : undefined}
             style={{
-                '--lgs-poi-background-color': point?.noBackground
+                // Inline tokens apply the saved POI typography and connector geometry to the preview and map card.
+                '--lgs-poi-background-color': point?.background === false
                     ? 'transparent'
                     : point?.bgColor ?? lgs.colors.poiDefaultBackground,
                 '--lgs-poi-border-color':     point?.color ?? lgs.colors.poiDefault,
                 '--lgs-poi-color':            point?.color ?? lgs.colors.poiDefault,
+                '--poi-font-family':          fontFamily === 'System' ? WIDGET_SYSTEM_FONT_STACK : fontFamily,
+                '--poi-font-size':            displaySettings.fontSize === undefined
+                    ? 'var(--lgs-font-size)'
+                    : `${displaySettings.fontSize}px`,
+                '--poi-font-style': displaySettings.italic ? 'italic' : 'normal',
+                '--poi-expanded-leader-angle': `${leaderAngle}deg`,
+                '--poi-expanded-leader-length': `${leaderLength}px`,
+                '--poi-expanded-leader-x': `${leaderOffsetX}px`,
+                '--poi-expanded-leader-y': `${leaderOffsetY}px`,
+                ...(typeof displaySettings.bold === 'boolean'
+                    ? {'--poi-font-weight': displaySettings.bold ? 'bold' : 'normal'}
+                    : {}),
                 ...(isExpanded && !isEmbedded
                     ? {'--poi-expanded-dimension': `${displaySettings.maxWidth}px`}
                     : {}),
@@ -494,6 +508,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                 className={classNames(
                     'poi-card',
                     isExpanded && !useInMenu && 'poi-card--expanded',
+                    isExpanded && stickPosition === 'above' && 'poi-card--stick-above',
                     isExpanded && !useInMenu && point?.pill !== false && 'poi-card--pill',
                 )}
                 ref={_poiContent}
@@ -501,7 +516,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                 <div className={classNames(
                     'poi-card-inner',
                     isExpanded && !useInMenu && point?.pill !== false && 'poi-card-inner--pill',
-                    point?.noBackground && 'poi-card-inner--no-background',
+                    point?.background === false && 'poi-card-inner--background-hidden',
                 )}>
                     <div className="poi-card-inner-background"/>
 
@@ -594,11 +609,10 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                         />
                      )}
                 </div>
-                {isExpanded && !isEmbedded && (
+                {isExpanded && (!isEmbedded || domPreview) && (
                     <div
                         className="poi-expanded-leader-space"
                         aria-hidden="true"
-                        ref={_leaderSpace}
                     >
                         <span className="poi-expanded-leader"/>
                         <span className="poi-geographic-anchor"/>

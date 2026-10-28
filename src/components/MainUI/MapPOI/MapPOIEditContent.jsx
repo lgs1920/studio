@@ -24,7 +24,7 @@ import {
 }                                 from '@Components/MainUI/MapPOI/usePOIJourneyAssociation'
 import { JourneySelector }        from '@Editor/journey/JourneySelector'
 import {
-    COORDINATE_INPUT_ERROR_DURATION_MS, COORDINATE_INPUT_NORMALIZE_DELAY_MS, POI_STANDARD_TYPE, POI_TMP_TYPE,
+    COORDINATE_INPUT_ERROR_DURATION_MS, COORDINATE_INPUT_NORMALIZE_DELAY_MS,
 }                                 from '@Core/constants'
 import { normalizePOIDisplaySettings } from '@Core/POIDisplaySettings'
 
@@ -35,7 +35,7 @@ import {
     ELEVATION_UNITS, UnitUtils,
 }                  from '@Utils/UnitUtils'
 import {
-    WaButton, WaCallout, WaColorPicker, WaCopyButton, WaDivider, WaIcon, WaInput, WaSwitch, WaTab, WaTabGroup,
+    WaButton, WaColorPicker, WaCopyButton, WaDivider, WaIcon, WaInput, WaSwitch, WaTab, WaTabGroup,
     WaTabPanel, WaTextarea, WaTooltip,
 }                  from '@awesome.me/webawesome/dist/react'
 import classNames  from 'classnames'
@@ -69,6 +69,9 @@ export const MapPOIEditContent = memo(({poi}) => {
                                           const $point = lgs.stores.main.components.pois.list.get(poi)
                                           const point = useSnapshot($point ?? EMPTY_POI_PROXY)
                                           const journeyAssociation = usePOIJourneyAssociation(point)
+                                          const updateEditedPOI = useCallback((updates, options = {}) => (
+                                              __.ui.poiManager.updatePOI(poi, updates, {...options, markAsEdited: true})
+                                          ), [poi])
 
                                           /**
                                            * Persist a changed display flag while retaining the other POI choices.
@@ -96,11 +99,31 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                   [field]: value,
                                               })
 
-                                              void __.ui.poiManager.updatePOI(poi, {display: nextDisplay}, {
+                                              void updateEditedPOI({display: nextDisplay}, {
                                                   immediate: field !== 'maxWidth',
                                               })
                                                   .catch(error => console.error(`[MapPOIEditContent] Failed to save ${field}:`, error))
-                                          }, [poi])
+                                          }, [poi, updateEditedPOI])
+
+                                          /** Persist a changed typography or connector value with the other POI display settings. */
+                                          const handleDisplayValueChange = useCallback((field, value) => {
+                                              if (!window.isOK) {
+                                                  return
+                                              }
+
+                                              const currentPoint = lgs.stores.main.components.pois.list.get(poi)
+                                              if (!currentPoint) {
+                                                  return
+                                              }
+
+                                              const currentDisplay = normalizePOIDisplaySettings(currentPoint.display)
+                                              const nextDisplay = normalizePOIDisplaySettings({
+                                                  ...currentDisplay,
+                                                  [field]: value,
+                                              })
+                                              void updateEditedPOI({display: nextDisplay})
+                                                  .catch(error => console.error(`[MapPOIEditContent] Failed to save ${field}:`, error))
+                                          }, [poi, updateEditedPOI])
 
                                           /**
                                            * Persist a changed POI shape or background setting immediately.
@@ -114,9 +137,9 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                   return
                                               }
 
-                                              void __.ui.poiManager.updatePOI(poi, {[field]: event.target.checked}, {immediate: true})
+                                              void updateEditedPOI({[field]: event.target.checked}, {immediate: true})
                                                   .catch(error => console.error(`[MapPOIEditContent] Failed to save ${field}:`, error))
-                                          }, [poi])
+                                          }, [poi, updateEditedPOI])
 
                                           /** Persist the Replay animation preference with the rest of this POI. */
                                           const handleReplayAnimationChange = useCallback((event) => {
@@ -133,14 +156,14 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                   && typeof currentPoint.replay === 'object'
                                                   ? currentPoint.replay
                                                   : {}
-                                              void __.ui.poiManager.updatePOI(poi, {
+                                              void updateEditedPOI({
                                                   replay: {
                                                       ...currentReplaySettings,
                                                       animated: event.target.checked === true,
                                                   },
                                               }, {immediate: true})
                                                   .catch(error => console.error('[MapPOIEditContent] Failed to save Replay animation preference:', error))
-                                          }, [poi])
+                                          }, [poi, updateEditedPOI])
 
                                           if (!point.id) {
                                               return null
@@ -158,11 +181,11 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                     color,
                                                     bgColor,
                                                     pill = true,
-                                                    noBackground = false,
+                                                    background = true,
                                                     time,
                                                     visible     = true,
                                                 } = point
-                                          const canSwapColors = !noBackground
+                                          const canSwapColors = background
                                               && hasVisibleColorAlpha(bgColor ?? lgs.colors.poiDefaultBackground)
                                               && hasVisibleColorAlpha(color ?? lgs.colors.poiDefault)
 
@@ -234,8 +257,8 @@ export const MapPOIEditContent = memo(({poi}) => {
 
                                               setSimulated(meters === point.simulatedHeight)
 
-                                              await __.ui.poiManager.updatePOI(poi, {height: meters}, {immediate: true})
-                                          }, [poi, elevationUnit, point.simulatedHeight])
+                                              await updateEditedPOI({height: meters}, {immediate: true})
+                                          }, [poi, elevationUnit, point.simulatedHeight, updateEditedPOI])
 
                                           /**
                                            * Handles color updates while preventing event bubbling
@@ -257,9 +280,9 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               }
 
                                               if (Object.keys(update).length > 0) {
-                                                  await __.ui.poiManager.updatePOI(poi, update)
+                                                  await updateEditedPOI(update)
                                               }
-                                          }, [poi])
+                                          }, [poi, updateEditedPOI])
 
                                           /** Swap the POI background and foreground colors when both remain visible. */
                                           const handleSwapColors = async () => {
@@ -268,7 +291,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               }
 
                                               const currentPoint = lgs.stores.main.components.pois.list.get(poi)
-                                              if (!currentPoint || currentPoint.noBackground) {
+                                              if (!currentPoint || !currentPoint.background) {
                                                   return
                                               }
 
@@ -278,7 +301,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                   return
                                               }
 
-                                              await __.ui.poiManager.updatePOI(poi, {
+                                              await updateEditedPOI({
                                                   bgColor: foregroundColor,
                                                   color:   backgroundColor,
                                               })
@@ -329,9 +352,9 @@ export const MapPOIEditContent = memo(({poi}) => {
 
                                               const currentValue = key === 'latitude' ? latitude : longitude
                                               if (val !== currentValue) {
-                                                  await __.ui.poiManager.updatePOI(poi, {[key]: val})
+                                                  await updateEditedPOI({[key]: val})
                                               }
-                                          }, [poi, latitude, longitude, coordinateSystem, showCoordinateError])
+                                          }, [poi, latitude, longitude, coordinateSystem, showCoordinateError, updateEditedPOI])
 
                                           const handleChangeLatitude = makeCoordHandler('latitude')
                                           const handleChangeLongitude = makeCoordHandler('longitude')
@@ -341,9 +364,9 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                   return
                                               }
                                               if (event.target.tagName.toLowerCase() === 'wa-input') {
-                                                  await __.ui.poiManager.updatePOI(poi, {title: event.target.value})
+                                                  await updateEditedPOI({title: event.target.value})
                                               }
-                                          }, [poi])
+                                          }, [poi, updateEditedPOI])
 
                                           const previousTitleRef = useRef(title)
 
@@ -374,24 +397,20 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               }
 
                                               const fallbackTitle = previousTitleRef.current ?? ''
-                                              await __.ui.poiManager.updatePOI(poi, {title: fallbackTitle})
-                                          }, [poi])
+                                              await updateEditedPOI({title: fallbackTitle})
+                                          }, [poi, updateEditedPOI])
 
                                           const handleChangeDescription = useCallback(async (event) => {
                                               if (window.isOK) {
-                                                  await __.ui.poiManager.updatePOI(poi, {description: event.target.value})
+                                                  await updateEditedPOI({description: event.target.value})
                                               }
-                                          }, [poi])
+                                          }, [poi, updateEditedPOI])
 
                                           const handleCopySuccess = useCallback(() => {
                                               UIToast.success({
                                                                   caption: title ?? 'POI', text: 'Coordinates copied<br/>Format: latitude, longitude',
                                                               })
                                           }, [title])
-
-                                          const handleAddToLibrary = useCallback(async () => {
-                                              await __.ui.poiManager.updatePOI(poi, {type: POI_STANDARD_TYPE})
-                                          }, [poi])
 
                                           const handleResetAltitude = useCallback(async (event) => {
                                               if (!window.isOK) {
@@ -406,8 +425,8 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               }
 
                                               setSimulated(true)
-                                              await __.ui.poiManager.updatePOI(poi, {height: simulatedHeight}, {immediate: true})
-                                          }, [poi, simulatedHeight])
+                                              await updateEditedPOI({height: simulatedHeight}, {immediate: true})
+                                          }, [poi, simulatedHeight, updateEditedPOI])
 
                                           const swatches = useMemo(() => swatchesList.join(';'), [swatchesList])
 
@@ -523,18 +542,6 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               <>
                                                   <WaDivider/>
 
-                                                  {point.type === POI_TMP_TYPE && (
-                                                      <WaCallout variant="warning" className="edit-map-poi-warning" open>
-                                                          <WaIcon slot="icon" variant="regular" name="location-exclamation"/>
-                                                          <div>
-                                                              {'This POI is temporary and won\'t be saved. Add it to the library to save it.'}
-                                                              <WaButton size="s" slot="end" variant="warning"
-                                                                        onClick={handleAddToLibrary}>
-                                                                  <WaIcon slot="start" name="location-dot" variant="regular"/>{'Add it'}
-                                                              </WaButton>
-                                                          </div>
-                                                      </WaCallout>)}
-
                                                   <div className="map-poi-edit-wrapper" id={`edit-map-poi-content-${id}`}>
                                                       <div className="map-poi-edit-toolbar">
                                                           <div className="map-poi-edit-swatches">
@@ -545,7 +552,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                   value={bgColor ?? lgs.colors.poiDefaultBackground}
                                                                   swatches={swatches}
                                                                   onChange={handleChangeColor}
-                                                                  disabled={!visible || noBackground}
+                                                                  disabled={!visible || !background}
                                                                   noFormatToggle
                                                                   ref={_poiBgColor}
                                                               />
@@ -698,8 +705,9 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                   display={point.display}
                                                                   hasDateTime={Boolean(time)}
                                                                   pill={pill}
-                                                                  noBackground={noBackground}
+                                                                  background={background}
                                                                   onDisplayChange={handleDisplayChange}
+                                                                  onDisplayValueChange={handleDisplayValueChange}
                                                                   onStyleChange={handleStyleChange}
                                                               />
                                                           </WaTabPanel>

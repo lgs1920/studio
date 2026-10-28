@@ -8,18 +8,26 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import {WIDGET_FONT_FAMILIES} from '@Core/constants'
+
 export const POI_DISPLAY_MIN_WIDTH = 120
 export const POI_DISPLAY_MAX_WIDTH = 400
 export const POI_DISPLAY_DEFAULT_WIDTH = 200
 export const POI_DISPLAY_WIDTH_STEP = 10
+export const POI_DISPLAY_DEFAULT_FONT_FAMILY = 'System'
+export const POI_DISPLAY_DEFAULT_FONT_SIZE = 13
+export const POI_DISPLAY_DEFAULT_STICK_ANGLE = 'random'
+export const POI_DISPLAY_DEFAULT_STICK_LENGTH = 16
+export const POI_DISPLAY_DEFAULT_STICK_POSITION = 'below'
+export const POI_DISPLAY_STICK_LENGTH_MAX = 200
 /** Version of the persisted per-POI display settings shape. */
-export const POI_DISPLAY_SETTINGS_SCHEMA_VERSION = 1
+export const POI_DISPLAY_SETTINGS_SCHEMA_VERSION = 3
 
 const DISPLAY_BOOLEAN_FIELDS = [
     'category',
@@ -74,10 +82,78 @@ export const getDefaultPOIDisplaySettings = () => {
 }
 
 /**
+ * Normalize optional typography and connector settings without changing legacy POI defaults.
+ *
+ * @param {Object} source - Raw display settings.
+ * @returns {Object} Supported optional settings explicitly present in the source.
+ */
+const normalizeOptionalPOIDisplaySettings = source => {
+    const settings = {}
+    /** Check whether an optional style setting was explicitly saved. */
+    const hasOwn = field => Object.prototype.hasOwnProperty.call(source, field)
+
+    if (hasOwn('fontFamily')) {
+        settings.fontFamily = WIDGET_FONT_FAMILIES.includes(source.fontFamily)
+            ? source.fontFamily
+            : POI_DISPLAY_DEFAULT_FONT_FAMILY
+    }
+
+    if (hasOwn('fontSize')) {
+        const fontSize = Number(source.fontSize)
+        settings.fontSize = Number.isFinite(fontSize)
+            ? Math.max(8, Math.min(48, fontSize))
+            : POI_DISPLAY_DEFAULT_FONT_SIZE
+    }
+
+    for (const field of ['bold', 'italic']) {
+        if (hasOwn(field)) {
+            settings[field] = source[field] === true
+        }
+    }
+
+    if (hasOwn('stickAngle')) {
+        const angle = `${source.stickAngle}`
+        settings.stickAngle = ['-45', 'vertical', '45', 'random'].includes(angle)
+            ? angle
+            : POI_DISPLAY_DEFAULT_STICK_ANGLE
+    }
+
+    if (hasOwn('stickPosition')) {
+        settings.stickPosition = ['above', 'below'].includes(source.stickPosition)
+            ? source.stickPosition
+            : POI_DISPLAY_DEFAULT_STICK_POSITION
+    }
+
+    if (hasOwn('stickLength')) {
+        const length = Number(source.stickLength)
+        settings.stickLength = Number.isFinite(length)
+            ? Math.round(Math.max(0, Math.min(POI_DISPLAY_STICK_LENGTH_MAX, length)))
+            : POI_DISPLAY_DEFAULT_STICK_LENGTH
+    }
+
+    return settings
+}
+
+/** Resolve a POI stick angle, using a stable ID-derived direction for the random choice. */
+export const resolvePOIStickAngle = (angle, poiId) => {
+    if (angle === 'vertical') {
+        return 0
+    }
+
+    if (angle === '-45' || angle === '45') {
+        return Number(angle)
+    }
+
+    const id = `${poiId ?? ''}`
+    const hash = [...id].reduce((value, character) => (value * 31 + character.charCodeAt(0)) >>> 0, 0)
+    return [-45, 0, 45][hash % 3]
+}
+
+/**
  * Normalize persisted POI display choices and migrate untouched legacy defaults.
  *
  * @param {Object|null|undefined} settings - Persisted display settings.
- * @returns {{category: boolean, titleCategoryIcon: boolean, titleAltitude: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number, schemaVersion: number}}
+ * @returns {{category: boolean, titleCategoryIcon: boolean, titleAltitude: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number, fontFamily?: string, fontSize?: number, bold?: boolean, italic?: boolean, stickAngle?: string, stickPosition?: string, stickLength?: number, schemaVersion: number}}
  */
 export const normalizePOIDisplaySettings = (settings = null) => {
     const source = settings && typeof settings === 'object' ? settings : {}
@@ -107,6 +183,7 @@ export const normalizePOIDisplaySettings = (settings = null) => {
     return Object.fromEntries([
         ...normalizedDisplay,
         ['maxWidth', normalizedWidth],
+        ...Object.entries(normalizeOptionalPOIDisplaySettings(source)),
         ['schemaVersion', POI_DISPLAY_SETTINGS_SCHEMA_VERSION],
     ])
 }

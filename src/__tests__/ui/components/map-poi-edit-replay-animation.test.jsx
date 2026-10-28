@@ -23,14 +23,16 @@ vi.mock('@Components/DateTimeDisplay', () => ({DateTimeDisplay: () => null}))
 vi.mock('@Components/MainUI/MapPOI/MapPOICategorySelector', () => ({MapPOICategorySelector: () => null}))
 vi.mock('@Components/MainUI/MapPOI/MapPOIDisplaySettings', () => ({MapPOIDisplaySettings: () => null}))
 vi.mock('@Components/MainUI/MapPOI/MapPOIEditMenu', () => ({MapPOIEditMenu: () => null}))
+vi.mock('@Components/MainUI/MapPOI/MapPOIEditPreview', () => ({
+    MapPOIEditPreview: () => <div className="map-poi-edit-preview"/>,
+}))
 vi.mock('@Components/MainUI/MapPOI/usePOIJourneyAssociation', () => ({
     NO_ASSOCIATED_JOURNEY_LABEL: 'No associated journey',
     usePOIJourneyAssociation: () => ({canAssociate: false}),
 }))
 vi.mock('@Editor/journey/JourneySelector', () => ({JourneySelector: () => null}))
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
-    WaButton: () => null,
-    WaCallout: () => null,
+    WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaColorPicker: () => null,
     WaCopyButton: () => null,
     WaDivider: () => null,
@@ -120,7 +122,7 @@ describe('MapPOIEditContent Replay animation setting', () => {
         const animationSwitch = screen.getByLabelText('Animate during Replay')
         const replayControls = preview.nextElementSibling
 
-        expect(replayControls).toHaveClass('map-poi-display-controls')
+        expect(replayControls.classList.contains('map-poi-display-controls')).toBe(true)
         expect(replayControls.querySelector('.map-poi-style-switch')).toBe(animationSwitch.closest('.map-poi-style-switch'))
         expect(replayControls.nextElementSibling).toBe(tabGroup)
         expect(tabGroup.contains(replayControls)).toBe(false)
@@ -128,7 +130,7 @@ describe('MapPOIEditContent Replay animation setting', () => {
     })
 
     it('immediately persists the updated Replay animation setting', async () => {
-        const {container} = render(<MapPOIEditContent poi="poi-1"/>)
+        render(<MapPOIEditContent poi="poi-1"/>)
         const animationSwitch = screen.getByLabelText('Animate during Replay')
 
         fireEvent.click(animationSwitch)

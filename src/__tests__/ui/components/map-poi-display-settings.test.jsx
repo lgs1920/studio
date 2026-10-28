@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -113,7 +113,7 @@ describe('MapPOIDisplaySettings', () => {
         expect(within(contentGroup).getByRole('checkbox', {name: 'Category'})).toBeTruthy()
         expect(within(contentGroup).getByRole('checkbox', {name: 'Date-Time'})).toBeTruthy()
         expect(within(appearanceGroup).getByRole('checkbox', {name: 'Pill'})).toBeTruthy()
-        expect(within(appearanceGroup).getByRole('checkbox', {name: 'No background'})).toBeTruthy()
+        expect(within(appearanceGroup).getByRole('checkbox', {name: 'Background'})).toBeTruthy()
         expect(within(appearanceGroup).getByRole('slider', {name: 'Width'})).toBeTruthy()
         expect(screen.getAllByRole('separator')).toHaveLength(2)
     })

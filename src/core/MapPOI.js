@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ export class MapPOI extends MapElement {
     bgColor
 
     /** @type {boolean} */
-    noBackground = false
+    background = true
 
     /**
      * @type {Camera}
@@ -64,7 +64,7 @@ export class MapPOI extends MapElement {
     description
 
     /**
-     * @type {{category: boolean, titleCategoryIcon: boolean, titleAltitude: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number, schemaVersion: number}}
+     * @type {{category: boolean, titleCategoryIcon: boolean, titleAltitude: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number, fontFamily?: string, fontSize?: number, bold?: boolean, italic?: boolean, stickAngle?: string, stickPosition?: string, stickLength?: number, schemaVersion: number}}
      */
     display = normalizePOIDisplaySettings()
 
@@ -81,6 +81,9 @@ export class MapPOI extends MapElement {
      */
     expanded = false
     isMouseOverExpanded = false
+
+    /** @type {number|null} Timestamp after which the new POI badge expires. */
+    newBadgeExpiresAt = null
 
     /**
      * @type {number}
@@ -167,11 +170,16 @@ export class MapPOI extends MapElement {
     constructor(options = null) {
         super(CURRENT_POI)
         options = options ?? {}
+        const poiOptions = {...options}
+        delete poiOptions.noBackground
         // If there is no id provided, we generate one
         options.id = options?.id ? options.id.toString() : uuid()
         options.slug = options.id
         this.update({
-            ...options,
+            ...poiOptions,
+            id: options.id,
+            slug: options.slug,
+            background: options.background ?? true,
             pill: options.pill ?? true,
             display: normalizePOIDisplaySettings(options.display),
         })
