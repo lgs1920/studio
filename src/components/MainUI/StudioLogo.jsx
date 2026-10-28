@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2024-10-03
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SLOGAN }          from '@Core/constants'
+import {SloganSvg} from '@Components/MainUI/SloganSvg'
 import { formatBuildInfo } from '@Utils/BuildInfoUtils'
 
 export const StudioLogo = (props) => {
@@ -46,7 +46,7 @@ export const StudioLogo = (props) => {
             {props.version &&
                 <div className={'version-info'}>{lgs.versions.studio} - {'build'}: {date}</div>
             }
-            {props.slogan && <span className={'the-slogan'}>{SLOGAN}</span>}
+            {props.slogan && <SloganSvg className="the-slogan"/>}
             {props.buttons}
         </div>
     )

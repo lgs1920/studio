@@ -189,26 +189,6 @@ body:not(.lgs-app-booting) {
         opacity: 0;
     }
 
-    & #lgs-boot-splash-slogan {
-        position: absolute;
-        z-index: 3;
-        left: 50%;
-    }
-
-    & #lgs-boot-splash-slogan {
-        top: calc(42% + 4.3rem);
-        width: min(28rem, calc(100vw - 2rem));
-        height: auto;
-        transform: translateX(-50%);
-        color: #f0c800;
-        filter: drop-shadow(0 0 14px rgba(0, 0, 0, 0.72));
-    }
-
-    &.lgs-boot-splash-react-ready #lgs-boot-splash-slogan {
-        opacity: 0;
-        visibility: hidden;
-    }
-
     /* Keep the welcome route visible before the React application styles load. */
     & > [data-lgs-boot-route-host] {
         position: absolute;
@@ -345,10 +325,6 @@ body:not(.lgs-app-booting) {
 
 @media (max-width: 700px) {
     #lgs-boot-splash {
-        & #lgs-boot-splash-slogan {
-            top: calc(42% + 3.4rem);
-        }
-
         & #lgs-boot-splash-status {
             top: calc(42% + 12.5rem);
         }

@@ -892,8 +892,55 @@ body.mobile .orbit-widget-body {
         width: min(28rem, calc(100vw - 2rem));
         height: auto;
         transform: translateX(-50%);
-        color: #f0c800;
+        /* Preserves the slogan's original tilt while allowing theme overrides. */
+        --lgs-slogan-angle: -8deg;
+        /* Preserves the slogan's original handwritten slant while allowing theme overrides. */
+        --lgs-slogan-skew: -14deg;
+        /* Keeps the existing gold fill configurable through the welcome branding class. */
+        --lgs-slogan-color: #f0c800;
+        color: var(--lgs-slogan-color);
         filter: drop-shadow(0 0 14px rgba(0, 0, 0, .72));
+
+        & .welcome-slogan-outline {
+            fill-opacity: 0;
+            stroke: currentColor;
+            stroke-width: 22;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 1;
+            stroke-dashoffset: 1;
+            stroke-opacity: 1;
+            /* Keeps each glyph trace sequential instead of overlapping the next character. */
+            animation: lgs-slogan-glyph-write 200ms linear both;
+        }
+    }
+}
+
+.welcome-slogan-transform {
+    transform-box: view-box;
+    transform-origin: 0 0;
+    transform: rotate(var(--lgs-slogan-angle, -8deg)) skewX(var(--lgs-slogan-skew, -14deg));
+}
+
+@keyframes lgs-slogan-glyph-write {
+    from {
+        fill-opacity: 0;
+        stroke-dashoffset: 1;
+        stroke-opacity: 1;
+    }
+
+    to {
+        fill-opacity: 1;
+        stroke-dashoffset: 0;
+        stroke-opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .welcome-branding-slogan .welcome-slogan-outline {
+        fill-opacity: 1;
+        stroke: none;
+        animation: none;
     }
 }
 

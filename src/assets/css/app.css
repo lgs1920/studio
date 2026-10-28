@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -330,12 +330,12 @@ body.lgs-app-booting #cesium-viewer {
 }
 
 .main-logo .the-slogan {
-    font-family: var(--lgs-slogan-font-family);
-    font-size: var(--lgs-slogan-font-size);
-    width: 100%;
+    display: block;
+    width: min(100%, calc(11.25 * var(--lgs-slogan-font-size)));
+    height: auto;
     margin-top: calc(2 * var(--lgs-gutter));
-    transform: rotate(-10deg) skew(-18deg);
-    text-align: center;
+    --lgs-slogan-angle: -10deg;
+    --lgs-slogan-skew: -18deg;
     color: var(--lgs-slogan-color);
 }
 

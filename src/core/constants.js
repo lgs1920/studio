@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-18
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { CESIUM_EVENTS as $CESIUM_EVENTS } from '@Core/events/cesiumEvents'
 
 
-export const SLOGAN = 'Replay Your World Outdoors.'
+export const SLOGAN = 'Replay Your World Outdoors!'
 /*******************************************************************************
  * Time and duration constants in seconds
  */

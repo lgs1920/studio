@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -247,7 +247,6 @@ html {
     --lgs-signage-color: black;
     --lgs-signage-disabled-color: var(--wa-color-neutral-on-quiet);
 
-    --lgs-slogan-font-family: "Cookie", cursive;
     --lgs-slogan-font-size: calc(2.5 * var(--lgs-gutter));
     --lgs-slogan-color: black;
 

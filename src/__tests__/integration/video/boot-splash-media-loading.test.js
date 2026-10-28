@@ -67,8 +67,7 @@ const registerBootSplashMediaLoadingTests = () => {
         const splashStatus = indexDocument.querySelector('#lgs-boot-splash-status')
         const startupStylesheet = indexDocument.querySelector('link[rel="stylesheet"][href="/src/assets/css/startup-shell.css"]')
         expect(splashLogo).toBeNull()
-        expect(splashSlogan?.querySelector('title')).toBeNull()
-        expect(splashSlogan?.querySelector('text')?.textContent.trim()).toBe('Replay Your World Outdoors.')
+        expect(splashSlogan).toBeNull()
         expect(splashSpinner).not.toBeNull()
         expect(splashSpinner?.getAttribute('style')).toBeNull()
         expect(splashStatus?.classList.contains('welcome-initialization-message')).toBe(true)
@@ -102,7 +101,7 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(splashStyle).toContain('filter: drop-shadow(0 0 8px color-mix(in oklab, var(--hero-route-glow-color) 42%, transparent))')
         expect(splashStyle).toContain('.welcome-hero-route-annotations')
         expect(splashStyle).toContain('.welcome-hero-poi.is-revealed.is-positioned')
-        expect(routeBootstrapSource).toContain('splashRouteRoot.render(<WelcomeHeroRoute useWorker={false}/>)')
+        expect(routeBootstrapSource).toContain('splashRouteRoot.render(<WelcomeHeroRoute useWorker={true}/>)')
         const routeSource = readFileSync('src/components/MainUI/WelcomeHeroRoute.jsx', 'utf8')
         expect(routeSource).toContain('const welcomeRouteModulesPromise = Promise.all([')
         expect(routeSource).toContain('const loadThreeModules = () => welcomeRouteModulesPromise')
@@ -140,5 +139,14 @@ describe('welcome logo animation', () => {
         expect(mainUiStyle).not.toContain(
             '.lgs-boot-splash-cta-ready ~ #lgs1920-container .welcome-branding-logo .lgs--logo-clapper'
         )
+    })
+})
+
+describe('welcome slogan animation', () => {
+    it('draws each outlined SVG glyph in sequence without a horizontal wipe', () => {
+        expect(mainUiStyle).toContain('animation: lgs-slogan-glyph-write 200ms linear both;')
+        expect(mainUiStyle).toContain('stroke-dashoffset: 1;')
+        expect(mainUiStyle).toContain('stroke-dashoffset: 0;')
+        expect(mainUiStyle).not.toContain('clip-path: inset(0 100% 0 0)')
     })
 })

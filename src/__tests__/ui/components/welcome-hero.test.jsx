@@ -474,7 +474,14 @@ describe('WelcomeBranding', () => {
         expect(document.querySelectorAll('.welcome-branding-logo svg')).toHaveLength(1)
         expect(document.querySelector('.welcome-branding-spinner wa-spinner')).toBeTruthy()
         expect(document.querySelector('.welcome-branding')?.classList.contains('welcome-branding-cta-visible')).toBe(false)
-        expect(screen.getByLabelText('LGS1920 slogan')).toBeTruthy()
+        const slogan = screen.getByLabelText('Replay Your World Outdoors!')
+        const sloganGlyphs = [...slogan.querySelectorAll('.welcome-slogan-outline')]
+        expect(slogan.tagName.toLowerCase()).toBe('svg')
+        expect(sloganGlyphs).toHaveLength(24)
+        expect(slogan.querySelector('text')).toBeNull()
+        expect(sloganGlyphs[0].getAttribute('pathLength')).toBe('1')
+        expect(sloganGlyphs[0].style.animationDelay).toBe('0ms')
+        expect(sloganGlyphs.at(-1).style.animationDelay).toBe('5720ms')
     })
 
     it('mounts only the vertical SVG on a narrow screen and switches variants on resize', () => {
