@@ -4,7 +4,7 @@ Status: **TODO — Studio canonical authoring model and integration**
 
 Target release: `1.0.0` preparation surface (delivered) and `1.1.0` Studio authoring integration (planned)
 
-Date: 2026-10-18
+Date: 2026-10-28
 
 ## Goal
 
@@ -56,6 +56,9 @@ The delivered preparation behavior is documented in the
   the existing multi-track editor.
 - Add domain validation and commands for widget tracks, clip movement,
   trimming, overlap rules, and the supported effects.
+- Add a read-only POI timing projection with fixed-duration clips, automatic
+  overlap lanes, and total duration derived from the canonical Replay speed
+  profile.
 - Make interactive playback and deterministic export consume the normalized timeline.
 
 The 1.0.0 surface already persists an editor snapshot. Treat that snapshot as
@@ -119,6 +122,34 @@ truth for playback and export:
 - Contains zero or more widget clips.
 - Never allows overlapping clips on the same track.
 - Visual stacking must be represented by placing clips on separate tracks.
+
+### POI Timing Projection
+
+POI timing clips are a derived, read-only view of the canonical Replay speed
+profile. They are not user-authored clips and do not create a second playback
+clock.
+
+- Create one fixed-duration clip for each POI that participates in Replay
+  slowdown. Its interval is mapped to elapsed video time through the same
+  Replay speed profile used by interactive playback and export.
+- Keep the current crawl interval at two seconds. The clip cannot be moved,
+  trimmed, or resized by the user.
+- Recompute POI projections, clip intervals, and the total Replay duration
+  whenever a POI moves or relevant Replay settings or route data change.
+- Place overlapping clips on separate, automatically allocated POI lanes.
+  Reuse the lowest available lane when a prior clip has ended. Do not merge
+  overlapping clips; preserve one identifiable clip per POI.
+- Treat the time covered by overlapping clips as shared elapsed time. For
+  intervals `[TA, TB]` and `[TC, TD]`, where `TC` falls within the first
+  interval, the combined visual span is `[TA, TD]`; do not add the overlap or
+  either clip duration a second time.
+- Derive the timeline end from the final Replay speed profile, not by summing
+  POI clip durations. Lane assignment affects only layout, never playback
+  timing.
+
+Keep POI-specific projection and labels in Studio's adapter/domain layer. The
+generic Timeline component should receive ordinary read-only tracks and clips
+without Replay-specific behavior.
 
 ### Clip Types
 

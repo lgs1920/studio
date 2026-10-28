@@ -412,7 +412,8 @@ Future or not delivered by this implementation:
 - replacing the preparation snapshot and existing clip arrays with a canonical
   Studio timeline domain model;
 - independent editable item timing and track commands in that domain model;
-- transitions, waits, media tracks, or POI tracks;
+- transitions, waits, media tracks, or POI tracks (planned in the
+  [Replay Timeline Editor Evolution](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md));
 - migrating the existing pre-Replay/post-Replay clip configuration into that
   canonical model;
 - clip double-click navigation and menu commands;
