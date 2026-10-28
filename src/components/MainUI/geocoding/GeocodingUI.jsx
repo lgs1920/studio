@@ -8,15 +8,18 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-21
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { SelectLocation }              from '@Components/MainUI/geocoding/SelectLocation'
+import { openPOIEditor }                from '@Components/MainUI/MapPOI/openPOIEditor'
+import { POICreationToastContent }      from '@Components/MainUI/MapPOI/POICreationToastContent'
+import { focusPOIInOpenList }           from '@Components/MainUI/MapPOI/focusPOIInOpenList'
 import WaDialogNonModal                from '@Components/WaDialogNonModal'
-import { SECOND }                      from '@Core/constants'
+import { POI_NEW_BADGE_DURATION, POI_STANDARD_TYPE, SECOND } from '@Core/constants'
 import {
     WaButton, WaDivider, WaIcon, WaInput, WaSwitch, WaTooltip,
 }                                      from '@awesome.me/webawesome/dist/react'
@@ -107,54 +110,55 @@ export const GeocodingUI = () => {
      * Focus the map on a point and optionally close the dialog after a delay.
      * @param {Object} geoPoint - GeoJSON point to display.
      * @param {{closeAfter?: number, shouldContinue?: () => boolean}} [options] - Optional close delay and cancellation guard.
-     * @returns {Promise<void>} Resolves after the point has been prepared for display.
+     * @returns {Promise<Object|null>} The created POI, or null when creation is cancelled or rejected.
      */
     const showPOI = async (geoPoint, {closeAfter = 0, shouldContinue = () => true} = {}) => {
-        /**
-         * Start focusing the map on a prepared point and schedule its optional close.
-         * @param {Object} point - Prepared map point.
-         */
-        const focusPoint = (point) => {
-            if (!shouldContinue()) {
-                return
-            }
-
-            __.ui.sceneManager.focus(point, {
-                target:     point,
-                lookAt:     true,
-                infinite:   false,
-                rotate:     lgs.settings.ui.poi.rotate,
-                rpm:        lgs.settings.ui.poi.rpm,
-                flyingTime: 2,
-                callback: async (poi) => {
-                    const newPoi = await __.ui.poiManager.add(poi)
-                    if (newPoi) {
-                        return true
-                    }
-                    UIToast.warning({
-                                        caption: 'POI not created !',
-                                        text:    'This location is too closed to an existing POI!',
-                                    })
-                    return false
-                },
-            })
-
-            if (closeAfter > 0) {
-                if (displayCloseTimer.current !== null) {
-                    window.clearTimeout(displayCloseTimer.current)
-                }
-                displayCloseTimer.current = window.setTimeout(requestClose, closeAfter)
-            }
+        const point = await __.ui.poiManager.getPointFromGeoJson(geoPoint, true)
+        if (!shouldContinue()) {
+            return null
         }
 
-        const displayPromise = __.ui.poiManager.getPointFromGeoJson(geoPoint, true).then(focusPoint)
+        // Search-created POIs follow the same persisted standard type as context-menu POIs.
+        point.type = POI_STANDARD_TYPE
+        point.newBadgeExpiresAt = Date.now() + POI_NEW_BADGE_DURATION
+        const poi = await __.ui.poiManager.add(point)
+        if (!poi) {
+            UIToast.warning({
+                                caption: 'POI not created !',
+                                text:    'This location is too closed to an existing POI!',
+                            })
+            return null
+        }
+
+        focusPOIInOpenList(poi.id)
+
+        void __.ui.sceneManager.focus(poi, {
+            target:     poi,
+            lookAt:     true,
+            infinite:   false,
+            rotate:     lgs.settings.ui.poi.rotate,
+            rpm:        lgs.settings.ui.poi.rpm,
+            flyingTime: 2,
+            callback: async (focusedPOI) => {
+                if (!shouldContinue()) {
+                    return
+                }
+
+                await __.ui.poiManager.updatePOI(poi.id, {camera: focusedPOI.camera})
+            },
+        })
 
         if (closeAfter > 0) {
-            await displayPromise
+            if (displayCloseTimer.current !== null) {
+                window.clearTimeout(displayCloseTimer.current)
+            }
+            displayCloseTimer.current = window.setTimeout(requestClose, closeAfter)
         }
         else {
             requestClose()
         }
+
+        return poi
     }
 
     const handleSubmit = async (event) => {
@@ -217,15 +221,22 @@ export const GeocodingUI = () => {
     }
 
     const handleSelect = async (placeId) => {
-        lgs.stores.main.components.pois.current = false
         const point = store.list.get(placeId)
         if (!point) {
             return
         }
-        await showPOI(point)
-        UIToast.warning({
-                            caption: 'Temporary POI created.',
-                            text:    `It won't be saved permanently until you edit it and add it to POIs library.`,
+        const createdPOI = await showPOI(point)
+        if (!createdPOI) {
+            return
+        }
+
+        UIToast.success({
+                            caption: 'POI created.',
+                            text:    <POICreationToastContent
+                                         poi={createdPOI}
+                                         canEdit
+                                         onEdit={() => openPOIEditor(createdPOI.id)}
+                                     />,
                         }, 8 * SECOND)
     }
 

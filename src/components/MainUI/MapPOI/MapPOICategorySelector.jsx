@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-10
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,7 +41,7 @@ export const MapPOICategorySelector = ({point: current, props, disabled = false}
     const handleCategory = (event) => {
         __.ui.poiManager.updatePOI(pois.current, {
             category: event.target.value,
-        })
+        }, {markAsEdited: true})
     }
 
     const categoryOptions = useMemo(() => {

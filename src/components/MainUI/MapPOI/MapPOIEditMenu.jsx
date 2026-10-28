@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -70,7 +70,7 @@ export const MapPOIEditMenu = memo(({poiId}) => {
         e?.stopPropagation()
 
         const nextState = !isVisible
-        await __.ui.poiManager.updatePOI(pointSnap.id, {visible: nextState})
+        await __.ui.poiManager.updatePOI(pointSnap.id, {visible: nextState}, {markAsEdited: true})
     }, [pointSnap.id, isVisible])
 
     const focus = useCallback(async (e) => {

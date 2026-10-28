@@ -8,15 +8,15 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-13
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    ADD_POI_EVENT, CURRENT_POI, GLOBAL_PARENT, POI_JOURNEY_ASSOCIATION_DISTANCE, POI_STARTER_TYPE,
-    POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE, REMOVE_POI_EVENT,
+    ADD_POI_EVENT, CURRENT_POI, GLOBAL_PARENT, POI_JOURNEY_ASSOCIATION_DISTANCE, POI_NEW_BADGE_DURATION, POI_STANDARD_TYPE,
+    POI_STARTER_TYPE, POI_THRESHOLD_DISTANCE, POI_TMP_TYPE, POIS_STORE, REMOVE_POI_EVENT,
 }                                                  from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
 import { normalizePOIDisplaySettings }              from '@Core/POIDisplaySettings'
@@ -46,6 +46,16 @@ const finiteNumber = value => {
 
 const normalizeText = value => String(value ?? '').trim()
 const normalizeCountryCode = value => normalizeText(value).toUpperCase()
+
+const migrateNewPOIBadge = data => {
+    if (data?.isNew !== true || Number.isFinite(data.newBadgeExpiresAt)) {
+        return false
+    }
+
+    data.newBadgeExpiresAt = Date.now() + POI_NEW_BADGE_DURATION
+    delete data.isNew
+    return true
+}
 
 /**
  * Check that a persisted POI already has every normalized display setting.
@@ -418,12 +428,47 @@ export class POIManager {
         await this.readStartupPOIsFromDB({includeStarter, journey})
     }
 
+    /**
+     * Create a POI with the shared defaults used by interactive creation paths.
+     * @param {Object} options - POI-specific values that override the shared defaults.
+     * @returns {MapPOI} The newly created POI.
+     */
+    createPOI = (options = {}) => {
+        const poiOptions = Object.assign({
+            bgColor:     lgs.colors.poiDefaultBackground,
+            category:    POI_STANDARD_TYPE,
+            color:       lgs.colors.poiDefault,
+            description: '',
+            title:       '',
+            type:        POI_TMP_TYPE,
+        }, options)
+
+        return new MapPOI(poiOptions)
+    }
+
+    /**
+     * Promote a temporary POI to the standard library type and persist it immediately.
+     * @param {string|Object} poiOrId - POI identifier or POI object.
+     * @returns {Promise<Object|null>} The updated POI, or null when it no longer exists.
+     */
+    promoteToStandardPOI = async (poiOrId) => {
+        const poiId = typeof poiOrId === 'string' ? poiOrId : poiOrId?.id
+        if (!poiId) {
+            return null
+        }
+
+        return this.updatePOI(poiId, {
+            category: POI_STANDARD_TYPE,
+            type:     POI_STANDARD_TYPE,
+        }, {immediate: true})
+    }
+
     isInitialized() {
         return this.#initialized
     }
 
     async updatePOI(id, updates, options = {}) {
-        const {skipPersist = false, immediate = false, skipLocationUpdate = false} = options
+        const {skipPersist = false, immediate = false, skipLocationUpdate = false, markAsEdited = false} = options
         const poi = this.list.get(id)
         if (!poi) {
             return null
@@ -447,6 +492,14 @@ export class POIManager {
         }
         if (Object.keys(safeUpdates).length === 0) {
             return poi
+        }
+
+        const markedAsEdited = markAsEdited
+            && poi.newBadgeExpiresAt !== null
+            && poi.newBadgeExpiresAt !== undefined
+            && Object.entries(safeUpdates).some(([key, value]) => JSON.stringify(poi[key]) !== JSON.stringify(value))
+        if (markedAsEdited) {
+            safeUpdates.newBadgeExpiresAt = null
         }
 
         const hasCoordinatesChanged = ['longitude', 'latitude'].some(key =>
@@ -473,7 +526,7 @@ export class POIManager {
         }
 
         if (!skipPersist) {
-            if (immediate) {
+            if (immediate || markedAsEdited) {
                 await this.persistToDatabase(poi)
             }
             else {
@@ -894,16 +947,14 @@ export class POIManager {
     }
 
     getPointFromGeoJson = async (json, simulate = false) => {
-        const point = {
+        const point = this.createPOI({
             longitude:   json.geometry.coordinates[0],
             latitude:    json.geometry.coordinates[1],
             title:       json.properties.name ?? '',
             description: json.properties.display_name
                          ? json.properties.display_name.split(', ').join(' - ')
                          : '',
-            color:       lgs.darkContrastColor,
-            bgColor:     lgs.colors.poiDefaultBackground,
-        }
+        })
         if (simulate) {
             try {
                 point.simulatedHeight = await this.getHeightFromTerrain({
@@ -1066,6 +1117,14 @@ export class POIManager {
             for (const key of keys) {
                 const data = await lgs.db.lgs1920.get(key, POIS_STORE)
                 if (data) {
+                    if (migrateNewPOIBadge(data)) {
+                        try {
+                            await this.persistToDatabase(new MapPOI(data))
+                        }
+                        catch (error) {
+                            console.warn(`[POIManager] Failed to migrate new badge for POI ${data.id}:`, error)
+                        }
+                    }
                     await this.ensurePersistedDisplaySettings(data)
                 }
                 if (!this.shouldLoadStartupPOI(data, {includeStarter, journey})) {
@@ -1097,6 +1156,14 @@ export class POIManager {
                 }
                 if (this.list.has(data.id)) {
                     continue
+                }
+                if (migrateNewPOIBadge(data)) {
+                    try {
+                        await this.persistToDatabase(new MapPOI(data))
+                    }
+                    catch (error) {
+                        console.warn(`[POIManager] Failed to migrate new badge for POI ${data.id}:`, error)
+                    }
                 }
                 await this.ensurePersistedDisplaySettings(data)
                 const poi = new MapPOI(data)

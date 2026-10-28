@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-25
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -51,7 +51,7 @@ export const MapPOIBulkActionsMenu = React.memo((globals) => {
         const actions = []
         $pois.bulkList.forEach((canHide, id) => {
             if (canHide) {
-                actions.push(__.ui.poiManager.updatePOI(id, {visible: false}))
+                actions.push(__.ui.poiManager.updatePOI(id, {visible: false}, {markAsEdited: true}))
             }
         })
         await Promise.all(actions)
@@ -65,7 +65,7 @@ export const MapPOIBulkActionsMenu = React.memo((globals) => {
         const actions = []
         $pois.bulkList.forEach((canShow, id) => {
             if (canShow) {
-                actions.push(__.ui.poiManager.updatePOI(id, {visible: true}))
+                actions.push(__.ui.poiManager.updatePOI(id, {visible: true}, {markAsEdited: true}))
             }
         })
         await Promise.all(actions)

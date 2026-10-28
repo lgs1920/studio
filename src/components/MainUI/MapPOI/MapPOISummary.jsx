@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-03-25
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@
 import { ICONS_PATH }                from '@Core/constants'
 import { applyPOIDuotoneIconStyles } from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import { WaIcon }                    from '@awesome.me/webawesome/dist/react'
-import { useMemo }                   from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSnapshot }               from 'valtio'
 import './style.css'
 
@@ -33,6 +33,19 @@ export const MapPOISummary = ({poi}) => {
     const pois = useSnapshot($pois)
     const point = useMemo(() => pois.list.get(poi), [pois.list, poi])
     const displayTitle = `${point?.title ?? point?.name ?? point?.id ?? 'POI'}`.trim() || 'POI'
+    const badgeExpiresAt = Number(point?.newBadgeExpiresAt)
+    const [now, setNow] = useState(() => Date.now())
+    const showNewBadge = Number.isFinite(badgeExpiresAt) && badgeExpiresAt > now
+
+    useEffect(() => {
+        const delay = badgeExpiresAt - Date.now()
+        if (!Number.isFinite(badgeExpiresAt) || delay <= 0) {
+            return undefined
+        }
+
+        const timeout = window.setTimeout(() => setNow(Date.now()), delay)
+        return () => window.clearTimeout(timeout)
+    }, [badgeExpiresAt])
 
     const iconName = point?.categoryIcon?.(point.category)
     const isSvg = iconName?.endsWith('.svg')
@@ -46,14 +59,15 @@ export const MapPOISummary = ({poi}) => {
                         variant="regular" family="duotone"
                         onWaLoad={applyPOIDuotoneIconStyles}
                 />
-                <span>{displayTitle}</span>
+                <span className="map-poi-summary-title">{displayTitle}</span>
             </span>
-            {point?.visible &&
-                <span>
+            <span className="map-poi-summary-indicators">
+                    {showNewBadge && <span className="map-poi-new-badge" aria-label="New POI" title="New POI">N</span>}
+                    {point?.visible && <>
                         <WaIcon name="square" style={{color: point.bgColor}} variant="solid"/>
                         <WaIcon name="square" style={{color: point.color}} variant="solid"/>
-                    </span>
-            }
+                    </>}
+            </span>
 
         </div>
     )

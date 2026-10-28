@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2025-01-19
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import { POI_FLAG_START, POI_FLAG_STOP } from '@Core/constants'
 import { featureEach }                   from '@turf/meta'
 
 const CITY_FIELDS = ['city', 'town', 'village', 'municipality', 'hamlet', 'county', 'state']
+const COMMUNE_FIELDS = ['city', 'town', 'village', 'municipality', 'hamlet']
 const REVERSE_GEOCODING_RETRY_DELAY = 60_000
 
 const finiteCoordinate = value => {
@@ -37,6 +38,7 @@ const normalizeCoordinate = coordinate => {
 }
 
 const normalizePlaceName = value => String(value ?? '').trim()
+const isTechnicalPlaceName = value => /^[A-Z][A-Z0-9]*\d+_[A-Za-z0-9]+$/.test(normalizePlaceName(value))
 
 const getTrackCoordinates = track => {
     const geometry = track?.content?.geometry
@@ -76,6 +78,8 @@ export const formatJourneyLocation = (start, stop) => {
 }
 
 const normalizeCountryCode = value => normalizePlaceName(value).toUpperCase()
+
+const firstGeocodingFeature = feature => feature?.type === 'FeatureCollection' ? feature.features?.[0] : feature
 
 const uniqueValues = values => [...new Set(values.map(normalizePlaceName).filter(Boolean))]
 
@@ -135,7 +139,7 @@ export const formatJourneyLocationDetails = (start, stop) => {
 }
 
 export const cityFromGeocodingFeature = feature => {
-    const result = feature?.type === 'FeatureCollection' ? feature.features?.[0] : feature
+    const result = firstGeocodingFeature(feature)
     const properties = result?.properties ?? result ?? {}
     const address = properties.address ?? {}
     const city = CITY_FIELDS.map(field => normalizePlaceName(address[field])).find(Boolean)
@@ -144,11 +148,15 @@ export const cityFromGeocodingFeature = feature => {
         return city
     }
 
-    return normalizePlaceName(properties.name) || normalizePlaceName(properties.display_name).split(',')[0].trim()
+    const fallback = [properties.name, normalizePlaceName(properties.display_name).split(',')[0].trim()]
+        .map(normalizePlaceName)
+        .find(candidate => candidate && !isTechnicalPlaceName(candidate))
+
+    return fallback ?? ''
 }
 
 export const locationDetailsFromGeocodingFeature = feature => {
-    const result = feature?.type === 'FeatureCollection' ? feature.features?.[0] : feature
+    const result = firstGeocodingFeature(feature)
     const properties = result?.properties ?? result ?? {}
     const address = properties.address ?? {}
 
@@ -195,7 +203,7 @@ export class Geocoder {
     proxy
     #search
     #reverse
-    #reverseLocationCache = new Map()
+    #reverseFeatureCache = new Map()
     #reverseLocationUnavailableUntil = 0
     #lastReverseLocationWarningAt = 0
     format
@@ -311,17 +319,35 @@ export class Geocoder {
             return normalizeLocationDetails()
         }
 
-        const key = `${coordinate.longitude.toFixed(5)}:${coordinate.latitude.toFixed(5)}`
+        const feature = await this.#getCoordinateFeature(coordinate)
+        return feature ? locationDetailsFromGeocodingFeature(feature) : normalizeLocationDetails()
+    }
 
-        if (!this.#reverseLocationCache.has(key)) {
-            this.#reverseLocationCache.set(key, this.#fetchLocationDetails(coordinate).catch(error => {
-                this.#reverseLocationCache.delete(key)
-                this.#handleReverseLocationError(error)
-                return normalizeLocationDetails()
-            }))
+    /**
+     * Retrieve a POI's display name and address from its coordinates.
+     * @param {Object} poi - POI whose longitude and latitude should be reverse-geocoded.
+     * @returns {Promise<{title: string, description: string}>} The place name and display address.
+     */
+    getPOIPresentationDetails = async (poi) => {
+        const coordinate = normalizeCoordinate(poi)
+        if (!coordinate || this.#isReverseLocationUnavailable()) {
+            return {title: '', description: ''}
         }
 
-        return this.#reverseLocationCache.get(key)
+        const feature = await this.#getCoordinateFeature(coordinate)
+        const properties = firstGeocodingFeature(feature)?.properties ?? {}
+        const displayName = normalizePlaceName(properties.display_name)
+        const address = properties.address ?? {}
+        const commune = COMMUNE_FIELDS.map(field => normalizePlaceName(address[field])).find(Boolean)
+        const displayLabel = displayName.split(',')[0].trim()
+        const title = [properties.name, commune, displayLabel]
+            .map(normalizePlaceName)
+            .find(candidate => candidate && !isTechnicalPlaceName(candidate)) ?? ''
+
+        return {
+            title,
+            description: displayName.split(', ').join(' - '),
+        }
     }
 
     getCoordinatesLocation = async (start, stop) => {
@@ -343,17 +369,34 @@ export class Geocoder {
         return formatJourneyLocationDetails(startLocation, stopLocation)
     }
 
-    #fetchLocationDetails = async ({longitude, latitude}) => {
+    /** Retrieve one cached reverse-geocoding feature for a coordinate. */
+    #getCoordinateFeature = async coordinate => {
+        const key = `${coordinate.longitude.toFixed(5)}:${coordinate.latitude.toFixed(5)}`
+
+        if (!this.#reverseFeatureCache.has(key)) {
+            this.#reverseFeatureCache.set(key, this.#fetchReverseFeature(coordinate).catch(error => {
+                this.#reverseFeatureCache.delete(key)
+                this.#handleReverseLocationError(error)
+                return null
+            }))
+        }
+
+        return this.#reverseFeatureCache.get(key)
+    }
+
+    /** Fetch the configured reverse-geocoding feature for a coordinate. */
+    #fetchReverseFeature = async ({longitude, latitude}) => {
         const url = new URL(`${this.url}/${this.#reverse}`)
         url.searchParams.append('lon', longitude)
         url.searchParams.append('lat', latitude)
         url.searchParams.append('format', this.format)
         url.searchParams.append('email', this.email)
         url.searchParams.append('addressdetails', 1)
-        url.searchParams.append('zoom', 10)
+        url.searchParams.append('namedetails', 1)
+        // Building-level results include names for POIs while keeping address fields available for city extraction.
+        url.searchParams.append('zoom', 18)
 
-        const feature = await this.fetch(url)
-        return locationDetailsFromGeocodingFeature(feature)
+        return this.fetch(url)
     }
 
     /**

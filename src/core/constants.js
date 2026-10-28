@@ -104,6 +104,7 @@ export const FLAG_START_TYPE = 'start'
 export const FLAG_STOP_TYPE = 'stop'
 export const POI_TRACK_TYPE = 'track'
 export const POI_STANDARD_TYPE = 'poi'
+export const POI_NEW_BADGE_DURATION = 2 * DAY
 export const POI_TMP_TYPE = undefined
 export const POI_FLAG_START = 'start'
 export const POI_FLAG_STOP = 'stop'

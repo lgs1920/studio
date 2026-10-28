@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -93,7 +93,16 @@ describe('POI context-menu creation and editing', () => {
         fireEvent.click(screen.getByText('Create POI'))
         await waitFor(() => expect(UIToast.success).toHaveBeenCalledTimes(1))
         const first = Array.from(lgs.stores.main.components.pois.list.values()).find(poi => poi.id !== 'old-poi')
-        expect(first).toMatchObject(FIRST_PLACE)
+        expect(first).toMatchObject({
+            ...FIRST_PLACE,
+            background:   true,
+            bgColor:      '#ffffff',
+            category:     'poi',
+            color:        '#000000',
+            description:  '',
+            title:        'Point Of Interest',
+            type:         'poi',
+        })
         const firstToast = UIToast.success.mock.calls[0][0]
 
         view.rerender(<MapPointContextMenu target={SECOND_PLACE}/>)

@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STANDARD_TYPE, POI_STARTER_TYPE, POI_TMP_TYPE,
+    CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE, POI_TMP_TYPE,
     ROTATION_ICON, SCENE_MODE_2D,
 }                        from '@Core/constants'
 import { openPOIEditor } from '@Components/MainUI/MapPOI/openPOIEditor'
@@ -65,15 +65,6 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
     // Hide menu after any action (safe – only calls singleton)
     const hideMenu = useCallback(() => __.ui.contextMenu.hide(), [])
 
-    /** Saves the temporary POI as a standard POI. */
-    const saveAsStandardPOI = useCallback(() => {
-        __.ui.poiManager.updatePOI(thePOI, {
-            type: POI_STANDARD_TYPE,
-            category: POI_STANDARD_TYPE,
-        })
-        hideMenu()
-    }, [thePOI, hideMenu])
-
     /** Sets the current POI as the new Starter POI. */
     const setAsStarter = useCallback(async () => {
         const {starter} = await __.ui.poiManager.setStarter(currentPoi)
@@ -117,7 +108,7 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
 
     /** Hides the current POI from the map. */
     const hidePOI = useCallback(async () => {
-        await __.ui.poiManager.updatePOI(thePOI, {visible: false})
+        await __.ui.poiManager.updatePOI(thePOI, {visible: false}, {markAsEdited: true})
         hideMenu()
     }, [thePOI, hideMenu])
 
@@ -219,8 +210,7 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
     const isPOIPanoramic = panoramaState.active
         && panoramaState.target?.element === CURRENT_POI
         && (panoramaState.target?.slug ?? panoramaState.target?.id) === thePOI
-    const canSaveAsStandard = currentPoi?.type === undefined
-    const canSetAsStarter = currentPoi?.type !== POI_STARTER_TYPE && !canSaveAsStandard
+    const canSetAsStarter = Boolean(currentPoi?.id) && currentPoi?.type !== POI_STARTER_TYPE
     const canRemove = currentPoi?.type !== POI_STARTER_TYPE &&
         currentPoi?.type !== POI_FLAG_START &&
         currentPoi?.type !== POI_FLAG_STOP
@@ -276,13 +266,6 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
             </div>
 
             <ul>
-                {/* Save as standard POI */}
-                {canSaveAsStandard && (
-                    <li onClick={saveAsStandardPOI}>
-                        <WaIcon name="location-dot" variant="regular"/>{'Add to library'}
-                    </li>
-                )}
-
                 {/* Set as Starter */}
                 {canSetAsStarter && (
                     <li onClick={setAsStarter}>

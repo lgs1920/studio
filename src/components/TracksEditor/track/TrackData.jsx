@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-26
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,11 +19,9 @@ import {
     EDIT_WIDGET_ICON,
     MILLIS,
     POI_THRESHOLD_DISTANCE,
-    POI_TMP_TYPE,
     SCENE_WIDGETS, SCENE_WIDGETS_BOARD, WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT,
     WIDGETS_EDITOR_DRAWER,
 } from '@Core/constants'
-import { MapPOI }                                                              from '@Core/MapPOI'
 import { Export }                                                              from '@Core/ui/Export'
 import {
     WidgetDynamicRenderer,
@@ -613,22 +611,21 @@ export const TrackData = memo(({compactAfterProfile = false, showWidgetControls 
             }
 
             const height = finiteNumber(point.simulatedHeight ?? point.altitude ?? point.height)
-            const poi = new MapPOI({
-                                       id:              `${STATS_POI_ID_PREFIX}:${parent ?? 'journey'}:${id}:${index}`,
-                                       parent,
-                                       type:            POI_TMP_TYPE,
-                                       title:           `${label}: ${formattedValue}`,
-                                       description:     `${label}: ${formattedValue}`,
-                                       skipLocationUpdate: true,
-                                       longitude,
-                                       latitude,
-                                       height:          height ?? undefined,
-                                       simulatedHeight: height ?? undefined,
-                                       time:            point.time,
-                                       distance:        point.distance,
-                                       expanded:        true,
-                                       visible:         true,
-                                   })
+            const poi = __.ui.poiManager.createPOI({
+                id:                 `${STATS_POI_ID_PREFIX}:${parent ?? 'journey'}:${id}:${index}`,
+                parent,
+                title:              `${label}: ${formattedValue}`,
+                description:        `${label}: ${formattedValue}`,
+                skipLocationUpdate: true,
+                longitude,
+                latitude,
+                height:             height ?? undefined,
+                simulatedHeight:    height ?? undefined,
+                time:               point.time,
+                distance:           point.distance,
+                expanded:           true,
+                visible:            true,
+            })
 
             return __.ui.poiManager.add(poi, false, false)
         }))

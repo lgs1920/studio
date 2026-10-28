@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-10-19
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -370,7 +370,7 @@ const setPoiAnimated = async (target, animated) => {
 
     const poi = lgs.stores.main.components.pois.list.get(poiId)
     if (poi?.animated !== animated) {
-        await __.ui.poiManager.updatePOI(poiId, {animated})
+        await __.ui.poiManager.updatePOI(poiId, {animated}, {markAsEdited: true})
     }
 }
 

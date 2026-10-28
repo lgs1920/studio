@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-11
- * Last modified: 2026-05-11
+ * Created on: 2026-05-03
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -150,7 +150,7 @@ export const usePOIJourneyAssociation = point => {
 
     const handleChangeJourney = useCallback(async (event) => {
         const parent = event.target.value || null
-        await __.ui.poiManager.updatePOI(pointId, {parent}, {immediate: true})
+        await __.ui.poiManager.updatePOI(pointId, {parent}, {immediate: true, markAsEdited: true})
     }, [pointId])
 
     useEffect(() => {

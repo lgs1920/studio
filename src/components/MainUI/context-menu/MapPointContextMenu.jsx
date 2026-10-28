@@ -8,27 +8,29 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-27
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    CURRENT_MAP_POINT, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER, ROTATION_ICON, SCENE_MODE_2D, SCENE_WIDGETS_BOARD,
+    CURRENT_MAP_POINT, POI_NEW_BADGE_DURATION, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER, ROTATION_ICON, SCENE_MODE_2D,
+    SCENE_WIDGETS_BOARD,
     VIDEO_CROP_ZONE,
 } from '@Core/constants'
 import { openPOIEditor } from '@Components/MainUI/MapPOI/openPOIEditor'
+import { focusPOIInOpenList } from '@Components/MainUI/MapPOI/focusPOIInOpenList'
+import { POICreationToastContent } from '@Components/MainUI/MapPOI/POICreationToastContent'
 import {
     getManageableWidgets,
     openWidgetManagementDrawer,
 }                                                                                  from '@Components/MainUI/widgets/openWidgetManagementDrawer'
-import { MapPOI }                                                                  from '@Core/MapPOI'
 import { getOrbitSettings, setOrbitStoreSettings }                                 from '@Core/OrbitSettings'
 import { ELEVATION_UNITS, UnitUtils }                                              from '@Utils/UnitUtils'
 import { UIToast }                                                                 from '@Utils/UIToast'
 import { useProxyValue }                                                            from '@Utils/ValtioUtils'
-import { WaButton, WaDivider, WaIcon }                                             from '@awesome.me/webawesome/dist/react'
+import { WaDivider, WaIcon }                                                       from '@awesome.me/webawesome/dist/react'
 import { useCallback, useMemo }                                                    from 'react'
 import { useSnapshot }                                                             from 'valtio'
 
@@ -73,18 +75,16 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
             return
         }
 
-        const poi = new MapPOI({
-                                   bgColor:         lgs.colors.poiDefaultBackground,
-                                   category:        POI_STANDARD_TYPE,
-                                   color:           lgs.colors.poiDefault,
-                                   description:     '',
-                                   height:          null,
-                                   latitude:        target.latitude,
-                                   longitude:       target.longitude,
-                                   simulatedHeight: target.simulatedHeight ?? target.height ?? 0,
-                                   title:           DEFAULT_POI_TITLE,
-                                   type:            POI_STANDARD_TYPE,
-                               })
+        const poi = __.ui.poiManager.createPOI({
+            category:        POI_STANDARD_TYPE,
+            height:          null,
+            latitude:        target.latitude,
+            longitude:       target.longitude,
+            simulatedHeight: target.simulatedHeight ?? target.height ?? 0,
+            title:           DEFAULT_POI_TITLE,
+            type:            POI_STANDARD_TYPE,
+            newBadgeExpiresAt: Date.now() + POI_NEW_BADGE_DURATION,
+        })
 
         const createdPoi = await __.ui.poiManager.add(poi)
         if (!createdPoi) {
@@ -95,26 +95,48 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
             return
         }
 
+        focusPOIInOpenList(createdPoi.id)
+
+        /** Fill the default title and empty description when reverse geocoding returns a place. */
+        const enrichPOIPresentation = async () => {
+            const geocoder = __.ui.geocoder
+            if (!geocoder?.getPOIPresentationDetails) {
+                return
+            }
+
+            const details = await geocoder.getPOIPresentationDetails(createdPoi)
+            await __.ui.poiManager.ensurePOILocation?.(createdPoi.id)
+            const currentPOI = __.ui.poiManager.get(createdPoi.id)
+            if (!currentPOI) {
+                return
+            }
+
+            const updates = {}
+            const title = details.title || currentPOI.location
+            if (String(currentPOI.title ?? '').trim().toLowerCase() === DEFAULT_POI_TITLE.toLowerCase() && title) {
+                updates.title = title
+            }
+            if (!String(currentPOI.description ?? '').trim() && details.description) {
+                updates.description = details.description
+            }
+
+            if (Object.keys(updates).length > 0) {
+                await __.ui.poiManager.updatePOI(createdPoi.id, updates, {immediate: true})
+            }
+        }
+
+        void enrichPOIPresentation().catch(error => {
+            console.warn('[MapPointContextMenu] Reverse geocoding failed for the created POI:', error)
+        })
+
         const canEditFromToast = lgs.stores.ui.drawers.open !== POIS_EDITOR_DRAWER
         UIToast.success({
                             caption: 'POI created.',
-                            text:    (
-                                         <div className="toast-action-stack">
-                                             <div>{createdPoi.title}</div>
-                                             {canEditFromToast && (
-                                                 <WaButton
-                                                     className="toast-action-button"
-                                                     appearance="filled"
-                                                     size="s"
-                                                     variant="brand"
-                                                     onClick={() => openEditDrawer(createdPoi.id)}
-                                                 >
-                                                     <WaIcon slot="start" name="location-pen"
-                                                             variant="regular"/>{'Edit'}
-                                                 </WaButton>
-                                             )}
-                                         </div>
-                                     ),
+                            text:    <POICreationToastContent
+                                         poi={createdPoi}
+                                         canEdit={canEditFromToast}
+                                         onEdit={() => openEditDrawer(createdPoi.id)}
+                                     />,
                         })
         hideMenu()
     }, [hideMenu, openEditDrawer, target])
