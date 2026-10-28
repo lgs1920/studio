@@ -23,7 +23,7 @@
  */
 
 import {normalizeJourneyReplayClips, REPLAY_CLIP_SLOT_POST_REPLAY, REPLAY_CLIP_SLOT_PRE_REPLAY} from './JourneyReplayClips'
-import {replayRouteTimeAtPlaybackTime} from './ReplayPOISpeedProfile'
+import {isReplayPOICrawlAtPlaybackTime, replayRouteTimeAtPlaybackTime} from './ReplayPOISpeedProfile'
 
 const DEFAULT_FPS = 30
 
@@ -313,6 +313,8 @@ export const resolveReplayVideoFramePhase = ({
     const replayProgress = phase.kind === 'replay'
         ? progressAtReplayPlaybackTime(timeline, localMillis, localProgress)
         : phase.anchorProgress
+    const poiCameraFreeze = phase.kind === 'replay'
+        && isReplayPOICrawlAtPlaybackTime(timeline?.replayProgressProfile, localMillis)
     const metrics = resolvePhaseFrameMetrics({phase, localMillis})
     const replayFrameIndex = phase.kind === 'replay' ? metrics.phaseFrameIndex : null
     const replayFrameCount = phase.kind === 'replay' ? metrics.phaseFrameCount : null
@@ -335,6 +337,7 @@ export const resolveReplayVideoFramePhase = ({
         frameIndex,
         frameCount: timeline.frameCount,
         progress: replayProgress,
+        poiCameraFreeze,
         localProgress,
         localMillis,
         ...metrics,

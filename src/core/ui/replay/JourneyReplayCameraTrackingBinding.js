@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-03
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -622,6 +622,23 @@ const updateCameraTracking = (mode, {
     if (!sample || (!exportMode && state.replayExportCameraActive)) {
         return
     }
+
+    const poiCameraFreeze = logicalFrame?.poiCameraFreeze === true
+        || logicalFrame?.phase?.poiCameraFreeze === true
+    if (poiCameraFreeze) {
+        if (!state.poiCameraFreezeFrame) {
+            call.cancelCameraBezierTransition(false)
+            state.poiCameraFreezeFrame = call.currentCameraFrame?.(null) ?? null
+        }
+        if (state.poiCameraFreezeFrame) {
+            call.applyCameraFrame?.(state.poiCameraFreezeFrame)
+            if (logicalFrame) {
+                logicalFrame.cameraFrame = state.poiCameraFreezeFrame
+            }
+        }
+        return
+    }
+    state.poiCameraFreezeFrame = null
 
     const updateStartedAt = globalThis.performance?.now?.() ?? Date.now()
     const updateCache = createReplayCameraUpdateCache()
@@ -1345,6 +1362,10 @@ const updateCameraTracking = (mode, {
  */
 export const updateCamera = (mode, options = {}) => {
     updateCameraTracking(mode, options)
+    if (options.logicalFrame?.poiCameraFreeze === true
+        || options.logicalFrame?.phase?.poiCameraFreeze === true) {
+        return
+    }
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     if (!options.sample || state.cameraUserAdjusting || state.cameraApplyingView

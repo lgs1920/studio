@@ -61,6 +61,7 @@ export const replayFrameIntentToLogicalFrame = intent => intent ? {
     cameraPose: intent.scene?.cameraPose ?? null,
     cameraCommand: intent.scene?.cameraCommand ?? null,
     cameraFrame: intent.scene?.cameraFrame ?? null,
+    poiCameraFreeze: intent.timeline?.phase?.poiCameraFreeze === true,
     phase: intent.timeline?.phase ?? null,
     source: intent.source ?? 'replay',
 } : null

@@ -1053,7 +1053,9 @@ export const bindRenderer = (mode, ) => {
                         showTrace: isJourneyReplayTraceActive(),
                     })
                     traceUpdateStep('renderer.update.end')
-                    if (!videoCaptureActive && detail.source !== 'scrub' && state.lastPlaybackUpdateProgressKey === playbackProgressKey) {
+                    if (!videoCaptureActive && detail.source !== 'scrub' && detail.poiCameraFreeze !== true
+                        && !state.poiCameraFreezeFrame
+                        && state.lastPlaybackUpdateProgressKey === playbackProgressKey) {
                         updateReplayFrameRenderContract({
                             logicalFrame: detail?.logicalFrame,
                         })

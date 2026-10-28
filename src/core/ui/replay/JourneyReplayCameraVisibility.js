@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -181,6 +181,7 @@ export const resetCameraInterpolationState = (mode, {
         state.lastCameraLogicalNow = null
         state.lastCameraTimingLogicalNow = null
         state.lastCameraTimingWallNow = null
+        state.poiCameraFreezeFrame = null
         state.cameraTimingChange = null
     }
 

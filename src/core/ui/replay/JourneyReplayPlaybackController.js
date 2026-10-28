@@ -28,6 +28,7 @@ import {projectReplayPOIsOnSampler} from './JourneyReplayPOIProjection'
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
 import {
     createReplayPOISpeedProfile,
+    isReplayPOICrawlAtPlaybackTime,
     replayPlaybackTimeAtRouteTime,
     replayRouteTimeAtPlaybackTime,
 } from './ReplayPOISpeedProfile'
@@ -494,12 +495,18 @@ export class JourneyReplayPlaybackController {
     /** Build one frame detail with its playback or explicit scrub source. */
     #eventDetail = (sample, source = 'replay-clock') => {
         const runtimeFrame = globalThis.lgs?.stores?.replay?.dynamicFrameState ?? null
+        const poiCameraFreeze = source !== 'scrub'
+            && isReplayPOICrawlAtPlaybackTime(
+                this.#playbackProfile,
+                this.#elapsedFromProgress(this.#progress),
+            )
         const logicalFrame = createJourneyReplayLogicalFrame({
             sample,
             progress:        this.#progress,
             durationMillis:  runtimeFrame?.durationMillis ?? this.#duration * MILLIS,
             frameTimeMs:     runtimeFrame?.frameTimeMs,
             frameIntervalMs: runtimeFrame?.frameIntervalMs,
+            poiCameraFreeze,
             phase:           runtimeFrame?.phase,
             source,
         })
@@ -517,6 +524,7 @@ export class JourneyReplayPlaybackController {
             frameTimeMs:     logicalFrame.frameTimeMs,
             frameIntervalMs: logicalFrame.frameIntervalMs,
             logicalFrame,
+            poiCameraFreeze,
             source,
         }
     }

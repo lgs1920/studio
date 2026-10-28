@@ -216,6 +216,7 @@ export class JourneyReplaySessionController {
     #lastCameraLogicalNow = null
     #lastCameraTimingLogicalNow = null
     #lastCameraTimingWallNow = null
+    #poiCameraFreezeFrame = null
     #cameraTimingChange = null
     #savedCameraState = null
     #preparationExitCameraState = null
@@ -500,6 +501,13 @@ export class JourneyReplaySessionController {
             get: () => this.#lastCameraTimingWallNow,
             set: value => {
                 this.#lastCameraTimingWallNow = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'poiCameraFreezeFrame', {
+            configurable: true,
+            get: () => this.#poiCameraFreezeFrame,
+            set: value => {
+                this.#poiCameraFreezeFrame = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'cameraTimingChange', {

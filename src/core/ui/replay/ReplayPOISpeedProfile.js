@@ -17,7 +17,10 @@
 import {isReplayPOIAnimationEndpoint, normalizeJourneyReplayPOISettings, normalizeReplayPOIBehavior} from './JourneyReplayPOISettings'
 
 const DEFAULT_POI_PLAYBACK_SPEED_FACTOR = 0.5
-const DEFAULT_POI_HOLD_DURATION_MILLIS = 1000
+const DEFAULT_POI_SLOWDOWN_DURATION_MILLIS = 2000
+const POI_CRAWL_SPEED_FACTOR = 0.05
+const POI_CRAWL_RAMP_STEPS = 16
+const MAX_POI_REPLAY_DISTANCE_METERS = 500
 const POI_SPEED_RAMP_STEPS = 16
 
 /** Convert input into a finite number or null. */
@@ -29,8 +32,58 @@ const finiteNumber = value => {
 /** Clamp a numeric value to an inclusive range. */
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value))
 
+/** Create a two-second crawl profile that reaches zero speed at the POI. */
+const createPOICrawlSegments = (centerMillis, routeDuration) => {
+    const maximumRouteSpan = DEFAULT_POI_SLOWDOWN_DURATION_MILLIS * POI_CRAWL_SPEED_FACTOR / 2
+    const routeSpan = Math.min(
+        maximumRouteSpan,
+        Math.max(0, centerMillis) * 2,
+        Math.max(0, routeDuration - centerMillis) * 2,
+    )
+    if (routeSpan <= 0) {
+        return []
+    }
+
+    const peakSpeedFactor = routeSpan * 2 / DEFAULT_POI_SLOWDOWN_DURATION_MILLIS
+    const routeStartMillis = centerMillis - routeSpan / 2
+    const halfDurationMillis = DEFAULT_POI_SLOWDOWN_DURATION_MILLIS / 2
+    const stepDurationMillis = halfDurationMillis / POI_CRAWL_RAMP_STEPS
+    const segments = []
+    let routeCursor = routeStartMillis
+
+    for (let half = 0; half < 2; half += 1) {
+        for (let step = 0; step < POI_CRAWL_RAMP_STEPS; step += 1) {
+            const start = step * stepDurationMillis
+            const end = (step + 1) * stepDurationMillis
+            const routeDistance = half === 0
+                ? peakSpeedFactor * (end - start - (end ** 2 - start ** 2) / (2 * halfDurationMillis))
+                : peakSpeedFactor * (end ** 2 - start ** 2) / (2 * halfDurationMillis)
+            const routeEndMillis = half === 0 && step === POI_CRAWL_RAMP_STEPS - 1
+                ? centerMillis
+                : half === 1 && step === POI_CRAWL_RAMP_STEPS - 1
+                    ? routeStartMillis + routeSpan
+                    : routeCursor + routeDistance
+            const segmentDurationMillis = stepDurationMillis
+            segments.push({
+                routeStartMillis: routeCursor,
+                routeEndMillis,
+                speedFactor: (routeEndMillis - routeCursor) / segmentDurationMillis,
+            })
+            routeCursor = routeEndMillis
+        }
+    }
+
+    return segments
+}
+
+/** Check whether the POI is close enough to the Replay route to affect its timing. */
+const isPOINearReplayRoute = entry => {
+    const distance = finiteNumber(entry?.distanceToJourneyMeters)
+    return distance === null || distance <= MAX_POI_REPLAY_DISTANCE_METERS
+}
+
 /**
- * Build a time-warp profile that slows around displayed POIs and holds at their closest point.
+ * Build a time-warp profile that slows around displayed POIs and crawls past each one.
  *
  * @param {object} options - Replay and POI timing inputs.
  * @returns {object} Route and playback time segments with the effective duration.
@@ -53,7 +106,10 @@ export const createReplayPOISpeedProfile = ({
     const safeDirection = Number(direction) < 0 ? -1 : 1
     const hasExpandedPOI = poiEntries.some(entry => {
         const poi = entry?.poi ?? entry
-        return poi?.expanded === true && !isReplayPOIAnimationEndpoint(poi)
+        return poi?.expanded === true
+            && poi?.tooClose !== true
+            && isPOINearReplayRoute(entry)
+            && !isReplayPOIAnimationEndpoint(poi)
     })
     const shouldSlowdown = enabled && (behavior.animatePoisDuringJourneyReplay || hasExpandedPOI)
 
@@ -76,13 +132,16 @@ export const createReplayPOISpeedProfile = ({
         }
 
         const poiSettings = normalizeJourneyReplayPOISettings(poi.replay)
+        if (poi.tooClose === true || !isPOINearReplayRoute(entry)) {
+            return []
+        }
+
         const willExpandDuringAnimation = behavior.animatePoisDuringJourneyReplay && poiSettings.animated !== false
         if (poi.expanded !== true && !willExpandDuringAnimation) {
             return []
         }
 
-        if (behavior.poiVisibilityMode === 'user'
-            && poiSettings.visible === false) {
+        if (behavior.poiVisibilityMode === 'user' && poiSettings.visible === false) {
             return []
         }
 
@@ -101,7 +160,7 @@ export const createReplayPOISpeedProfile = ({
         return [{routeStartMillis, routeEndMillis, routeCenterMillis}]
     }).sort((left, right) => left.routeStartMillis - right.routeStartMillis)
 
-    // Merge overlapping windows while retaining each POI's center and one-second hold.
+    // Merge overlapping windows while retaining each POI's crawl zone.
     const mergedWindows = windows.reduce((merged, window) => {
         const previous = merged.at(-1)
         if (previous && window.routeStartMillis <= previous.routeEndMillis) {
@@ -118,7 +177,7 @@ export const createReplayPOISpeedProfile = ({
     let playbackCursor = 0
     const segments = []
     /** Append one ordered route segment and advance its playback clock. */
-    const appendSegment = (routeStartMillis, routeEndMillis, speed) => {
+    const appendSegment = (routeStartMillis, routeEndMillis, speed, metadata = {}) => {
         if (routeEndMillis <= routeStartMillis) {
             return
         }
@@ -130,29 +189,23 @@ export const createReplayPOISpeedProfile = ({
             playbackStartMillis: playbackCursor,
             playbackEndMillis: playbackCursor + playbackDuration,
             speedFactor: speed,
+            ...metadata,
         })
         playbackCursor += playbackDuration
         routeCursor = routeEndMillis
-    }
-
-    /** Append a one-second wall-clock hold without advancing route progress. */
-    const appendPOIHold = routeMillis => {
-        segments.push({
-            routeStartMillis: routeMillis,
-            routeEndMillis: routeMillis,
-            playbackStartMillis: playbackCursor,
-            playbackEndMillis: playbackCursor + DEFAULT_POI_HOLD_DURATION_MILLIS,
-            speedFactor: 0,
-            poiHold: true,
-        })
-        playbackCursor += DEFAULT_POI_HOLD_DURATION_MILLIS
-        routeCursor = routeMillis
     }
 
     mergedWindows.forEach(window => {
         appendSegment(routeCursor, window.routeStartMillis, 1)
 
         const breakpoints = new Set([window.routeStartMillis, window.routeEndMillis])
+        const crawlSegments = window.windows.flatMap(({routeCenterMillis}) => (
+            createPOICrawlSegments(routeCenterMillis, routeDuration)
+        ))
+        crawlSegments.forEach(({routeStartMillis, routeEndMillis}) => {
+            breakpoints.add(routeStartMillis)
+            breakpoints.add(routeEndMillis)
+        })
         window.windows.forEach(poiWindow => {
             const {routeStartMillis, routeEndMillis, routeCenterMillis} = poiWindow
             const halfSteps = Math.max(1, POI_SPEED_RAMP_STEPS)
@@ -164,7 +217,6 @@ export const createReplayPOISpeedProfile = ({
         })
 
         const orderedBreakpoints = [...breakpoints].sort((left, right) => left - right)
-        const holdCenters = [...new Set(window.windows.map(poiWindow => poiWindow.routeCenterMillis))]
         const speedAt = routeMillis => window.windows.reduce((slowest, poiWindow) => {
             const {routeStartMillis, routeEndMillis, routeCenterMillis} = poiWindow
             if (routeMillis < routeStartMillis || routeMillis > routeEndMillis) {
@@ -182,10 +234,16 @@ export const createReplayPOISpeedProfile = ({
         orderedBreakpoints.forEach((point, index) => {
             if (index > 0) {
                 const previousPoint = orderedBreakpoints[index - 1]
-                appendSegment(previousPoint, point, speedAt((previousPoint + point) / 2))
-            }
-            if (holdCenters.includes(point)) {
-                appendPOIHold(point)
+                const middlePoint = (previousPoint + point) / 2
+                const crawlSegment = crawlSegments.find(segment => (
+                    middlePoint >= segment.routeStartMillis && middlePoint < segment.routeEndMillis
+                ))
+                appendSegment(
+                    previousPoint,
+                    point,
+                    crawlSegment?.speedFactor ?? speedAt(middlePoint),
+                    crawlSegment ? {poiCrawl: true} : {},
+                )
             }
         })
     })
@@ -223,6 +281,18 @@ export const replayRouteTimeAtPlaybackTime = (profile, playbackMillis) => {
     return clamp(segment.routeStartMillis + localPlayback * segment.speedFactor, 0, routeDuration)
 }
 
+/** Return whether playback is inside the extreme crawl around a Replay POI. */
+export const isReplayPOICrawlAtPlaybackTime = (profile, playbackMillis) => {
+    const time = finiteNumber(playbackMillis)
+    if (time === null) {
+        return false
+    }
+
+    return profile?.segments?.some(segment => segment.poiCrawl === true
+        && time >= segment.playbackStartMillis
+        && time < segment.playbackEndMillis) === true
+}
+
 /**
  * Convert route milliseconds into Replay wall-clock milliseconds.
  *
@@ -241,7 +311,7 @@ export const replayPlaybackTimeAtRouteTime = (profile, routeMillis) => {
         return routeTime
     }
 
-    if (segment.poiHold || segment.speedFactor <= 0) {
+    if (segment.speedFactor <= 0) {
         return clamp(segment.playbackStartMillis, 0, playbackDuration)
     }
 

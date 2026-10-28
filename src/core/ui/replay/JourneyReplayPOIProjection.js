@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,10 +50,11 @@ export const projectReplayPOIsOnSampler = (entries, sampler) => {
             if (!nearest || distance < nearest.distance) {
                 nearest = {
                     distance,
+                    distanceToJourneyMeters: distance,
                     projectedAbscissa: segment.startDistance + projection.properties.totalDistance,
                 }
             }
         }
-        return nearest ? [{...entry, projectedAbscissa: nearest.projectedAbscissa}] : []
+        return nearest ? [{...entry, ...nearest}] : []
     })
 }

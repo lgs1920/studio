@@ -805,6 +805,7 @@ export const captureReplayDeferredExportContext = ({
                 segment.routeStartMillis,
                 segment.routeEndMillis,
                 segment.speedFactor,
+                segment.poiCrawl === true,
             ])),
         } : {}),
         renderContract: renderContext.contract,

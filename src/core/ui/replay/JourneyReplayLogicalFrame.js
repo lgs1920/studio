@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,7 @@ export const createJourneyReplayLogicalFrame = ({
                                                      cameraPose = null,
                                                      cameraCommand = null,
                                                      cameraFrame = null,
+                                                     poiCameraFreeze = false,
                                                      phase = null,
                                                      source = 'replay',
                                                  } = {}) => {
@@ -63,6 +64,7 @@ export const createJourneyReplayLogicalFrame = ({
         cameraPose:      cameraPose ?? null,
         cameraCommand:   cameraCommand ?? null,
         cameraFrame:     cameraFrame ?? null,
+        poiCameraFreeze: poiCameraFreeze === true || phase?.poiCameraFreeze === true,
         phase:           phase ?? null,
         source,
     }
