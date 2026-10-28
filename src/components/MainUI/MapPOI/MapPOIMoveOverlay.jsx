@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,7 @@ import { isCesiumInputBlocked } from '@Core/events/CesiumInputGate'
 import { POIUtils } from '@Utils/cesium/POIUtils'
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import { UIToast } from '@Utils/UIToast'
+import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { WaButton } from '@awesome.me/webawesome/dist/react'
 import { Cartesian2, Cartesian3, Cartographic, Math as CesiumMath, Property, JulianDate } from 'cesium'
 import { createPortal } from 'react-dom'
@@ -136,6 +137,7 @@ const pickTerrainLocation = (viewer, clientX, clientY) => {
  */
 export const MapPOIMoveOverlay = () => {
     const session = useSyncExternalStore(subscribeToPOIMove, getPOIMoveSession, getPOIMoveSession)
+    const journeyEditor = useOptionalSnapshot(lgs.stores.journeyEditor)
     const $pois = lgs.stores.main.components.pois
     const poiListSnapshot = useSnapshot($pois.list)
     const poi = session?.poiId ? poiListSnapshot.get(session.poiId) ?? {} : {}
@@ -276,7 +278,7 @@ export const MapPOIMoveOverlay = () => {
         }
         let updatedPOI
         try {
-            updatedPOI = await __.ui.poiManager.updatePOI(session.poiId, updates, {immediate: true})
+            updatedPOI = await __.ui.poiManager.updatePOI(session.poiId, updates, {immediate: true, markAsEdited: true})
             if (!updatedPOI) {
                 cancelMove()
                 return
@@ -404,6 +406,12 @@ export const MapPOIMoveOverlay = () => {
         if (_drag.current || event.isPrimary === false || (event.button !== undefined && event.button !== 0)) {
             return
         }
+        if (globalThis.lgs?.stores?.journeyEditor?.fixPathEditorOpen === true) {
+            event.preventDefault()
+            event.stopPropagation()
+            cancelMove()
+            return
+        }
         event.preventDefault()
         event.stopPropagation()
         const activeViewport = _viewport.current
@@ -422,12 +430,18 @@ export const MapPOIMoveOverlay = () => {
         setDragging(true)
         updateFromPointer(event, drag)
         event.currentTarget.setPointerCapture?.(event.pointerId)
-    }, [anchor, container, updateFromPointer])
+    }, [anchor, cancelMove, container, updateFromPointer])
 
     /** Track the pointer while the marker owns the pointer capture. */
     const handlePointerMove = useCallback(event => {
         const drag = _drag.current
         if (!drag || drag.pointerId !== event.pointerId) {
+            return
+        }
+        if (globalThis.lgs?.stores?.journeyEditor?.fixPathEditorOpen === true) {
+            event.preventDefault()
+            event.stopPropagation()
+            cancelMove()
             return
         }
         event.preventDefault()
@@ -448,6 +462,12 @@ export const MapPOIMoveOverlay = () => {
     const handlePointerUp = useCallback(event => {
         const drag = _drag.current
         if (!drag || drag.pointerId !== event.pointerId) {
+            return
+        }
+        if (globalThis.lgs?.stores?.journeyEditor?.fixPathEditorOpen === true) {
+            event.preventDefault()
+            event.stopPropagation()
+            cancelMove()
             return
         }
         event.preventDefault()
@@ -476,6 +496,12 @@ export const MapPOIMoveOverlay = () => {
     useLayoutEffect(() => {
         _pointerHandlers.current = {handlePointerMove, handlePointerUp, handlePointerCancel, cancelMove}
     }, [cancelMove, handlePointerCancel, handlePointerMove, handlePointerUp])
+
+    useEffect(() => {
+        if (journeyEditor.fixPathEditorOpen === true && session?.poiId) {
+            cancelMove()
+        }
+    }, [cancelMove, journeyEditor.fixPathEditorOpen, session?.poiId])
 
     useEffect(() => {
         if (!canvas) {
@@ -789,7 +815,7 @@ export const MapPOIMoveOverlay = () => {
                     style={{
                         left: `${displayedPoint.x - markerGeometry.anchorOffset.x}px`,
                         top: `${displayedPoint.y - markerGeometry.anchorOffset.y}px`,
-                        '--lgs-poi-background-color': poi.noBackground ? 'transparent' : poi.bgColor ?? lgs.colors.poiDefaultBackground,
+                        '--lgs-poi-background-color': poi.background === false ? 'transparent' : poi.bgColor ?? lgs.colors.poiDefaultBackground,
                         '--lgs-poi-border-color': poi.color ?? lgs.colors.poiDefault,
                         '--lgs-poi-color': poi.color ?? lgs.colors.poiDefault,
                     }}

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -1510,8 +1510,8 @@ export const FixPathEditor = () => {
             && previousLasso.replaceSelection === replaceSelection
         const selectSourcePoints = continuesLasso
             ? previousLasso.kind === 'source'
-            : sourceSelection && !marker
-        if (scanProgress || (selection.phase === 'add-points' && !marker)
+            : sourceSelection
+        if (scanProgress || (selection.phase === 'add-points' && !marker && !sourceSelection)
             || event.button !== 0 || !modifier
             || event.pointerType === 'touch'
             || event.target?.closest?.('.fix-path-panel, .fix-path-context-menu')) {

@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -108,7 +108,7 @@ const createPOI = overrides => proxy({
     visible: true,
     color: 'var(--wa-color-brand-fill-normal)',
     bgColor: 'var(--wa-color-brand-fill-quiet)',
-    noBackground: false,
+    background: true,
     ...overrides,
 })
 
@@ -524,7 +524,7 @@ describe('POI move interaction', () => {
     it('inlines the loaded custom SVG category icon in a transparent move preview', async () => {
         const poi = createPOI({
             expanded: false,
-            noBackground: true,
+            background: false,
             category: 'refuge',
             categoryIcon: () => 'house-bed.svg',
         })
@@ -543,7 +543,7 @@ describe('POI move interaction', () => {
         await act(async () => {
             await Promise.resolve()
         })
-        expect(clonedPOI.querySelector('.poi-card-inner').classList.contains('poi-card-inner--no-background')).toBe(true)
+        expect(clonedPOI.querySelector('.poi-card-inner').classList.contains('poi-card-inner--background-hidden')).toBe(true)
         expect(clonedPOI.querySelector('svg.poi-as-flag path[data-duotone-primary]')).toBeTruthy()
         expect(mocks.stylePOIDuotoneIcon).toHaveBeenCalledWith(sourceIcon)
     })
