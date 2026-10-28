@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-25
- * Last modified: 2026-10-27
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -537,6 +537,18 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                       </div>
 
                                                       <MapPOIEditPreview poi={id}/>
+                                                      <div className="map-poi-display-controls">
+                                                          <WaSwitch
+                                                              className="map-poi-style-switch"
+                                                              size="xs"
+                                                              label-at-start
+                                                              checked={point.replay?.animated !== false}
+                                                              disabled={!visible}
+                                                              onInput={handleReplayAnimationChange}
+                                                          >
+                                                              {'Animate during Replay'}
+                                                          </WaSwitch>
+                                                      </div>
 
                                                       <WaTabGroup
                                                           className="map-poi-edit-tabs"
@@ -551,17 +563,6 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                           </WaTab>
                                                           <WaTabPanel name={`poi-edit-${id}`}>
                                                               <div className="edit-map-poi-wrapper">
-                                                                  <div className="map-poi-replay-animation-row">
-                                                                      <WaSwitch
-                                                                          size="xs"
-                                                                          label-at-start
-                                                                          checked={point.replay?.animated !== false}
-                                                                          disabled={!visible}
-                                                                          onInput={handleReplayAnimationChange}
-                                                                      >
-                                                                          {'Animate during Replay'}
-                                                                      </WaSwitch>
-                                                                  </div>
                                                                   <MapPOICategorySelector point={point} disabled={!visible}/>
                                                                   <WaInput appearance="filled"
                                                                       size="s"

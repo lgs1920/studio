@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-09
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -80,5 +80,16 @@ describe('MapPOIListItem', () => {
         await waitFor(() => {
             expect(scrollIntoViewSpy).toHaveBeenCalledWith({behavior: 'smooth', block: 'nearest'})
         })
+    })
+
+    it('keeps the bulk-selection checkbox outside the details so it can align with the summary title', () => {
+        const {container} = render(<MapPOIListItem id="poi-2" canSelect/>)
+        const wrapper = container.querySelector('.edit-map-poi-item-wrapper')
+        const details = container.querySelector('.edit-map-poi-item')
+        const checkbox = container.querySelector('.map-poi-item-checkbox')
+
+        expect(checkbox.parentElement).toBe(wrapper)
+        expect(details.parentElement).toBe(wrapper)
+        expect(checkbox.nextElementSibling).toBe(details)
     })
 })

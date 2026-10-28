@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,8 +36,8 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaDivider: () => null,
     WaIcon: () => null,
     WaInput: () => null,
-    WaSwitch: ({checked, children, disabled, onInput}) => (
-        <label>
+    WaSwitch: ({checked, children, className, disabled, onInput}) => (
+        <label className={className}>
             <input
                 type="checkbox"
                 checked={checked}
@@ -48,7 +48,7 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
         </label>
     ),
     WaTab: ({children}) => <div>{children}</div>,
-    WaTabGroup: ({children}) => <div>{children}</div>,
+    WaTabGroup: ({children, className}) => <div className={className}>{children}</div>,
     WaTabPanel: ({children}) => <div>{children}</div>,
     WaTextarea: () => null,
     WaTooltip: () => null,
@@ -113,14 +113,23 @@ describe('MapPOIEditContent Replay animation setting', () => {
         globalThis.__ = undefined
     })
 
-    it('places the per-POI Replay switch first and immediately persists its boolean value', async () => {
+    it('places the per-POI Replay switch below the preview and outside the tabs', async () => {
         const {container} = render(<MapPOIEditContent poi="poi-1"/>)
-        const replayRow = container.querySelector('.map-poi-replay-animation-row')
-        const editContent = container.querySelector('.edit-map-poi-wrapper')
+        const preview = container.querySelector('.map-poi-edit-preview')
+        const tabGroup = container.querySelector('.map-poi-edit-tabs')
         const animationSwitch = screen.getByLabelText('Animate during Replay')
+        const replayControls = preview.nextElementSibling
 
-        expect(editContent.firstElementChild).toBe(replayRow)
+        expect(replayControls).toHaveClass('map-poi-display-controls')
+        expect(replayControls.querySelector('.map-poi-style-switch')).toBe(animationSwitch.closest('.map-poi-style-switch'))
+        expect(replayControls.nextElementSibling).toBe(tabGroup)
+        expect(tabGroup.contains(replayControls)).toBe(false)
         expect(animationSwitch.checked).toBe(false)
+    })
+
+    it('immediately persists the updated Replay animation setting', async () => {
+        const {container} = render(<MapPOIEditContent poi="poi-1"/>)
+        const animationSwitch = screen.getByLabelText('Animate during Replay')
 
         fireEvent.click(animationSwitch)
 
