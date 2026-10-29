@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,7 @@ import {
 import {renderReplayExportFrame} from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
 import {buildReplayVideoTimeline, resolveReplayVideoFramePhase} from '@Core/ui/replay/ReplayVideoTimeline'
 import {resetRuntimeProgress} from '@Core/ui/replay/JourneyReplayRuntime'
+import * as ReplayVisibility from '@Core/ui/replay/JourneyReplayVisibilityController'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
 /** Install a production POI window and visibility policy behind the public export frame boundary. */
@@ -68,6 +69,51 @@ afterEach(() => {
 })
 
 describe('Replay POI fixed-frame lifecycle', () => {
+    it.each(['basic', 'expert'])('restores the pre-preparation POIs after an export handoff in %s mode', userMode => {
+        const pois = [
+            {id: 'initially-shown', visible: true, replay: {visible: false}},
+            {id: 'user-hidden', visible: false},
+            {id: 'render-hidden', visible: true},
+        ]
+        const entities = new Map(pois.map((poi, index) => [poi.id, {
+            show: index === 0,
+            billboard: {show: index === 0},
+        }]))
+        const replay = {userMode, animatedPOIIds: [], nearbyPois: []}
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {userMode, basic: {poiVisibilityMode: 'no'}, hideAllPoisDuringJourneyReplay: true}}},
+            stores: {replay, main: {components: {pois: {list: new Map(pois.map(poi => [poi.id, poi]))}}}},
+            viewer: {entities: {getById: id => entities.get(id)}, dataSources: {length: 0}},
+            scene: {requestRender: vi.fn()},
+        })
+        const state = {replayPOIVisibilityState: new Map(), replayPoiTriggered: new Set()}
+        const call = {}
+        const mode = {[JOURNEY_REPLAY_INTERNAL_STATE]: state, [JOURNEY_REPLAY_INTERNAL_CALL]: call}
+        for (const name of ['replayPOICandidates', 'resolveJourneyReplayPOI', 'poiEntities', 'isVisibleProperty',
+            'isPOIVisibleBeforePlayback', 'setPOIEntityVisibility']) {
+            call[name] = (...args) => ReplayVisibility[name](mode, ...args)
+        }
+
+        ReplayVisibility.hideJourneyReplayPOIsForPreparation(mode)
+        expect(entities.get('initially-shown').show).toBe(false)
+
+        // Record marks the export active before restoring the preceding preparation scene.
+        replay.deferredExportPlan = {runtime: {status: 'exporting'}}
+        ReplayVisibility.restoreJourneyReplayPOIVisibility(mode)
+        ReplayVisibility.applyJourneyReplayPOIVisibility(mode)
+        expect(entities.get('initially-shown').show).toBe(false)
+
+        replay.deferredExportPlan.runtime.status = 'ready'
+        resetRuntimeProgress(replay)
+        ReplayVisibility.restoreJourneyReplayPOIVisibility(mode)
+
+        expect(entities.get('initially-shown')).toEqual({show: true, billboard: {show: true}})
+        expect(entities.get('user-hidden').show).toBe(false)
+        expect(entities.get('render-hidden').show).toBe(false)
+        expect(state.replayPOIVisibilityState.size).toBe(0)
+        expect(pois.map(poi => poi.visible)).toEqual([true, false, true])
+    })
+
     it.each([false, true])('closes a final animated POI before the outro and keeps Hide all applied (dryRun=%s)', async dryRun => {
         const {poi, replay, entity, renderAt} = createReplay()
 

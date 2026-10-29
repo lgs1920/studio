@@ -24,6 +24,7 @@ import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {getJourneyReplayHideOtherJourneys} from '@Core/ui/JourneyVisibility'
 import {
     isReplayPOIEndpoint,
+    isReplayPOIPresentationActive,
     normalizeJourneyReplayPOISettings,
 } from './JourneyReplayPOISettings'
 import {
@@ -345,23 +346,32 @@ export const reapplyHideAllPOIVisibilityAfterAnimations = mode => {
     return true
 }
 
-export const restoreJourneyReplayPOIVisibility = (mode) => {
+/**
+ * Restore saved POI visibility, retaining the baseline while Replay still masks the scene.
+ * @param {object} mode - Replay session mode.
+ * @returns {void}
+ */
+export const restoreJourneyReplayPOIVisibility = mode => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        for (const [poiId, poiState] of state.replayPOIVisibilityState.entries()) {
-            const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
-                ?? globalThis.__?.ui?.poiManager?.get?.(poiId)
-            if (!poi?.id) {
-                continue
-            }
-
-            call.setPOIEntityVisibility(poi, poiState?.visible === true && poi.visible !== false)
+    for (const [poiId, poiState] of state.replayPOIVisibilityState.entries()) {
+        const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
+            ?? globalThis.__?.ui?.poiManager?.get?.(poiId)
+        if (!poi?.id) {
+            continue
         }
 
-        state.replayPOIVisibilityState.clear()
-        globalThis.lgs?.scene?.requestRender?.()
+        call.setPOIEntityVisibility(poi, poiState?.visible === true && poi.visible !== false)
     }
+
+    // Record starts its export mask before cleaning up the preceding preparation.
+    // Only consume the baseline once visibility can return to the normal map.
+    if (!isReplayPOIPresentationActive()) {
+        state.replayPOIVisibilityState.clear()
+    }
+    globalThis.lgs?.scene?.requestRender?.()
+}
 
 /**
  * Hide every visible POI while Replay camera preparation is in progress.
