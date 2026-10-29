@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -143,11 +143,13 @@ export const restoreCurrentJourneyVisibility = (mode, {restorePOIs = true} = {})
         if (!restorePOIs) {
             call.applyJourneyReplayPOIVisibility()
         }
-        if (restorePOIs) {
-            call.restoreJourneyReplayPOIVisibility()
-        }
         if (restorePOIs && globalThis.lgs?.viewer?.dataSources) {
             TrackUtils.updatePOIsVisibility(journey, true)
+        }
+        if (restorePOIs) {
+            // Apply the saved per-POI state last so journey-wide visibility
+            // updates cannot show POIs that were hidden before Replay.
+            call.restoreJourneyReplayPOIVisibility()
         }
         globalThis.lgs?.scene?.requestRender?.()
     }
@@ -331,8 +333,10 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
 export const reapplyHideAllPOIVisibilityAfterAnimations = mode => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const replay = replayStore()
     if (!state.replayPOIAnimationOccurred
-        || !currentJourneyReplayPoiBehavior().hideAllPoisDuringJourneyReplay) {
+        || !currentJourneyReplayPoiBehavior().hideAllPoisDuringJourneyReplay
+        || !(replay?.active || replay?.playing || replay?.paused || replay?.clipSequenceActive)) {
         return false
     }
 
