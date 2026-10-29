@@ -25,8 +25,10 @@ measured from the route tangent:
 `0°` is along the trace, `+90°` right, `-90°` left, and `±180°` behind. The
 camera always looks back toward the replay anchor. During Basic or Expert
 preparation, the guide anchor and bearing follow the current Cesium projection.
-The cone has a fixed CSS-pixel display length independent of map zoom and
-Replay camera height. A final screen-space
+The cone has a fixed nominal CSS-pixel length independent of map zoom and
+Replay camera height. Its sides, rounded base, and angle arc use the same
+projected local map-plane axes as the camera icon, preserving the scene's
+foreshortening under pitch and heading changes. A final screen-space
 layout fits its rounded base, tip, and camera icon inside the live crop. It
 preserves the departure anchor when enough room remains and otherwise moves
 the display into the crop instead of collapsing its length. Passive layout

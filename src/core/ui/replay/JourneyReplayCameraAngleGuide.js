@@ -1726,9 +1726,15 @@ const svgBaseArcCommandFrom = (baseLeft, baseRight, tip, flattening = 1) => {
  * @param {{x: number, y: number}} baseRight - Right base point.
  * @param {{x: number, y: number}} tip - Shared cone tip.
  * @param {number} flattening - Vertical radius multiplier for the base arc.
+ * @param {Array<Object>|null} [projectedArc] - Two projected cubic segments for a planar base.
  * @returns {string} SVG path data.
  */
-const svgConePathFrom = (baseLeft, baseRight, tip, flattening = 1) => `M ${baseLeft.x} ${baseLeft.y} L ${tip.x} ${tip.y} L ${baseRight.x} ${baseRight.y} ${svgBaseArcCommandFrom(baseLeft, baseRight, tip, flattening)} Z`
+const svgConePathFrom = (baseLeft, baseRight, tip, flattening = 1, projectedArc = null) => {
+    const arc = projectedArc
+        ? `C ${projectedArc.slice(0, 3).map(point => `${point.x} ${point.y}`).join(' ')} C ${projectedArc.slice(3).map(point => `${point.x} ${point.y}`).join(' ')}`
+        : svgBaseArcCommandFrom(baseLeft, baseRight, tip, flattening)
+    return `M ${baseLeft.x} ${baseLeft.y} L ${tip.x} ${tip.y} L ${baseRight.x} ${baseRight.y} ${arc} Z`
+}
 
 /**
  * Resolve a gradient axis whose constant-opacity lines are parallel to the
@@ -1807,43 +1813,29 @@ const positionGuideIcon = (icon, point, heading = null) => {
 }
 
 /**
- * Project a DOM icon's local axes onto a map-tangent or vertical plane.
+ * Resolve shared CSS-pixel axes on a map-tangent or vertical plane.
  *
  * @param {Object} viewer - Cesium viewer.
  * @param {HTMLElement} overlay - DOM overlay.
- * @param {HTMLElement} icon - Icon to position.
  * @param {Cartesian3} worldPosition - Icon centre in world coordinates.
- * @param {{x: number, y: number}|null} screenPosition - Projected icon centre.
  * @param {number} bearing - Local forward bearing in radians.
  * @param {{viewProjectionMatrix: Matrix4}|null} projectionFrame - Camera projection frame.
- * @param {number|null} [fallbackHeading=null] - Screen heading used if planar projection is unavailable.
- * @param {boolean} [vertical=false] - Whether the icon plane is perpendicular to the map surface.
- * @param {Cartesian3|null} [verticalTargetPosition=null] - World position the vertical icon faces.
- * @returns {void}
+ * @param {Object} [options] - Local dimensions and optional upright orientation.
+ * @returns {{a: number, b: number, c: number, d: number}|null} Projected plane axes.
  */
-const positionGuideIconInPlane = (
+const guidePlaneAxesFrom = (
     viewer,
     overlay,
-    icon,
     worldPosition,
-    screenPosition,
     bearing,
     projectionFrame,
-    fallbackHeading = null,
-    vertical = false,
-    verticalTargetPosition = null,
+    {iconWidth = CAMERA_ANGLE_GUIDE_ICON_SIZE, iconHeight = CAMERA_ANGLE_GUIDE_ICON_SIZE,
+        vertical = false, verticalTargetPosition = null} = {},
 ) => {
-    if (!screenPosition || !worldPosition) {
-        positionGuideIcon(icon, null)
-        return
-    }
-
-    const iconWidth = Number.parseFloat(icon.style.width) || CAMERA_ANGLE_GUIDE_ICON_SIZE
-    const iconHeight = Number.parseFloat(icon.style.height) || CAMERA_ANGLE_GUIDE_ICON_SIZE
+    if (!worldPosition) return null
     const metersPerCssPixel = metersPerCssPixelFrom(viewer, worldPosition)
     if (!Number.isFinite(bearing) || !Number.isFinite(metersPerCssPixel) || metersPerCssPixel <= 0) {
-        positionGuideIcon(icon, screenPosition, fallbackHeading)
-        return
+        return null
     }
 
     const localFrame = Transforms.eastNorthUpToFixedFrame(worldPosition)
@@ -1884,8 +1876,7 @@ const positionGuideIconInPlane = (
         )
         : projectOffset(planeBearing - (Math.PI / 2), halfHeightMeters)
     if (![xPositive, xNegative, yPositive, yNegative].every(Boolean)) {
-        positionGuideIcon(icon, screenPosition, fallbackHeading)
-        return
+        return null
     }
 
     const a = (xPositive.x - xNegative.x) / iconWidth
@@ -1893,9 +1884,30 @@ const positionGuideIconInPlane = (
     const c = (yPositive.x - yNegative.x) / iconHeight
     const d = (yPositive.y - yNegative.y) / iconHeight
     if (![a, b, c, d].every(Number.isFinite)) {
+        return null
+    }
+    return {a, b, c, d}
+}
+
+/** Position an icon using the same projected local plane as the preparation cone. */
+const positionGuideIconInPlane = (
+    viewer, overlay, icon, worldPosition, screenPosition, bearing, projectionFrame,
+    fallbackHeading = null, vertical = false, verticalTargetPosition = null,
+) => {
+    if (!screenPosition || !worldPosition) {
+        positionGuideIcon(icon, null)
+        return
+    }
+    const axes = guidePlaneAxesFrom(viewer, overlay, worldPosition, bearing, projectionFrame, {
+        iconWidth: Number.parseFloat(icon.style.width) || CAMERA_ANGLE_GUIDE_ICON_SIZE,
+        iconHeight: Number.parseFloat(icon.style.height) || CAMERA_ANGLE_GUIDE_ICON_SIZE,
+        vertical, verticalTargetPosition,
+    })
+    if (!axes) {
         positionGuideIcon(icon, screenPosition, fallbackHeading)
         return
     }
+    const {a, b, c, d} = axes
 
     icon.style.display = icon.dataset.visibleDisplay ?? 'block'
     icon.style.left = `${screenPosition.x}px`
@@ -2132,6 +2144,7 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
             }
         }
         const screenHeading = coneHeading - (Number(viewer.camera?.heading) || 0)
+        const plane = guidePlaneAxesFrom(viewer, overlay, record.anchor, coneHeading, record.screenProjectionFrame)
         displayGeometry = resolveReplayPreparationConeLayout({
             anchor: routeProjectionState.sections[0]?.[0] ?? outerBaseCenter ?? record.projectedAnchor
                 ?? {x: width / 2, y: height / 2},
@@ -2140,6 +2153,7 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
             baseWidthScale,
             iconGap: CAMERA_ANGLE_GUIDE_ICON_GAP_PIXELS,
             bounds: cameraIconCropBounds,
+            plane,
         })
     }
     else {
@@ -2169,23 +2183,51 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         width,
         height,
     )
-    const simulationPoint = projectedRoute && angleArcClipPath
+    let simulationPoint = projectedRoute && angleArcClipPath
         ? firstBezierPointAtRadiusFrom(projectedRoute, displayedRotationCenter, requestedArcRadius)
         : null
     const simulationArcRadius = simulationPoint
         ? Math.hypot(simulationPoint.x - displayedRotationCenter.x, simulationPoint.y - displayedRotationCenter.y)
         : requestedArcRadius
-    const angleArcLabel = displayedRotationCenter && displayedTip
+    let angleArcLabel = displayedRotationCenter && displayedTip
         ? angleArcLabelFrom(displayedRotationCenter, displayedTip, simulationArcRadius)
         : null
-    const angleArcPoints = displayedRotationCenter && simulationPoint && displayedTip
+    let angleArcPoints = displayedRotationCenter && simulationPoint && displayedTip
         ? angleArcPointsFrom(displayedRotationCenter, simulationPoint, displayedTip)
         : null
+    const plane = displayGeometry.plane
+    const determinant = plane ? plane.a * plane.d - plane.b * plane.c : 0
+    if (plane && Math.abs(determinant) > 1e-8 && projectedRoute && angleArcClipPath) {
+        /** Resolve arc geometry in the same local plane as the cone, before screen projection. */
+        const unproject = point => {
+            const x = point.x - displayedRotationCenter.x
+            const y = point.y - displayedRotationCenter.y
+            return {x: (plane.d * x - plane.c * y) / determinant, y: (-plane.b * x + plane.a * y) / determinant}
+        }
+        /** Project local arc geometry through the final crop-fitted cone plane. */
+        const project = point => point ? {
+            x: displayedRotationCenter.x + plane.a * point.x + plane.c * point.y,
+            y: displayedRotationCenter.y + plane.b * point.x + plane.d * point.y,
+        } : null
+        const center = {x: 0, y: 0}
+        const localLeft = unproject(displayedLeft)
+        const localRight = unproject(displayedRight)
+        const radius = Math.hypot(localRight.x - localLeft.x, localRight.y - localLeft.y)
+            * CAMERA_ANGLE_GUIDE_ANGLE_ARC_BASE_RATIO / baseWidthScale
+        const localSimulation = firstBezierPointAtRadiusFrom(projectedRoute.map(unproject), center, radius)
+        const localTip = unproject(displayedTip)
+        const localPoints = localSimulation ? angleArcPointsFrom(center, localSimulation, localTip) : null
+        simulationPoint = project(localSimulation)
+        angleArcPoints = localPoints?.map(project) ?? null
+        angleArcLabel = localSimulation
+            ? project(angleArcLabelFrom(center, localTip, Math.hypot(localSimulation.x, localSimulation.y)))
+            : null
+    }
     const angleArc = angleArcPoints
         ? {path: svgPolylinePathFrom(angleArcPoints)}
         : null
     const innerGradientAxis = svgGradientAxisFrom(displayedInnerTip, displayedInnerLeft, displayedInnerRight)
-    const outerPath = svgConePathFrom(displayedLeft, displayedRight, displayedTip)
+    const outerPath = svgConePathFrom(displayedLeft, displayedRight, displayedTip, 1, displayGeometry.outerBaseArc)
     elements.angleArcClipShape.setAttribute('d', angleArcClipPath)
     elements.interactionPath.setAttribute('d', outerPath)
     elements.outer.setAttribute('data-base-width-scale', baseWidthScale)
@@ -2197,6 +2239,7 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         displayedInnerRight,
         displayedInnerTip,
         CAMERA_ANGLE_GUIDE_INNER_ARC_FLATTENING,
+        displayGeometry.innerBaseArc,
     ))
     elements.cameraAxis.setAttribute('x1', displayedRotationCenter.x)
     elements.cameraAxis.setAttribute('y1', displayedRotationCenter.y)

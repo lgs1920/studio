@@ -52,9 +52,10 @@ Preserve these boundaries:
   are consumed before Cesium navigation handles them, then the selected Replay
   pose is applied through the Replay camera controller without a camera lease.
   The preparation cone uses a
-  fixed CSS-pixel size independent of Cesium zoom and Replay camera height.
-  Only fitting the complete guide inside the current crop may reduce its
-  displayed size. Never derive that size from Replay altitude or persist crop
+  fixed nominal CSS-pixel size independent of Cesium zoom and Replay camera height.
+  Its sides, rounded base, and angle arc share the camera icon's local map-plane
+  projection, including perspective foreshortening. Crop fitting may further
+  reduce the complete guide. Never derive its nominal size from Replay altitude or persist crop
   layout adjustments into camera settings.
   Playback saves the current normal view before applying the configured
   Replay pose, then restores that view and its Cesium reference frame on every terminal path. Keep the normal

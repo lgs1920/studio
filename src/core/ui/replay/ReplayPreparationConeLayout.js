@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-15
- * Last modified: 2026-10-15
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,17 +26,18 @@
  * @param {number} options.baseWidthScale - Angle-dependent base width multiplier.
  * @param {number} options.iconGap - CSS pixel gap between the tip and camera icon.
  * @param {object|null} options.bounds - Inset crop bounds in overlay coordinates.
+ * @param {object|null} [options.plane] - Shared camera-icon plane axes in CSS pixels.
  * @returns {object|null} Complete display geometry, or null for invalid projections.
  */
-export const resolveReplayPreparationConeLayout = ({anchor, direction, length, baseWidthScale, iconGap, bounds}) => {
+export const resolveReplayPreparationConeLayout = ({anchor, direction, length, baseWidthScale, iconGap, bounds, plane = null}) => {
     const directionLength = Math.hypot(direction?.x, direction?.y)
     if (![anchor?.x, anchor?.y, directionLength, length, baseWidthScale, iconGap].every(Number.isFinite)
         || directionLength <= 0 || length <= 0) {
         return null
     }
 
-    const forward = {x: direction.x / directionLength, y: direction.y / directionLength}
-    const side = {x: -forward.y, y: forward.x}
+    const forward = plane ? {x: plane.a, y: plane.b} : {x: direction.x / directionLength, y: direction.y / directionLength}
+    const side = plane ? {x: plane.c, y: plane.d} : {x: -forward.y, y: forward.x}
     const halfWidth = length * 0.32 * baseWidthScale
     const innerOffset = length * 0.05
     /** Create a cone-local point from forward and lateral CSS distances. */
@@ -56,10 +57,11 @@ export const resolveReplayPreparationConeLayout = ({anchor, direction, length, b
     }
     // The rounded base extends past its two endpoints. Reserve its complete
     // circle as well as the tip and icon, rather than fitting triangle vertices.
+    const baseRadius = halfWidth * Math.max(Math.hypot(forward.x, side.x), Math.hypot(forward.y, side.y))
     const footprint = [
         ...Object.values(offsets),
-        {x: -halfWidth, y: 0}, {x: halfWidth, y: 0},
-        {x: 0, y: -halfWidth}, {x: 0, y: halfWidth},
+        {x: -baseRadius, y: 0}, {x: baseRadius, y: 0},
+        {x: 0, y: -baseRadius}, {x: 0, y: baseRadius},
     ]
     const minimum = {x: Math.min(...footprint.map(point => point.x)), y: Math.min(...footprint.map(point => point.y))}
     const maximum = {x: Math.max(...footprint.map(point => point.x)), y: Math.max(...footprint.map(point => point.y))}
@@ -94,8 +96,24 @@ export const resolveReplayPreparationConeLayout = ({anchor, direction, length, b
         }
     }
 
-    return Object.fromEntries(Object.entries(offsets).map(([key, point]) => [key, {
+    /** Apply the same final crop translation and scale to every projected point. */
+    const displayPoint = point => ({
         x: origin.x + point.x * scale,
         y: origin.y + point.y * scale,
-    }]))
+    })
+    const geometry = Object.fromEntries(Object.entries(offsets).map(([key, point]) => [key, displayPoint(point)]))
+    if (plane) {
+        /** Project two quarter-circle cubic segments, including the flattened inner base. */
+        const baseArc = (offset, width, flattening) => {
+            const kappa = 0.5522847498307936
+            return [
+                [-kappa * width, width], [-width, kappa * width], [-width, 0],
+                [-width, -kappa * width], [-kappa * width, -width], [0, -width],
+            ].map(([distance, lateral]) => displayPoint(localPoint(offset + distance * flattening, lateral)))
+        }
+        geometry.outerBaseArc = baseArc(0, halfWidth, 1)
+        geometry.innerBaseArc = baseArc(innerOffset, halfWidth * 0.95, 0.32)
+        geometry.plane = {a: plane.a * scale, b: plane.b * scale, c: plane.c * scale, d: plane.d * scale}
+    }
+    return geometry
 }

@@ -58,6 +58,7 @@ const installPreparationGuide = ({supplyCrop = true, altitude = 1200} = {}) => {
         ellipsoid: Ellipsoid.WGS84,
         drawingBufferWidth: 2000,
         drawingBufferHeight: 1600,
+        pixelRatio: 2,
         globe: {getHeight: () => 120},
         postRender: new Event(),
         requestRender: vi.fn(),
@@ -142,6 +143,36 @@ const installPreparationGuide = ({supplyCrop = true, altitude = 1200} = {}) => {
 }
 
 describe('Replay preparation cone crop with a real Cesium camera', () => {
+    it('aligns the full cone and its rounded base with the camera icon as pitch and heading change', () => {
+        const fixture = installPreparationGuide()
+        for (const [pitch, heading] of [[-1.3, 0], [-0.4, 0.7], [-0.8, -1.2]]) {
+            fixture.setMapView(8000, pitch, heading)
+            const {anchor, length, points} = fixture.readGuide()
+            const icon = fixture.overlay.querySelector('img')
+            const [a, b, c, d] = icon.style.transform.match(/matrix\(([^)]+)\)/)[1].split(',').map(Number)
+            const baseHalfWidth = Math.hypot(points[2].x - points[0].x, points[2].y - points[0].y) / 2
+            const outer = fixture.overlay.querySelector('[data-part="outer"]')
+            const widthScale = Number(outer.getAttribute('data-base-width-scale'))
+            expect(length / baseHalfWidth * 0.32 * widthScale).toBeCloseTo(Math.hypot(a, b) / Math.hypot(c, d), 3)
+            const tip = points[1]
+            const cross = (tip.x - anchor.x) * b - (tip.y - anchor.y) * a
+            expect(Math.abs(cross) / length).toBeLessThan(0.00001)
+            expect(outer.getAttribute('d').match(/ C /g)).toHaveLength(2)
+            const arc = fixture.overlay.querySelector('[data-part="camera-angle-arc"]')
+            const arcPoints = [...arc.getAttribute('d').matchAll(/[ML] ([\d.e+-]+) ([\d.e+-]+)/g)]
+            expect(arcPoints.length).toBeGreaterThan(10)
+            const determinant = a * d - b * c
+            const radii = arcPoints.map(point => {
+                const x = Number(point[1]) - anchor.x
+                const y = Number(point[2]) - anchor.y
+                return Math.hypot((d * x - c * y) / determinant, (-b * x + a * y) / determinant)
+            })
+            expect(Math.max(...radii) - Math.min(...radii)).toBeLessThan(0.01)
+            fixture.expectInsideCrop()
+        }
+        expect(fixture.onCameraChange).not.toHaveBeenCalled()
+    })
+
     it.each([0.2, 3])('preserves Replay height while dragging the camera angle at %sx its initial radius', radiusFactor => {
         const fixture = installPreparationGuide({altitude: 3454})
         updateJourneyReplayCameraAngleGuide(fixture.viewer, fixture.guide, {previewCesiumCamera: true})
@@ -200,14 +231,15 @@ describe('Replay preparation cone crop with a real Cesium camera', () => {
         expect(fixture.onCameraChange).not.toHaveBeenCalled()
     })
 
-    it('keeps the same CSS pixel size when only the Cesium zoom changes', () => {
+    it('keeps the projected CSS size stable to subpixel precision when only the Cesium zoom changes', () => {
         const fixture = installPreparationGuide()
         const initialLength = fixture.readGuide().length
         expect(initialLength).toBeGreaterThan(64)
         for (const range of [25000, 4000, 16000, 8000]) {
             fixture.setMapView(range)
             fixture.expectInsideCrop()
-            expect(fixture.readGuide().length).toBeCloseTo(initialLength, 3)
+            // The elevated terrain anchor introduces subpixel perspective parallax across zoom levels.
+            expect(Math.abs(fixture.readGuide().length - initialLength)).toBeLessThan(0.1)
         }
         fixture.setMapView(25000)
         removeJourneyReplayCameraAngleGuide(fixture.viewer)
@@ -219,10 +251,10 @@ describe('Replay preparation cone crop with a real Cesium camera', () => {
         updateJourneyReplayCameraAngleGuide(fixture.viewer, fixture.guide)
         const remountedAxis = remountedOverlay.querySelector('[data-part="camera-position-axis"]')
         const remountedTip = remountedOverlay.querySelector('[data-part="cone-tip-drag-target"]')
-        expect(Math.hypot(
+        expect(Math.abs(Math.hypot(
             Number(remountedTip.getAttribute('cx')) - Number(remountedAxis.getAttribute('x1')),
             Number(remountedTip.getAttribute('cy')) - Number(remountedAxis.getAttribute('y1')),
-        )).toBeCloseTo(initialLength, 3)
+        ) - initialLength)).toBeLessThan(0.1)
         expect(fixture.onCameraChange).not.toHaveBeenCalled()
     })
 

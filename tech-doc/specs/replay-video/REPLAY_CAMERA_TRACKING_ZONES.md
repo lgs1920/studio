@@ -67,6 +67,8 @@ position.
 During Basic or Expert preparation, the camera guide cone and camera icon use
 the current Cesium projection, keeping the cone anchored to the route departure
 as the map is panned or zoomed without changing the configured camera angle.
+The cone sides, rounded base, and angle arc use the camera icon's local map-plane
+projection, including perspective foreshortening as pitch and heading change.
 The camera icon at the cone tip is projected onto the local map plane. The
 journey activity icon stands in a vertical plane perpendicular to the map and
 faces the angle camera marker at the cone tip. Both follow the current scene

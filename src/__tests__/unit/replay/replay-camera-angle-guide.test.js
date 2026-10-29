@@ -571,7 +571,7 @@ describe('replay camera angle map guide', () => {
         expect(guide.angleDegrees).toBe(-165)
     })
 
-    it('projects the camera icon flat and the upright activity icon toward the angle camera', () => {
+    it.each([false, true])('projects the cone and camera icon onto the same map plane with preparation=%s', screenLocked => {
         const container = document.createElement('div')
         const canvas = document.createElement('canvas')
         canvas.width = 1000
@@ -628,7 +628,7 @@ describe('replay camera angle map guide', () => {
             camera: {cameraAngle: 90, cameraAltitude: 2400},
             journey: planeJourney,
         })
-        expect(mountJourneyReplayCameraAngleGuide(viewer, guide, {}, {})).toBe(true)
+        expect(mountJourneyReplayCameraAngleGuide(viewer, guide, {}, {screenLocked})).toBe(true)
 
         /**
          * Read the affine CSS transform coefficients for an icon.
@@ -666,6 +666,17 @@ describe('replay camera angle map guide', () => {
         expect(projectedAreaScaleFrom(cameraIcon)).toBeLessThan(0.45)
         expect(projectedAreaScaleFrom(activityIcon)).toBeGreaterThan(0.25)
         expect(projectedAreaScaleFrom(activityIcon)).toBeLessThan(0.45)
+
+        if (screenLocked) {
+            const cone = container.querySelector('[data-part="outer"]')
+            const vertices = cone.getAttribute('d').match(/^M ([\d.e+-]+) ([\d.e+-]+) L ([\d.e+-]+) ([\d.e+-]+) L ([\d.e+-]+) ([\d.e+-]+)/).slice(1).map(Number)
+            const axis = container.querySelector('[data-part="camera-position-axis"]')
+            const length = Math.hypot(vertices[2] - Number(axis.getAttribute('x1')), vertices[3] - Number(axis.getAttribute('y1')))
+            const halfWidth = Math.hypot(vertices[4] - vertices[0], vertices[5] - vertices[1]) / 2
+            const widthScale = Number(cone.getAttribute('data-base-width-scale'))
+            const planeRatio = Math.hypot(cameraMatrix[0], cameraMatrix[1]) / Math.hypot(cameraMatrix[2], cameraMatrix[3])
+            expect(length / halfWidth * 0.32 * widthScale).toBeCloseTo(planeRatio, 3)
+        }
 
         removeJourneyReplayCameraAngleGuide(viewer)
         container.remove()
