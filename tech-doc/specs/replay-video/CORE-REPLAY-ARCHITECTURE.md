@@ -129,14 +129,24 @@ display geometry. The final crop constraint
 contains the rounded base, tip, and camera icon together, retaining the projected
 departure anchor where possible and translating the guide when needed to keep
 it usable. Crop replacement and ancestor layout changes refresh that constraint.
-These display adjustments never write camera settings or move the map camera.
+Passive display adjustments never write camera settings or move the map camera.
+Dragging the camera-angle guide during preparation applies its Replay angle and
+altitude to the Cesium camera live through the Replay camera controller. The
+guide consumes its mouse and keyboard events so Cesium navigation does not also
+handle them. Camera-icon dragging changes only azimuth and preserves Replay
+height regardless of pointer radius; only the cone-tip handle edits height.
+Preparation still restores the saved normal camera view when it
+closes. The simulated route defaults to 1,000 metres, capped by the available
+track length; its arrow and dotted stroke use Replay fill color.
 Entering Basic or Expert video preparation stops and awaits an existing normal
 map orbit before framing the canonical journey departure in a static
 North-oriented view with Replay pitch and height. This explicit entry boundary
 waits for prior scene restoration and successful preparation, and rejects stale
-transitions. It never supplies normal camera values to Replay settings. Subsequent preparation computes the Replay guide without moving,
-locking, or capturing the normal map camera or changing its geographic pivot. Drawer refreshes and
-timeline seeks cannot apply a camera update without a playback camera lease;
+transitions. It never supplies normal camera values to Replay settings. Passive
+guide refreshes leave the Cesium camera and its geographic pivot unchanged;
+explicit camera-angle guide edits apply the prepared Replay pose without taking
+camera ownership. Outside this explicit preparation control, passive drawer
+refreshes and timeline seeks cannot apply a camera update without a playback camera lease;
 the session call bridge enforces this boundary.
 
 On first successful video-preparation entry, the session keeps the existing

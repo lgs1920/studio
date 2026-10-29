@@ -47,8 +47,11 @@ Preserve these boundaries:
   a North-oriented view of the canonical departure using Replay pitch and height.
   Only this explicit entry boundary frames the map, after successful preparation
   and stale-transition checks.
-  Subsequent preparation edits and guide refreshes do not move the map camera
-  or infer Replay settings from that normal view. The preparation cone uses a
+  Passive guide refreshes do not move the map camera or infer Replay settings
+  from that normal view. During preparation, explicit camera-angle guide inputs
+  are consumed before Cesium navigation handles them, then the selected Replay
+  pose is applied through the Replay camera controller without a camera lease.
+  The preparation cone uses a
   fixed CSS-pixel size independent of Cesium zoom and Replay camera height.
   Only fitting the complete guide inside the current crop may reduce its
   displayed size. Never derive that size from Replay altitude or persist crop

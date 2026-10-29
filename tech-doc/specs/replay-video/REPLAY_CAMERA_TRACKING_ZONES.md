@@ -80,9 +80,13 @@ remains aligned to the route at the same `cameraAngle`. Cesium camera events
 never write Replay camera settings. The camera icon is the only azimuth drag
 handle; the cone surface is visual, while its tip remains the altitude handle.
 The Replay drawer's camera-angle control and the icon drag both update the same
-`cameraAngle` setting. The route arrow can be dragged along the source trace to
-resize the displayed simulation between 60 and 1,200 metres; keyboard users can
-adjust it with the arrow keys or jump to either limit with Home and End. The
+`cameraAngle` setting. During preparation, the guide consumes pointer and
+keyboard events, then applies the selected camera pose through Replay so Cesium
+does not also interpret those inputs as map navigation. The route arrow can be
+dragged along the source trace to resize the displayed simulation between 60
+and 1,000 metres, capped by available track length; keyboard users can adjust it
+with the arrow keys or jump to either limit with Home and End. The arrow uses
+Replay fill color for both the arrow and dotted line. The
 guide and simulation are hidden whenever their departure or selected route end
 is outside the viewport or occluded by the terrain.
 

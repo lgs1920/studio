@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -155,7 +155,7 @@ describe('replay camera angle map guide', () => {
         expect(guide.directionPoint.longitude).toBeCloseTo(0.001, 8)
     })
 
-    it('shows at most 600 metres after a non-loop departure without adding a lead-in', () => {
+    it('shows at most 1000 metres after a non-loop departure without adding a lead-in', () => {
         const coordinates = Array.from({length: 400}, (_, index) => [index * 0.0001, 0, 0])
         const guide = resolveJourneyReplayCameraAngleGuide({
             camera: {headingOffset: 0, positionMode: 'behind'},
@@ -165,12 +165,12 @@ describe('replay camera angle map guide', () => {
         expect(guide.looped).toBe(false)
         expect(guide.routeAfter).toHaveLength(1)
         expect(guide.routeAfter[0].length).toBeLessThanOrEqual(16)
-        expect(guide.routeAfter[0].at(-1).longitude).toBeCloseTo((600 / 6378137) * 180 / Math.PI, 5)
+        expect(guide.routeAfter[0].at(-1).longitude).toBeCloseTo((1000 / 6378137) * 180 / Math.PI, 5)
         expect(guide.routeBefore).toBeUndefined()
         expect(guide.routeLoop).toBeUndefined()
     })
 
-    it('shows only the first 600 metres after a masked loop departure', () => {
+    it('shows only the first 1000 metres after a masked loop departure', () => {
         const coordinates = Array.from({length: 402}, (_, index) => {
             if (index === 401) {
                 return [0.0001, 0, 0]
@@ -193,7 +193,7 @@ describe('replay camera angle map guide', () => {
         expect(guide.routeAfter).toHaveLength(1)
         expect(guide.routeAfter[0].length).toBeLessThanOrEqual(16)
         expect(guide.routeAfter[0][0]).toEqual({height: 0, latitude: 0, longitude: 0})
-        expect(guide.routeAfter[0].at(-1).longitude).toBeCloseTo((600 / 6378137) * 180 / Math.PI, 5)
+        expect(guide.routeAfter[0].at(-1).longitude).toBeCloseTo((1000 / 6378137) * 180 / Math.PI, 5)
         expect(guide.routeBefore).toBeUndefined()
         expect(guide.routeLoop).toBeUndefined()
     })
@@ -488,8 +488,8 @@ describe('replay camera angle map guide', () => {
         }
         const onCameraChange = vi.fn()
         const guide = resolveJourneyReplayCameraAngleGuide({camera: {cameraAngle: 180}, journey: resizeJourney})
-        expect(guide.routeWindowMeters).toBe(600)
-        expect(guide.routeMaxWindowMeters).toBe(1200)
+        expect(guide.routeWindowMeters).toBe(1000)
+        expect(guide.routeMaxWindowMeters).toBe(1000)
         expect(mountJourneyReplayCameraAngleGuide(viewer, guide, {}, {
             onCameraChange,
             cropElement,
@@ -507,7 +507,7 @@ describe('replay camera angle map guide', () => {
         )
         expect(resizeHandle.style.display).toBe('block')
         expect(resizeHandle.getAttribute('role')).toBe('slider')
-        expect(resizeHandle.getAttribute('aria-valuenow')).toBe('600')
+        expect(resizeHandle.getAttribute('aria-valuenow')).toBe('1000')
 
         const pointerEvent = (type, x, y) => {
             const event = new Event(type, {bubbles: true, cancelable: true})
@@ -526,12 +526,12 @@ describe('replay camera angle map guide', () => {
         ))
         expect(cameraController.enableRotate).toBe(false)
         window.dispatchEvent(pointerEvent('pointermove', 620, 400))
-        expect(resizeHandle.getAttribute('aria-valuenow')).toBe('1200')
+        expect(resizeHandle.getAttribute('aria-valuenow')).toBe('1000')
         const expandedRouteLength = Math.hypot(
             routeEndFromPath()[0] - routeStart[0],
             routeEndFromPath()[1] - routeStart[1],
         )
-        expect(expandedRouteLength).toBeCloseTo(initialRouteLength * 2, 3)
+        expect(expandedRouteLength).toBeCloseTo(initialRouteLength, 3)
         window.dispatchEvent(pointerEvent('pointermove', 530, 400))
         expect(resizeHandle.getAttribute('aria-valuenow')).toBe('300')
         expect(routeEndFromPath()[0]).toBeLessThan(620)
@@ -542,7 +542,7 @@ describe('replay camera angle map guide', () => {
         resizeHandle.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true}))
         expect(resizeHandle.getAttribute('aria-valuenow')).toBe('325')
         resizeHandle.dispatchEvent(new KeyboardEvent('keydown', {key: 'End', bubbles: true, cancelable: true}))
-        expect(resizeHandle.getAttribute('aria-valuenow')).toBe('1200')
+        expect(resizeHandle.getAttribute('aria-valuenow')).toBe('1000')
         removeJourneyReplayCameraAngleGuide(viewer)
         container.remove()
     })

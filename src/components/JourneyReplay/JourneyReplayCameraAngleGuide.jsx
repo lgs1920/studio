@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,7 @@ import {REPLAY_DRAWER, VIDEO_CROP_ZONE} from '@Core/constants'
 import {
     getJourneyReplaySettings,
     normalizeJourneyReplayCamera,
+    normalizeJourneyReplayProgressionStyle,
     REPLAY_INITIAL_CAMERA_ANGLE,
     toGlobalReplayCameraSettings,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
@@ -105,6 +106,11 @@ export const JourneyReplayCameraAngleGuide = () => {
             : getBasicReplaySettings(replaySettings)?.camera ?? getJourneyReplaySettings().camera
         : replay.camera ?? replaySettings.camera
     const camera = normalizeJourneyReplayCamera(cameraSettings)
+    const progression = normalizeJourneyReplayProgressionStyle(
+        replay.progression ?? getJourneyReplaySettings().progression,
+    )
+    const routeFillColor = progression.fill.color
+    const routeBorderColor = progression.border.color
     const cameraAngle = camera.cameraAngle
     const _cameraSettings = useRef(camera)
     const replaying = isJourneyReplayCameraActive(replay)
@@ -122,6 +128,7 @@ export const JourneyReplayCameraAngleGuide = () => {
     const isPreparingReplay = guideVisible
         && !replaying
         && (video.editing === true || drawers.open === REPLAY_DRAWER)
+    const previewCesiumCamera = isPreparingReplay && video.editing === true
     const cropElement = useSyncExternalStore(
         isPreparingReplay ? subscribeToCropElement : subscribeToNoCropElement,
         isPreparingReplay ? getCropElementSnapshot : getNoCropElementSnapshot,
@@ -133,7 +140,7 @@ export const JourneyReplayCameraAngleGuide = () => {
     }, [camera])
 
     /**
-     * Persist camera-guide adjustments without moving the Cesium camera.
+     * Persist camera-guide adjustments and apply them through Replay's camera controller.
      *
      * @param {Object} updates - Camera settings changed by the guide.
      * @returns {void}
@@ -154,8 +161,16 @@ export const JourneyReplayCameraAngleGuide = () => {
             syncJourneyExpertReplayCamera(nextCamera)
         }
         lgs.stores.replay.camera = nextCamera
+        if (previewCesiumCamera) {
+            __.ui.replay?.refreshCamera?.({
+                sample:             lgs.stores.replay.sample ?? null,
+                suppressMoveEvents: true,
+                source:             'camera-angle-guide',
+                preparation:        true,
+            })
+        }
         globalThis.window?.dispatchEvent?.(new Event(REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT))
-    }, [])
+    }, [previewCesiumCamera])
 
     useEffect(() => {
         if (!isPreparingReplay) {
@@ -178,16 +193,17 @@ export const JourneyReplayCameraAngleGuide = () => {
             journey,
             pois: lgs.stores.main.components?.pois?.list,
         })
-        if (!mountJourneyReplayCameraAngleGuide(viewer, guide, {}, {
+        if (!mountJourneyReplayCameraAngleGuide(viewer, guide, {routeFillColor, routeBorderColor}, {
             onCameraChange: updateCameraFromGuide,
             cropElement,
             screenLocked: isPreparingReplay,
+            previewCesiumCamera,
         })) {
             removeJourneyReplayCameraAngleGuide(viewer)
         }
 
         return () => removeJourneyReplayCameraAngleGuide(viewer)
-    }, [cropElement, guideVisible, isPreparingReplay, journeySlug, updateCameraFromGuide])
+    }, [cropElement, guideVisible, isPreparingReplay, journeySlug, routeBorderColor, routeFillColor, previewCesiumCamera, updateCameraFromGuide])
 
     useEffect(() => {
         if (!guideVisible) {
@@ -205,15 +221,22 @@ export const JourneyReplayCameraAngleGuide = () => {
             removeJourneyReplayCameraAngleGuide(viewer)
             return
         }
-        const callbacks = {cropElement, onCameraChange: updateCameraFromGuide}
+        const callbacks = {
+            cropElement,
+            onCameraChange: updateCameraFromGuide,
+            previewCesiumCamera,
+            routeBorderColor,
+            routeFillColor,
+        }
         if (!updateJourneyReplayCameraAngleGuide(viewer, guide, callbacks)) {
-            mountJourneyReplayCameraAngleGuide(viewer, guide, {}, {
+            mountJourneyReplayCameraAngleGuide(viewer, guide, {routeFillColor, routeBorderColor}, {
                 onCameraChange: updateCameraFromGuide,
                 cropElement,
                 screenLocked: isPreparingReplay,
+                previewCesiumCamera,
             })
         }
-    }, [camera.altitude, cameraAngle, cropElement, guideVisible, isPreparingReplay, journeySlug, replaySample, updateCameraFromGuide,
+    }, [camera.altitude, cameraAngle, cropElement, guideVisible, isPreparingReplay, journeySlug, replaySample, routeBorderColor, routeFillColor, previewCesiumCamera, updateCameraFromGuide,
         replay.videoCropRect?.left, replay.videoCropRect?.top, replay.videoCropRect?.width, replay.videoCropRect?.height,
     ])
 

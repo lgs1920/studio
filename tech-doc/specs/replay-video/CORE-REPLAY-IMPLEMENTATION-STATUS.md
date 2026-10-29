@@ -29,8 +29,14 @@ The cone has a fixed CSS-pixel display length independent of map zoom and
 Replay camera height. A final screen-space
 layout fits its rounded base, tip, and camera icon inside the live crop. It
 preserves the departure anchor when enough room remains and otherwise moves
-the display into the crop instead of collapsing its length. This display
-constraint never changes the Cesium camera or persisted Replay settings.
+the display into the crop instead of collapsing its length. Passive layout
+changes do not move the Cesium camera or alter persisted Replay settings. During
+video preparation, dragging the camera-angle guide applies the selected angle
+and altitude to Cesium live while consuming the mouse gesture so Cesium's
+navigation controller does not also act on it. The normal camera snapshot is
+retained and restored when preparation closes. The simulated route defaults to
+1,000 metres, capped by the available track length; its arrow uses Replay fill
+color for both its arrow and dotted stroke.
 Mounting and crop-element replacement resolve the live crop even when React
 has not yet supplied its element reference.
 The simulated departure trace uses sampled terrain height and is reprojected whenever Cesium's
@@ -41,9 +47,12 @@ without changing `cameraAngle`; Cesium navigation cannot write camera settings.
 The camera icon follows the local map plane. The journey activity icon stands
 perpendicular to that plane and faces the angle camera marker at the cone tip;
 both follow the scene projection.
-Only dragging the camera icon adjusts its azimuth, while the cone tip adjusts
-height. During preparation, dragging the simulated-route arrow changes the
-visible source-trace distance from 60 to 1,200 metres. The complete DOM guide is
+Only dragging the camera icon adjusts its azimuth, preserving the prepared
+height even when the pointer moves toward or away from the cone anchor. The
+cone tip alone adjusts height. During preparation, dragging the simulated-route arrow changes the
+visible source-trace distance from 60 to 1,000 metres, capped by track length.
+The arrow and dotted route both use Replay fill color.
+The complete DOM guide is
 hidden while either route endpoint is outside the viewport or terrain-occluded.
 Basic Replay disables camera diagnostics and adds a configurable-duration
 trace-centroid focus phase after playback, rotating at one turn every five

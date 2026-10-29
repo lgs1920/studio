@@ -108,8 +108,9 @@ change refreshes the guide projection so its camera icon remains aligned to the
 trace at the unchanged `cameraAngle`. Cesium camera events do not write Replay
 settings. Dragging the camera icon is the explicit map interaction for changing
 `cameraAngle`; the cone tip changes camera height. During preparation, the route
-arrow resizes the displayed source-trace window from 60 to 1,200 metres, and the
-guide is hidden if either route endpoint leaves the viewport or is terrain-occluded.
+arrow resizes the displayed source-trace window from 60 to 1,000 metres, capped
+by the available track length. The guide is hidden if either route endpoint
+leaves the viewport or is terrain-occluded.
 
 ## 3. Product contract
 

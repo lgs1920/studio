@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-29
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -131,7 +131,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
             expect(guideHarness.mount).toHaveBeenCalledWith(
                 expect.anything(),
                 expect.objectContaining({angleDegrees: 20}),
-                {},
+                {routeFillColor: '#ff6a00', routeBorderColor: '#ffffff'},
                 expect.objectContaining({onCameraChange: expect.any(Function), screenLocked: false}),
             )
             expect(guideHarness.resolve).toHaveBeenLastCalledWith(expect.objectContaining({sample}))
@@ -211,7 +211,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
             expect.objectContaining({
                 anchor: {height: 0, latitude: 48, longitude: 2},
             }),
-            {},
+            {routeFillColor: '#ff6a00', routeBorderColor: '#ffffff'},
             expect.objectContaining({
                 cropElement,
                 onCameraChange: expect.any(Function),
@@ -234,7 +234,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
         const replacementCrop = container.querySelector(`#${VIDEO_CROP_ZONE}`)
         expect(replacementCrop).not.toBe(cropElement)
         await waitFor(() => expect(guideHarness.mount).toHaveBeenLastCalledWith(
-            expect.anything(), expect.anything(), {},
+            expect.anything(), expect.anything(), {routeFillColor: '#ff6a00', routeBorderColor: '#ffffff'},
             expect.objectContaining({cropElement: replacementCrop, screenLocked: true}),
         ))
     })
@@ -283,7 +283,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
             expect(guideHarness.mount).toHaveBeenCalledWith(
                 expect.anything(),
                 expect.objectContaining({angleDegrees: 0}),
-                {},
+                {routeFillColor: '#ff6a00', routeBorderColor: '#ffffff'},
                 expect.objectContaining({onCameraChange: expect.any(Function), screenLocked: true}),
             )
             expect(guideHarness.resolve).toHaveBeenLastCalledWith(expect.objectContaining({
@@ -370,7 +370,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
 
         render(<JourneyReplayCameraAngleGuide/>)
         await waitFor(() => expect(guideHarness.mount).toHaveBeenCalled())
-        act(() => {
+        await act(async () => {
             guideHarness.mount.mock.calls.at(-1)[3].onCameraChange({altitude: 600, cameraAngle: -150})
         })
 
@@ -379,10 +379,15 @@ describe('JourneyReplayCameraAngleGuide component', () => {
         expect(journey.replay.basic.camera).toMatchObject({altitude: 600, cameraAngle: -150})
         expect(globalThis.lgs.stores.replay.camera).toMatchObject({altitude: 600, cameraAngle: -150})
         expect(refresh).not.toHaveBeenCalled()
-        expect(refreshCamera).not.toHaveBeenCalled()
+        expect(refreshCamera).toHaveBeenCalledExactlyOnceWith({
+            preparation: true,
+            sample: null,
+            source: 'camera-angle-guide',
+            suppressMoveEvents: true,
+        })
     })
 
-    it('persists an Expert camera angle without moving the prepared Cesium view', async () => {
+    it('persists an Expert camera angle and previews the prepared Cesium view', async () => {
         const journey = {replay: {expert: {camera: {altitude: 900, cameraAngle: 180}}}}
         const refresh = vi.fn()
         const refreshCamera = vi.fn()
@@ -407,7 +412,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
 
         render(<JourneyReplayCameraAngleGuide/>)
         await waitFor(() => expect(guideHarness.mount).toHaveBeenCalled())
-        act(() => {
+        await act(async () => {
             guideHarness.mount.mock.calls.at(-1)[3].onCameraChange({
                 altitude: 900,
                 cameraAngle: -40,
@@ -419,6 +424,11 @@ describe('JourneyReplayCameraAngleGuide component', () => {
         expect(journey.replay.expert.camera).toMatchObject({altitude: 900, cameraAngle: -40})
         expect(globalThis.lgs.stores.replay.camera).toMatchObject({altitude: 900, cameraAngle: -40})
         expect(refresh).not.toHaveBeenCalled()
-        expect(refreshCamera).not.toHaveBeenCalled()
+        expect(refreshCamera).toHaveBeenCalledExactlyOnceWith({
+            preparation: true,
+            sample: null,
+            source: 'camera-angle-guide',
+            suppressMoveEvents: true,
+        })
     })
 })

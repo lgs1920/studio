@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-15
- * Last modified: 2026-10-17
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -142,6 +142,42 @@ const installPreparationGuide = ({supplyCrop = true, altitude = 1200} = {}) => {
 }
 
 describe('Replay preparation cone crop with a real Cesium camera', () => {
+    it.each([0.2, 3])('preserves Replay height while dragging the camera angle at %sx its initial radius', radiusFactor => {
+        const fixture = installPreparationGuide({altitude: 3454})
+        updateJourneyReplayCameraAngleGuide(fixture.viewer, fixture.guide, {previewCesiumCamera: true})
+        const cameraIcon = fixture.overlay.querySelector('img')
+        const {anchor} = fixture.readGuide()
+        const start = {x: Number.parseFloat(cameraIcon.style.left), y: Number.parseFloat(cameraIcon.style.top)}
+        const radius = Math.hypot(start.x - anchor.x, start.y - anchor.y)
+        const angle = Math.atan2(start.y - anchor.y, start.x - anchor.x) + Math.PI / 4
+        const surface = fixture.overlay.getBoundingClientRect()
+
+        /** Dispatch a pointer at overlay coordinates through the public guide gesture. */
+        const dispatchPointer = (target, type, x, y) => {
+            const event = new window.Event(type, {bubbles: true, cancelable: true})
+            Object.defineProperties(event, {
+                button: {value: 0},
+                clientX: {value: surface.left + x},
+                clientY: {value: surface.top + y},
+                pointerId: {value: 1},
+            })
+            target.dispatchEvent(event)
+        }
+
+        dispatchPointer(cameraIcon, 'pointerdown', start.x, start.y)
+        const moved = {
+            x: anchor.x + Math.cos(angle) * radius * radiusFactor,
+            y: anchor.y + Math.sin(angle) * radius * radiusFactor,
+        }
+        dispatchPointer(window, 'pointermove', moved.x, moved.y)
+        expect(fixture.onCameraChange).toHaveBeenCalledOnce()
+        expect(fixture.onCameraChange.mock.lastCall[0].cameraAngle).not.toBe(fixture.guide.angleDegrees)
+        expect(fixture.onCameraChange.mock.lastCall[0].altitude).toBe(3454)
+        dispatchPointer(window, 'pointerup', moved.x, moved.y)
+        expect(fixture.onCameraChange.mock.lastCall[0].altitude).toBe(3454)
+        expect(fixture.viewer.scene.screenSpaceCameraController.enableRotate).toBe(true)
+    })
+
     it('keeps its display geometry unchanged when the prepared Replay height changes', () => {
         const fixture = installPreparationGuide()
         const initialGuide = fixture.readGuide()

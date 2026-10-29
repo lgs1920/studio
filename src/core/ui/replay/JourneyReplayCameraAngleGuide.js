@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -63,8 +63,8 @@ const CAMERA_ANGLE_GUIDE_ROUTE_STROKE_PIXELS = 3
 const CAMERA_ANGLE_GUIDE_ROUTE_DASH_LENGTH_PIXELS = 16
 const CAMERA_ANGLE_GUIDE_ROUTE_DASH_GAP_PIXELS = 4.8
 const CAMERA_ANGLE_GUIDE_MAX_ROUTE_POINTS = 16
-const CAMERA_ANGLE_GUIDE_ROUTE_WINDOW_METERS = 600
-const CAMERA_ANGLE_GUIDE_ROUTE_MAX_WINDOW_METERS = 1200
+const CAMERA_ANGLE_GUIDE_ROUTE_WINDOW_METERS = 1000
+const CAMERA_ANGLE_GUIDE_ROUTE_MAX_WINDOW_METERS = 1000
 const CAMERA_ANGLE_GUIDE_ROUTE_MIN_WINDOW_METERS = 60
 const CAMERA_ANGLE_GUIDE_ROUTE_RESIZE_KEY_STEP_METERS = 25
 const CAMERA_ANGLE_GUIDE_ROUTE_START_MARKER_RADIUS_PIXELS = CAMERA_ANGLE_GUIDE_ROUTE_STROKE_PIXELS * 1.5
@@ -801,7 +801,7 @@ const coneGeometryFrom = (viewer, anchor, transform, guide, coneHeading = guide.
  */
 const guideColorFrom = (value, fallback = DEFAULT_CAMERA_ANGLE_GUIDE_COLOR) => {
     try {
-        return Color.fromCssColorString(value ?? fallback)
+        return Color.fromCssColorString(value ?? fallback) ?? Color.fromCssColorString(fallback)
     }
     catch {
         return Color.fromCssColorString(fallback)
@@ -2292,6 +2292,8 @@ const updateRouteGuideOverlay = (viewer, record, width, height, angleCameraPosit
     const routeEnd = projectedRoute.at(-1)?.at(-1) ?? null
     const routeAfterPath = svgRoutePathFrom(projectedRoute)
     elements.routeAfter.setAttribute('d', routeAfterPath)
+    elements.routeAfter.setAttribute('stroke', cssColorFrom(record.routeFillColor))
+    elements.routeArrowHead.setAttribute('fill', cssColorFrom(record.routeFillColor))
     elements.routeAfter.setAttribute(
         'stroke-dasharray',
         `${CAMERA_ANGLE_GUIDE_ROUTE_DASH_LENGTH_PIXELS} ${CAMERA_ANGLE_GUIDE_ROUTE_DASH_GAP_PIXELS}`,
@@ -2301,6 +2303,7 @@ const updateRouteGuideOverlay = (viewer, record, width, height, angleCameraPosit
     if (routeStart) {
         elements.routeStartMarker.setAttribute('cx', routeStart.x)
         elements.routeStartMarker.setAttribute('cy', routeStart.y)
+        elements.routeStartMarker.setAttribute('fill', cssColorFrom(record.routeBorderColor))
         elements.routeStartMarker.style.display = 'block'
     }
     else {
@@ -2353,9 +2356,11 @@ const updateRouteGuideOverlay = (viewer, record, width, height, angleCameraPosit
  * @param {Object} options.viewer - Cesium viewer.
  * @param {Color} options.headingColor - Cone fill color.
  * @param {Color} options.aheadColor - Cone side and drone color.
+ * @param {Color} options.routeFillColor - Simulation arrow color.
+ * @param {Color} options.routeBorderColor - Simulation route start marker color.
  * @returns {{overlay: HTMLElement, elements: Object}|null} Created overlay.
  */
-const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}) => {
+const createGuideOverlay = ({viewer, headingColor, aheadColor, routeFillColor, routeBorderColor, activityIconName}) => {
     const container = viewer?.container ?? viewer?.scene?.canvas?.parentElement
     if (!container || typeof document === 'undefined') {
         return null
@@ -2491,10 +2496,10 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
     })
     angleSnapMarker.style.display = 'none'
     angleSnapMarker.style.pointerEvents = 'none'
-    const createRoutePath = (part, dashed = false) => createSvgElement('path', {
+    const createRoutePath = (part, dashed = false, color = headingColor) => createSvgElement('path', {
         'data-part': part,
         fill: 'none',
-        stroke: cssColorFrom(headingColor),
+        stroke: cssColorFrom(color),
         'stroke-dasharray': dashed
             ? `${CAMERA_ANGLE_GUIDE_ROUTE_DASH_LENGTH_PIXELS} ${CAMERA_ANGLE_GUIDE_ROUTE_DASH_GAP_PIXELS}`
             : 'none',
@@ -2502,11 +2507,11 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
         'stroke-linejoin': 'round',
         'stroke-width': CAMERA_ANGLE_GUIDE_ROUTE_STROKE_PIXELS,
     })
-    const routeAfter = createRoutePath('journey-route-after', true)
+    const routeAfter = createRoutePath('journey-route-after', true, routeFillColor)
     routeAfter.setAttribute('stroke-linecap', 'butt')
     const routeStartMarker = createSvgElement('circle', {
         'data-part': 'journey-route-start',
-        fill: cssColorFrom(headingColor),
+        fill: cssColorFrom(routeBorderColor),
         r: CAMERA_ANGLE_GUIDE_ROUTE_START_MARKER_RADIUS_PIXELS,
     })
     const routeResizeHandle = createSvgElement('circle', {
@@ -2532,7 +2537,7 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
     })
     const routeArrowHead = createSvgElement('path', {
         d: 'M 0 0 L 16 6 L 0 12 z',
-        fill: cssColorFrom(headingColor),
+        fill: cssColorFrom(routeFillColor),
     })
     routeArrowMarker.append(routeArrowHead)
     routeAfter.setAttribute('marker-end', `url(#${routeArrowMarkerId})`)
@@ -2637,6 +2642,7 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
             svg,
             routeSvg,
             routeAfter,
+            routeArrowHead,
             routeStartMarker,
             routeResizeHandle,
             activityIcon,
@@ -2914,7 +2920,8 @@ const bindGuideDragInteractions = (viewer, record) => {
         const cameraController = viewer.scene?.screenSpaceCameraController
         record.dragState = {
             pointerId: event.pointerId,
-            altitudeDraggable: !routeLengthDrag,
+            // Azimuth dragging must preserve height even when the pointer moves radially.
+            altitudeDraggable: tipAltitudeOnly,
             angleDraggable: cameraIconDrag,
             routeDraggable: routeLengthDrag,
             // Keep the gesture origin stable: updateGuideOverlay may translate
@@ -2924,6 +2931,7 @@ const bindGuideDragInteractions = (viewer, record) => {
             startAltitude: record.guide.cameraAltitude ?? CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS,
             startRadius: Math.hypot(deltaX, deltaY),
             startOffset: record.guide.offsetRadians,
+            lastAppliedCameraAngle: record.guide.angleDegrees,
             shiftPressed: event.shiftKey === true,
             controlPressed: event.ctrlKey === true,
             startMapAngle: tipAltitudeOnly || record.screenLocked ? null : mapBearingFromPointer(event),
@@ -2977,6 +2985,9 @@ const bindGuideDragInteractions = (viewer, record) => {
         else {
             return
         }
+        event.preventDefault()
+        event.stopPropagation()
+        event.stopImmediatePropagation?.()
         dragState.snapActive = true
         updateGuideGeometry(viewer, record, false)
     }
@@ -3001,6 +3012,9 @@ const bindGuideDragInteractions = (viewer, record) => {
         else {
             return
         }
+        event.preventDefault()
+        event.stopPropagation()
+        event.stopImmediatePropagation?.()
         dragState.snapActive = true
         updateGuideGeometry(viewer, record, false)
     }
@@ -3072,6 +3086,11 @@ const bindGuideDragInteractions = (viewer, record) => {
         dragState.pendingUpdates = {
             altitude,
             cameraAngle,
+        }
+        if (record.previewCesiumCamera && dragState.angleDraggable
+            && dragState.lastAppliedCameraAngle !== cameraAngle) {
+            dragState.lastAppliedCameraAngle = cameraAngle
+            record.onCameraChange?.(dragState.pendingUpdates)
         }
     }
 
@@ -3247,7 +3266,7 @@ export const removeJourneyReplayCameraAngleGuide = viewer => {
  *
  * @param {Object} viewer - Cesium viewer.
  * @param {Object} guide - Resolved guide geometry.
- * @param {Object|string} colors - Heading and ahead colors, or one legacy color.
+ * @param {Object|string} colors - Guide and Replay simulation colors, or one legacy color.
  * @param {Object} callbacks - Optional camera interaction callbacks.
  * @returns {boolean} Whether the 3D guide was mounted.
  */
@@ -3269,11 +3288,21 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}, c
         typeof colors === 'string' ? null : colors?.aheadColor,
         lessLuminousColorFrom(headingColor).toCssColorString(),
     )
+    const routeFillColor = guideColorFrom(
+        typeof colors === 'string' ? null : colors?.routeFillColor,
+        headingColor.toCssColorString(),
+    )
+    const routeBorderColor = guideColorFrom(
+        typeof colors === 'string' ? null : colors?.routeBorderColor,
+        headingColor.toCssColorString(),
+    )
     const coneColor = headingColor
     const overlayParts = createGuideOverlay({
         aheadColor,
         activityIconName: guide.activityIcon,
         headingColor: coneColor,
+        routeBorderColor,
+        routeFillColor,
         viewer,
     })
     if (!overlayParts) {
@@ -3282,8 +3311,11 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}, c
 
     const record = Object.assign({}, worldGeometry, overlayParts, {
         guide,
+        routeBorderColor,
+        routeFillColor,
         cropElement: mountedCropElementFrom(viewer, callbacks.cropElement),
         onCameraChange: callbacks.onCameraChange,
+        previewCesiumCamera: callbacks.previewCesiumCamera === true,
         screenLocked: callbacks.screenLocked === true,
         screenProjectionFrame: callbacks.screenLocked === true ? cameraProjectionFrameFrom(viewer) : null,
         preparationCameraOrientation: callbacks.screenLocked === true ? cameraOrientationFrom(viewer) : null,
@@ -3374,6 +3406,15 @@ export const updateJourneyReplayCameraAngleGuide = (viewer, guide, callbacks = {
     }
     if (typeof callbacks.onCameraChange === 'function') {
         record.onCameraChange = callbacks.onCameraChange
+    }
+    if (typeof callbacks.previewCesiumCamera === 'boolean') {
+        record.previewCesiumCamera = callbacks.previewCesiumCamera
+    }
+    if (typeof callbacks.routeFillColor === 'string') {
+        record.routeFillColor = guideColorFrom(callbacks.routeFillColor, record.routeFillColor.toCssColorString())
+    }
+    if (typeof callbacks.routeBorderColor === 'string') {
+        record.routeBorderColor = guideColorFrom(callbacks.routeBorderColor, record.routeBorderColor.toCssColorString())
     }
     const cropElement = mountedCropElementFrom(viewer,
         Object.prototype.hasOwnProperty.call(callbacks, 'cropElement') ? callbacks.cropElement : record.cropElement,

@@ -398,8 +398,9 @@ projection so the camera icon stays aligned to the route at the same
 dragging the cone surface does not change the angle, and dragging the cone tip
 changes camera height. The Expert drawer angle control edits the same
 `cameraAngle` value. In preparation, dragging the route arrow shortens or
-extends the displayed source-trace window from 60 to 1,200 metres, and the route
-is recalculated from the journey coordinates. The guide and simulation are
+extends the displayed source-trace window from 60 to 1,000 metres, capped by the
+available track length, and the route is recalculated from the journey
+coordinates. The arrow and dotted line both use Replay fill color. The guide and simulation are
 hidden if either route endpoint is outside the viewport or terrain-occluded.
 
 In Expert preparation, the Replay keyboard handler listens globally, so the
