@@ -4119,3 +4119,163 @@
 ## 2026-10-26 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/3a2bc456efa70d3cf790e82e2b3267c7e314e7d4)
 
 - Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: preserve POI previews while moving`](https://github.com/lgs1920/studio/commit/8bb20be935f02f15999c920700da9b10a287e047)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: inline SVG icons in POI move previews`](https://github.com/lgs1920/studio/commit/d332d2add3893b63115c3074201b1df519bec4bb)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: pass unrelated shift clicks to map tools`](https://github.com/lgs1920/studio/commit/c537f7b0d0a7225d4fa1320061c5a20d47eef36c)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: animate global POIs during Replay`](https://github.com/lgs1920/studio/commit/9799d63ef74c0d65a09091ef1009986fd7e4c1ee)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: persist Replay crop dimensions per Journey`](https://github.com/lgs1920/studio/commit/062f4175e7ae61ed5e7da104e04af338cb67ac51)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: synchronize SVG clapper animation and sound`](https://github.com/lgs1920/studio/commit/092348833b5921d3ab685fbaf01c07737fbaf309)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: preserve POI title altitude during Replay`](https://github.com/lgs1920/studio/commit/7baaf6e6acaa75ab8922d0fcb75f2866e3fa5ab7)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: include global POIs in startup worker batches`](https://github.com/lgs1920/studio/commit/9169da84ababea66535085d16567901d5b0dc407)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: confirm closing videos before download`](https://github.com/lgs1920/studio/commit/fea548858f52c58df1f00b5528c4cb44ece0da74)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: prioritize Fix Path shift selection over POI moves`](https://github.com/lgs1920/studio/commit/0bd00e24a8bf019445acafe663ce9ba52be619e5)
+
+- Recorded automatically from Git history.
+
+## 2026-10-27 — [`feat: add POI editor preview`](https://github.com/lgs1920/studio/commit/fa2a31265197305cd00fe8e5e8ed4a73fbfd54d6)
+
+- Recorded automatically from Git history.
+
+## 2026-10-27 — [`fix: preserve pill POI content width`](https://github.com/lgs1920/studio/commit/c6d84aacfedfd821f0221a8b307e97991f81bbdf)
+
+- Recorded automatically from Git history.
+
+## 2026-10-28 — [`fix: align POI controls with their headers`](https://github.com/lgs1920/studio/commit/b75320da31f822e0cba6fb173733bb3a531342f1)
+
+- Recorded automatically from Git history.
+
+## 2026-10-28 — [`feat: add POI and Replay color swap controls`](https://github.com/lgs1920/studio/commit/8e59c89671471202aa6e1dce9a388cf2e52af517)
+
+- Recorded automatically from Git history.
+
+## 2026-10-28 — [`fix: remove duplicate startup logo flash`](https://github.com/lgs1920/studio/commit/e016174e5cbc7b1fe73aacc435da44d71b64bb54)
+
+- Recorded automatically from Git history.
+
+## 2026-10-28 — [`feat: animate startup slogan during initialization`](https://github.com/lgs1920/studio/commit/300236d6176dd8598bde845d04d8b68c17221eac)
+
+- Recorded automatically from Git history.
+
+## 2026-10-28 — [`feat: unify POI creation and persist new entries`](https://github.com/lgs1920/studio/commit/526b28e28e0c94c94374d8b0b69581234112dce0)
+
+- Recorded automatically from Git history.
+
+## 2026-10-28 — [`feat: expand POI styling and preview controls`](https://github.com/lgs1920/studio/commit/4958c8a7281e166d525424e3663c80d095430ea4)
+
+- Recorded automatically from Git history.
+
+## 2026-10-28 — [`fix: keep POI shift drag compatible with Fix Path`](https://github.com/lgs1920/studio/commit/5696bc91011dd502f026f7b627ed5fb65b6f69be)
+
+- Recorded automatically from Git history.
+
+## 2026-10-28 — [`feat: time Replay playback around POIs`](https://github.com/lgs1920/studio/commit/57ecda2cef2725a7c7f8fb1aa95474e39c27cdf2)
+
+- Recorded automatically from Git history.
+
+## 2026-10-28 — [`fix: align POI filters and result list`](https://github.com/lgs1920/studio/commit/724aedfa31dfb87383f5adb4f172602c84b071d4)
+
+- Recorded automatically from Git history.
+
+## 2026-10-28 — [`fix: freeze Replay camera during POI crawl`](https://github.com/lgs1920/studio/commit/a8a377549389e935d1bc8987c55d0008413a0540)
+
+- Recorded automatically from Git history.
+
+## 2026-10-28 — [`docs: plan POI timing lanes in Replay timeline`](https://github.com/lgs1920/studio/commit/74fdd5c770dab93b55ed714c4c47118b9877fce6)
+
+- Recorded automatically from Git history.
+
+## 2026-10-28 — [`fix: confirm closing Replay video dialog`](https://github.com/lgs1920/studio/commit/11a9c07cf22654ab86018e53930729b9975e0d6e)
+
+- Recorded automatically from Git history.
+
+## 2026-10-28 — [`fix: filter POIs by journey environment`](https://github.com/lgs1920/studio/commit/25ea8d7acca15e6b75f79c04016a10b53146d2ef)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`fix: align Replay POI timing`](https://github.com/lgs1920/studio/commit/46ba7112ebde333ae857c03db5426555b8120051)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`fix: restore POI visibility after Replay`](https://github.com/lgs1920/studio/commit/0ed063227d60c003bc65332d069466e1d1ff8a28)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`docs: propose synchronized Replay widget-layer export`](https://github.com/lgs1920/studio/commit/b36db4d7274783ea27161600bac46a66e9a50f49)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`fix: align Replay camera guide controls and preview`](https://github.com/lgs1920/studio/commit/6cc0c6e6058022eb16814bf4403527eb842b12e6)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`docs: clarify Replay camera guide ownership rules`](https://github.com/lgs1920/studio/commit/e1090b6802e07484c5fbe38871bf4cdf2438eac8)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`fix: preserve POI visibility across Replay export`](https://github.com/lgs1920/studio/commit/4748c0f3c7cc0b2b4b44833e0a38cb0c9d5d22e2)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`fix: gate Replay POI appearances by route proximity`](https://github.com/lgs1920/studio/commit/3a64064bf78fe1a991a2c4ef93b19ff4958036fa)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`feat: add Replay preparation camera joystick`](https://github.com/lgs1920/studio/commit/06d4d5f9b6ebbb73d925319520e7cc7ddf70b44e)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`fix: keep control widgets within board bounds`](https://github.com/lgs1920/studio/commit/2f8448599789cfdafee3e22951f6c68dabe9dcd2)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`fix: align Replay preparation cone with the map plane`](https://github.com/lgs1920/studio/commit/5d12b303903823f5ae563bf91b5f4b98527a0230)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`feat: add POI decoration styles and editor sections`](https://github.com/lgs1920/studio/commit/0d1bda54ccad518679c806f24d34120fa9ce696b)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`fix: preserve POI borders and anchors during canvas capture`](https://github.com/lgs1920/studio/commit/db950866af62b1d7f0c43ce136b3f075ca5ad73f)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`fix: refine reduced POI pins and drag shadows`](https://github.com/lgs1920/studio/commit/a40612ee77cba5e3b156797c8e5e76890a0b3edd)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`style: adjust POI title-only spacing`](https://github.com/lgs1920/studio/commit/43e15b3698f9debcca891bd66edf1a337dde2795)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/527403d0ed6b6814d10dc530cb415c5c408387f8)
+
+- Recorded automatically from Git history.
