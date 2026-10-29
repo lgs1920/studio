@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import { POI_STANDARD_TYPE } from '@Core/constants'
 import { POIManager } from '@Core/ui/POIManager'
 import {
     getDefaultPOIDisplaySettings, normalizePOIDisplaySettings, POI_DISPLAY_DEFAULT_WIDTH,
-    POI_DISPLAY_SETTINGS_SCHEMA_VERSION, shouldDisplayPOIField,
+    POI_DISPLAY_SETTINGS_SCHEMA_VERSION, shouldDisplayPOIField, POI_DISPLAY_DEFAULT_STYLE,
 }                 from '@Core/POIDisplaySettings'
 import {
     afterEach, beforeEach, describe, expect, it, vi,
@@ -88,6 +88,24 @@ describe('POI display settings', () => {
         })
         expect(normalizePOIDisplaySettings({maxWidth: 900}).maxWidth).toBe(400)
         expect(normalizePOIDisplaySettings({maxWidth: 245}).maxWidth).toBe(250)
+    })
+
+    it('normalizes supported POI styles and horizontal stick anchors', () => {
+        expect(normalizePOIDisplaySettings({style: 'slanted-banner', stickHorizontalPosition: '80'})).toMatchObject({
+            style: 'slanted-banner',
+            stickHorizontalPosition: 80,
+        })
+        expect(normalizePOIDisplaySettings({style: 'legacy-pill', stickHorizontalPosition: 40})).toMatchObject({
+            style: POI_DISPLAY_DEFAULT_STYLE,
+            stickHorizontalPosition: 50,
+        })
+        expect(normalizePOIDisplaySettings({style: '19'}).style).toBe(POI_DISPLAY_DEFAULT_STYLE)
+    })
+
+    it('does not retain the removed pill POI property', () => {
+        const poi = new MapPOI({id: 'style-poi', pill: false})
+
+        expect(Object.hasOwn(poi, 'pill')).toBe(false)
     })
 
     it('migrates unversioned legacy defaults while preserving custom choices and versioned settings', () => {

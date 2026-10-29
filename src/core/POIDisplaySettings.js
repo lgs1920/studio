@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,7 +25,22 @@ export const POI_DISPLAY_DEFAULT_FONT_SIZE = 13
 export const POI_DISPLAY_DEFAULT_STICK_ANGLE = 'random'
 export const POI_DISPLAY_DEFAULT_STICK_LENGTH = 16
 export const POI_DISPLAY_DEFAULT_STICK_POSITION = 'below'
+export const POI_DISPLAY_DEFAULT_STICK_HORIZONTAL_POSITION = 50
+export const POI_DISPLAY_DEFAULT_STYLE = 'pill'
 export const POI_DISPLAY_STICK_LENGTH_MAX = 200
+export const POI_DISPLAY_STYLES = [
+    'pill', 'side-accent', 'round-badge', 'underline', 'open-frame', 'slanted-banner', 'rounded', 'icon-frame',
+]
+export const POI_DISPLAY_STYLE_LABELS = Object.freeze({
+    pill: 'Pill',
+    'side-accent': 'Side accent',
+    'round-badge': 'Round badge',
+    underline: 'Underline',
+    'open-frame': 'Open frame',
+    'slanted-banner': 'Slanted banner',
+    rounded: 'Rounded',
+    'icon-frame': 'Icon frame',
+})
 /** Version of the persisted per-POI display settings shape. */
 export const POI_DISPLAY_SETTINGS_SCHEMA_VERSION = 3
 
@@ -122,6 +137,18 @@ const normalizeOptionalPOIDisplaySettings = source => {
         settings.stickPosition = ['above', 'below'].includes(source.stickPosition)
             ? source.stickPosition
             : POI_DISPLAY_DEFAULT_STICK_POSITION
+    }
+
+    if (hasOwn('stickHorizontalPosition')) {
+        const position = Number(source.stickHorizontalPosition)
+        settings.stickHorizontalPosition = [20, 50, 80].includes(position)
+            ? position
+            : POI_DISPLAY_DEFAULT_STICK_HORIZONTAL_POSITION
+    }
+
+    if (hasOwn('style')) {
+        const style = `${source.style}`
+        settings.style = POI_DISPLAY_STYLES.includes(style) ? style : POI_DISPLAY_DEFAULT_STYLE
     }
 
     if (hasOwn('stickLength')) {

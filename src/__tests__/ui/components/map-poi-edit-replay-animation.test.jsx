@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -142,7 +142,7 @@ describe('MapPOIEditContent Replay animation setting', () => {
                     animated: true,
                     hiddenFields: {category: true},
                 },
-            }, {immediate: true})
+            }, {immediate: true, markAsEdited: true})
         })
     })
 })

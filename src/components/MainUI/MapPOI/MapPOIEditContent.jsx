@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-25
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -180,7 +180,6 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                     simulatedHeight,
                                                     color,
                                                     bgColor,
-                                                    pill = true,
                                                     background = true,
                                                     time,
                                                     visible     = true,
@@ -604,10 +603,13 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                           onWaTabShow={handleTabShow}
                                                       >
                                                           <WaTab slot="nav" panel={`poi-edit-${id}`}>
-                                                              <WaIcon size="s" name="pen-to-square" variant="regular"/>{'Edit'}
+                                                              <WaIcon size="s" name="pen-to-square" variant="regular"/>{'Details'}
+                                                          </WaTab>
+                                                          <WaTab slot="nav" panel={`poi-content-${id}`}>
+                                                              <WaIcon size="s" name="rectangle-list" variant="regular"/>{'Content'}
                                                           </WaTab>
                                                           <WaTab slot="nav" panel={`poi-style-${id}`}>
-                                                              <WaIcon size="s" name="paintbrush-pencil" variant="regular"/>{'Style'}
+                                                              <WaIcon size="s" name="paintbrush-pencil" variant="regular"/>{'Decoration'}
                                                           </WaTab>
                                                           <WaTabPanel name={`poi-edit-${id}`}>
                                                               <div className="edit-map-poi-wrapper">
@@ -699,12 +701,24 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                   {altitudeInput}
                                                               </div>
                                                           </WaTabPanel>
-                                                          <WaTabPanel name={`poi-style-${id}`} onClick={event => event.stopPropagation()}>
+                                                          <WaTabPanel name={`poi-content-${id}`} onClick={event => event.stopPropagation()}>
                                                               <MapPOIDisplaySettings
+                                                                  panel="content"
                                                                   poi={id}
                                                                   display={point.display}
                                                                   hasDateTime={Boolean(time)}
-                                                                  pill={pill}
+                                                                  background={background}
+                                                                  onDisplayChange={handleDisplayChange}
+                                                                  onDisplayValueChange={handleDisplayValueChange}
+                                                                  onStyleChange={handleStyleChange}
+                                                              />
+                                                          </WaTabPanel>
+                                                          <WaTabPanel name={`poi-style-${id}`} onClick={event => event.stopPropagation()}>
+                                                              <MapPOIDisplaySettings
+                                                                  panel="decoration"
+                                                                  poi={id}
+                                                                  display={point.display}
+                                                                  hasDateTime={Boolean(time)}
                                                                   background={background}
                                                                   onDisplayChange={handleDisplayChange}
                                                                   onDisplayValueChange={handleDisplayValueChange}

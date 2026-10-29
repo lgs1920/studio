@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -64,7 +64,7 @@ export class MapPOI extends MapElement {
     description
 
     /**
-     * @type {{category: boolean, titleCategoryIcon: boolean, titleAltitude: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number, fontFamily?: string, fontSize?: number, bold?: boolean, italic?: boolean, stickAngle?: string, stickPosition?: string, stickLength?: number, schemaVersion: number}}
+     * @type {{category: boolean, titleCategoryIcon: boolean, titleAltitude: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number, fontFamily?: string, fontSize?: number, bold?: boolean, italic?: boolean, style?: string, stickAngle?: string, stickPosition?: string, stickHorizontalPosition?: number, stickLength?: number, schemaVersion: number}}
      */
     display = normalizePOIDisplaySettings()
 
@@ -116,9 +116,6 @@ export class MapPOI extends MapElement {
      * @type {string[null]}
      */
     parent = null
-
-    /** @type {boolean} */
-    pill = true
 
     /** @type {POIUtils} **/
     utils = POIUtils
@@ -172,6 +169,7 @@ export class MapPOI extends MapElement {
         options = options ?? {}
         const poiOptions = {...options}
         delete poiOptions.noBackground
+        delete poiOptions.pill
         // If there is no id provided, we generate one
         options.id = options?.id ? options.id.toString() : uuid()
         options.slug = options.id
@@ -180,7 +178,6 @@ export class MapPOI extends MapElement {
             id: options.id,
             slug: options.slug,
             background: options.background ?? true,
-            pill: options.pill ?? true,
             display: normalizePOIDisplaySettings(options.display),
         })
     }

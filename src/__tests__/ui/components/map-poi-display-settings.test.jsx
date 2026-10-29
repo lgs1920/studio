@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,15 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
+    WaButton: ({children}) => <button>{children}</button>,
+    WaButtonGroup: ({children}) => <div>{children}</div>,
     WaDivider:  () => <hr/>,
+    WaIcon: () => <span/>,
+    WaNumberInput: ({label, value}) => <input aria-label={label} value={value} readOnly/>,
+    WaOption: ({children, value}) => <option value={value}>{children}</option>,
+    WaSelect: ({label, value, children, onChange}) => (
+        <label>{label}<select aria-label={label} value={value} onChange={event => onChange({target: {value: event.currentTarget.value}})}>{children}</select></label>
+    ),
     WaSlider:  ({label, value, min, max, step, onInput}) => (
         <input
             type="range"
@@ -78,7 +86,7 @@ describe('MapPOIDisplaySettings', () => {
         expect(screen.getByRole('checkbox', {name: 'Altitude'}).checked).toBe(false)
         expect(screen.getByRole('checkbox', {name: 'Coordinates'}).checked).toBe(false)
         expect(screen.getByRole('checkbox', {name: 'Date-Time'}).checked).toBe(false)
-        expect(screen.getByRole('slider', {name: 'Width'}).value).toBe('200')
+        expect(screen.queryByRole('slider', {name: 'Width'})).toBeNull()
     })
 
     it('shows YAML defaults for a POI saved with the previous code defaults', () => {
@@ -101,21 +109,46 @@ describe('MapPOIDisplaySettings', () => {
         expect(screen.getByRole('checkbox', {name: 'Add Category'}).checked).toBe(false)
     })
 
-    it('groups title, content, and appearance settings with separators', () => {
+    it('groups title and content settings in the content panel', () => {
         render(<MapPOIDisplaySettings poi="poi-1" hasDateTime onDisplayChange={vi.fn()} onStyleChange={vi.fn()}/>)
 
         const titleGroup = screen.getByRole('region', {name: 'Title'})
         const contentGroup = screen.getByRole('region', {name: 'Content'})
-        const appearanceGroup = screen.getByRole('region', {name: 'Appearance'})
 
         expect(within(titleGroup).getByRole('checkbox', {name: 'Add Category'})).toBeTruthy()
         expect(within(titleGroup).getByRole('checkbox', {name: 'Add Altitude'})).toBeTruthy()
         expect(within(contentGroup).getByRole('checkbox', {name: 'Category'})).toBeTruthy()
         expect(within(contentGroup).getByRole('checkbox', {name: 'Date-Time'})).toBeTruthy()
-        expect(within(appearanceGroup).getByRole('checkbox', {name: 'Pill'})).toBeTruthy()
-        expect(within(appearanceGroup).getByRole('checkbox', {name: 'Background'})).toBeTruthy()
-        expect(within(appearanceGroup).getByRole('slider', {name: 'Width'})).toBeTruthy()
+        expect(screen.queryByRole('region', {name: 'Appearance'})).toBeNull()
+        expect(screen.queryByRole('region', {name: 'Stick'})).toBeNull()
+        expect(screen.getAllByRole('separator')).toHaveLength(1)
+    })
+
+    it('groups typography, appearance, and stick settings in the decoration panel', () => {
+        render(<MapPOIDisplaySettings panel="decoration" poi="poi-1" onDisplayChange={vi.fn()} onStyleChange={vi.fn()}/>)
+
+        const typographyGroup = screen.getByRole('region', {name: 'Typography'})
+        const appearanceGroup = screen.getByRole('region', {name: 'Appearance'})
+        const stickGroup = screen.getByRole('region', {name: 'Stick'})
+
+        expect(within(typographyGroup).getByRole('combobox', {name: 'Typeface'})).toBeTruthy()
+        expect(within(appearanceGroup).getByRole('combobox', {name: 'Style'}).value).toBe('pill')
+        expect(within(appearanceGroup).getByRole('combobox', {name: 'Style'}).textContent).not.toMatch(/\b(?:01|02|05|08|16|19|24|34)\b/)
+        expect(within(appearanceGroup).getByRole('checkbox', {name: 'Background'}).checked).toBe(true)
+        expect(within(stickGroup).getByRole('combobox', {name: 'Horizontal anchor'}).value).toBe('50')
+        expect(within(appearanceGroup).getByRole('slider', {name: 'Width'}).value).toBe('200')
         expect(screen.getAllByRole('separator')).toHaveLength(2)
+    })
+
+    it('persists selected POI styles and horizontal stick anchors', () => {
+        const onDisplayValueChange = vi.fn()
+        render(<MapPOIDisplaySettings panel="decoration" poi="poi-1" onDisplayValueChange={onDisplayValueChange}/>)
+
+        fireEvent.change(screen.getByRole('combobox', {name: 'Style'}), {target: {value: 'slanted-banner'}})
+        fireEvent.change(screen.getByRole('combobox', {name: 'Horizontal anchor'}), {target: {value: '80'}})
+
+        expect(onDisplayValueChange).toHaveBeenNthCalledWith(1, 'style', 'slanted-banner')
+        expect(onDisplayValueChange).toHaveBeenNthCalledWith(2, 'stickHorizontalPosition', '80')
     })
 
     it('notifies the editor when the category icon choice changes', () => {
@@ -143,7 +176,7 @@ describe('MapPOIDisplaySettings', () => {
     it('notifies the editor when the expanded width changes', () => {
         const onDisplayChange = vi.fn()
 
-        render(<MapPOIDisplaySettings poi="poi-1" onDisplayChange={onDisplayChange}/>)
+        render(<MapPOIDisplaySettings panel="decoration" poi="poi-1" onDisplayChange={onDisplayChange}/>)
         fireEvent.input(screen.getByRole('slider', {name: 'Width'}), {target: {value: '340'}})
 
         expect(onDisplayChange).toHaveBeenCalledOnce()

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,8 +28,10 @@ import {
     normalizePOIDisplaySettings,
     POI_DISPLAY_DEFAULT_FONT_FAMILY,
     POI_DISPLAY_DEFAULT_STICK_ANGLE,
+    POI_DISPLAY_DEFAULT_STICK_HORIZONTAL_POSITION,
     POI_DISPLAY_DEFAULT_STICK_LENGTH,
     POI_DISPLAY_DEFAULT_STICK_POSITION,
+    POI_DISPLAY_DEFAULT_STYLE,
     resolvePOIStickAngle,
     shouldDisplayPOIField,
 }                                                   from '@Core/POIDisplaySettings'
@@ -40,7 +42,7 @@ import { ELEVATION_UNITS, UnitUtils }               from '@Utils/UnitUtils'
 import { WaIcon }                                  from '@awesome.me/webawesome/dist/react'
 import { snapdom }                                 from '@zumer/snapdom'
 import classNames                                  from 'classnames'
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { proxy, useSnapshot }                      from 'valtio'
 import { createPOICanvasRenderQueue }              from '@Components/MainUI/MapPOI/poiCanvasRenderQueue'
 import './style.css'
@@ -111,9 +113,16 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         : null
     const presentation = resolveReplayPOIPresentation(point, {replay})
     const replayActive = presentation.active
+    // Read optional settings directly so Valtio subscribes when a field is first added.
+    const selectedStyle = point?.display?.style
+    const selectedStickHorizontalPosition = point?.display?.stickHorizontalPosition
     const displaySettings = normalizePOIDisplaySettings(point?.display)
     const configuredStickAngle = displaySettings.stickAngle ?? POI_DISPLAY_DEFAULT_STICK_ANGLE
     const stickPosition = displaySettings.stickPosition ?? POI_DISPLAY_DEFAULT_STICK_POSITION
+    const stickHorizontalPosition = selectedStickHorizontalPosition
+        ?? displaySettings.stickHorizontalPosition
+        ?? POI_DISPLAY_DEFAULT_STICK_HORIZONTAL_POSITION
+    const poiStyle = selectedStyle ?? displaySettings.style ?? POI_DISPLAY_DEFAULT_STYLE
     const leaderAngle = resolvePOIStickAngle(configuredStickAngle, pointId)
     const leaderLength = displaySettings.stickLength ?? POI_DISPLAY_DEFAULT_STICK_LENGTH
     const leaderAngleRadians = leaderAngle * Math.PI / 180
@@ -151,6 +160,12 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         : ''
     const displayDateTimeValue = Boolean(point?.time && displayDateTime)
     const displayCoordinateDetails = displayAltitudeValue || displayCoordinates || displayDateTimeValue
+    const hasVisibleDetailsBelowTitle = Boolean(
+        (pointLocation && displayLocation)
+        || (point?.category && displayCategory)
+        || displayCoordinateDetails,
+    )
+    const isTitleOnly = !hasVisibleDetailsBelowTitle
 
     const iconName = point?.categoryIcon(point?.category)
     const isSvgIcon = iconName?.endsWith('.svg')
@@ -323,35 +338,6 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         })
     }, [isEmbedded, point?.expanded, replayActive, replayAnimationActive, replayMasked, hiddenBecauseTooClose, pointId, $pois.list])
 
-    /** Keep pill content clear of its curved ends as its rendered dimensions change. */
-    useLayoutEffect(() => {
-        const card = _poiContent.current
-        const pill = _poiContent.current?.querySelector('.poi-card-inner.poi-card-inner--pill')
-        if (!card || !pill) {
-            return
-        }
-
-        /** Set symmetric side insets to the measured pill radius. */
-        const updatePillSideInset = () => {
-            const height = pill.getBoundingClientRect().height
-            if (!height) {
-                return
-            }
-
-            const insetValue = `${Math.round(height / 2 * 100) / 100}px`
-            if (card.style.getPropertyValue('--poi-pill-side-inset') !== insetValue) {
-                card.style.setProperty('--poi-pill-side-inset', insetValue)
-            }
-        }
-
-        updatePillSideInset()
-        const observer = typeof ResizeObserver === 'undefined'
-            ? null
-            : new ResizeObserver(updatePillSideInset)
-        observer?.observe(pill)
-        return () => observer?.disconnect()
-    }, [isEmbedded, isExpanded, point])
-
     useEffect(() => {
         if (isEmbedded || !pointId || (!replayMasked && !hiddenBecauseTooClose)) {
             return
@@ -410,8 +396,8 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                   point?.expanded,
                   point?.color,
                   point?.bgColor,
-                  point?.pill,
                   point?.background,
+                  point?.display?.style,
                   point?.height,
                   point?.simulatedHeight,
                   point?.location,
@@ -425,6 +411,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                   point?.display?.italic,
                   point?.display?.stickAngle,
                   point?.display?.stickPosition,
+                  point?.display?.stickHorizontalPosition,
                   point?.display?.stickLength,
                   point?.display?.location,
                   point?.display?.altitude,
@@ -495,6 +482,8 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                 '--poi-expanded-leader-length': `${leaderLength}px`,
                 '--poi-expanded-leader-x': `${leaderOffsetX}px`,
                 '--poi-expanded-leader-y': `${leaderOffsetY}px`,
+                // Keep the connector and its geographic endpoint aligned to the selected card anchor.
+                '--poi-expanded-leader-position': `${stickHorizontalPosition}%`,
                 ...(typeof displaySettings.bold === 'boolean'
                     ? {'--poi-font-weight': displaySettings.bold ? 'bold' : 'normal'}
                     : {}),
@@ -509,13 +498,15 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                     'poi-card',
                     isExpanded && !useInMenu && 'poi-card--expanded',
                     isExpanded && stickPosition === 'above' && 'poi-card--stick-above',
-                    isExpanded && !useInMenu && point?.pill !== false && 'poi-card--pill',
+                    isExpanded && !useInMenu && `poi-card--style-${poiStyle}`,
+                    isExpanded && !useInMenu && `poi-card--stick-horizontal-position-${stickHorizontalPosition}`,
                 )}
                 ref={_poiContent}
             >
                 <div className={classNames(
                     'poi-card-inner',
-                    isExpanded && !useInMenu && point?.pill !== false && 'poi-card-inner--pill',
+                    isExpanded && !useInMenu && isTitleOnly && 'poi-card-inner--title-only',
+                    isExpanded && !useInMenu && `poi-card-inner--style-${poiStyle}`,
                     point?.background === false && 'poi-card-inner--background-hidden',
                 )}>
                     <div className="poi-card-inner-background"/>
@@ -523,8 +514,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                     {isExpanded && !useInMenu ? (
                         <div className={classNames(
                             'poi-card-content',
-                            !(point.location && displayLocation) && !displayCategory && !displayCoordinateDetails
-                            && 'poi-card-content--title-only',
+                            isTitleOnly && 'poi-card-content--title-only',
                         )}>
                             <div className="poi-title">
                                 {displayTitleCategoryIcon && (

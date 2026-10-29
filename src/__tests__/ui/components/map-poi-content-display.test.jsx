@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -170,30 +170,144 @@ describe('MapPOIContent display settings', () => {
         expect(screen.getByTestId('poi-date-time').textContent).toBe('2026-10-24T10:00:00Z')
     })
 
-    it.each([
-        {randomValue: 0.1, expectedAngle: -45},
-        {randomValue: 0.5, expectedAngle: 0},
-        {randomValue: 0.9, expectedAngle: 45},
-    ])('renders a one-rem leader at $expectedAngle degrees with the geographic POI as its endpoint', ({
-        randomValue,
-        expectedAngle,
-    }) => {
-        vi.spyOn(Math, 'random').mockReturnValue(randomValue)
+    it('marks a POI as title-only when enabled detail fields have no rendered value', () => {
+        const point = poiList.get('poi-1')
+        point.category = ''
+        point.location = ''
+        point.display = {
+            schemaVersion: 1,
+            category:    true,
+            location:    true,
+            altitude:    false,
+            coordinates: false,
+            dateTime:    false,
+            fontSize:    30,
+        }
+
         render(<MapPOIContent poi="poi-1"/>)
 
         const wrapper = document.querySelector('.poi-icon-wrapper')
-        const leaderSpace = wrapper.querySelector('.poi-expanded-leader-space')
-        const angle = Number.parseFloat(leaderSpace.style.getPropertyValue('--poi-expanded-leader-angle'))
+        const card = wrapper.querySelector('.poi-card-inner')
+        const content = card.querySelector('.poi-card-content')
+
+        expect(card.classList.contains('poi-card-inner--title-only')).toBe(true)
+        expect(content.classList.contains('poi-card-content--title-only')).toBe(true)
+        expect(wrapper.style.getPropertyValue('--poi-font-size')).toBe('30px')
+    })
+
+    it('renders the selected POI style and horizontal stick anchor', () => {
+        poiList.get('poi-1').display.style = 'underline'
+        poiList.get('poi-1').display.stickHorizontalPosition = 80
+        render(<MapPOIContent poi="poi-1"/>)
+
+        const wrapper = document.querySelector('.poi-icon-wrapper')
+        const card = wrapper.querySelector('.poi-card')
+        expect(card.querySelector('.poi-card-inner--style-underline')).not.toBeNull()
+        expect(card.classList.contains('poi-card--stick-horizontal-position-80')).toBe(true)
+        expect(wrapper.style.getPropertyValue('--poi-expanded-leader-position'))
+            .toBe('80%')
+    })
+
+    it('updates an underline POI when its background is disabled and enabled again', async () => {
+        const point = poiList.get('poi-1')
+        point.display.style = 'underline'
+        point.bgColor = '#ffffff'
+        render(<MapPOIContent poi="poi-1"/>)
+
+        const wrapper = document.querySelector('.poi-icon-wrapper')
+        const card = wrapper.querySelector('.poi-card-inner--style-underline')
+        expect(wrapper.style.getPropertyValue('--lgs-poi-background-color')).toBe('#ffffff')
+        expect(card.classList.contains('poi-card-inner--background-hidden')).toBe(false)
+
+        await act(async () => {
+            point.background = false
+        })
+
+        expect(wrapper.style.getPropertyValue('--lgs-poi-background-color')).toBe('transparent')
+        expect(card.classList.contains('poi-card-inner--background-hidden')).toBe(true)
+
+        await act(async () => {
+            point.background = true
+        })
+
+        expect(wrapper.style.getPropertyValue('--lgs-poi-background-color')).toBe('#ffffff')
+        expect(card.classList.contains('poi-card-inner--background-hidden')).toBe(false)
+    })
+
+    it('keeps every POI detail in the round badge content beside the category icon', () => {
+        poiList.get('poi-1').display.style = 'round-badge'
+        render(<MapPOIContent poi="poi-1"/>)
+
+        const content = document.querySelector('.poi-card-inner--style-round-badge .poi-card-content')
+        const badge = content?.querySelector('.poi-category-title-icon')
+
+        expect(content).not.toBeNull()
+        expect(badge).not.toBeNull()
+        expect(content?.querySelector('h3')?.textContent).toBe('River stop')
+        expect(content?.querySelectorAll('.poi-location')).toHaveLength(2)
+        expect(content?.querySelector('.poi-full-coordinates')).not.toBeNull()
+        expect(content?.contains(badge)).toBe(true)
+    })
+
+    it('frames all POI text separately from the top-left icon', () => {
+        poiList.get('poi-1').display.style = 'icon-frame'
+        poiList.get('poi-1').title = 'River stop with a long name that spans several lines'
+        render(<MapPOIContent poi="poi-1"/>)
+
+        const card = document.querySelector('.poi-card-inner--style-icon-frame')
+        const content = card?.querySelector('.poi-card-content')
+        const title = content?.querySelector('.poi-title')
+        const icon = title?.querySelector('.poi-category-title-icon')
+        const heading = title?.querySelector('h3')
+
+        expect(card).not.toBeNull()
+        expect(content).not.toBeNull()
+        expect(icon).not.toBeNull()
+        expect(heading?.textContent).toBe('River stop with a long name that spans several lines')
+        expect(icon?.parentElement).toBe(title)
+        expect(heading?.parentElement).toBe(title)
+        expect(content?.querySelectorAll('.poi-location')).toHaveLength(2)
+        expect(content?.querySelector('.poi-full-coordinates')).not.toBeNull()
+    })
+
+    it('updates the rendered POI when an optional style is first added', async () => {
+        render(<MapPOIContent poi="poi-1"/>)
+        const card = document.querySelector('.poi-card-inner')
+        const queuedRenders = requestAnimationFrame.mock.calls.length
+        expect(card.classList.contains('poi-card-inner--style-pill')).toBe(true)
+
+        await act(async () => {
+            poiList.get('poi-1').display.style = 'open-frame'
+            await Promise.resolve()
+        })
+
+        expect(card.classList.contains('poi-card-inner--style-open-frame')).toBe(true)
+        expect(requestAnimationFrame.mock.calls.length).toBeGreaterThan(queuedRenders)
+    })
+
+    it.each([
+        {stickAngle: '-45', expectedAngle: -45},
+        {stickAngle: 'vertical', expectedAngle: 0},
+        {stickAngle: '45', expectedAngle: 45},
+    ])('renders a one-rem leader at $expectedAngle degrees with the geographic POI as its endpoint', ({
+        stickAngle,
+        expectedAngle,
+    }) => {
+        poiList.get('poi-1').display.stickAngle = stickAngle
+        render(<MapPOIContent poi="poi-1"/>)
+
+        const wrapper = document.querySelector('.poi-icon-wrapper')
+        const angle = Number.parseFloat(wrapper.style.getPropertyValue('--poi-expanded-leader-angle'))
         const radians = angle * Math.PI / 180
 
         expect(angle).toBe(expectedAngle)
         expect(wrapper.querySelector('.poi-card--expanded')).not.toBeNull()
         expect(wrapper.querySelector('.poi-expanded-leader')).not.toBeNull()
         expect(wrapper.querySelector('.poi-geographic-anchor')).not.toBeNull()
-        expect(Number.parseFloat(leaderSpace.style.getPropertyValue('--poi-expanded-leader-x')))
-            .toBeCloseTo(-Math.sin(radians))
-        expect(Number.parseFloat(leaderSpace.style.getPropertyValue('--poi-expanded-leader-y')))
-            .toBeCloseTo(Math.cos(radians))
+        expect(Number.parseFloat(wrapper.style.getPropertyValue('--poi-expanded-leader-x')))
+            .toBeCloseTo(-Math.sin(radians) * 16)
+        expect(Number.parseFloat(wrapper.style.getPropertyValue('--poi-expanded-leader-y')))
+            .toBeCloseTo(Math.cos(radians) * 16)
     })
 
     it('adds a real POI altitude to the title using the selected system units', async () => {
@@ -317,7 +431,7 @@ describe('MapPOIContent display settings', () => {
         vi.mocked(snapdom).mockResolvedValue({toCanvas: async () => canvas})
         render(<MapPOIContent poi="poi-1"/>)
         vi.spyOn(document.querySelector('.poi-card'), 'getBoundingClientRect')
-            .mockReturnValue({width: 100, height: 40})
+            .mockReturnValue({left: 0, top: 0, right: 100, bottom: 40, width: 100, height: 40})
 
         await act(async () => {})
         await act(async () => {
@@ -343,7 +457,8 @@ describe('MapPOIContent display settings', () => {
         vi.mocked(snapdom).mockResolvedValue({toCanvas: () => pendingCanvas})
         render(<MapPOIContent poi="poi-1"/>)
         const element = document.querySelector('.poi-card')
-        vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({width: 100, height: 40})
+        vi.spyOn(element, 'getBoundingClientRect')
+            .mockReturnValue({left: 0, top: 0, right: 100, bottom: 40, width: 100, height: 40})
 
         // Let mount-time DOM mutations publish their replacement capture requests.
         await act(async () => {})
@@ -376,4 +491,6 @@ describe('MapPOIContent display settings', () => {
             await pendingCanvas
         }
     })
+
+
 })
