@@ -198,7 +198,6 @@ describe('Map POI style', () => {
         const css = loadMapPOIStyle()
         const singleLineStyle = css.slice(css.indexOf('.poi-card-content--title-only {'))
 
-        expect(css).toContain('.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--title-only {\n    padding-block: 0;')
         expect(singleLineStyle).toContain('min-height: 1.4em;')
         expect(singleLineStyle).toContain('line-height: 1.4;')
         expect(singleLineStyle).not.toContain('var(--lgs-font-size) * 1.4')

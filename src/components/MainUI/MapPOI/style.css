@@ -313,10 +313,6 @@
     color: var(--lgs-poi-color);
 }
 
-.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--title-only {
-    padding-block: 0;
-}
-
 .poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-pill {
     border-radius: 9999px;
     padding-inline: calc(3 * var(--poi-padding));
