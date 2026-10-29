@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -507,7 +507,7 @@ describe('POI move interaction', () => {
         expect(updates.latitude).toBeCloseTo(45.6789, 7)
         expect(updates.height).toBeCloseTo(345, 5)
         expect(updates.simulatedHeight).toBeCloseTo(345, 5)
-        expect(options).toEqual({immediate: true})
+        expect(options).toEqual({immediate: true, markAsEdited: true})
         expect(poi.expanded).toBe(false)
         expect(poi.visible).toBe(true)
         expect(poi.title).toBe('River stop')

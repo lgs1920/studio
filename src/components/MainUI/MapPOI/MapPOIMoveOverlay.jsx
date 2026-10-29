@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -664,31 +664,42 @@ export const MapPOIMoveOverlay = () => {
             return undefined
         }
 
-        /** Anchor compact POIs at the rotated pin base and expanded POIs at their geographic connector. */
+        /** Anchor compact POIs at their visible pin tip and expanded POIs at their geographic connector. */
         const measureMarker = () => {
             const marker = _marker.current
             const preview = marker?.querySelector('.poi-icon-wrapper.poi-move-preview')
             const card = preview?.querySelector('.poi-card-inner')
+            const pinShape = preview?.querySelector('.poi-reduced-pin-shape')
             const geographicAnchor = preview?.querySelector('.poi-geographic-anchor')
             const hostRect = marker?.getBoundingClientRect?.()
             const previewRect = preview?.getBoundingClientRect?.()
             const cardRect = card?.getBoundingClientRect?.()
+            const pinShapeRect = pinShape?.getBoundingClientRect?.()
             const isCompact = preview?.classList.contains('poi-shrinked')
-            const markerRect = isCompact ? cardRect : previewRect
+            const hasPinShapeBounds = Boolean(pinShapeRect?.width && pinShapeRect.height)
+            const markerRect = isCompact ? (hasPinShapeBounds ? pinShapeRect : cardRect) : previewRect
             if (!hostRect?.width || !hostRect?.height || !markerRect?.width || !markerRect?.height
                 || !cardRect?.width || !cardRect?.height) {
                 return
             }
             let geographicAnchorRect = geographicAnchor?.getBoundingClientRect?.()
             if (isCompact) {
-                // Rounded corners leave transparent pixels below the visible tip inside the rotated DOM bounds.
-                const cardStyle = getComputedStyle(card)
-                const radiusValue = parseFloat(cardStyle.borderBottomRightRadius) || 0
-                const cornerRadius = cardStyle.borderBottomRightRadius.includes('%')
-                    ? (parseFloat(cardStyle.width) || 0) * radiusValue / 100
-                    : radiusValue
-                const tip = calculatePOIMovePinAnchor(cardRect, cornerRadius)
-                geographicAnchorRect = {left: tip.x, top: tip.y}
+                if (hasPinShapeBounds) {
+                    geographicAnchorRect = {
+                        left: (pinShapeRect.left + pinShapeRect.right) / 2,
+                        top: pinShapeRect.bottom,
+                    }
+                }
+                else {
+                    // Keep supporting cloned legacy POIs while their rounded pin used a rotated card.
+                    const cardStyle = getComputedStyle(card)
+                    const radiusValue = parseFloat(cardStyle.borderBottomRightRadius) || 0
+                    const cornerRadius = cardStyle.borderBottomRightRadius.includes('%')
+                        ? (parseFloat(cardStyle.width) || 0) * radiusValue / 100
+                        : radiusValue
+                    const tip = calculatePOIMovePinAnchor(cardRect, cornerRadius)
+                    geographicAnchorRect = {left: tip.x, top: tip.y}
+                }
             }
             const nextGeometry = measurePOIMoveMarkerGeometry(hostRect, markerRect, cardRect, geographicAnchorRect)
             setMarkerGeometry(current => {

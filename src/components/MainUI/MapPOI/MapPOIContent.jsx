@@ -555,6 +555,18 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                     )}
                     ref={_poiContent}
                 >
+                    {!isExpanded && !useInMenu && (
+                        <svg className="poi-reduced-pin-shape" viewBox="0 0 100 112"
+                             preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
+                            <path
+                                d="M 50 4 A 46 46 0 0 0 29 90.927 L 43 105 Q 50 111 57 105 L 71 90.927 A 46 46 0 0 0 50 4 Z"
+                                fill="var(--lgs-poi-background-color)"
+                                stroke="var(--lgs-poi-border-color)"
+                                strokeWidth="8"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    )}
                     <div className={classNames(
                         'poi-card-inner',
                         isExpanded && !useInMenu && isTitleOnly && 'poi-card-inner--title-only',

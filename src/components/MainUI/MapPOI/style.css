@@ -61,7 +61,10 @@
 }
 
 .poi-icon-wrapper.poi-shrinked:not(.used-in-menu) {
-    height: calc(var(--dimension) + var(--triangle-size));
+    /* Reserve the rounded point below the circular head without stretching it. */
+    --poi-pin-tail-length: calc(0.12 * var(--dimension));
+    height: calc(var(--dimension) + var(--poi-pin-tail-length));
+    transform: none;
 }
 
 .poi-icon-wrapper.poi-shrinked.used-in-menu {
@@ -242,6 +245,45 @@
 
 .used-in-menu .poi-card-inner {
     border-radius: var(--lgs-border-radius-xs);
+}
+
+.poi-shrinked:not(.used-in-menu) .poi-card {
+    position: relative;
+    width: var(--dimension);
+    max-width: var(--dimension);
+    height: calc(var(--dimension) + var(--poi-pin-tail-length));
+}
+
+.poi-reduced-pin-shape {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.poi-shrinked:not(.used-in-menu) .poi-card-inner {
+    top: 0;
+    left: 0;
+    z-index: 1;
+    width: var(--dimension);
+    height: var(--dimension);
+    transform: none;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.poi-shrinked:not(.used-in-menu) .poi-card-inner-background {
+    display: none;
+}
+
+.poi-shrinked:not(.used-in-menu) .poi-card-inner .poi-as-flag::part(svg) {
+    transform: none;
 }
 
 .poi-card-inner.poi-card-inner--background-hidden {
@@ -1533,12 +1575,13 @@
         box-shadow: none;
     }
 
-    & .poi-move-preview .poi-card-inner {
-        /* Keep the large halo on the POI card, outside the small button hit area. */
-        box-shadow:
-            0 0 0.55rem 0.1rem var(--wa-color-shadow),
-            0 0.6rem 0.9rem var(--wa-color-shadow),
-            var(--wa-shadow-l);
+    & .poi-move-preview.poi-shrinked .poi-reduced-pin-shape,
+    & .poi-move-preview:not(.poi-shrinked) .poi-card {
+        /* Follow the visible pixels of either POI drawing instead of its bounding rectangle. */
+        filter:
+            drop-shadow(0 0 0.65rem var(--wa-color-shadow))
+            drop-shadow(0 0.6rem 0.9rem var(--wa-color-shadow))
+            drop-shadow(var(--wa-shadow-offset-x-l) var(--wa-shadow-offset-y-l) var(--wa-shadow-blur-l) var(--wa-color-shadow));
     }
 
     & .poi-icon-wrapper.poi-move-preview {
