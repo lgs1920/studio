@@ -153,14 +153,17 @@ the handle to center without restoring the previous camera pose. Its public
 and applies it to Cesium without acquiring ownership. The transient `lgs-widget`
 uses the scene board and stays outside the visual-widget catalogue and captured
 video composition. Its circular pad uses the standard on-map card theme. A
-transparent Three.js scene draws an on-map-colored, physically shaded ball over
-a recessed on-map dish. The themed inner ring and raised crown surround and
-follow the ball; real mesh depth, surface normals, and lights provide the crown
-ribs and cavity relief. Transparent canvas pixels leave the on-map pad visible
-around the hardware. The DOM thumb remains the pointer and keyboard target. It
-keeps its on-map fallback
+transparent Three.js scene draws a movable, concave on-map cuvette over a
+rounded on-map ball. The cuvette follows the ball's spherical surface, and an
+on-map bevel defines the ball's edge. The grooved, on-map-colored crown stays
+fixed around it. Its perspective angle is oblique, and the cuvette fades slightly
+as it nears the edge. Mesh depth, surface normals, and directional lighting
+provide the relief.
+Transparent canvas pixels leave the on-map disk visible around the hardware.
+The DOM thumb remains the pointer and keyboard target. It
+keeps its concave on-map fallback
 appearance while WebGL initializes or is unavailable, then becomes transparent
-over the rendered ball. The canvas also renders on mount and resize. No title,
+over the rendered cuvette. The canvas also renders on mount and resize. No title,
 measurements, help text, or direction buttons are displayed. Locally bundled
 Font Awesome zoom and rotation icons appear only during adjustment. Focused
 arrow keys expose both axes without triggering global Replay azimuth shortcuts.

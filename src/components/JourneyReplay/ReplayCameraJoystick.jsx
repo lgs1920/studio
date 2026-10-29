@@ -45,6 +45,12 @@ const CONFIG = {
     zIndex: 'var(--lgs-video-recording-settings-toolbar-zindex)',
 }
 
+/** Scale pointer-held joystick input into a gentler Replay camera adjustment rate. */
+const JOYSTICK_POINTER_SENSITIVITY = 0.7
+
+/** Limit full-deflection pitch adjustment to 22.5 degrees per second. */
+const JOYSTICK_PITCH_DEGREES_PER_SECOND = 22.5
+
 /** Check the live preparation state before every camera write, including queued input frames. */
 const canAdjustCamera = () => {
     const video = globalThis.lgs?.stores?.ui?.video
@@ -59,7 +65,7 @@ const consumeInput = event => {
     event.stopPropagation()
 }
 
-/** Project the recessed thumb onto the sphere's tangent plane, shortening its radial axis toward the rim. */
+/** Project the recessed thumb over the curved pad surface, shortening movement toward the rim. */
 const thumbStyleFrom = ({x, y}) => {
     const radius = Math.hypot(x, y)
     const depth = Math.sqrt(Math.max(0, 1 - (radius * 0.8) ** 2))
@@ -69,8 +75,8 @@ const thumbStyleFrom = ({x, y}) => {
     const b = (depth - 1) * normalX * normalY
     const d = 1 + (depth - 1) * normalY ** 2
     return {
-        left: `${50 + x * 22}%`,
-        top: `${50 + y * 22}%`,
+        left: `${50 + x * 20}%`,
+        top: `${50 + y * 20}%`,
         transform: `translate(-50%, -50%) matrix(${a}, ${b}, ${b}, ${d}, 0, 0)`,
     }
 }
@@ -111,9 +117,12 @@ export const ReplayCameraJoystick = () => {
         if (!canAdjustCamera()) return
         const current = currentJourneyReplayCameraSettings()
         const altitude = Math.max(10, Math.min(100000, current.altitude * Math.exp(y * scale)))
-        const pitch = Math.max(-89, Math.min(-5, current.pitch - x * 30 * scale))
+        const pitch = Math.max(-89, Math.min(-5, current.pitch - x * JOYSTICK_PITCH_DEGREES_PER_SECOND * scale))
         if (altitude !== current.altitude || pitch !== current.pitch) {
-            globalThis.__?.ui?.replay?.updatePreparationCamera?.({altitude, pitch})
+            globalThis.__?.ui?.replay?.updatePreparationCamera?.(
+                {altitude, pitch},
+                {preserveCameraRange: true},
+            )
         }
     }, [])
 
@@ -139,7 +148,7 @@ export const ReplayCameraJoystick = () => {
             ? 1 / 60
             : Math.max(0, Math.min(0.1, (currentTime - gesture.lastFrameTime) / 1000))
         gesture.lastFrameTime = currentTime
-        adjust(x, y, elapsedSeconds)
+        adjust(x, y, elapsedSeconds * JOYSTICK_POINTER_SENSITIVITY)
         if (_gesture.current === gesture) _frame.current = requestAnimationFrame(gesture.applyHeld)
     }, [adjust, stop])
 
@@ -148,7 +157,7 @@ export const ReplayCameraJoystick = () => {
         const gesture = _gesture.current
         if (!gesture || gesture.pointerId !== event.pointerId) return
         consumeInput(event)
-        const radius = Math.max(1, Math.min(gesture.rect.width, gesture.rect.height) * 0.22)
+        const radius = Math.max(1, Math.min(gesture.rect.width, gesture.rect.height) * 0.2)
         let deltaClientX = event.clientX - gesture.clientX
         let deltaClientY = event.clientY - gesture.clientY
         if (event.ctrlKey) {

@@ -64,11 +64,12 @@ display frequency and bounds catch-up after browser suspension. The handle sprin
 back on release while retaining the prepared pose. Its session API rejects
 writes during playback and capture. Pointer cancellation, window blur, Journey
 replacement, and unmount cancel pending input frames. The circular control uses
-the standard on-map card as its base. Three.js draws an on-map-colored shaded
-ball over a recessed on-map dish. The themed inner ring and raised crown surround
-and follow the ball, with radial grooves shaped into the crown geometry. Mesh
-depth, normals, and lights provide the relief while transparent canvas pixels
-leave the themed background visible. The thumb keeps an on-map CSS fallback
+the standard on-map card as its base. Three.js draws a smaller movable, concave
+on-map cuvette over a rounded on-map ball. The cuvette conforms to the ball's
+spherical surface and fades slightly near its edge; an on-map bevel defines the
+ball's edge. A grooved, on-map-colored crown stays fixed around the ball. Mesh
+depth, normals, perspective, and directional lighting provide the relief while transparent
+canvas pixels leave the themed background visible. The thumb keeps an on-map CSS fallback
 until WebGL is ready and whenever its context is unavailable. Focused arrow keys
 offer the same controls without
 visible buttons, labels, or measurements.
