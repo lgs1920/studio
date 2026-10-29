@@ -385,7 +385,7 @@ export const openNearbyPOIForPlayback = async (mode, poiId) => {
         call.setPOIEntityVisibility(poi, true, {allowReplayAnimation: true})
     }
 
-/** Start POI display windows when their anchors enter the active crop. */
+/** Start POI display windows near their route passage when their anchors enter the active crop. */
 export const syncNearbyPOIsForSample = async (mode, sample = null) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -474,16 +474,19 @@ export const syncNearbyPOIsForSample = async (mode, sample = null) => {
                 const displayDurationSeconds = basicMode
                     ? poiAnimationDurationSeconds
                     : poiSettings.displayDurationSeconds
-                const poiTraversalProgress = Math.max(0, Math.min(1, entry.projectedAbscissa / totalDistance))
+                const poiProgress = Math.max(0, Math.min(1, entry.projectedAbscissa / totalDistance))
+                const poiTraversalProgress = direction < 0 ? 1 - poiProgress : poiProgress
                 const markerReachedPOI = traversalProgress >= poiTraversalProgress
-                const cropVisibility = isPOIInsideVideoCrop(mode, poi)
-                const insideCrop = cropVisibility ?? isReplayPOIAnimationActiveAtProgress({
+                const nearPassage = isReplayPOIAnimationActiveAtProgress({
                     progress,
                     poiDistance: entry.projectedAbscissa,
                     totalDistance,
                     replayDurationSeconds,
                     animationDurationSeconds: displayDurationSeconds,
                 })
+                // A wide camera view can contain the whole route. Crop entry must
+                // not open distant POIs before their route-relative approach window.
+                const insideCrop = nearPassage && isPOIInsideVideoCrop(mode, poi) !== false
                 const appearance = state.replayPOIAppearanceState.get(poiId) ?? {
                     insideCrop: false,
                     startTimes: [],
