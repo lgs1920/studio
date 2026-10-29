@@ -152,12 +152,18 @@ the handle to center without restoring the previous camera pose. Its public
 `updatePreparationCamera` session boundary persists the active Journey camera
 and applies it to Cesium without acquiring ownership. The transient `lgs-widget`
 uses the scene board and stays outside the visual-widget catalogue and captured
-video composition. Its round shell contains a shaded hemisphere and one recessed
-thumb, foreshortened along the surface normal in its 2D projection. No title,
+video composition. Its circular pad uses the standard on-map card theme. A
+transparent Three.js scene draws an on-map-colored, physically shaded ball over a
+dark recessed dish and a raised gray crown with radial grooves. Real mesh depth,
+surface normals, and lights provide the crown ribs and cavity relief;
+transparent canvas pixels leave the on-map pad visible around the hardware. The
+DOM thumb remains the pointer and keyboard target. It keeps its on-map fallback
+appearance while WebGL initializes or is unavailable, then becomes transparent
+over the rendered ball. The canvas also renders on mount and resize. No title,
 measurements, help text, or direction buttons are displayed. Locally bundled
 Font Awesome zoom and rotation icons appear only during adjustment. Focused
 arrow keys expose both axes without triggering global Replay azimuth shortcuts.
-Dragging the hemisphere outside the thumb moves the widget through the shared
+Dragging the pad outside the thumb moves the widget through the shared
 widget host. The host keeps Moveable's bounds engine active for draggable
 controls even when alignment snapping is disabled, keeping the whole widget
 inside its board during movement. Only the thumb excludes host dragging and controls the camera.

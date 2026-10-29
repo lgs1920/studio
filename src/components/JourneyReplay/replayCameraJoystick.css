@@ -25,29 +25,19 @@
     overflow: visible !important;
 }
 
-.replay-camera-joystick.wa-theme-lgs1920-on-map {
+.replay-camera-joystick {
     position: relative;
-    display: block;
-    padding: 4px;
     border-radius: 50%;
-    background: var(--lgs-card-on-map-bg-color);
-    box-shadow: inset 0 1px 2px color-mix(in oklab, var(--lgs-light-color) 35%, transparent),
-        inset 0 -2px 3px color-mix(in oklab, var(--lgs-dark-color) 75%, transparent),
-        0 6px 12px color-mix(in oklab, var(--lgs-dark-color) 45%, transparent);
     cursor: grab;
 
     & .replay-camera-joystick-pad {
         position: relative;
+        box-sizing: border-box;
         width: 112px;
         height: 112px;
         border-radius: 50%;
-        background:
-            radial-gradient(ellipse at 29% 21%, color-mix(in oklab, var(--lgs-light-color) 38%, transparent), transparent 48%),
-            radial-gradient(circle at 38% 31%, color-mix(in oklab, var(--lgs-card-on-map-bg-color) 55%, var(--lgs-light-color)),
-                var(--lgs-card-on-map-bg-color) 56%, color-mix(in oklab, var(--lgs-dark-color) 90%, var(--lgs-card-on-map-bg-color)) 100%);
-        box-shadow: inset 0 1px 3px color-mix(in oklab, var(--lgs-light-color) 48%, transparent),
-            inset -6px -10px 14px color-mix(in oklab, var(--lgs-dark-color) 65%, transparent),
-            0 2px 3px color-mix(in oklab, var(--lgs-dark-color) 70%, transparent);
+        padding: 0;
+        isolation: isolate;
         cursor: grab;
         touch-action: none;
         user-select: none;
@@ -56,31 +46,44 @@
         &:focus-visible { outline: 2px solid var(--wa-color-focus); outline-offset: 3px; }
     }
 
+    & .replay-camera-joystick-canvas {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        z-index: 2;
+        pointer-events: none;
+    }
+
     & .replay-camera-joystick-thumb {
         position: absolute;
+        z-index: 4;
+        box-sizing: border-box;
         width: 26px;
         height: 26px;
         border-radius: 50%;
-        border: 1px solid color-mix(in oklab, var(--lgs-dark-color) 55%, transparent);
-        background:
-            radial-gradient(ellipse at 68% 80%, color-mix(in oklab, var(--lgs-light-color) 35%, transparent), transparent 55%),
-            radial-gradient(circle at 65% 75%, color-mix(in oklab, var(--lgs-card-on-map-bg-color) 65%, var(--lgs-light-color)),
-                var(--lgs-card-on-map-bg-color) 55%, color-mix(in oklab, var(--lgs-dark-color) 85%, var(--lgs-card-on-map-bg-color)) 100%);
-        box-shadow: inset 2px 3px 5px color-mix(in oklab, var(--lgs-dark-color) 75%, transparent),
-            inset -1px -2px 3px color-mix(in oklab, var(--lgs-light-color) 20%, transparent),
-            0 1px 0 color-mix(in oklab, var(--lgs-light-color) 25%, transparent);
+        padding: 0;
         pointer-events: auto;
         cursor: grab;
 
         &:active { cursor: grabbing; }
     }
 
+    & .replay-camera-joystick-pad.is-threejs-ready .replay-camera-joystick-thumb {
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
     & .replay-camera-joystick-action {
         position: absolute;
+        z-index: 5;
         width: 16px;
         height: 16px;
-        color: var(--lgs-text-on-color);
-        filter: drop-shadow(0 1px 2px var(--lgs-dark-color));
+        color: var(--lgs-on-map-text-color, var(--lgs-text-on-color));
+        filter: drop-shadow(0 1px 2px var(--lgs-on-map-dark-color, var(--lgs-dark-color)));
         pointer-events: none;
 
         &.action-top { top: -22px; left: calc(50% - 8px); }

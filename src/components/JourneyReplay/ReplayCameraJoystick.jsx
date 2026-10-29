@@ -82,8 +82,13 @@ export const ReplayCameraJoystick = () => {
     const journeySlug = useProxyValue(lgs.stores.main, main => main.theJourney?.slug ?? null, null)
     const _gesture = useRef(null)
     const _frame = useRef(null)
+    const _pad = useRef(null)
+    const _canvas = useRef(null)
+    const _scene = useRef(null)
+    const _visualPosition = useRef({x: 0, y: 0})
     const [stick, setStick] = useState({x: 0, y: 0})
     const [action, setAction] = useState({x: 0, y: 0})
+    const [sceneReady, setSceneReady] = useState(false)
     const available = video.editing === true && !video.preRecording && !video.exporting
         && !video.snapshot && !video.finalizing && !isJourneyReplayCameraActive(replay)
         && Boolean(journeySlug)
@@ -250,6 +255,9 @@ export const ReplayCameraJoystick = () => {
         setAction({x: 0, y: 0})
     }, [])
 
+    const handleSceneContextLost = useCallback(() => setSceneReady(false), [])
+    const handleSceneContextRestored = useCallback(() => setSceneReady(true), [])
+
     useEffect(() => {
         window.addEventListener('blur', stop)
         return () => {
@@ -258,18 +266,60 @@ export const ReplayCameraJoystick = () => {
         }
     }, [available, journeySlug, replay.userMode, stop])
 
+    useEffect(() => {
+        const canvasElement = _canvas.current
+        const padElement = _pad.current
+        if (!available || !canvasElement || !padElement) return
+        setSceneReady(false)
+        let cancelled = false
+        let joystickScene
+        import('./ReplayCameraJoystickScene').then(({createReplayCameraJoystickScene}) => {
+            if (cancelled) return
+            try {
+                joystickScene = createReplayCameraJoystickScene({
+                    canvas: canvasElement,
+                    padElement,
+                    onContextLost: handleSceneContextLost,
+                    onContextRestored: handleSceneContextRestored,
+                })
+                _scene.current = joystickScene
+                joystickScene.setPosition(_visualPosition.current)
+                setSceneReady(true)
+            }
+            catch (error) {
+                console.warn('Replay camera joystick could not initialize its Three.js surface', error)
+            }
+        }).catch(error => {
+            if (!cancelled) console.warn('Replay camera joystick could not load its Three.js surface', error)
+        })
+        return () => {
+            cancelled = true
+            joystickScene?.dispose()
+            if (_scene.current === joystickScene) _scene.current = null
+            setSceneReady(false)
+        }
+    }, [available, handleSceneContextLost, handleSceneContextRestored])
+
+    useEffect(() => {
+        _visualPosition.current = stick
+        _scene.current?.setPosition(stick)
+    }, [stick])
+
     if (!available) return null
 
     return (
         <Widget isVisible config={CONFIG} className="replay-camera-joystick-shell">
-            <div className="replay-camera-joystick wa-theme-lgs1920-on-map">
-                <div className="replay-camera-joystick-pad" role="group" tabIndex={0}
+            <div className="replay-camera-joystick">
+                <div ref={_pad} className={`replay-camera-joystick-pad lgs-card wa-theme-lgs1920-on-map${sceneReady ? ' is-threejs-ready' : ''}`}
+                     role="group" tabIndex={0}
                      aria-label="Drag to adjust zoom and pitch" aria-roledescription="joystick"
                      onKeyDown={keyDown} onKeyUp={keyUp} onBlur={stop}
                      onPointerDown={start} onPointerMove={move} onPointerUp={end}
                      onPointerCancel={end} onLostPointerCapture={stop} onContextMenu={consumeInput}
                      onWheel={consumeInput}>
-                    <span className="replay-camera-joystick-thumb lgs-widget-no-drag" aria-hidden="true" style={thumbStyleFrom(stick)}/>
+                    <canvas ref={_canvas} className="replay-camera-joystick-canvas" aria-hidden="true"/>
+                    <span className="replay-camera-joystick-thumb lgs-card wa-theme-lgs1920-on-map lgs-widget-no-drag"
+                          aria-hidden="true" style={thumbStyleFrom(stick)}/>
                     {action.y !== 0 && <WaIcon className={`replay-camera-joystick-action ${action.y < 0 ? 'action-top' : 'action-bottom'}`}
                         name={action.y < 0 ? 'magnifying-glass-plus' : 'magnifying-glass-minus'} aria-hidden="true"/>}
                     {action.x !== 0 && <WaIcon className={`replay-camera-joystick-action ${action.x < 0 ? 'action-left' : 'action-right'}`}

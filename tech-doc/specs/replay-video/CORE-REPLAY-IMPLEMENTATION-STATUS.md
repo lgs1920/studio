@@ -63,11 +63,15 @@ ArrowDown zoom out. Elapsed animation-frame time keeps the rate independent of
 display frequency and bounds catch-up after browser suspension. The handle springs
 back on release while retaining the prepared pose. Its session API rejects
 writes during playback and capture. Pointer cancellation, window blur, Journey
-replacement, and unmount cancel pending input frames. A round, shaded hemisphere
-contains only a recessed thumb with surface foreshortening; zoom and rotation
-icons appear during movement. Focused arrow keys offer the same controls without
+replacement, and unmount cancel pending input frames. The circular control uses
+the standard on-map card as its base. Three.js draws an on-map-colored shaded
+ball, a dark recessed dish, and a raised gray crown with radial grooves. Mesh
+depth, normals, and lights provide the relief while transparent canvas pixels
+leave the themed background visible. The thumb keeps an on-map CSS fallback
+until WebGL is ready and whenever its context is unavailable. Focused arrow keys
+offer the same controls without
 visible buttons, labels, or measurements.
-The hemisphere surface moves the widget; dragging the thumb alone adjusts the
+The circular pad moves the widget; dragging the thumb alone adjusts the
 camera. Ctrl selects the initial dominant horizontal or vertical axis and
 retains it until released, without jumping when free movement resumes.
 Real Cesium camera tests cover Journey persistence, prepared-view updates,
