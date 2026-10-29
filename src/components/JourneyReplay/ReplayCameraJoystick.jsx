@@ -69,8 +69,8 @@ const thumbStyleFrom = ({x, y}) => {
     const b = (depth - 1) * normalX * normalY
     const d = 1 + (depth - 1) * normalY ** 2
     return {
-        left: `${50 + x * 40}%`,
-        top: `${50 + y * 40}%`,
+        left: `${50 + x * 22}%`,
+        top: `${50 + y * 22}%`,
         transform: `translate(-50%, -50%) matrix(${a}, ${b}, ${b}, ${d}, 0, 0)`,
     }
 }
@@ -148,7 +148,7 @@ export const ReplayCameraJoystick = () => {
         const gesture = _gesture.current
         if (!gesture || gesture.pointerId !== event.pointerId) return
         consumeInput(event)
-        const radius = Math.max(1, Math.min(gesture.rect.width, gesture.rect.height) * 0.4)
+        const radius = Math.max(1, Math.min(gesture.rect.width, gesture.rect.height) * 0.22)
         let deltaClientX = event.clientX - gesture.clientX
         let deltaClientY = event.clientY - gesture.clientY
         if (event.ctrlKey) {

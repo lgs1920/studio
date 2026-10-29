@@ -25,7 +25,7 @@ const CROWN_TUBE_RADIUS = 0.12
 const CROWN_RIB_COUNT = 28
 const CAVITY_RADIUS = CROWN_RADIUS - CROWN_TUBE_RADIUS + 0.004
 const BALL_RADIUS = 0.27
-const BALL_TRAVEL = 0.928
+const BALL_TRAVEL = 0.5104
 
 /** Build the recessed center dish with real depth and smooth surface normals. */
 export const createJoystickCavityGeometry = () => {
@@ -94,10 +94,10 @@ export const createJoystickCrownGeometry = () => {
     return geometry
 }
 
-/** Resolve the active on-map card color to an RGB value understood by Three.js. */
-const getOnMapSurfaceColor = element => {
+/** Resolve an on-map CSS color token to an RGB value understood by Three.js. */
+const getOnMapColor = (element, token, fallback) => {
     const swatch = element.ownerDocument.createElement('span')
-    swatch.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;background-color:var(--lgs-card-on-map-bg-color, #34383b)'
+    swatch.style.cssText = `position:absolute;visibility:hidden;pointer-events:none;background-color:var(${token}, ${fallback})`
     element.appendChild(swatch)
     const color = new Color().setStyle(getComputedStyle(swatch).backgroundColor, SRGBColorSpace)
     swatch.remove()
@@ -130,12 +130,14 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, onContextLo
     const ballGeometry = new SphereGeometry(BALL_RADIUS, 64, 48)
     const innerBeadGeometry = new TorusGeometry(CAVITY_RADIUS - 0.006, 0.022, 20, 192)
     const outerBeadGeometry = new TorusGeometry(CROWN_RADIUS + CROWN_TUBE_RADIUS - 0.005, 0.014, 16, 192)
-    const cavityMaterial = new MeshStandardMaterial({color: 0x272b2e, roughness: 0.7, metalness: 0.08})
-    const crownMaterial = new MeshStandardMaterial({color: 0x969696, roughness: 0.52, metalness: 0.12})
-    const innerBeadMaterial = new MeshStandardMaterial({color: 0x343434, roughness: 0.52, metalness: 0.12})
-    const outerBeadMaterial = new MeshStandardMaterial({color: 0x626262, roughness: 0.46, metalness: 0.12})
+    const surfaceColor = getOnMapColor(padElement, '--lgs-card-on-map-bg-color', '#34383b')
+    const borderColor = getOnMapColor(padElement, '--lgs-card-on-map-border-color', '#8a8a8a')
+    const cavityMaterial = new MeshStandardMaterial({color: surfaceColor, roughness: 0.7, metalness: 0.08})
+    const crownMaterial = new MeshStandardMaterial({color: borderColor, roughness: 0.52, metalness: 0.12})
+    const innerBeadMaterial = new MeshStandardMaterial({color: borderColor, roughness: 0.52, metalness: 0.12})
+    const outerBeadMaterial = new MeshStandardMaterial({color: borderColor, roughness: 0.46, metalness: 0.12})
     const ballMaterial = new MeshPhysicalMaterial({
-        color: getOnMapSurfaceColor(padElement),
+        color: surfaceColor,
         roughness: 0.2,
         metalness: 0.1,
         clearcoat: 0.85,
@@ -164,7 +166,12 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, onContextLo
     /** Follow CSS theme changes applied after the replay control has mounted. */
     const updateOnMapColor = () => {
         if (disposed) return
-        ballMaterial.color.copy(getOnMapSurfaceColor(padElement))
+        cavityMaterial.color.copy(getOnMapColor(padElement, '--lgs-card-on-map-bg-color', '#34383b'))
+        const borderColor = getOnMapColor(padElement, '--lgs-card-on-map-border-color', '#8a8a8a')
+        crownMaterial.color.copy(borderColor)
+        innerBeadMaterial.color.copy(borderColor)
+        outerBeadMaterial.color.copy(borderColor)
+        ballMaterial.color.copy(getOnMapColor(padElement, '--lgs-card-on-map-bg-color', '#34383b'))
         render()
     }
 
@@ -236,7 +243,13 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, onContextLo
         setPosition: next => {
             if (disposed) return
             position = next
-            ball.position.set(position.x * BALL_TRAVEL, -position.y * BALL_TRAVEL, 0.13)
+            const x = position.x * BALL_TRAVEL
+            const y = -position.y * BALL_TRAVEL
+            cavity.position.set(x, y, 0)
+            crown.position.set(x, y, 0)
+            innerBead.position.set(x, y, 0.008)
+            outerBead.position.set(x, y, -0.003)
+            ball.position.set(x, y, 0.13)
             render()
         },
         dispose,

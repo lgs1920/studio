@@ -153,11 +153,12 @@ the handle to center without restoring the previous camera pose. Its public
 and applies it to Cesium without acquiring ownership. The transient `lgs-widget`
 uses the scene board and stays outside the visual-widget catalogue and captured
 video composition. Its circular pad uses the standard on-map card theme. A
-transparent Three.js scene draws an on-map-colored, physically shaded ball over a
-dark recessed dish and a raised gray crown with radial grooves. Real mesh depth,
-surface normals, and lights provide the crown ribs and cavity relief;
-transparent canvas pixels leave the on-map pad visible around the hardware. The
-DOM thumb remains the pointer and keyboard target. It keeps its on-map fallback
+transparent Three.js scene draws an on-map-colored, physically shaded ball over
+a recessed on-map dish. The themed inner ring and raised crown surround and
+follow the ball; real mesh depth, surface normals, and lights provide the crown
+ribs and cavity relief. Transparent canvas pixels leave the on-map pad visible
+around the hardware. The DOM thumb remains the pointer and keyboard target. It
+keeps its on-map fallback
 appearance while WebGL initializes or is unavailable, then becomes transparent
 over the rendered ball. The canvas also renders on mount and resize. No title,
 measurements, help text, or direction buttons are displayed. Locally bundled
