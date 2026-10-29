@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -428,11 +428,20 @@ export const syncNearbyPOIsForSample = async (mode, sample = null) => {
         const shouldAnimatePOIs = replayDurationSeconds > 0 && totalDistance > 0
         const expandedIds = new Set()
 
-        if (state.lastReplayPOIProgress !== null && progress < state.lastReplayPOIProgress) {
+        const replay = replayStore()
+        const direction = Number(state.controller?.direction ?? replay?.direction) < 0 ? -1 : 1
+        const traversalProgress = direction < 0 ? 1 - progress : progress
+        if (state.lastReplayPOIProgress !== null && traversalProgress < state.lastReplayPOIProgress) {
             state.replayPOIAppearanceState.clear()
         }
-        state.lastReplayPOIProgress = progress
-        const currentReplaySeconds = Math.max(0, Math.min(1, progress)) * replayDurationSeconds
+        state.lastReplayPOIProgress = traversalProgress
+        const replayPhase = replay?.replayFramePhase
+        const playbackClockMillis = replayPhase?.kind === 'replay'
+            ? finiteNumber(replayPhase.localMillis)
+            : null
+        const currentReplaySeconds = playbackClockMillis === null
+            ? Math.max(0, Math.min(1, traversalProgress)) * replayDurationSeconds
+            : Math.max(0, playbackClockMillis / 1000)
 
         if (shouldAnimatePOIs) {
             const uniqueNearbyPois = new Map(nearbyPois
@@ -465,6 +474,8 @@ export const syncNearbyPOIsForSample = async (mode, sample = null) => {
                 const displayDurationSeconds = basicMode
                     ? poiAnimationDurationSeconds
                     : poiSettings.displayDurationSeconds
+                const poiTraversalProgress = Math.max(0, Math.min(1, entry.projectedAbscissa / totalDistance))
+                const markerReachedPOI = traversalProgress >= poiTraversalProgress
                 const cropVisibility = isPOIInsideVideoCrop(mode, poi)
                 const insideCrop = cropVisibility ?? isReplayPOIAnimationActiveAtProgress({
                     progress,
@@ -479,16 +490,22 @@ export const syncNearbyPOIsForSample = async (mode, sample = null) => {
                 }
                 if (insideCrop && !appearance.insideCrop
                     && appearance.startTimes.length < MAX_REPLAY_POI_APPEARANCES) {
-                    // Start the display clock only on a crop-entry transition, never on route proximity.
-                    appearance.startTimes.push(currentReplaySeconds)
+                    // Keep an early crop entry visible until the marker reaches the POI, then start its display timer.
+                    appearance.startTimes.push({
+                        displayStartedAt: markerReachedPOI ? currentReplaySeconds : null,
+                    })
                 }
                 appearance.insideCrop = insideCrop
                 state.replayPOIAppearanceState.set(poiId, appearance)
 
-                if (appearance.startTimes.some(startTime => (
-                    currentReplaySeconds >= startTime
-                    && currentReplaySeconds < startTime + displayDurationSeconds
-                ))) {
+                if (appearance.startTimes.some(startTime => {
+                    if (startTime.displayStartedAt === null && markerReachedPOI) {
+                        startTime.displayStartedAt = currentReplaySeconds
+                    }
+
+                    return startTime.displayStartedAt === null
+                        || currentReplaySeconds < startTime.displayStartedAt + displayDurationSeconds
+                })) {
                     expandedIds.add(poiId)
                 }
             }

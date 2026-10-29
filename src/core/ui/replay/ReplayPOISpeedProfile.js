@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-28
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import {isReplayPOIAnimationEndpoint, normalizeJourneyReplayPOISettings, normalizeReplayPOIBehavior} from './JourneyReplayPOISettings'
 
 const DEFAULT_POI_PLAYBACK_SPEED_FACTOR = 0.5
-const DEFAULT_POI_SLOWDOWN_DURATION_MILLIS = 2000
+const DEFAULT_POI_SLOWDOWN_DURATION_MILLIS = 1000
 const POI_CRAWL_SPEED_FACTOR = 0.05
 const POI_CRAWL_RAMP_STEPS = 16
 const MAX_POI_REPLAY_DISTANCE_METERS = 500
@@ -32,7 +32,7 @@ const finiteNumber = value => {
 /** Clamp a numeric value to an inclusive range. */
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value))
 
-/** Create a two-second crawl profile that reaches zero speed at the POI. */
+/** Create a one-second crawl profile that reaches zero speed at the POI. */
 const createPOICrawlSegments = (centerMillis, routeDuration) => {
     const maximumRouteSpan = DEFAULT_POI_SLOWDOWN_DURATION_MILLIS * POI_CRAWL_SPEED_FACTOR / 2
     const routeSpan = Math.min(
