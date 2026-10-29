@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -1284,6 +1284,8 @@ export class JourneyReplaySessionController {
     seek = (...args) => JourneyReplaySessionPlaybackController.seek(this, ...args)
     refresh = (...args) => JourneyReplaySessionPlaybackController.refresh(this, ...args)
     refreshCamera = (...args) => JourneyReplaySessionPlaybackController.refreshCamera(this, ...args)
+    /** Apply explicit camera edits from the preparation joystick. */
+    updatePreparationCamera = (...args) => JourneyReplaySessionPlaybackController.updatePreparationCamera(this, ...args)
     beginReplayCameraExport = (...args) => JourneyReplaySessionPlaybackController.beginReplayCameraExport(this, ...args)
     endReplayCameraExport = (...args) => JourneyReplaySessionPlaybackController.endReplayCameraExport(this, ...args)
     renderReplayExportFrame = (...args) => JourneyReplaySessionPlaybackController.renderReplayExportFrame(this, ...args)

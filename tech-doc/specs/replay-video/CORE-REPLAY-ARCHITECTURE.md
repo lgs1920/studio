@@ -138,6 +138,30 @@ height regardless of pointer radius; only the cone-tip handle edits height.
 Preparation still restores the saved normal camera view when it
 closes. The simulated route defaults to 1,000 metres, capped by the available
 track length; its arrow and dotted stroke use Replay fill color.
+An on-map preparation joystick controls height (vertical axis) and pitch
+(horizontal axis) independently of azimuth. Held thumb deflection controls the
+adjustment rate: maintaining a displaced thumb continues zooming or pitching.
+Upward input and ArrowUp zoom in by reducing camera height; downward input and
+ArrowDown zoom out by increasing it.
+Updates use elapsed animation-frame time, with a bounded catch-up interval after
+browser suspension. Returning to center stops adjustment. Diagonals combine both
+controls. Release, pointer cancellation, focus
+loss, Journey replacement, playback, and capture stop its input loop and return
+the handle to center without restoring the previous camera pose. Its public
+`updatePreparationCamera` session boundary persists the active Journey camera
+and applies it to Cesium without acquiring ownership. The transient `lgs-widget`
+uses the scene board and stays outside the visual-widget catalogue and captured
+video composition. Its round shell contains a shaded hemisphere and one recessed
+thumb, foreshortened along the surface normal in its 2D projection. No title,
+measurements, help text, or direction buttons are displayed. Locally bundled
+Font Awesome zoom and rotation icons appear only during adjustment. Focused
+arrow keys expose both axes without triggering global Replay azimuth shortcuts.
+Dragging the hemisphere outside the thumb moves the widget through the shared
+widget host. Only the thumb excludes host dragging and controls the camera.
+Ctrl constrains thumb movement to the first dominant axis after a three-pixel
+threshold, retaining that axis until Ctrl is released. The circular boundary
+preserves the blocked coordinate; releasing Ctrl resumes free movement without
+applying movement previously ignored on that axis.
 Entering Basic or Expert video preparation stops and awaits an existing normal
 map orbit before framing the canonical journey departure in a static
 North-oriented view with Replay pitch and height. This explicit entry boundary

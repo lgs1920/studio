@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-11
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -96,7 +96,7 @@ describe('useWebAwesomeKits', () => {
         expect(decodeURIComponent(source.slice('data:image/svg+xml,'.length))).toContain('data-prefix="far"')
     })
 
-    it.each(['arrows-up-down', 'arrows-left-right', 'lasso', 'square-dashed'])('bundles the solid %s cursor icon independently of the remote Kit', name => {
+    it.each(['arrows-up-down', 'arrows-left-right', 'lasso', 'square-dashed', 'magnifying-glass-plus', 'magnifying-glass-minus', 'arrow-rotate-left', 'arrow-rotate-right'])('bundles the solid %s cursor icon independently of the remote Kit', name => {
         registerLGS1920IconLibrary()
 
         const [, options] = mocks.registerIconLibrary.mock.calls.find(

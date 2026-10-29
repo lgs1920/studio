@@ -392,6 +392,19 @@
   keys:
     - Left drag
   scope: Replay camera setup
+- action: Adjust replay zoom and pitch with the joystick
+  description: During Basic or Expert video preparation, drag the recessed thumb upward to zoom in, downward to zoom out, and horizontally to change pitch. Drag the hemisphere outside the thumb to move the widget. Diagonal input combines both camera axes. Holding a displaced thumb continues adjustment at a rate set by its distance from center. Returning to center stops adjustment. Release retains the camera pose and centers the thumb. When the joystick has keyboard focus, Up zooms in, Down zooms out, Left and Right adjust pitch, and Escape centers it. Local joystick keys do not rotate Replay azimuth.
+  id: replay-camera-joystick
+  keys:
+    - Left drag
+    - ArrowUp | ArrowDown | ArrowLeft | ArrowRight | Escape
+  scope: Replay camera setup
+- action: Constrain the camera joystick to one axis
+  description: Hold Ctrl while dragging the joystick thumb to lock its movement to the initial dominant horizontal or vertical axis. Keep Ctrl pressed to retain that axis. Release Ctrl to resume free movement without a camera jump.
+  id: replay-camera-joystick-axis-lock
+  keys:
+    - Ctrl+Left drag
+  scope: Replay camera setup
 - action: Snap replay camera angle while dragging
   description: Hold Shift while dragging the camera icon to rotate replay azimuth in 5-degree steps.
   id: replay-camera-angle-snap-shift-drag

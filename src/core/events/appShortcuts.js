@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -801,6 +801,11 @@ const installWidgetKeyboardShortcuts = () => {
 
     const listener = event => {
         const composedPath = event.composedPath?.() ?? []
+        // The focused joystick owns both arrow axes without changing Replay azimuth.
+        if (event.target?.closest?.('.replay-camera-joystick-pad')
+            || composedPath.some(target => target?.closest?.('.replay-camera-joystick-pad'))) {
+            return
+        }
         if ((event.key === 'ArrowUp'
             || event.key === 'ArrowDown'
             || event.key === 'PageUp'

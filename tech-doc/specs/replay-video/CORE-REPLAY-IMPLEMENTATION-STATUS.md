@@ -52,6 +52,25 @@ height even when the pointer moves toward or away from the cone anchor. The
 cone tip alone adjusts height. During preparation, dragging the simulated-route arrow changes the
 visible source-trace distance from 60 to 1,000 metres, capped by track length.
 The arrow and dotted route both use Replay fill color.
+Basic and Expert video preparation also mount a transient on-map camera
+joystick: vertical input changes height/zoom, horizontal input changes pitch,
+and diagonal input combines them without changing azimuth. Held deflection sets
+the adjustment rate: a displaced thumb continues changing the pose until release
+or return to center. Upward input and ArrowUp zoom in; downward input and
+ArrowDown zoom out. Elapsed animation-frame time keeps the rate independent of
+display frequency and bounds catch-up after browser suspension. The handle springs
+back on release while retaining the prepared pose. Its session API rejects
+writes during playback and capture. Pointer cancellation, window blur, Journey
+replacement, and unmount cancel pending input frames. A round, shaded hemisphere
+contains only a recessed thumb with surface foreshortening; zoom and rotation
+icons appear during movement. Focused arrow keys offer the same controls without
+visible buttons, labels, or measurements.
+The hemisphere surface moves the widget; dragging the thumb alone adjusts the
+camera. Ctrl selects the initial dominant horizontal or vertical axis and
+retains it until released, without jumping when free movement resumes.
+Real Cesium camera tests cover Journey persistence, prepared-view updates,
+capture rejection, and return-view restoration;
+rendered browser validation remains pending.
 The complete DOM guide is
 hidden while either route endpoint is outside the viewport or terrain-occluded.
 Basic Replay disables camera diagnostics and adds a configurable-duration

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-11
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,7 @@ import {
 import {
     faArrowsLeftRight, faArrowsUpDown, faBasketShopping, faBottleWater, faBridge, faBusStop, faCableCar,
     faCamera, faKitMedical, faLasso, faLocationDot, faLocationPin, faMugHot, faRestroom, faSignPost, faSquareDashed,
+    faMagnifyingGlassMinus, faMagnifyingGlassPlus, faArrowRotateLeft, faArrowRotateRight,
     faSquareFull, faTent, faTrain, faTriangleExclamation, faUtensils, faWater,
 } from '@fortawesome/pro-solid-svg-icons'
 import {faCircle} from '@fortawesome/duotone-regular-svg-icons/faCircle'
@@ -61,6 +62,7 @@ export const LGS1920_ICON_KITS = [
         icons: {faArrowsLeftRight, faArrowsUpDown, faLasso, faLocationDot, faLocationPin, faSquareDashed, faSquareFull},
     },
     {family: 'classic', variant: 'regular', icons: {faArrowRightArrowLeft, faCirclePlus, faQuestion, faRulerVertical}},
+    {family: 'classic', variant: 'solid', icons: {faMagnifyingGlassMinus, faMagnifyingGlassPlus, faArrowRotateLeft, faArrowRotateRight}},
 ]
 
 /**

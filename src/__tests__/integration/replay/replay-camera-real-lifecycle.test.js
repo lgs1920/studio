@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-10
- * Last modified: 2026-10-24
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -118,6 +118,36 @@ afterEach(() => {
 })
 
 describe('Replay with the real Cesium camera', () => {
+    it.each(['basic', 'expert'])('applies joystick height and pitch during %s preparation and restores the original view', async userMode => {
+        const {camera, mode, journey} = installScene({userMode, cameraAngle: 65})
+        const normal = readPose(camera)
+        try {
+            expect(mode.updatePreparationCamera({altitude: 2400, pitch: -50})).toBeNull()
+            await mode.enterReplayPreparation({journey})
+            const prepared = readPose(camera)
+            expect(mode.updatePreparationCamera({altitude: 2400, pitch: -50})).toMatchObject({
+                altitude: 2400, pitch: -50, cameraAngle: 65,
+            })
+            expect(journey.replay[userMode].camera).toMatchObject({altitude: 2400, pitch: -50, cameraAngle: 65})
+            expect(Cartesian3.distance(camera.positionWC, prepared.position)).toBeGreaterThan(100)
+            const target = Cartesian3.fromDegrees(2, 48, 120)
+            const local = Matrix4.inverseTransformation(Transforms.eastNorthUpToFixedFrame(target), new Matrix4())
+            const direction = Matrix4.multiplyByPointAsVector(local, camera.directionWC, new Cartesian3())
+            expect(Math.asin(direction.z)).toBeCloseTo(-50 * Math.PI / 180, 7)
+            expect(isCameraOwnedByReplay(camera)).toBe(false)
+            lgs.stores.ui.video.exporting = true
+            expect(mode.updatePreparationCamera({altitude: 9999})).toBeNull()
+            expect(journey.replay[userMode].camera.altitude).toBe(2400)
+            lgs.stores.ui.video.exporting = false
+            mode.leaveReplayPreparation()
+            expectPose(camera, normal)
+        }
+        finally {
+            mode.dispose()
+            await mode.waitForSceneRestore()
+        }
+    })
+
     it.each([false, true])('applies each export frame once without the interactive listener with dryRun=%s', async dryRun => {
         const {camera, mode, journey, controller, renderer} = installScene()
         const returnPose = readPose(camera)

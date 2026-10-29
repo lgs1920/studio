@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,7 +61,7 @@ import {
 import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips } from './JourneyReplayClips'
 import {
     currentJourneyReplayCameraSettings, currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber,
-    isJourneyReplayTraceActive, publishReplayClipFrameState, replayStore, resetRuntimeProgress,
+    isJourneyReplayCameraActive, isJourneyReplayTraceActive, publishReplayClipFrameState, replayStore, resetRuntimeProgress,
     resolveJourneyReplayRuntimeClips,
 } from './JourneyReplayRuntime'
 import {createJourneyReplayLogicalFrame} from './JourneyReplayLogicalFrame'
@@ -1169,6 +1169,32 @@ const refreshPreparationCamera = (mode, sample, options = {}) => {
     }
     call.cesiumScene?.()?.requestRender?.()
     return true
+}
+
+/**
+ * Apply explicit preparation controls through the session's persistence and camera boundary.
+ *
+ * @param {Object} mode - Replay session.
+ * @param {Object} updates - Prepared camera settings to merge.
+ * @returns {Object|null} Saved pose, or null outside idle video preparation.
+ */
+export const updatePreparationCamera = (mode, updates) => {
+    const video = globalThis.lgs?.stores?.ui?.video
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    if (!state.preparationExitCameraState || video?.editing !== true
+        || video.preRecording || video.exporting || video.snapshot || video.finalizing
+        || isJourneyReplayCameraActive(globalThis.lgs?.stores?.replay)
+        || replayOwnedCameraFor(mode)) {
+        return null
+    }
+
+    call.cancelPreparationCameraGesture?.()
+    const camera = call.persistCameraSettings?.(updates)
+    if (camera) {
+        refreshCamera(mode, {preparation: true, suppressMoveEvents: true, source: 'preparation-joystick'})
+    }
+    return camera ?? null
 }
 
 export const refreshCamera = (mode, options = {}) => {
