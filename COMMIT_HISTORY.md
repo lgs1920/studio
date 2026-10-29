@@ -4047,3 +4047,75 @@
 ## 2026-10-25 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/3b2f9c856c25ceedc94811130babd60b7718573c)
 
 - Recorded automatically from Git history.
+
+## 2026-10-25 — [`fix: show Replay phase colors in monitor`](https://github.com/lgs1920/studio/commit/5ae570472448823e46b3203cb7eacf333a535262)
+
+- Recorded automatically from Git history.
+
+## 2026-10-25 — [`fix: respect POI animations with hide-all enabled`](https://github.com/lgs1920/studio/commit/d2e7170c1293e9f5fb55be563d8b4ce5dab13b43)
+
+- Recorded automatically from Git history.
+
+## 2026-10-25 — [`fix: preserve Replay POI visibility after animations`](https://github.com/lgs1920/studio/commit/cea9736a668f9815707600e558352d07557f8070)
+
+- Recorded automatically from Git history.
+
+## 2026-10-25 — [`feat: refine POI display and persist its defaults`](https://github.com/lgs1920/studio/commit/22b6f25480b1c2730b546deff96d7c262c7d5efb)
+
+- Recorded automatically from Git history.
+
+## 2026-10-25 — [`fix: anchor expanded POI leaders to coordinates`](https://github.com/lgs1920/studio/commit/42c8065dc4cfe209c367e63b4e5497a2da3a1376)
+
+- Recorded automatically from Git history.
+
+## 2026-10-25 — [`fix: correct expanded POI anchor vertical offset`](https://github.com/lgs1920/studio/commit/b56f3be68c837a42bf0003a5d63e34e054878687)
+
+- Recorded automatically from Git history.
+
+## 2026-10-25 — [`fix: update expanded POI width live`](https://github.com/lgs1920/studio/commit/0852c8294b3ff81269135ee3bf287f424c51bef2)
+
+- Recorded automatically from Git history.
+
+## 2026-10-25 — [`fix: clamp expanded POI width`](https://github.com/lgs1920/studio/commit/0b3a3b5226acdbda8193189f1f1bfa04b322e6f0)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: start POI move on shift drag`](https://github.com/lgs1920/studio/commit/a07c257f5170ba9241a2d1c5ab02b6ed5dd2f6fb)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: isolate modifier click sequences`](https://github.com/lgs1920/studio/commit/093108c4b3fb6a98702077131913d49fabe497f5)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: synchronize POI Replay presentation`](https://github.com/lgs1920/studio/commit/58bbac6af172181a7288084a2fed899f46dfa337)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: preserve replay video handoff during cleanup`](https://github.com/lgs1920/studio/commit/c0bc607255c34ac0f7993a6db15b987bd84d95b8)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`chore: update baseline browser mapping`](https://github.com/lgs1920/studio/commit/a49def597f2d012ee4944b76057e10771f3be5f6)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`docs: document Replay POI and export lifecycle`](https://github.com/lgs1920/studio/commit/03a08f724aac42caef847b6830b5a37573e46561)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`docs: organize Replay and POI follow-ups`](https://github.com/lgs1920/studio/commit/b54dd5c14d06b7169319f38094066ad7f4e45c13)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: preview collapsed POIs on Shift hover`](https://github.com/lgs1920/studio/commit/bce963fa1fa1bad1f418f2fd489f3b9be6a1a39e)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`fix: prevent Shift hover POI render loop`](https://github.com/lgs1920/studio/commit/f9cddc2746450b9d45b4a8f2f8c96e2a20225ab6)
+
+- Recorded automatically from Git history.
+
+## 2026-10-26 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/3a2bc456efa70d3cf790e82e2b3267c7e314e7d4)
+
+- Recorded automatically from Git history.
