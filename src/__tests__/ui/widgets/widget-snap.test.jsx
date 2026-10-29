@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-10-22
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { proxyMap } from 'valtio/utils'
-import { LGS_TOOLBAR, LGS_VISUAL_WIDGET, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { LGS_TOOLBAR, LGS_WIDGET, LGS_VISUAL_WIDGET, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 
 const moveableState = vi.hoisted(() => ({
@@ -236,15 +236,21 @@ describe('Widget snap behavior', () => {
         expect(latestMoveableProps().edge).toEqual(['n', 's'])
     })
 
-    it('disables snap for non visual widgets even when grid snap is enabled', async () => {
+    it.each([LGS_WIDGET, LGS_TOOLBAR])('enforces bounds for %s without alignment snapping even when grid snap is enabled', async type => {
         installGlobals({grid: {enabled: true, size: 30, snap: true}})
+        __.ui.widgetManager.setupElement.mockImplementation(async (_element, _config, setBounds) => {
+            setBounds({left: 0, top: 0, right: 800, bottom: 600})
+            return true
+        })
 
-        renderWidget({type: LGS_TOOLBAR, snappable: true})
+        renderWidget({type, snappable: true})
 
-        expect(latestMoveableProps().snappable).toBe(false)
+        expect(latestMoveableProps().snappable).toBe(true)
+        await waitFor(() => expect(latestMoveableProps().bounds).toEqual({left: 0, top: 0, right: 800, bottom: 600}))
         expect(latestMoveableProps().snapCenter).toBe(false)
         expect(latestMoveableProps().snapElement).toBe(false)
         expect(latestMoveableProps().snapDirections).toBe(false)
+        expect(latestMoveableProps().snapRotationDegrees).toEqual([])
         expect(latestMoveableProps().elementSnapDirections).toBe(false)
         expect(latestMoveableProps().elementGuidelines).toEqual([])
         expect(latestMoveableProps().maxSnapElementGuidelineDistance).toBe(0)

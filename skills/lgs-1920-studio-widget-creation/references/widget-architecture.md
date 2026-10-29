@@ -52,6 +52,12 @@ The active board determines the widget bounds. Grid display is controlled by `lg
 
 Position changes should flow through `__.ui.widgetManager`, including `saveWidgetPosition`, `applyPosition`, and the manager's bound or crop adaptation helpers. This keeps pointer, keyboard, editor preview, scene replacement, and browser database state aligned.
 
+The host enables Moveable's bounds engine for draggable, resizable, scalable,
+and rotatable widgets even when alignment snapping is disabled. Moveable handles
+bounds through its `Snappable` engine; keep its activation separate from the
+grid, peer-widget, center, and directional alignment options. On-map controls
+must remain inside their resolved board throughout dragging.
+
 Credits may be anchored and scaled while preserving their intended position. Logo and Credits are composition infrastructure, not ordinary removable widgets.
 
 ## Verification matrix

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-10-22
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -647,6 +647,8 @@ const WidgetHost = ({
     }, [config?.snapSensitivity])
     const {threshold: snapThreshold, gap: snapGap} = snapSettings
     const canSnapWidget = isVisualWidget && (config?.snappable ?? true)
+    // Moveable's Snappable engine also enforces bounds, independently of alignment snapping.
+    const useBoundsEngine = canSnapWidget || canDrag || canResize || canScale || canRotate
     const canSnapCenter = canSnapWidget && !config.isCropper
     const gridSnapEnabled = canSnapWidget && widgetGrid.enabled && widgetGrid.snap
     const replayAlignmentGuides = Array.isArray(replay.alignmentGuides) ? replay.alignmentGuides : EMPTY_REPLAY_ALIGNMENT_GUIDES
@@ -2087,8 +2089,8 @@ const WidgetHost = ({
                 snapGap={snapGap}
                 snapThreshold={snapThreshold}
                 snapRotationThreshold={5}
-                snapRotationDegrees={[0, -30, -45, -60, -90, -120, -135, -150, -180]}
-                snappable={canSnapWidget}
+                snapRotationDegrees={canSnapWidget ? [0, -30, -45, -60, -90, -120, -135, -150, -180] : []}
+                snappable={useBoundsEngine}
                 snapDirections={canSnapWidget ? {top: true, right: true, bottom: true, left: true, center: canSnapCenter, middle: canSnapCenter} : false}
                 elementSnapDirections={canSnapWidget ? {top: true, left: true, bottom: true, right: true, center: canSnapCenter, middle: canSnapCenter} : false}
                 maxSnapElementGuidelineDistance={canSnapWidget ? 10 : 0}

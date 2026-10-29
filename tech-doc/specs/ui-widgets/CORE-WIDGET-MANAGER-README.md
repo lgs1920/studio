@@ -47,6 +47,12 @@ For the current implementation:
 
 The bounds container is the DOM rect used to clamp widgets so they stay inside their board.
 
+Moveable enforces live bounds through its `Snappable` engine. The shared host
+keeps that engine active for draggable, resizable, scalable, and rotatable
+controls, including non-visual widgets. Alignment snapping remains a separate
+policy: disabling grid, peer, center, or rotation snapping does not allow a
+widget to leave its board while being moved.
+
 In practice, the reference container and the bounds container usually resolve to the same DOM node.
 
 ## Snapping and Alignment

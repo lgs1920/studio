@@ -157,7 +157,9 @@ measurements, help text, or direction buttons are displayed. Locally bundled
 Font Awesome zoom and rotation icons appear only during adjustment. Focused
 arrow keys expose both axes without triggering global Replay azimuth shortcuts.
 Dragging the hemisphere outside the thumb moves the widget through the shared
-widget host. Only the thumb excludes host dragging and controls the camera.
+widget host. The host keeps Moveable's bounds engine active for draggable
+controls even when alignment snapping is disabled, keeping the whole widget
+inside its board during movement. Only the thumb excludes host dragging and controls the camera.
 Ctrl constrains thumb movement to the first dominant axis after a three-pixel
 threshold, retaining that axis until Ctrl is released. The circular boundary
 preserves the blocked coordinate; releasing Ctrl resumes free movement without
