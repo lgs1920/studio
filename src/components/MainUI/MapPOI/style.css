@@ -93,6 +93,10 @@
 }
 
 
+.poi-canvas-capture-surface {
+    display: contents;
+}
+
 .poi-card {
     --poi-expanded-leader-gap: 0px; /* Start each stick directly at the POI's visible border. */
 

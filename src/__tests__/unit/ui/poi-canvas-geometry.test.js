@@ -8,14 +8,17 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {describe, expect, it, vi} from 'vitest'
-import {calculatePOIContentPixelOffset} from '@Components/MainUI/MapPOI/poiCanvasGeometry'
+import {
+    calculatePOICanvasCapturePadding,
+    calculatePOIContentPixelOffset,
+} from '@Components/MainUI/MapPOI/poiCanvasGeometry'
 
 describe('POI canvas geometry', () => {
     it('keeps the visible card centered as the configured maximum width changes', () => {
@@ -56,6 +59,14 @@ describe('POI canvas geometry', () => {
         }
 
         expect(calculatePOIContentPixelOffset(element, 100, 100)).toEqual({x: 0, y: 0})
+    })
+
+    it.each([
+        {name: 'round endpoint', geometry: {borderWidth: 3}, expectedPadding: 6},
+        {name: 'Open Frame stroke', geometry: {borderWidth: 3, openFrameLineWidth: 4.5}, expectedPadding: 6},
+        {name: 'slanted frame', geometry: {borderWidth: 3, slantedContentHeight: 120}, expectedPadding: 21},
+    ])('pads capture for $name overflow', ({geometry, expectedPadding}) => {
+        expect(calculatePOICanvasCapturePadding(geometry)).toBe(expectedPadding)
     })
 
     it.each([

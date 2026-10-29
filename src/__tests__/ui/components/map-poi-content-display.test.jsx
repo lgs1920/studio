@@ -430,7 +430,7 @@ describe('MapPOIContent display settings', () => {
         canvas.height = 80
         vi.mocked(snapdom).mockResolvedValue({toCanvas: async () => canvas})
         render(<MapPOIContent poi="poi-1"/>)
-        vi.spyOn(document.querySelector('.poi-card'), 'getBoundingClientRect')
+        vi.spyOn(document.querySelector('.poi-canvas-capture-surface'), 'getBoundingClientRect')
             .mockReturnValue({left: 0, top: 0, right: 100, bottom: 40, width: 100, height: 40})
 
         await act(async () => {})
@@ -456,7 +456,7 @@ describe('MapPOIContent display settings', () => {
         const pendingCanvas = new Promise(resolve => {finishCanvas = resolve})
         vi.mocked(snapdom).mockResolvedValue({toCanvas: () => pendingCanvas})
         render(<MapPOIContent poi="poi-1"/>)
-        const element = document.querySelector('.poi-card')
+        const element = document.querySelector('.poi-canvas-capture-surface')
         vi.spyOn(element, 'getBoundingClientRect')
             .mockReturnValue({left: 0, top: 0, right: 100, bottom: 40, width: 100, height: 40})
 
@@ -492,5 +492,38 @@ describe('MapPOIContent display settings', () => {
         }
     })
 
+    it('pads SnapDOM capture for a slanted style and restores the preview layout', async () => {
+        poiList.get('poi-1').display.style = 'slanted-banner'
+        const canvas = document.createElement('canvas')
+        canvas.width = 400
+        canvas.height = 240
+        let capturedElement
+        let capturedPadding
+        vi.mocked(snapdom).mockImplementation(async element => {
+            capturedElement = element
+            capturedPadding = element.style.padding
+            return {toCanvas: async () => canvas}
+        })
+        render(<MapPOIContent poi="poi-1"/>)
 
+        const captureSurface = document.querySelector('.poi-canvas-capture-surface')
+        const slantedContent = document.querySelector('.poi-card-inner--style-slanted-banner')
+        vi.spyOn(captureSurface, 'getBoundingClientRect')
+            .mockReturnValue({left: 0, top: 0, right: 300, bottom: 160, width: 300, height: 160})
+        vi.spyOn(slantedContent, 'getBoundingClientRect')
+            .mockReturnValue({left: 0, top: 0, right: 300, bottom: 120, width: 300, height: 120})
+
+        await act(async () => {})
+        await act(async () => {
+            requestAnimationFrame.mock.calls.map(([callback]) => callback).forEach(callback => callback())
+        })
+
+        expect(capturedElement).toBe(captureSurface)
+        expect(capturedPadding).toBe('21px')
+        expect(captureSurface.style.display).toBe('')
+        expect(captureSurface.style.width).toBe('')
+        expect(captureSurface.style.boxSizing).toBe('')
+        expect(captureSurface.style.padding).toBe('')
+        expect(drawPOI).toHaveBeenCalledWith(expect.objectContaining({id: 'poi-1', image: {src: canvas, width: 200, height: 120}}))
+    })
 })

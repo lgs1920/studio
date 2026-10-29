@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,6 +30,24 @@ export const calculatePOIContentAnchor = (elementBounds, cardBounds, anchorBound
             : null,
     y: anchorBounds ? anchorBounds.top : elementBounds.bottom,
 })
+
+/**
+ * Calculate per-side capture padding for visible POI artwork outside its layout box.
+ *
+ * @param {Object} geometry - Measured POI outline geometry.
+ * @param {number} geometry.borderWidth - Base POI border width in CSS pixels.
+ * @param {number} [geometry.openFrameLineWidth=0] - Open Frame stroke width in CSS pixels.
+ * @param {number} [geometry.slantedContentHeight=0] - Slanted POI content height in CSS pixels.
+ * @returns {number} Capture padding in CSS pixels.
+ */
+export const calculatePOICanvasCapturePadding = ({borderWidth, openFrameLineWidth = 0, slantedContentHeight = 0}) => {
+    const normalizedBorderWidth = Number.isFinite(borderWidth) ? Math.max(0, borderWidth) : 0
+    const slantedBleed = slantedContentHeight > 0
+        ? Math.tan(15 * Math.PI / 180) * slantedContentHeight / 2 + normalizedBorderWidth
+        : 0
+
+    return Math.ceil(Math.max(normalizedBorderWidth * 1.5, openFrameLineWidth, slantedBleed) + 1)
+}
 
 /**
  * Align the geographic POI anchor with its Cesium billboard position after canvas capture.

@@ -18,7 +18,9 @@ import { NameValueUnit }                           from '@Components/DataDisplay
 import { DateTimeDisplay }                         from '@Components/DateTimeDisplay'
 import { stylePOIDuotoneIcon }                     from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import { openPOIEditor }                           from '@Components/MainUI/MapPOI/openPOIEditor'
-import { calculatePOIContentPixelOffset }          from '@Components/MainUI/MapPOI/poiCanvasGeometry'
+import {
+    calculatePOICanvasCapturePadding, calculatePOIContentPixelOffset,
+}                                                   from '@Components/MainUI/MapPOI/poiCanvasGeometry'
 import {
     clearPOIHoverPreview, isPOIHoverPreviewActive, isPointerNearPOIHoverPreview, showPOIHoverPreview,
 } from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
@@ -85,6 +87,7 @@ const assertPOICanvasDimensions = (element, scale, ratio) => {
  */
 export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, collapsedPreview = false, style}) => {
     const _poiContent = useRef(null)
+    const _poiCanvasCaptureSurface = useRef(null)
     const _icon = useRef(null)
     const _renderRequestId = useRef(0)
 
@@ -305,20 +308,68 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
 
                 const scale = 2
                 const ratio = window.devicePixelRatio || 1
-                const element = _poiContent.current
-                if (!element) {
+                const element = _poiCanvasCaptureSurface.current
+                const card = _poiContent.current
+                if (!element || !card) {
+                    return
+                }
+
+                const originalDisplay = element.style.display
+                const originalWidth = element.style.width
+                const originalBoxSizing = element.style.boxSizing
+                const originalPadding = element.style.padding
+                let canvas
+                let pixelOffset
+                try {
+                    const cardStyle = window.getComputedStyle(card)
+                    const borderWidth = Number.parseFloat(cardStyle.getPropertyValue('--poi-border-width'))
+                    const openFrameLineWidth = Number.parseFloat(
+                        cardStyle.getPropertyValue('--poi-open-frame-line-width'),
+                    )
+                    const slantedContentHeight = card.classList.contains('poi-card--style-slanted-banner')
+                        ? card.querySelector('.poi-card-inner')?.getBoundingClientRect().height ?? 0
+                        : 0
+                    const capturePadding = expanded ? calculatePOICanvasCapturePadding({
+                        borderWidth: Number.isFinite(borderWidth) ? borderWidth : 3,
+                        openFrameLineWidth: Number.isFinite(openFrameLineWidth) ? openFrameLineWidth : 0,
+                        slantedContentHeight,
+                    }) : 0
+
+                    // Expand only the rasterization root so SnapDOM includes transformed and external strokes.
+                    element.style.display = 'block'
+                    element.style.width = 'max-content'
+                    element.style.boxSizing = 'content-box'
+                    element.style.padding = `${capturePadding}px`
+                    assertPOICanvasDimensions(element, scale, ratio)
+                    const snap = await snapdom(element, {scale})
+                    canvas = await snap.toCanvas()
+                    if (!isCurrentRender() || _poiCanvasCaptureSurface.current !== element
+                        || _poiContent.current !== card) {
+                        return
+                    }
+
+                    const width = canvas.width / scale / ratio
+                    const height = canvas.height / scale / ratio
+                    pixelOffset = calculatePOIContentPixelOffset(element, width, height)
+                }
+                catch (error) {
+                    console.error(`Error rendering POI ${pointId} to canvas:`, error)
+                    return
+                }
+                finally {
+                    element.style.display = originalDisplay
+                    element.style.width = originalWidth
+                    element.style.boxSizing = originalBoxSizing
+                    element.style.padding = originalPadding
+                }
+
+                const currentPoint = $pois.list.get(pointId)
+                if (!canvas || !isCurrentRender() || _poiCanvasCaptureSurface.current !== element
+                    || _poiContent.current !== card) {
                     return
                 }
 
                 try {
-                    assertPOICanvasDimensions(element, scale, ratio)
-                    const snap = await snapdom(element, {scale})
-                    const canvas = await snap.toCanvas()
-                    const currentPoint = $pois.list.get(pointId)
-                    if (!isCurrentRender() || _poiContent.current !== element) {
-                        return
-                    }
-
                     const mapPOI = new MapPOI(currentPoint)
                     const width = canvas.width / scale / ratio
                     const height = canvas.height / scale / ratio
@@ -328,7 +379,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                         width,
                         height,
                     }
-                    mapPOI.pixelOffset = calculatePOIContentPixelOffset(element, width, height)
+                    mapPOI.pixelOffset = pixelOffset
                     await mapPOI.utils.draw(mapPOI)
                 }
                 catch (error) {
@@ -493,121 +544,123 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                 ...style,
             }}
         >
-            <div
-                className={classNames(
-                    'poi-card',
-                    isExpanded && !useInMenu && 'poi-card--expanded',
-                    isExpanded && stickPosition === 'above' && 'poi-card--stick-above',
-                    isExpanded && !useInMenu && `poi-card--style-${poiStyle}`,
-                    isExpanded && !useInMenu && `poi-card--stick-horizontal-position-${stickHorizontalPosition}`,
-                )}
-                ref={_poiContent}
-            >
-                <div className={classNames(
-                    'poi-card-inner',
-                    isExpanded && !useInMenu && isTitleOnly && 'poi-card-inner--title-only',
-                    isExpanded && !useInMenu && `poi-card-inner--style-${poiStyle}`,
-                    point?.background === false && 'poi-card-inner--background-hidden',
-                )}>
-                    <div className="poi-card-inner-background"/>
+            <div className="poi-canvas-capture-surface" ref={_poiCanvasCaptureSurface}>
+                <div
+                    className={classNames(
+                        'poi-card',
+                        isExpanded && !useInMenu && 'poi-card--expanded',
+                        isExpanded && stickPosition === 'above' && 'poi-card--stick-above',
+                        isExpanded && !useInMenu && `poi-card--style-${poiStyle}`,
+                        isExpanded && !useInMenu && `poi-card--stick-horizontal-position-${stickHorizontalPosition}`,
+                    )}
+                    ref={_poiContent}
+                >
+                    <div className={classNames(
+                        'poi-card-inner',
+                        isExpanded && !useInMenu && isTitleOnly && 'poi-card-inner--title-only',
+                        isExpanded && !useInMenu && `poi-card-inner--style-${poiStyle}`,
+                        point?.background === false && 'poi-card-inner--background-hidden',
+                    )}>
+                        <div className="poi-card-inner-background"/>
 
-                    {isExpanded && !useInMenu ? (
-                        <div className={classNames(
-                            'poi-card-content',
-                            isTitleOnly && 'poi-card-content--title-only',
-                        )}>
-                            <div className="poi-title">
-                                {displayTitleCategoryIcon && (
-                                    <WaIcon
-                                        name={isSvgIcon ? '' : iconName}
-                                        src={isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
-                                        className="poi-category-title-icon"
-                                        variant="regular"
-                                        onWaLoad={renderToCanvasAfterIconLoad}
-                                    />
-                                )}
-                                <h3>
-                                    {point.title ?? 'Point Of Interest'}
-                                    {formattedTitleAltitude && ` (${formattedTitleAltitude})`}
-                                </h3>
-                            </div>
-                            {point.location && displayLocation && (
-                                <div className="poi-location" title={point.location}>
-                                    <WaIcon name="location-dot"
+                        {isExpanded && !useInMenu ? (
+                            <div className={classNames(
+                                'poi-card-content',
+                                isTitleOnly && 'poi-card-content--title-only',
+                            )}>
+                                <div className="poi-title">
+                                    {displayTitleCategoryIcon && (
+                                        <WaIcon
+                                            name={isSvgIcon ? '' : iconName}
+                                            src={isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
+                                            className="poi-category-title-icon"
                                             variant="regular"
                                             onWaLoad={renderToCanvasAfterIconLoad}
-                                    />
-                                    <span>{point.location}</span>
-                                </div>
-                            )}
-
-                            {point.category && displayCategory && (
-                                <div className="poi-location" title={point.location}>
-                                    <WaIcon
-                                        name={isSvgIcon ? '' : iconName}
-                                        src={isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
-                                        variant="regular"
-                                        onWaLoad={renderToCanvasAfterIconLoad}
-                                    />
-                                    <span>{point.category}</span>
-                                </div>
-                            )}
-
-
-                            {displayCoordinateDetails && (
-                                <div className="poi-full-coordinates">
-                                {displayAltitudeValue && (
-                                    <NameValueUnit
-                                        className="poi-elevation"
-                                        text={'Altitude:'}
-                                        value={point.height.toFixed()}
-                                        format="%d"
-                                        units={ELEVATION_UNITS}
-                                    />
-                                )}
-                                {displayCoordinates && (
-                                    <div className="poi-coordinates">
-                                        <span>
-                                            {__.convert(point.latitude).to(coordinateSystem.current)},{' '}
-                                            {__.convert(point.longitude).to(coordinateSystem.current)}
-                                        </span>
-                                    </div>
-                                )}
-                                {displayDateTimeValue && (
-                                    <div className="poi-time">
-                                        <DateTimeDisplay
-                                            value={point.time}
-                                            timeZone={point.timeZone}
-                                            longitude={point.longitude}
-                                            latitude={point.latitude}
                                         />
+                                    )}
+                                    <h3>
+                                        {point.title ?? 'Point Of Interest'}
+                                        {formattedTitleAltitude && ` (${formattedTitleAltitude})`}
+                                    </h3>
+                                </div>
+                                {point.location && displayLocation && (
+                                    <div className="poi-location" title={point.location}>
+                                        <WaIcon name="location-dot"
+                                                variant="regular"
+                                                onWaLoad={renderToCanvasAfterIconLoad}
+                                        />
+                                        <span>{point.location}</span>
                                     </div>
                                 )}
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <WaIcon
-                            ref={_icon}
-                             key={point?.category}
-                            name={iconVisible ? (!isSvgIcon ? iconName : '') : 'mask'}
-                            src={iconVisible && isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
-                            className="poi-as-flag poi-duotone-icon"
-                            variant="regular"
-                            family="duotone"
-                            onWaLoad={renderToCanvasAfterIconLoad}
-                        />
-                     )}
-                </div>
-                {isExpanded && (!isEmbedded || domPreview) && (
-                    <div
-                        className="poi-expanded-leader-space"
-                        aria-hidden="true"
-                    >
-                        <span className="poi-expanded-leader"/>
-                        <span className="poi-geographic-anchor"/>
+
+                                {point.category && displayCategory && (
+                                    <div className="poi-location" title={point.location}>
+                                        <WaIcon
+                                            name={isSvgIcon ? '' : iconName}
+                                            src={isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
+                                            variant="regular"
+                                            onWaLoad={renderToCanvasAfterIconLoad}
+                                        />
+                                        <span>{point.category}</span>
+                                    </div>
+                                )}
+
+
+                                {displayCoordinateDetails && (
+                                    <div className="poi-full-coordinates">
+                                    {displayAltitudeValue && (
+                                        <NameValueUnit
+                                            className="poi-elevation"
+                                            text={'Altitude:'}
+                                            value={point.height.toFixed()}
+                                            format="%d"
+                                            units={ELEVATION_UNITS}
+                                        />
+                                    )}
+                                    {displayCoordinates && (
+                                        <div className="poi-coordinates">
+                                            <span>
+                                                {__.convert(point.latitude).to(coordinateSystem.current)},{' '}
+                                                {__.convert(point.longitude).to(coordinateSystem.current)}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {displayDateTimeValue && (
+                                        <div className="poi-time">
+                                            <DateTimeDisplay
+                                                value={point.time}
+                                                timeZone={point.timeZone}
+                                                longitude={point.longitude}
+                                                latitude={point.latitude}
+                                            />
+                                        </div>
+                                    )}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <WaIcon
+                                ref={_icon}
+                                 key={point?.category}
+                                name={iconVisible ? (!isSvgIcon ? iconName : '') : 'mask'}
+                                src={iconVisible && isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
+                                className="poi-as-flag poi-duotone-icon"
+                                variant="regular"
+                                family="duotone"
+                                onWaLoad={renderToCanvasAfterIconLoad}
+                            />
+                         )}
                     </div>
-                )}
+                    {isExpanded && (!isEmbedded || domPreview) && (
+                        <div
+                            className="poi-expanded-leader-space"
+                            aria-hidden="true"
+                        >
+                            <span className="poi-expanded-leader"/>
+                            <span className="poi-geographic-anchor"/>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     )
