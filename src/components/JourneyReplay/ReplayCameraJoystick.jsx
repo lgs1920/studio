@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-29
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -116,8 +116,8 @@ export const ReplayCameraJoystick = () => {
     const adjust = useCallback((x, y, scale = 1) => {
         if (!canAdjustCamera()) return
         const current = currentJourneyReplayCameraSettings()
-        const altitude = Math.max(10, Math.min(100000, current.altitude * Math.exp(y * scale)))
-        const pitch = Math.max(-89, Math.min(-5, current.pitch - x * JOYSTICK_PITCH_DEGREES_PER_SECOND * scale))
+        const altitude = Math.max(10, Math.min(100000, current.altitude * Math.exp(-x * scale)))
+        const pitch = Math.max(-89, Math.min(-5, current.pitch - y * JOYSTICK_PITCH_DEGREES_PER_SECOND * scale))
         if (altitude !== current.altitude || pitch !== current.pitch) {
             globalThis.__?.ui?.replay?.updatePreparationCamera?.(
                 {altitude, pitch},
@@ -321,7 +321,7 @@ export const ReplayCameraJoystick = () => {
             <div className="replay-camera-joystick">
                 <div ref={_pad} className={`replay-camera-joystick-pad lgs-card wa-theme-lgs1920-on-map${sceneReady ? ' is-threejs-ready' : ''}`}
                      role="group" tabIndex={0}
-                     aria-label="Drag to adjust zoom and pitch" aria-roledescription="joystick"
+                     aria-label="Drag up or down to adjust pitch, and left or right to zoom" aria-roledescription="joystick"
                      onKeyDown={keyDown} onKeyUp={keyUp} onBlur={stop}
                      onPointerDown={start} onPointerMove={move} onPointerUp={end}
                      onPointerCancel={end} onLostPointerCapture={stop} onContextMenu={consumeInput}
@@ -330,9 +330,9 @@ export const ReplayCameraJoystick = () => {
                     <span className="replay-camera-joystick-thumb lgs-card wa-theme-lgs1920-on-map lgs-widget-no-drag"
                           aria-hidden="true" style={thumbStyleFrom(stick)}/>
                     {action.y !== 0 && <WaIcon className={`replay-camera-joystick-action ${action.y < 0 ? 'action-top' : 'action-bottom'}`}
-                        name={action.y < 0 ? 'magnifying-glass-plus' : 'magnifying-glass-minus'} aria-hidden="true"/>}
+                        name={action.y < 0 ? 'arrow-up' : 'arrow-down'} aria-hidden="true"/>}
                     {action.x !== 0 && <WaIcon className={`replay-camera-joystick-action ${action.x < 0 ? 'action-left' : 'action-right'}`}
-                        name={action.x < 0 ? 'arrow-rotate-left' : 'arrow-rotate-right'} aria-hidden="true"/>}
+                        name={action.x < 0 ? 'magnifying-glass-minus' : 'magnifying-glass-plus'} aria-hidden="true"/>}
                 </div>
             </div>
         </Widget>

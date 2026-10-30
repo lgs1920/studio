@@ -8,52 +8,63 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-29
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    AmbientLight, BufferAttribute, BufferGeometry, Color, DirectionalLight, Group, HemisphereLight, Mesh,
-    MeshStandardMaterial, NoToneMapping, PerspectiveCamera, Scene, SRGBColorSpace, TorusGeometry,
-    WebGLRenderer,
+    AmbientLight, BufferAttribute, BufferGeometry, CanvasTexture, Color, DirectionalLight,
+    EquirectangularReflectionMapping, Group, HemisphereLight, Mesh, MeshPhysicalMaterial,
+    MeshStandardMaterial, NoToneMapping, PCFSoftShadowMap, PerspectiveCamera, RingGeometry, Scene,
+    SRGBColorSpace, WebGLRenderer,
 } from 'three'
 
 const CROWN_RADIUS = 1.02
 const CROWN_TUBE_RADIUS = 0.09
-const CROWN_VERTICAL_SCALE = 0.65
-const CROWN_RIB_COUNT = 28
+const CROWN_INNER_RADIUS = CROWN_RADIUS - CROWN_TUBE_RADIUS
+const CROWN_OUTER_RADIUS = CROWN_RADIUS + CROWN_TUBE_RADIUS
+const CROWN_CONCAVITY_DEPTH = 0.035
 const DISH_RADIUS = 0.88
-const DOME_HEIGHT = 0.26
+const DOME_HEIGHT = 0.30
 const DOME_SPHERE_RADIUS = (DISH_RADIUS ** 2 + DOME_HEIGHT ** 2) / (2 * DOME_HEIGHT)
 const DOME_EDGE_HEIGHT = Math.sqrt(DOME_SPHERE_RADIUS ** 2 - DISH_RADIUS ** 2)
-const DISH_RIM_RADIUS = 0.86
-const DISH_RIM_TUBE_RADIUS = 0.03
 const CUVETTE_RADIUS = 0.30
-const CUVETTE_DEPTH = 0.12
+const CUVETTE_DEPTH = 0.08
+const CUVETTE_BRIGHTNESS_FACTOR = 0.6
 const CUVETTE_TRAVEL = 0.464
+const SEAT_RING_WIDTH = 0.18
+const SEAT_RING_DEPTH = 0.045
+const SEAT_RING_OUTER_FADE_START = 0.68
+const CONTACT_RING_WIDTH = 0.054
+const CONTACT_RING_DEPTH = 0.01
+const CONTACT_RING_ALPHA = 0.8
 const ON_MAP_FALLBACK = 'var(--lgs-on-map-dark-color, var(--lgs-dark-color, var(--wa-color-brand, #273d35)))'
+
+/** Match the ball's on-map brightness at a point on its surface. */
+const getDomeShade = (x, y) => 1.14 - 0.28 * Math.hypot(x, y) / DISH_RADIUS
 
 /** Return the spherical cap height above the edge of the large on-map ball. */
 const getDomeHeight = (x, y) => Math.sqrt(DOME_SPHERE_RADIUS ** 2 - x ** 2 - y ** 2) - DOME_EDGE_HEIGHT
 
 /** Build a concave on-map surface with real depth and smooth normals. */
 const createConcaveGeometry = (radius, depth) => {
-    const radialSteps = 24
+    const radialSteps = 32
     const radialSegments = 128
     const positions = [0, 0, -depth]
-    const colors = [0.76, 0.76, 0.76]
+    const colors = [CUVETTE_BRIGHTNESS_FACTOR, CUVETTE_BRIGHTNESS_FACTOR, CUVETTE_BRIGHTNESS_FACTOR]
     const indices = []
 
     for (let step = 1; step <= radialSteps; step++) {
         const ringRadius = radius * step / radialSteps
-        const surfaceDepth = -depth * (1 - (ringRadius / radius) ** 2)
-        const reliefShade = 0.7 + 0.36 * ringRadius / radius
+        const progress = ringRadius / radius
+        const roundedProgress = progress ** 3 * (progress * (progress * 6 - 15) + 10)
+        const surfaceDepth = -depth * (1 - roundedProgress)
         for (let segment = 0; segment < radialSegments; segment++) {
             const angle = segment * Math.PI * 2 / radialSegments
             positions.push(Math.cos(angle) * ringRadius, Math.sin(angle) * ringRadius, surfaceDepth)
-            colors.push(reliefShade, reliefShade, reliefShade)
+            colors.push(CUVETTE_BRIGHTNESS_FACTOR, CUVETTE_BRIGHTNESS_FACTOR, CUVETTE_BRIGHTNESS_FACTOR)
         }
     }
 
@@ -130,34 +141,86 @@ export const createJoystickDomeGeometry = () => {
     return geometry
 }
 
+/** Create a transparent seat with broad directional shadows and highlights. */
+const createJoystickSeatGeometry = () => {
+    const innerRadius = DISH_RADIUS
+    const outerRadius = innerRadius + SEAT_RING_WIDTH
+    const geometry = new RingGeometry(innerRadius, outerRadius, 256, 16)
+    const positions = geometry.getAttribute('position')
+    const colors = new Float32Array(positions.count * 4)
+
+    for (let index = 0; index < positions.count; index++) {
+        const radius = Math.hypot(positions.getX(index), positions.getY(index))
+        const progress = (radius - innerRadius) / SEAT_RING_WIDTH
+        const groove = Math.sin(progress * Math.PI)
+        const lightDirection = Math.atan2(positions.getY(index), positions.getX(index))
+        const lightAlignment = Math.cos(lightDirection - Math.atan2(2.8, -2.2))
+        const lightFacing = Math.max(0, lightAlignment)
+        const shadowFacing = Math.max(0, -lightAlignment)
+        const outerFadeProgress = Math.max(0, Math.min(1,
+            (progress - SEAT_RING_OUTER_FADE_START) / (1 - SEAT_RING_OUTER_FADE_START)))
+        const outerFade = 1 - outerFadeProgress ** 2 * (3 - 2 * outerFadeProgress)
+        const highlight = lightFacing ** 0.9
+            * Math.exp(-(((progress - 0.32) / 0.2) ** 2)) * 0.42 * outerFade
+        const shadow = shadowFacing ** 1.2
+            * (0.1 + groove ** 1.4 * 0.72) * outerFade
+        const isHighlight = highlight > shadow
+        const opacity = Math.max(highlight, shadow)
+        const shade = isHighlight ? 1 : 0
+        positions.setZ(index, -0.003 * (1 - progress) - SEAT_RING_DEPTH * groove ** 2)
+        colors.set([shade, shade, shade, opacity], index * 4)
+    }
+
+    positions.needsUpdate = true
+    geometry.setAttribute('color', new BufferAttribute(colors, 4))
+    geometry.computeVertexNormals()
+    geometry.computeBoundingSphere()
+    return geometry
+}
+
+/** Create a three-pixel recessed contact shadow around the ball. */
+const createJoystickContactRingGeometry = () => {
+    const innerRadius = DISH_RADIUS
+    const geometry = new RingGeometry(innerRadius, innerRadius + CONTACT_RING_WIDTH, 256, 12)
+    const positions = geometry.getAttribute('position')
+    const colors = new Float32Array(positions.count * 4)
+
+    for (let index = 0; index < positions.count; index++) {
+        const radius = Math.hypot(positions.getX(index), positions.getY(index))
+        const progress = (radius - innerRadius) / CONTACT_RING_WIDTH
+        const groove = Math.sin(progress * Math.PI)
+        const edge = Math.abs(progress - 0.5) * 2
+        const shade = 0.22 + edge * 0.3
+        positions.setZ(index, -0.003 - CONTACT_RING_DEPTH * groove ** 2)
+        colors.set([shade, shade, shade, CONTACT_RING_ALPHA], index * 4)
+    }
+
+    geometry.setAttribute('color', new BufferAttribute(colors, 4))
+    geometry.computeVertexNormals()
+    geometry.computeBoundingSphere()
+    return geometry
+}
+
 /** Build the concave movable on-map cuvette. */
 export const createJoystickCuvetteGeometry = () => createConcaveGeometry(CUVETTE_RADIUS, CUVETTE_DEPTH)
 
 /** Keep the exported cavity geometry focused on the concave center cup. */
 export const createJoystickCavityGeometry = () => createJoystickCuvetteGeometry()
 
-/** Emboss narrow radial grooves into the crown instead of simulating them with flat color stripes. */
+/** Build a smooth concave band with a darker center channel and raised lips. */
 export const createJoystickCrownGeometry = () => {
-    const geometry = new TorusGeometry(CROWN_RADIUS, CROWN_TUBE_RADIUS, 32, 512)
+    const geometry = new RingGeometry(CROWN_INNER_RADIUS, CROWN_OUTER_RADIUS, 512, 12)
     const positions = geometry.getAttribute('position')
     const colors = new Float32Array(positions.count * 3)
-    const period = Math.PI * 2 / CROWN_RIB_COUNT
-    const grooveHalfWidth = period * 0.15
+    const radialWidth = CROWN_OUTER_RADIUS - CROWN_INNER_RADIUS
 
     for (let index = 0; index < positions.count; index++) {
-        const x = positions.getX(index)
-        const y = positions.getY(index)
-        const z = positions.getZ(index)
-        const around = Math.atan2(y, x)
-        const nearestRib = Math.round(around / period) * period
-        const angleDelta = Math.atan2(Math.sin(around - nearestRib), Math.cos(around - nearestRib))
-        const acrossTube = Math.max(0, Math.sin(Math.atan2(z, Math.hypot(x, y) - CROWN_RADIUS)))
-        const groove = Math.exp(-((angleDelta / grooveHalfWidth) ** 2) * 2.1) * acrossTube ** 2
-        const shoulder = Math.exp(-(((Math.abs(angleDelta) - grooveHalfWidth * 1.3) / (grooveHalfWidth * 0.55)) ** 2))
-            * acrossTube ** 2
-        const reliefShade = Math.max(0.82, Math.min(1.08, 1 - groove * 0.22 + shoulder * 0.1))
-        colors.set([reliefShade, reliefShade, reliefShade], index * 3)
-        positions.setZ(index, z * CROWN_VERTICAL_SCALE - groove * 0.015)
+        const radius = Math.hypot(positions.getX(index), positions.getY(index))
+        const acrossBand = (radius - CROWN_INNER_RADIUS) / radialWidth
+        const edgeHeight = Math.abs(acrossBand * 2 - 1)
+        const shade = 0.64 + 0.36 * edgeHeight
+        positions.setZ(index, CROWN_CONCAVITY_DEPTH * edgeHeight ** 1.5)
+        colors.set([shade, shade, shade], index * 3)
     }
 
     positions.needsUpdate = true
@@ -198,8 +261,13 @@ const getOnMapColor = (element, token, fallback) => readCssColor(element, `var($
 /** Read the exact on-map surface color used by the themed card. */
 const getOnMapSurfaceColor = element => getOnMapColor(element, '--lgs-card-on-map-bg-color', ON_MAP_FALLBACK)
 
-/** Keep the crown in the same on-map hue while lifting it slightly above the ball. */
-const getCrownColor = element => getOnMapSurfaceColor(element).multiplyScalar(1.08)
+/** Blend and slightly darken the shared ball and cuvette material tint. */
+const getOnMapDomeColor = element => {
+    const surfaceColor = getOnMapSurfaceColor(element)
+    const brandColor = getOnMapColor(element, '--wa-color-brand', ON_MAP_FALLBACK)
+    const seasonColor = getOnMapColor(element, '--lgs-season-accent-color', 'var(--wa-color-green-60, #67a50d)')
+    return surfaceColor.lerp(brandColor, 0.28).lerp(seasonColor, 0.22).multiplyScalar(0.9)
+}
 
 /** Save original vertex heights before adapting the cuvette to the large dish. */
 const captureBaseDepths = geometry => {
@@ -209,17 +277,23 @@ const captureBaseDepths = geometry => {
     return depths
 }
 
-/** Warp a cuvette component to follow the large ball's spherical surface. */
+/** Warp the cuvette to the ball and match its local on-map color brightness. */
 const conformToDome = (geometry, baseDepths, x, y) => {
     const positions = geometry.getAttribute('position')
+    const colors = geometry.getAttribute('color')
     const centerHeight = getDomeHeight(x, y)
     for (let index = 0; index < positions.count; index++) {
         const localX = positions.getX(index)
         const localY = positions.getY(index)
-        const heightDelta = getDomeHeight(x + localX, y + localY) - centerHeight
+        const surfaceX = x + localX
+        const surfaceY = y + localY
+        const heightDelta = getDomeHeight(surfaceX, surfaceY) - centerHeight
+        const shade = getDomeShade(surfaceX, surfaceY) * CUVETTE_BRIGHTNESS_FACTOR
         positions.setZ(index, baseDepths[index] + heightDelta)
+        colors.setXYZ(index, shade, shade, shade)
     }
     positions.needsUpdate = true
+    colors.needsUpdate = true
     geometry.computeVertexNormals()
     geometry.computeBoundingSphere()
 }
@@ -230,59 +304,130 @@ const getOnMapHighlightColor = element => {
     return color.multiplyScalar(1 / Math.max(color.r, color.g, color.b, 0.001))
 }
 
-/** Render the on-map cuvette and rounded ball inside the fixed themed crown. */
+/** Create a small theme-derived reflection map for the joystick's polished surfaces. */
+const createOnMapReflectionTexture = element => {
+    const canvas = element.ownerDocument.createElement('canvas')
+    canvas.width = 256
+    canvas.height = 128
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('The joystick reflection canvas is unavailable')
+
+    const texture = new CanvasTexture(canvas)
+    texture.mapping = EquirectangularReflectionMapping
+    texture.colorSpace = SRGBColorSpace
+
+    /** Paint broad surface-colored bands that read as reflected map light on metal. */
+    const update = (surfaceColor, highlightColor) => {
+        const shadowColor = surfaceColor.clone().multiplyScalar(0.08)
+        const reflectedColor = surfaceColor.clone().lerp(highlightColor, 0.48)
+        const base = context.createLinearGradient(0, 0, 0, canvas.height)
+        base.addColorStop(0, highlightColor.clone().multiplyScalar(0.32).getStyle(SRGBColorSpace))
+        base.addColorStop(0.2, shadowColor.getStyle(SRGBColorSpace))
+        base.addColorStop(0.58, surfaceColor.clone().multiplyScalar(0.2).getStyle(SRGBColorSpace))
+        base.addColorStop(1, reflectedColor.clone().multiplyScalar(0.44).getStyle(SRGBColorSpace))
+        context.fillStyle = base
+        context.fillRect(0, 0, canvas.width, canvas.height)
+
+        const band = context.createLinearGradient(0, 0, canvas.width, 0)
+        band.addColorStop(0, shadowColor.getStyle(SRGBColorSpace))
+        band.addColorStop(0.28, reflectedColor.getStyle(SRGBColorSpace))
+        band.addColorStop(0.5, highlightColor.clone().multiplyScalar(0.64).getStyle(SRGBColorSpace))
+        band.addColorStop(0.72, reflectedColor.getStyle(SRGBColorSpace))
+        band.addColorStop(1, shadowColor.getStyle(SRGBColorSpace))
+        context.globalAlpha = 0.38
+        context.fillStyle = band
+        context.fillRect(0, 38, canvas.width, 34)
+        context.globalAlpha = 1
+        texture.needsUpdate = true
+    }
+
+    return {texture, update}
+}
+
+/** Render the large domed surface and its softly rounded, theme-reflective cuvette. */
 export const createReplayCameraJoystickScene = ({canvas, padElement, onContextLost, onContextRestored}) => {
     const renderer = new WebGLRenderer({canvas, alpha: true, antialias: true, powerPreference: 'low-power'})
     renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2))
     renderer.setClearColor(0, 0)
     renderer.outputColorSpace = SRGBColorSpace
     renderer.toneMapping = NoToneMapping
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = PCFSoftShadowMap
 
     const scene = new Scene()
     const camera = new PerspectiveCamera(32, 1, 0.1, 10)
     camera.position.set(0, -1.25, 4.2)
     camera.lookAt(0, 0, 0.1)
     const surfaceColor = getOnMapSurfaceColor(padElement)
-    const crownColor = getCrownColor(padElement)
+    const domeColor = getOnMapDomeColor(padElement)
     const highlightColor = getOnMapHighlightColor(padElement)
     const shadowColor = surfaceColor.clone().multiplyScalar(0.65)
+    const reflection = createOnMapReflectionTexture(padElement)
+    reflection.update(surfaceColor, highlightColor)
     const hemisphereLight = new HemisphereLight(highlightColor, shadowColor, 0.72)
     const ambientLight = new AmbientLight(highlightColor, 0.38)
     scene.add(hemisphereLight, ambientLight)
 
     const keyLight = new DirectionalLight(highlightColor, 2.05)
     keyLight.position.set(-2.2, 2.8, 3)
+    keyLight.castShadow = true
+    keyLight.shadow.mapSize.set(512, 512)
+    keyLight.shadow.camera.left = -1.5
+    keyLight.shadow.camera.right = 1.5
+    keyLight.shadow.camera.top = 1.5
+    keyLight.shadow.camera.bottom = -1.5
+    keyLight.shadow.camera.near = 0.1
+    keyLight.shadow.camera.far = 8
+    keyLight.shadow.camera.updateProjectionMatrix()
+    keyLight.shadow.bias = -0.0005
+    keyLight.shadow.intensity = 0.55
     scene.add(keyLight)
     const fillLight = new DirectionalLight(shadowColor, 0.25)
     fillLight.position.set(2, -1.5, 2.5)
     scene.add(fillLight)
+    const seatAmbientLight = new AmbientLight(0xffffff, 0.32)
+    seatAmbientLight.layers.set(1)
+    const seatKeyLight = new DirectionalLight(0xffffff, 1.75)
+    seatKeyLight.position.set(-2.2, 2.8, 3)
+    seatKeyLight.layers.set(1)
+    scene.add(seatAmbientLight, seatKeyLight)
+    camera.layers.enable(1)
 
     const domeGeometry = createJoystickDomeGeometry()
+    const seatGeometry = createJoystickSeatGeometry()
+    const contactRingGeometry = createJoystickContactRingGeometry()
     const cuvetteGeometry = createJoystickCuvetteGeometry()
-    const crownGeometry = createJoystickCrownGeometry()
-    const dishRimGeometry = new TorusGeometry(DISH_RIM_RADIUS, DISH_RIM_TUBE_RADIUS, 24, 256)
-    const outerBeadGeometry = new TorusGeometry(CROWN_RADIUS + CROWN_TUBE_RADIUS - 0.005, 0.014, 16, 192)
-    const domeMaterial = new MeshStandardMaterial({color: surfaceColor, roughness: 0.74, metalness: 0.05, vertexColors: true})
-    const cuvetteMaterial = new MeshStandardMaterial({
-        color: surfaceColor, roughness: 0.68, metalness: 0.06, vertexColors: true,
+    const domeMaterial = new MeshStandardMaterial({color: domeColor, roughness: 0.74, metalness: 0.05, vertexColors: true})
+    const seatMaterial = new MeshStandardMaterial({
+        color: 0xffffff, vertexColors: true,
+        roughness: 0.92, metalness: 0,
         transparent: true, depthWrite: false,
     })
-    const dishRimMaterial = new MeshStandardMaterial({color: surfaceColor, roughness: 0.48, metalness: 0.08})
-    const crownMaterial = new MeshStandardMaterial({color: crownColor, roughness: 0.42, metalness: 0.08, vertexColors: true})
-    const outerBeadMaterial = new MeshStandardMaterial({color: crownColor, roughness: 0.46, metalness: 0.08})
+    const contactRingMaterial = new MeshStandardMaterial({
+        color: surfaceColor, roughness: 0.94, metalness: 0.02, vertexColors: true,
+        transparent: true, depthWrite: false,
+    })
+    const cuvetteMaterial = new MeshPhysicalMaterial({
+        color: domeColor, roughness: 0.56, metalness: 0.05, vertexColors: true,
+        envMap: reflection.texture, envMapIntensity: 0.4, clearcoat: 0.3, clearcoatRoughness: 0.34,
+        transparent: true, depthTest: false, depthWrite: false,
+    })
     const dome = new Mesh(domeGeometry, domeMaterial)
-    const dishRim = new Mesh(dishRimGeometry, dishRimMaterial)
-    const crown = new Mesh(crownGeometry, crownMaterial)
-    const outerBead = new Mesh(outerBeadGeometry, outerBeadMaterial)
+    const seat = new Mesh(seatGeometry, seatMaterial)
+    seat.layers.set(1)
+    const contactRing = new Mesh(contactRingGeometry, contactRingMaterial)
     const cuvette = new Mesh(cuvetteGeometry, cuvetteMaterial)
     const cuvetteBaseDepths = captureBaseDepths(cuvetteGeometry)
-    dishRim.position.z = 0.004
-    outerBead.position.z = -0.003
-    const crownAssembly = new Group()
-    crownAssembly.add(crown, outerBead)
     const cuvetteAssembly = new Group()
     cuvetteAssembly.add(cuvette)
-    scene.add(dome, dishRim, crownAssembly, cuvetteAssembly)
+    dome.castShadow = true
+    dome.receiveShadow = true
+    seat.renderOrder = 1
+    contactRing.receiveShadow = true
+    contactRing.renderOrder = 2
+    cuvette.castShadow = true
+    cuvette.receiveShadow = true
+    scene.add(dome, seat, contactRing, cuvetteAssembly)
 
     let disposed = false
     let contextLost = false
@@ -297,14 +442,13 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, onContextLo
     const updateOnMapColor = () => {
         if (disposed) return
         const surfaceColor = getOnMapSurfaceColor(padElement)
-        const crownColor = getCrownColor(padElement)
+        const domeColor = getOnMapDomeColor(padElement)
         const highlightColor = getOnMapHighlightColor(padElement)
         const shadowColor = surfaceColor.clone().multiplyScalar(0.65)
-        domeMaterial.color.copy(surfaceColor)
-        cuvetteMaterial.color.copy(surfaceColor)
-        dishRimMaterial.color.copy(surfaceColor)
-        crownMaterial.color.copy(crownColor)
-        outerBeadMaterial.color.copy(crownColor)
+        domeMaterial.color.copy(domeColor)
+        contactRingMaterial.color.copy(surfaceColor)
+        cuvetteMaterial.color.copy(domeColor)
+        reflection.update(surfaceColor, highlightColor)
         hemisphereLight.color.copy(highlightColor)
         hemisphereLight.groundColor.copy(shadowColor)
         ambientLight.color.copy(highlightColor)
@@ -344,7 +488,7 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, onContextLo
     const resizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null
     const themeObserver = typeof MutationObserver === 'function' ? new MutationObserver(updateOnMapColor) : null
     resizeObserver?.observe(padElement)
-    themeObserver?.observe(padElement.ownerDocument.documentElement, {attributes: true, attributeFilter: ['class', 'style']})
+    themeObserver?.observe(padElement.ownerDocument.documentElement, {attributes: true, attributeFilter: ['class', 'data-season-theme', 'style']})
     themeObserver?.observe(padElement.ownerDocument.body, {attributes: true, attributeFilter: ['class', 'data-on-map-theme', 'style']})
     themeObserver?.observe(padElement, {attributes: true, attributeFilter: ['class', 'style']})
     window.addEventListener('resize', resize)
@@ -359,15 +503,14 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, onContextLo
         canvas.removeEventListener('webglcontextlost', loseContext)
         canvas.removeEventListener('webglcontextrestored', restoreContext)
         domeGeometry.dispose()
+        seatGeometry.dispose()
+        contactRingGeometry.dispose()
         cuvetteGeometry.dispose()
-        crownGeometry.dispose()
-        dishRimGeometry.dispose()
-        outerBeadGeometry.dispose()
         domeMaterial.dispose()
+        seatMaterial.dispose()
+        contactRingMaterial.dispose()
         cuvetteMaterial.dispose()
-        dishRimMaterial.dispose()
-        crownMaterial.dispose()
-        outerBeadMaterial.dispose()
+        reflection.texture.dispose()
         renderer.dispose()
     }
 
@@ -380,14 +523,14 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, onContextLo
     }
 
     return {
-        /** Move the cuvette along the recessed disk while keeping the themed crown fixed around it. */
+        /** Move the cuvette along the recessed disk while keeping the domed surface fixed. */
         setPosition: next => {
             if (disposed) return
             const x = next.x * CUVETTE_TRAVEL
             const y = -next.y * CUVETTE_TRAVEL
             const travel = Math.hypot(x, y)
             const domeHeight = getDomeHeight(x, y)
-            cuvetteAssembly.position.set(x, y, domeHeight + CUVETTE_DEPTH + 0.006)
+            cuvetteAssembly.position.set(x, y, domeHeight)
             conformToDome(cuvetteGeometry, cuvetteBaseDepths, x, y)
             const edgeGap = DISH_RADIUS - travel - CUVETTE_RADIUS
             cuvetteMaterial.opacity = 1 - Math.max(0, Math.min(1, (0.28 - edgeGap) / 0.2)) * 0.35
