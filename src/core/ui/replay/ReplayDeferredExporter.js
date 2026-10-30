@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -2496,6 +2496,9 @@ export const resolveReplayDeferredExportPlan = ({
  *
  * This is the "export now" path. It still goes through the same deterministic
  * frame session and context validation as the share-friendly blob path.
+ * @param {Function|null} [onVideoReady] - Receives the encoded video before asynchronous cleanup.
+ * @param {Function|null} [onExportFailure] - Releases UI state as soon as export fails.
+ * @returns {Promise<Object>} Completed export result after cleanup.
  */
 export const runReplayDeferredMp4Export = async ({
                                                      replay = defaultReplayStore(),
@@ -2518,6 +2521,8 @@ export const runReplayDeferredMp4Export = async ({
                                                      tileReadinessTimeoutMs = DEFAULT_REPLAY_SCENE_TILE_READINESS_TIMEOUT_MS,
                                                      uiToast = UIToast,
                                                      download = downloadBlob,
+                                                     onVideoReady = null,
+                                                     onExportFailure = null,
                                                      yieldIntervalMs = REPLAY_DRY_RUN_BROWSER_YIELD_INTERVAL_MS,
                                                      yieldToBrowser = null,
                                                      dryRun = false,
@@ -2610,7 +2615,6 @@ export const runReplayDeferredMp4Export = async ({
                                     replayFramePhase: replay.replayFramePhase,
                                     clipSequenceActive: replay.clipSequenceActive,
                                     toolbarVisible: replay.toolbarVisible,
-                                    mainUiHidden: replay.mainUiHidden,
                                 }
                                 : null
     let exportSucceeded = false
@@ -3285,16 +3289,32 @@ export const runReplayDeferredMp4Export = async ({
             download(result.blob, exportFilename)
         }
         exportSucceeded = true
-        uiToast?.success?.({
-            caption: 'Replay video',
-            text:    'Replay video generated.',
-        })
-        return {
+        const completedResult = {
             ...result,
             plan,
             filename: exportFilename,
             cleanupErrors,
         }
+        try {
+            onVideoReady?.(completedResult)
+        }
+        catch (error) {
+            console.error('[Replay video] The completed video could not be handed to the UI:', error)
+        }
+        uiToast?.success?.({
+            caption: 'Replay video',
+            text:    'Replay video generated.',
+        })
+        return completedResult
+    }
+    catch (error) {
+        try {
+            onExportFailure?.(error)
+        }
+        catch (handoffError) {
+            console.error('[Replay video] Failed to release the capture UI after export failure:', handoffError)
+        }
+        throw error
     }
     finally {
         /** Preserve an encoded artifact or the primary export error while releasing every independent resource. */

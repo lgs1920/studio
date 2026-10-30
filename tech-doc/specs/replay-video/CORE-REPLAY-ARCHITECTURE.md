@@ -36,7 +36,11 @@ small fraction of the route movement so the map keeps moving between safety
 recenters. The pan preserves the prepared orientation and zoom; collision-driven
 camera corrections retain control when the marker approaches the zone boundary.
 Start/stop clips may define their own camera movement.
-Completed videos open in the standard preview and sharing dialog.
+Completed videos open in the standard preview and sharing dialog as soon as the
+encoded MP4 is ready. Scene and camera cleanup continues independently, so a
+stalled handback cannot keep the capture overlay in front of the available
+download and share actions. Failed exports restore the capture UI on their
+terminal path.
 `ReplayMediaCapture` handles screenshots and completed-media handoff.
 
 Basic Replay settings are stored under `basic` in global UI settings and on

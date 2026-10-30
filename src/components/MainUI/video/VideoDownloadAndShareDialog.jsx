@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-04
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -269,6 +269,8 @@ export const VideoDownloadAndShareDialog = () => {
             setMediaUrl(url)
             setFilename(safeFilename)
             setCanDownloadAndShare(true)
+            // Show the generated file immediately; scene restoration must not gate access to download.
+            setDialogOpen(true)
             await prepareReplaySceneForDialog()
             if (requestToken !== _mediaRequestToken.current) {
                 return
@@ -284,7 +286,6 @@ export const VideoDownloadAndShareDialog = () => {
                 void __.mediaCapture?.releaseMedia?.()
                 return
             }
-            setDialogOpen(true)
         }
 
 

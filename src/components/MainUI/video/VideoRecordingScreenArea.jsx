@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-30
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,6 +54,7 @@ export const VideoRecordingScreenArea = memo(() => {
     const _pendingFinish = useRef(null)
     const _recordingStartToken = useRef(0)
     const _recordingAbortController = useRef(null)
+    const _mediaHandoffToken = useRef(0)
     const [mountTimeoutOpen, setMountTimeoutOpen] = useState(false)
     const [mountTimeoutError, setMountTimeoutError] = useState({missing: [], timeoutMs: WIDGET_MOUNT_TIMEOUT})
     const [mountTimeoutAction, setMountTimeoutAction] = useState('record')
@@ -67,7 +68,11 @@ export const VideoRecordingScreenArea = memo(() => {
         _recordingAbortController.current?.abort()
     }, [])
 
-    useEffect(() => () => invalidateRecording(), [invalidateRecording])
+    useEffect(() => () => {
+        if (_mediaHandoffToken.current !== _recordingStartToken.current) {
+            invalidateRecording()
+        }
+    }, [invalidateRecording])
 
     /**
      * Cancel the active browser recording and restore Replay preparation.
@@ -173,42 +178,14 @@ export const VideoRecordingScreenArea = memo(() => {
             ...(journeyTitle ? {title: journeyTitle, description: journeyTitle} : {}),
         }
 
-        Object.assign($video, {
-            preRecording: false,
-            exporting:  true,
-            finalizing:   false,
-            paused:       false,
-            editing:      false,
-        })
-
-        try {
-            const exportOptions = {
-                replay:       lgs.stores.replay,
-                journey:      lgs.theJourney,
-                controller:   __.ui.replay?.controller,
-                replayMode:   __.ui.replay,
-                fps:          renderSpec.fps,
-                dimensions:   renderSpec.dimensions,
-                captureMode:  'deferred-master',
-                sourceCanvas: lgs.canvas,
-                renderHostMode: 'visible',
-                signal:       abortController.signal,
-                abortController,
-                mediaMetadata,
-            }
-            const exportPromise = dryRun
-                ? exportReplayDeferredDryRun(exportOptions)
-                : exportReplayDeferredMp4({
-                    ...exportOptions,
-                    filename: `${journeyTitle || lgs.theJourney?.slug || 'replay'}.mp4`,
-                })
-            const exportRuntime = lgs.stores.replay.deferredExportPlan?.runtime
-            if (exportRuntime) {
-                exportRuntime.exportPromise = exportPromise
-            }
-            const result = await exportPromise
+        /**
+         * Publish the encoded file and release the capture overlay before scene cleanup.
+         * @param {Object} result - Completed deferred export result.
+         * @returns {boolean} Whether the result was handed to the dialog.
+         */
+        const handoffCompletedVideo = result => {
             if (!isCurrentRecording() || dryRun) {
-                return
+                return false
             }
 
             if (!(result?.blob instanceof Blob) || result.blob.size <= 0) {
@@ -241,6 +218,87 @@ export const VideoRecordingScreenArea = memo(() => {
                     },
                 },
             }))
+            Object.assign($video, {
+                preRecording: false,
+                exporting: false,
+                finalizing: false,
+                paused: false,
+                editing: true,
+                dryRun: false,
+            })
+            restoreVideoCaptureUi()
+            stopReplayRecordingMonitor()
+            _mediaHandoffToken.current = startToken
+            return true
+        }
+
+        /**
+         * Release the capture overlay as soon as the exporter reports a terminal failure.
+         * @param {Error} error - Terminal export error.
+         * @returns {boolean} Whether this recording still owns the capture UI.
+         */
+        const releaseCaptureUiAfterFailure = error => {
+            if (!isCurrentRecording() || error?.name === 'AbortError') {
+                return false
+            }
+
+            Object.assign($video, {
+                preRecording: false,
+                exporting: false,
+                finalizing: false,
+                paused: false,
+                editing: true,
+                dryRun: false,
+            })
+            restoreVideoCaptureUi()
+            stopReplayRecordingMonitor()
+            _mediaHandoffToken.current = startToken
+            return true
+        }
+
+        Object.assign($video, {
+            preRecording: false,
+            exporting:  true,
+            finalizing:   false,
+            paused:       false,
+            editing:      false,
+        })
+
+        try {
+            const exportOptions = {
+                replay:       lgs.stores.replay,
+                journey:      lgs.theJourney,
+                controller:   __.ui.replay?.controller,
+                replayMode:   __.ui.replay,
+                fps:          renderSpec.fps,
+                dimensions:   renderSpec.dimensions,
+                captureMode:  'deferred-master',
+                sourceCanvas: lgs.canvas,
+                renderHostMode: 'visible',
+                signal:       abortController.signal,
+                abortController,
+                mediaMetadata,
+                onVideoReady: dryRun ? null : handoffCompletedVideo,
+                onExportFailure: releaseCaptureUiAfterFailure,
+            }
+            const exportPromise = dryRun
+                ? exportReplayDeferredDryRun(exportOptions)
+                : exportReplayDeferredMp4({
+                    ...exportOptions,
+                    filename: `${journeyTitle || lgs.theJourney?.slug || 'replay'}.mp4`,
+                })
+            const exportRuntime = lgs.stores.replay.deferredExportPlan?.runtime
+            if (exportRuntime) {
+                exportRuntime.exportPromise = exportPromise
+            }
+            const result = await exportPromise
+            if (!isCurrentRecording() || dryRun) {
+                return
+            }
+
+            if (_mediaHandoffToken.current !== startToken) {
+                handoffCompletedVideo(result)
+            }
         }
         catch (error) {
             if (isCurrentRecording() && error?.name !== 'AbortError') {
@@ -260,7 +318,7 @@ export const VideoRecordingScreenArea = memo(() => {
             }
         }
         finally {
-            if (startToken === _recordingStartToken.current) {
+            if (startToken === _recordingStartToken.current && _mediaHandoffToken.current !== startToken) {
                 Object.assign($video, {
                     preRecording: false,
                     exporting:  false,
@@ -299,6 +357,7 @@ export const VideoRecordingScreenArea = memo(() => {
     const handleStartRecording = useCallback(async () => {
         invalidateRecording()
         const startToken = _recordingStartToken.current
+        _mediaHandoffToken.current = 0
         // Completed media belongs to the dialog. Only a new capture or explicit cancellation supersedes it.
         const mediaHandoffRevision = ($video.mediaHandoffRevision ?? 0) + 1
         $video.mediaHandoffRevision = mediaHandoffRevision
