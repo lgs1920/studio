@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-21
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,6 +41,7 @@ export const GeocodingUI = () => {
     const address = useRef(null)
     const geolocationRequestId = useRef(0)
     const displayCloseTimer = useRef(null)
+    const _reopenAfterHide = useRef(false)
     const [exactMatch, setExactMatch] = useState(false)
     const [coordinates, setCoordinates] = useState(false)
     const [ddCoordinates, setDdCoordinates] = useState(false)
@@ -78,6 +79,7 @@ export const GeocodingUI = () => {
     }
 
     const requestClose = () => {
+        _reopenAfterHide.current = false
         geolocationRequestId.current += 1
         if (displayCloseTimer.current !== null) {
             window.clearTimeout(displayCloseTimer.current)
@@ -97,12 +99,34 @@ export const GeocodingUI = () => {
         requestClose()
     }
 
+    /**
+     * Finish closing the dialog without losing a reopen requested during its hide animation.
+     * @param {CustomEvent} event - Web Awesome dialog lifecycle event.
+     */
     const handleAfterHide = (event) => {
         if (!isDialogLifecycleEvent(event)) {
             return
         }
 
         resetTransientState()
+
+        if (store.dialog.visible) {
+            // Re-apply the open state after Web Awesome completes the previous close transition.
+            _reopenAfterHide.current = true
+            store.dialog.visible = false
+            requestAnimationFrame(() => {
+                if (!_reopenAfterHide.current) {
+                    return
+                }
+
+                _reopenAfterHide.current = false
+                if (store.dialog.mounted) {
+                    store.dialog.visible = true
+                }
+            })
+            return
+        }
+
         store.dialog.mounted = false
     }
 
@@ -362,6 +386,7 @@ export const GeocodingUI = () => {
 
     useEffect(() => {
         return () => {
+            _reopenAfterHide.current = false
             resetTransientState()
             store.dialog.visible = false
             store.dialog.mounted = false
