@@ -259,41 +259,60 @@ export const VideoDownloadAndShareDialog = () => {
                 return
             }
 
-            const requestToken = ++_mediaRequestToken.current
-            _replayScenePreFocused.current = false
-            releaseMediaUrl()
-            const url = URL.createObjectURL(blob)
-            const safeFilename = sanitizeFilenameStem(`${filename}`.replace(/\.[^.]+$/, ''), DEFAULT_VIDEO_FILENAME)
-            _mediaBlob.current = {
-                blob,
-                url,
-                filename: safeFilename,
-                type: ReplayMediaCapture.VIDEO,
-                source: 'deferred-replay',
-                mediaData,
-            }
-            __.mediaCapture.type = ReplayMediaCapture.VIDEO
-            setDeferredMediaData(mediaData)
-            _dialogCleanupDone.current = false
-            setMediaUrl(url)
-            setFilename(safeFilename)
-            setCanDownloadAndShare(true)
-            // Show the generated file immediately; scene restoration must not gate access to download.
-            setDialogOpen(true)
-            await prepareReplaySceneForDialog()
-            if (requestToken !== _mediaRequestToken.current) {
-                return
-            }
-            if (!isCurrentMedia()) {
+            let requestToken = null
+            try {
+                requestToken = ++_mediaRequestToken.current
+                _replayScenePreFocused.current = false
                 releaseMediaUrl()
-                _mediaBlob.current = {blob: null, url: null, filename: ''}
-                _dialogCleanupDone.current = true
-                setMediaUrl(null)
-                setDeferredMediaData(null)
-                setCanDownloadAndShare(false)
-                setDialogOpen(false)
-                void __.mediaCapture?.releaseMedia?.()
-                return
+                const url = URL.createObjectURL(blob)
+                const safeFilename = sanitizeFilenameStem(`${filename}`.replace(/\.[^.]+$/, ''), DEFAULT_VIDEO_FILENAME)
+                _mediaBlob.current = {
+                    blob,
+                    url,
+                    filename: safeFilename,
+                    type: ReplayMediaCapture.VIDEO,
+                    source: 'deferred-replay',
+                    mediaData,
+                }
+                __.mediaCapture.type = ReplayMediaCapture.VIDEO
+                setDeferredMediaData(mediaData)
+                _dialogCleanupDone.current = false
+                setMediaUrl(url)
+                setFilename(safeFilename)
+                setCanDownloadAndShare(true)
+                // Show the generated file immediately; scene restoration must not gate access to download.
+                setDialogOpen(true)
+                await prepareReplaySceneForDialog()
+                if (requestToken !== _mediaRequestToken.current) {
+                    return
+                }
+                if (!isCurrentMedia()) {
+                    releaseMediaUrl()
+                    _mediaBlob.current = {blob: null, url: null, filename: ''}
+                    _dialogCleanupDone.current = true
+                    setMediaUrl(null)
+                    setDeferredMediaData(null)
+                    setCanDownloadAndShare(false)
+                    setDialogOpen(false)
+                    void __.mediaCapture?.releaseMedia?.()
+                }
+            }
+            catch (error) {
+                console.error('[Replay video] Failed to prepare the generated video dialog:', error)
+                if (requestToken === _mediaRequestToken.current) {
+                    releaseMediaUrl()
+                    _mediaBlob.current = {blob: null, url: null, filename: ''}
+                    _dialogCleanupDone.current = true
+                    setMediaUrl(null)
+                    setDeferredMediaData(null)
+                    setCanDownloadAndShare(false)
+                    setDialogOpen(false)
+                    void __.mediaCapture?.releaseMedia?.()
+                }
+                UIToast.error({
+                    caption: 'Replay video',
+                    text: error?.message ?? 'Unable to open the generated video.',
+                })
             }
         }
 

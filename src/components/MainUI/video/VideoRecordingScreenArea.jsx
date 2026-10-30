@@ -218,6 +218,8 @@ export const VideoRecordingScreenArea = memo(() => {
                     },
                 },
             }))
+            // Mark ownership before the Valtio update can unmount this screen.
+            _mediaHandoffToken.current = startToken
             Object.assign($video, {
                 preRecording: false,
                 exporting: false,
@@ -228,7 +230,6 @@ export const VideoRecordingScreenArea = memo(() => {
             })
             restoreVideoCaptureUi()
             stopReplayRecordingMonitor()
-            _mediaHandoffToken.current = startToken
             return true
         }
 
@@ -242,6 +243,8 @@ export const VideoRecordingScreenArea = memo(() => {
                 return false
             }
 
+            // Mark ownership before the Valtio update can unmount this screen.
+            _mediaHandoffToken.current = startToken
             Object.assign($video, {
                 preRecording: false,
                 exporting: false,
@@ -252,7 +255,6 @@ export const VideoRecordingScreenArea = memo(() => {
             })
             restoreVideoCaptureUi()
             stopReplayRecordingMonitor()
-            _mediaHandoffToken.current = startToken
             return true
         }
 

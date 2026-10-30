@@ -3295,12 +3295,7 @@ export const runReplayDeferredMp4Export = async ({
             filename: exportFilename,
             cleanupErrors,
         }
-        try {
-            onVideoReady?.(completedResult)
-        }
-        catch (error) {
-            console.error('[Replay video] The completed video could not be handed to the UI:', error)
-        }
+        onVideoReady?.(completedResult)
         uiToast?.success?.({
             caption: 'Replay video',
             text:    'Replay video generated.',
