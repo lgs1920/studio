@@ -4335,3 +4335,7 @@
 ## 2026-10-30 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/f81a7c56eeeff64a84bb05b4c583cb5a3637c911)
 
 - Recorded automatically from Git history.
+
+## 2026-10-30 — [`docs: add replay export performance and quality plans`](https://github.com/lgs1920/studio/commit/8f9df6c52cddc43fc6d780f04452a1a3bd32a9d7)
+
+- Recorded automatically from Git history.
