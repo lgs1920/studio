@@ -27,6 +27,8 @@ implementation documents. Implemented behavior and current architecture belong u
 - [POI animation during replay](CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
 - [Clip altitude alignment](CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
 - [Replay video resolution profiles](REPLAY_VIDEO_RESOLUTION_PROFILES_SPEC.md)
+- [Replay HQ export performance optimization plan](CORE-REPLAY-HQ-VIDEO-EXPORT-PERFORMANCE-OPTIMIZATION-PLAN.md)
+- [Replay video quality and resizing extension](CORE-REPLAY-HQ-VIDEO-QUALITY-AND-RESIZE-SPEC.md)
 - [Replay encoder and frame-rendering pipeline overlap analysis](CORE-REPLAY-ENCODER-PIPELINE-OVERLAP-ANALYSIS.md)
 - [Replay widget-layer export and SnapDOM stream proposal](CORE-REPLAY-WIDGET-LAYER-EXPORT-SPEC.md)
 - [Replay Video Widget](VIDEO_WIDGET_SPEC.md)

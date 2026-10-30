@@ -37,6 +37,8 @@ below by engineering domain rather than storage directory.
 - [Drone camera 3D path editor](todo/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md)
 - [Camera HPR orientation sphere](todo/CORE-CAMERA-HPR-THREEJS-SPHERE-WIDGET-SPEC.md)
 - [Replay video resolution profiles](todo/REPLAY_VIDEO_RESOLUTION_PROFILES_SPEC.md)
+- [Replay HQ export performance optimization plan](todo/CORE-REPLAY-HQ-VIDEO-EXPORT-PERFORMANCE-OPTIMIZATION-PLAN.md)
+- [Replay video quality and resizing extension](todo/CORE-REPLAY-HQ-VIDEO-QUALITY-AND-RESIZE-SPEC.md)
 - [Video widget](todo/VIDEO_WIDGET_SPEC.md)
 
 ## Cesium, Mapping, and Environment
