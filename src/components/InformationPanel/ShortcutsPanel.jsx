@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-10-21
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import { OS_ICONS }           from '@Core/constants'
 import { SHORTCUTS } from '@Core/events/appShortcuts'
 import { UIToast }            from '@Utils/UIToast'
 import { WaButton, WaCard, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
-import { Fragment, useCallback, useRef, useState } from 'react'
+import { Fragment, useCallback, useId, useRef, useState } from 'react'
 
 const MOUSE_TOKEN_ICONS = {
     'Double click':     'computer-mouse-button-left',
@@ -120,23 +120,28 @@ const platformIconsOf = (platform = '') => PLATFORM_ICONS
 
 const PlatformIcons = ({platform}) => {
     const icons = platformIconsOf(platform)
+    const rawTooltipId = useId()
+    const tooltipId = `shortcuts-platform-${rawTooltipId.replace(/:/g, '')}`
 
     if (icons.length === 0) {
         return null
     }
 
     return (
-        <span className="lgs--shortcuts-platform" aria-label={platform} title={platform}>
-            {icons.map(({family, key, label, name}) => (
-                <WaIcon
-                    aria-label={label}
-                    family={family === 'brands' ? family : undefined}
-                    key={key}
-                    name={name}
-                    variant={family !== 'brands' ? family : undefined}
-                />
-            ))}
-        </span>
+        <>
+            <span className="lgs--shortcuts-platform" id={tooltipId} aria-label={platform}>
+                {icons.map(({family, key, label, name}) => (
+                    <WaIcon
+                        aria-label={label}
+                        family={family === 'brands' ? family : undefined}
+                        key={key}
+                        name={name}
+                        variant={family !== 'brands' ? family : undefined}
+                    />
+                ))}
+            </span>
+            <WaTooltip for={tooltipId} placement="top">{platform}</WaTooltip>
+        </>
     )
 }
 

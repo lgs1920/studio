@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-03-25
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,12 +23,14 @@
 
 import { ICONS_PATH }                from '@Core/constants'
 import { applyPOIDuotoneIconStyles } from '@Components/MainUI/MapPOI/duotoneIconUtils'
-import { WaIcon }                    from '@awesome.me/webawesome/dist/react'
-import { useEffect, useMemo, useState } from 'react'
+import { WaIcon, WaTooltip }          from '@awesome.me/webawesome/dist/react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { useSnapshot }               from 'valtio'
 import './style.css'
 
 export const MapPOISummary = ({poi}) => {
+    const rawTooltipId = useId()
+    const newBadgeTooltipId = `map-poi-new-badge-${rawTooltipId.replace(/:/g, '')}`
     const $pois = lgs.stores.main.components.pois
     const pois = useSnapshot($pois)
     const point = useMemo(() => pois.list.get(poi), [pois.list, poi])
@@ -62,7 +64,10 @@ export const MapPOISummary = ({poi}) => {
                 <span className="map-poi-summary-title">{displayTitle}</span>
             </span>
             <span className="map-poi-summary-indicators">
-                    {showNewBadge && <span className="map-poi-new-badge" aria-label="New POI" title="New POI">N</span>}
+                    {showNewBadge && <>
+                        <span id={newBadgeTooltipId} className="map-poi-new-badge" aria-label="New POI">N</span>
+                        <WaTooltip for={newBadgeTooltipId}>{'New POI'}</WaTooltip>
+                    </>}
                     {point?.visible && <>
                         <WaIcon name="square" style={{color: point.bgColor}} variant="solid"/>
                         <WaIcon name="square" style={{color: point.color}} variant="solid"/>

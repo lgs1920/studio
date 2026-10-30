@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ import {LGS_TOOLBAR, REPLAY_RECORDING_MONITOR_WIDGET_ID} from '@Core/constants'
 import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAwesomeKits'
 import {WaButton, WaIcon, WaProgressBar, WaTooltip} from '@awesome.me/webawesome/dist/react'
 import {createPortal} from 'react-dom'
-import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore} from 'react'
+import {useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore} from 'react'
 import './replay-recording-monitor.css'
 
 const MONITOR_WIDGET_POSITION_KEY = 'replay-recording-monitor-window-v5'
@@ -161,14 +161,13 @@ const preparePictureInPictureDocument = externalWindow => {
  * @param {string} [props.className] - Additional button class names.
  * @returns {JSX.Element} Icon-only button.
  */
-const MonitorIconButton = ({id, label, tooltipLabel = label, showTitle = true, icon, library, className = '', ...buttonProps}) => (
+const MonitorIconButton = ({id, label, tooltipLabel = label, icon, library, className = '', ...buttonProps}) => (
     <span className="replay-recording-monitor-button-wrapper lgs-widget-no-drag">
         <WaTooltip for={id}>{tooltipLabel}</WaTooltip>
         <WaButton
             id={id}
             className={`replay-recording-monitor-icon-button lgs-widget-no-drag${className ? ` ${className}` : ''}`}
             size="s"
-            title={showTitle ? label : undefined}
             aria-label={label}
             {...buttonProps}
         >
@@ -203,6 +202,8 @@ const ReplayRecordingProgress = ({percentage, label = 'Recording progress'}) => 
  * @returns {JSX.Element|null} Monitor widget content.
  */
 const ReplayRecordingMonitorSurface = ({snapshot}) => {
+    const rawMetricTooltipId = useId()
+    const metricTooltipIdPrefix = `replay-recording-metric-${rawMetricTooltipId.replace(/:/g, '')}`
     const _previewCleanup = useRef(null)
     const _pictureInPictureWindow = useRef(null)
     const _pictureInPictureCleanup = useRef(null)
@@ -432,23 +433,29 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                         </div>
                     )}
                     <div className="replay-recording-monitor-metrics">
-                        <span className="replay-recording-monitor-metric-remaining" title={isDryRun ? 'Estimated time remaining' : 'Remaining time'}>
+                        <span id={`${metricTooltipIdPrefix}-remaining`} className="replay-recording-monitor-metric-remaining">
+                            <WaTooltip for={`${metricTooltipIdPrefix}-remaining`} placement="top">
+                                {isDryRun ? 'Estimated time remaining' : 'Remaining time'}
+                            </WaTooltip>
                             <WaIcon name="stopwatch" variant="regular" label={isDryRun ? 'Estimated time remaining' : 'Remaining time'}/>
                             <strong className="replay-recording-monitor-remaining-value">{remainingLabel}</strong>
                         </span>
-                        <span className="replay-recording-monitor-metric-duration" title={generatedVideoTitle}>
+                        <span id={`${metricTooltipIdPrefix}-duration`} className="replay-recording-monitor-metric-duration">
+                            <WaTooltip for={`${metricTooltipIdPrefix}-duration`} placement="top">{generatedVideoTitle}</WaTooltip>
                             <WaIcon name="films" variant="regular" label={generatedVideoTitle}/>
                             {generatedVideoLabel}
                         </span>
                         {isDryRun
                             ? (
-                                <span className="replay-recording-monitor-metric-size" title="Frames checked">
+                                <span id={`${metricTooltipIdPrefix}-frames`} className="replay-recording-monitor-metric-size">
+                                    <WaTooltip for={`${metricTooltipIdPrefix}-frames`} placement="top">{'Frames checked'}</WaTooltip>
                                     <WaIcon name="check" variant="regular" label="Frames checked"/>
                                     {`${snapshot.processedFrames} / ${snapshot.frameCount ?? '--'}`}
                                 </span>
                             )
                             : (
-                                <span className="replay-recording-monitor-metric-size" title="Encoded size">
+                                <span id={`${metricTooltipIdPrefix}-encoded-size`} className="replay-recording-monitor-metric-size">
+                                    <WaTooltip for={`${metricTooltipIdPrefix}-encoded-size`} placement="top">{'Encoded size'}</WaTooltip>
                                     <WaIcon name="hard-drive" variant="regular" label="Encoded size"/>
                                     {formatBytes(snapshot.size)}
                                 </span>
@@ -472,7 +479,6 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                                     ? isDryRun ? 'Resume Dry run' : 'Resume recording'
                                     : isDryRun ? 'Pause Dry run' : 'Pause recording'}
                                 tooltipLabel={snapshot.paused ? 'Resume' : 'Pause'}
-                                showTitle={false}
                                 icon={snapshot.paused ? 'play' : 'pause'}
                                 appearance="plain"
                                 onClick={togglePause}
@@ -482,7 +488,6 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                                     id="replay-monitor-stop"
                                     label="Stop recording and save or share"
                                     tooltipLabel="Stop"
-                                    showTitle={false}
                                     icon="stop"
                                     appearance="plain"
                                     onClick={stopRecording}
@@ -492,7 +497,6 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                                 id="replay-monitor-cancel"
                                 label={isDryRun ? 'Cancel Dry run and return to preparation' : 'Cancel recording and close Replay'}
                                 tooltipLabel="Cancel"
-                                showTitle={false}
                                 icon="xmark"
                                 appearance="plain"
                                 onClick={cancelRecording}

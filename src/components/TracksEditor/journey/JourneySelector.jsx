@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-20
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { LGSPopup }                                                       from '@Components/LGSPopup'
 import { Journey }                                                        from '@Core/Journey'
 import {
-    WaCard, WaIcon, WaOption, WaSelect, WaTree, WaTreeItem,
+    WaCard, WaIcon, WaOption, WaSelect, WaTooltip, WaTree, WaTreeItem,
 }                                                                         from '@awesome.me/webawesome/dist/react'
 import classNames                                                         from 'classnames'
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
@@ -30,6 +30,25 @@ const GROUPS_EXPANDED_KEY = 'lgs1920-journey-selector-groups-expanded'
 
 const naturalSortJourneys = (a, b) =>
     a.title.localeCompare(b.title, undefined, {numeric: true, sensitivity: 'base'})
+
+/** Render a journey activity icon with its full activity label available as a tooltip. */
+const JourneyActivityIcon = ({journey}) => {
+    const activity = Journey.activityProfile(journey?.activity, journey?.activitySettings)
+    const rawTooltipId = useId()
+    const tooltipId = `journey-selector-activity-${rawTooltipId.replace(/:/g, '')}`
+
+    return (
+        <>
+            <WaIcon
+                id={tooltipId}
+                className="lgs--journey-activity-icon"
+                name={activity.icon ?? 'person-hiking'}
+                variant="regular"
+            />
+            <WaTooltip for={tooltipId}>{activity.label}</WaTooltip>
+        </>
+    )
+}
 
 /**
  * A memoized React component for selecting or displaying a journey.
@@ -259,16 +278,7 @@ export const JourneySelector = memo(({
     }, [closeOnOutsidePointerDown])
 
     const renderActivityIcon = useCallback((journey = currentJourney) => {
-        const activity = Journey.activityProfile(journey?.activity, journey?.activitySettings)
-
-        return (
-            <WaIcon
-                className="lgs--journey-activity-icon"
-                name={activity.icon ?? 'person-hiking'}
-                title={activity.label}
-                variant="regular"
-            />
-        )
+        return <JourneyActivityIcon journey={journey}/>
     }, [currentJourney])
 
     const renderTrackPreview = useCallback((journey, track) => (

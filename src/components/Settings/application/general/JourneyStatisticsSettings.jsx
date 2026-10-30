@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,9 +18,9 @@ import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { Track } from '@Core/Track'
 import { Utils } from '@Editor/Utils'
 import {
-    WaButton, WaCallout, WaDivider, WaIcon, WaInput, WaOption, WaSelect,
+    WaButton, WaCallout, WaDivider, WaIcon, WaInput, WaOption, WaSelect, WaTooltip,
 }                            from '@awesome.me/webawesome/dist/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { useSnapshot }                  from 'valtio/index'
 
 const SPEED_FACTOR = 3.6
@@ -188,6 +188,8 @@ const hasCustomThresholds = (profile, standardProfile) => {
 }
 
 export const JourneyStatisticsSettings = () => {
+    const rawTooltipId = useId()
+    const resetTooltipIdPrefix = `journey-statistics-reset-${rawTooltipId.replace(/:/g, '')}`
     const $activity = lgs.settings.journey.activity
     const activity = useSnapshot($activity)
 
@@ -324,6 +326,7 @@ export const JourneyStatisticsSettings = () => {
                                         <span className="journey-statistics-threshold-hint">{field.hint}</span>
                                     </div>
                                     <WaButton
+                                        id={`${resetTooltipIdPrefix}-${field.key}`}
                                         className="journey-statistics-field-reset"
                                         size="s"
                                         appearance="plain"
@@ -334,10 +337,12 @@ export const JourneyStatisticsSettings = () => {
                                             resetThreshold(field.key)
                                         }}
                                         aria-label={`Reset ${field.label}`}
-                                        title={`Reset ${field.label}`}
                                     >
                                         <WaIcon name="arrow-rotate-left" variant="regular"/>
                                     </WaButton>
+                                    <WaTooltip for={`${resetTooltipIdPrefix}-${field.key}`} placement="top">
+                                        {`Reset ${field.label}`}
+                                    </WaTooltip>
                                 </div>
                             ))}
                         </div>

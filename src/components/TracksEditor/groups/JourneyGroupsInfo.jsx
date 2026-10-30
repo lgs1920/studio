@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-06
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { JOURNEY_GROUPS_DRAWER }       from '@Core/constants'
 import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
-import { memo, useCallback, useMemo }  from 'react'
+import { memo, useCallback, useId, useMemo } from 'react'
 import { useSnapshot }                 from 'valtio'
 
 export const JourneyGroupColorIcon = ({color}) => (
@@ -28,13 +28,21 @@ export const JourneyGroupColorIcon = ({color}) => (
     />
 )
 
-export const JourneyGroupChip = ({group}) => (
-    <span className="journey-group-chip" title={group.description || group.name}>
-        <JourneyGroupColorIcon color={group.color}/>
-        <WaIcon name="folder" variant="regular"/>
-        <span>{group.name}</span>
-    </span>
-)
+export const JourneyGroupChip = ({group}) => {
+    const rawTooltipId = useId()
+    const tooltipId = `journey-group-chip-${rawTooltipId.replace(/:/g, '')}`
+
+    return (
+        <>
+            <span className="journey-group-chip" id={tooltipId}>
+                <JourneyGroupColorIcon color={group.color}/>
+                <WaIcon name="folder" variant="regular"/>
+                <span>{group.name}</span>
+            </span>
+            <WaTooltip for={tooltipId}>{group.description || group.name}</WaTooltip>
+        </>
+    )
+}
 
 export const JourneyGroupsInfo = memo(({journey}) => {
     const groupStore = useSnapshot(lgs.stores.ui.journeyGroups)

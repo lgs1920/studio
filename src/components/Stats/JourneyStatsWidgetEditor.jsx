@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-06
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -51,7 +51,7 @@ import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS } from '@Utils
 import {
     WaButton, WaButtonGroup, WaCard, WaColorPicker, WaDivider, WaIcon, WaSlider, WaSwitch, WaTab,
     WaTabGroup,
-    WaTabPanel,
+    WaTabPanel, WaTooltip,
 }                                                                   from '@awesome.me/webawesome/dist/react'
 import { useOptionalSnapshot, useProxyValue }                       from '@Utils/ValtioUtils'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -539,6 +539,10 @@ export const JourneyStatsWidgetEditor = ({
                                   }
                                   : null
         const lockState = dateTimeLockState ?? summaryLockState
+        const lockTooltipId = `journey-stats-text-order-${String(item.id).replace(/[^\w-]/g, '-')}`
+        const lockTooltipLabel = dateTimeLockState
+            ? (lockState.isOpen ? 'Combine date and time' : 'Separate date and time')
+            : (lockState.isOpen ? 'Align summary metrics' : 'Force line break')
 
         return (
             <WaCard
@@ -552,13 +556,12 @@ export const JourneyStatsWidgetEditor = ({
                 <div className="sortable-widget-info">{item.label}</div>
                 {lockState.visible && (
                     <WaButton
+                        id={lockTooltipId}
                         appearance="plain"
                         variant="brand"
                         size="s"
                         className="journey-stats-text-order-lock-button"
-                        title={dateTimeLockState
-                            ? (lockState.isOpen ? 'Combine date and time' : 'Separate date and time')
-                            : (lockState.isOpen ? 'Align summary metrics' : 'Force line break')}
+                        aria-label={lockTooltipLabel}
                         onClick={event => dateTimeLockState
                             ? toggleDateTimeStack(event)
                             : toggleSummaryLineBreak(item.id, event)}
@@ -567,6 +570,7 @@ export const JourneyStatsWidgetEditor = ({
                         <WaIcon name={lockState.isOpen ? 'lock-open' : 'lock'} variant="regular"/>
                     </WaButton>
                 )}
+                {lockState.visible && <WaTooltip for={lockTooltipId}>{lockTooltipLabel}</WaTooltip>}
             </WaCard>
         )
     }

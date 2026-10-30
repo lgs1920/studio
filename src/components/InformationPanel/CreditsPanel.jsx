@@ -8,16 +8,16 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-06-17
- * Last modified: 2026-10-14
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
-import { WaButton, WaCard } from '@awesome.me/webawesome/dist/react'
+import { WaButton, WaCard, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import '@awesome.me/webawesome/dist/styles/utilities/text.css'
-import React                        from 'react'
+import React, {useId}                 from 'react'
 import { default as ReactMarkdown } from 'react-markdown'
 import { markdown as engine }    from '../../../src/assets/credits/credits-engine.md'
 import { markdown as geocoding } from '../../../src/assets/credits/credits-geocoding.md'
@@ -27,9 +27,17 @@ import { markdown as code }      from '../../../src/assets/credits/credits-open-
 import { openCodeDependenciesDrawer } from './openCodeDependenciesDrawer'
 
 /** Renders a Markdown link with Web Awesome's theme-aware link utility. */
-const CreditsMarkdownLink = ({children, href, title}) => (
-    <a className="wa-link" href={href} title={title}>{children}</a>
-)
+const CreditsMarkdownLink = ({children, href, title}) => {
+    const rawTooltipId = useId()
+    const tooltipId = `credits-markdown-link-${rawTooltipId.replace(/:/g, '')}`
+
+    return (
+        <>
+            <a className="wa-link" href={href} id={tooltipId}>{children}</a>
+            {title && <WaTooltip for={tooltipId}>{title}</WaTooltip>}
+        </>
+    )
+}
 
 /** Applies the same branded link renderer to every credits document. */
 const creditsMarkdownComponents = {a: CreditsMarkdownLink}

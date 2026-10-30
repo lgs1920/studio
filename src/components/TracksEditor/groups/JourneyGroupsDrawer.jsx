@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-06
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,7 +28,7 @@ import {
     WaSelect, WaTab, WaTabGroup, WaTabPanel, WaTextarea, WaTooltip, WaTree, WaTreeItem,
 }                                from '@awesome.me/webawesome/dist/react'
 import classNames                from 'classnames'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal }          from 'react-dom'
 import Sortable                  from 'sortablejs'
 import { useSnapshot }           from 'valtio'
@@ -60,6 +60,25 @@ const GROUP_COLOR_SWATCHES = [
 const groupTabId = (groupId, suffix) => `journey-group-${groupId.replace(/[^a-zA-Z0-9_-]/g, '-')}-${suffix}`
 const groupPopupAnchorId = groupId => groupTabId(groupId, 'popup-anchor')
 
+/** Render a journey activity icon with its full activity label available as a tooltip. */
+const JourneyActivityIcon = ({journey}) => {
+    const activity = Journey.activityProfile(journey?.activity, journey?.activitySettings)
+    const rawTooltipId = useId()
+    const tooltipId = `journey-group-activity-${rawTooltipId.replace(/:/g, '')}`
+
+    return (
+        <>
+            <WaIcon
+                id={tooltipId}
+                className="lgs--journey-activity-icon"
+                name={activity.icon ?? 'person-hiking'}
+                variant="regular"
+            />
+            <WaTooltip for={tooltipId}>{activity.label}</WaTooltip>
+        </>
+    )
+}
+
 const renderJourneyIcons = (journey) => {
     const tracks = Array.from(journey.tracks?.values?.() ?? [])
 
@@ -72,10 +91,7 @@ const renderJourneyIcons = (journey) => {
             <span className="lgs--journey-icons-in-settings">
                 <TrackStylePreview track={tracks[0]} compact
                                    visible={journey.visible !== false && tracks[0].visible !== false}/>
-                <WaIcon className="lgs--journey-activity-icon"
-                        name={Journey.activityProfile(journey?.activity, journey?.activitySettings).icon ?? 'person-hiking'}
-                        title={Journey.activityProfile(journey?.activity, journey?.activitySettings).label}
-                        variant="regular"/>
+                <JourneyActivityIcon journey={journey}/>
             </span>
         )
     }
@@ -92,10 +108,7 @@ const renderJourneyIcons = (journey) => {
                     />
                 ))}
             </span>
-            <WaIcon className="lgs--journey-activity-icon"
-                    name={Journey.activityProfile(journey?.activity, journey?.activitySettings).icon ?? 'person-hiking'}
-                    title={Journey.activityProfile(journey?.activity, journey?.activitySettings).label}
-                    variant="regular"/>
+            <JourneyActivityIcon journey={journey}/>
         </span>
     )
 }

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-10-23
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -294,6 +294,7 @@ export const JourneyLoaderUI = (props) => {
     const _attemptCounter = useRef(0)
 
     const fileInputId = useId()
+    const sampleOptionTooltipIdPrefix = `journey-sample-option-${fileInputId.replace(/:/g, '')}`
 
     const journeySamples = useMemo(
         () => normalizeJourneySamplesCatalog(samplesSettings),
@@ -1089,9 +1090,9 @@ export const JourneyLoaderUI = (props) => {
                                     return (
                                         <WaOption
                                             key={sample.slug}
+                                            id={`${sampleOptionTooltipIdPrefix}-${sample.slug.replace(/[^\w-]/g, '-')}`}
                                             value={sample.slug}
                                             disabled={isLoaded}
-                                            title={sample.description || sample.name}
                                         >
                                             <WaIcon
                                                 slot="start"
@@ -1105,6 +1106,14 @@ export const JourneyLoaderUI = (props) => {
                                     )
                                 })}
                             </WaSelect>
+                            {journeySamples.map(sample => {
+                                const optionId = `${sampleOptionTooltipIdPrefix}-${sample.slug.replace(/[^\w-]/g, '-')}`
+                                return (
+                                    <WaTooltip key={sample.slug} for={optionId} placement="top">
+                                        {sample.description || sample.name}
+                                    </WaTooltip>
+                                )
+                            })}
                         </div>
                     </>
                 }

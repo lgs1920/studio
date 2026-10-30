@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-06-04
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { INFO_CHANGELOG_TAB, INFO_DRAWER } from '@Core/constants'
 import { LogoSvg }                         from '@Components/MainUI/LogoSvg'
-import { WaButton, WaDivider, WaIcon } from '@awesome.me/webawesome/dist/react'
+import { WaButton, WaDivider, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import React                           from 'react'
 
 const openChangelog = () => {
@@ -27,8 +27,12 @@ const openChangelog = () => {
 }
 
 // Memoized component for performance
-const DrawerFooter = React.memo(() => (
-    <>
+const DrawerFooter = React.memo(() => {
+    const rawTooltipId = React.useId()
+    const tooltipIdPrefix = `drawer-footer-${rawTooltipId.replace(/:/g, '')}`
+
+    return (
+        <>
         <WaDivider/>
         <div className="drawer-pane-footer credits-pane-footer" slot="footer">
 
@@ -42,28 +46,32 @@ const DrawerFooter = React.memo(() => (
                 <span>{lgs?.versions?.backend || 'N/A'}</span>
             </div>
             <div className="drawer-footer-url">
-                <WaButton appearance="plain" variant="brand"
+                <WaButton id={`${tooltipIdPrefix}-changelog`} appearance="plain" variant="brand"
                           onClick={openChangelog}
-                          title={'Changelog'}>
+                          aria-label="Changelog">
                     <WaIcon name="circle-info" variant="regular"/>
                 </WaButton>
+                <WaTooltip for={`${tooltipIdPrefix}-changelog`}>{'Changelog'}</WaTooltip>
 
-                <WaButton appearance="plain" variant={'brand'}
+                <WaButton id={`${tooltipIdPrefix}-website`} appearance="plain" variant={'brand'}
                           target="_blank"
                           href={__.app.buildUrl(lgs?.configuration?.website || 'https://lgs1920.fr')}
-                          title={'LGS1920 project Web site'}>
+                          aria-label="LGS1920 project Web site">
                     <WaIcon name="globe-pointer" variant="regular"/>
                 </WaButton>
+                <WaTooltip for={`${tooltipIdPrefix}-website`}>{'LGS1920 project Web site'}</WaTooltip>
 
-                <WaButton appearance="plain" variant="brand"
+                <WaButton id={`${tooltipIdPrefix}-github`} appearance="plain" variant="brand"
                           target="_blank"
                           href={lgs?.configuration?.githubURL || 'https://github.com/lgs1920'}
-                          title={'Our Github repos'}>
+                          aria-label="Our Github repos">
                     <WaIcon name="github" family="brands"/>
                 </WaButton>
+                <WaTooltip for={`${tooltipIdPrefix}-github`}>{'Our Github repos'}</WaTooltip>
             </div>
         </div>
-    </>
-))
+        </>
+    )
+})
 
 export default DrawerFooter

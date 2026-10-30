@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-12
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -371,7 +371,8 @@ describe('ReplayRecordingMonitorWidget', () => {
         })
         expect(globalThis.documentPictureInPicture.requestWindow).toHaveBeenCalledWith({width: 480, height: 160})
         expect(externalDocument.body.querySelector('canvas')).toBeNull()
-        expect(externalDocument.body.querySelector('[title="Frames checked percentage"]').textContent).toBe('44%')
+        expect(externalDocument.body.querySelector('.replay-recording-monitor-metric-duration')?.textContent)
+            .toContain('Frames checked percentage44%')
         expect(externalDocument.body.textContent).toContain('4 / 9')
     })
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -388,7 +388,6 @@ export const JourneyReplayProgressBar = memo(({
                                 appearance={actionAppearance}
                                 variant="brand"
                                 size="s"
-                                title={pauseLabel}
                                 aria-label={pauseLabel}
                                 onClick={pause}
                                 disabled={disabled}
@@ -405,7 +404,6 @@ export const JourneyReplayProgressBar = memo(({
                                  appearance={actionAppearance}
                                  variant="brand"
                                  size="s"
-                                 title={playLabel}
                                  aria-label={playLabel}
                                  onClick={playOrResume}
                                  disabled={disabled}
@@ -423,7 +421,6 @@ export const JourneyReplayProgressBar = memo(({
                                 appearance={snapshotAppearance}
                                 variant="brand"
                                 size="s"
-                                title={snapshotLabel}
                                 aria-label={snapshotLabel}
                                 onClick={snapshot}
                                 disabled={disabled}
@@ -438,7 +435,6 @@ export const JourneyReplayProgressBar = memo(({
                         appearance={actionAppearance}
                         variant={stopVariant}
                         size="s"
-                        title={stopLabel}
                         aria-label={stopLabel}
                         onClick={stop}
                         disabled={disabled}
@@ -455,7 +451,6 @@ export const JourneyReplayProgressBar = memo(({
                         appearance={snapshotAppearance}
                         variant="brand"
                         size="s"
-                        title={snapshotLabel}
                         aria-label={snapshotLabel}
                         onClick={snapshot}
                         disabled={disabled}
@@ -472,7 +467,6 @@ export const JourneyReplayProgressBar = memo(({
                         appearance={actionAppearance}
                         variant="brand"
                         size="s"
-                        title={settingsLabel}
                         aria-label={settingsLabel}
                         onClick={toggleSettings}
                         disabled={disabled}

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-14
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,12 +30,15 @@ import {
 import {hasVisibleColorAlpha} from '@Utils/ColorUtils'
 import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAwesomeKits'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
+import {useId} from 'react'
 import {useSnapshot} from 'valtio'
 
 const BASIC_REPLAY_SIZE_LABELS = ['thin', 'small', 'medium', 'large']
 
 /** Render live color swatches and fixed-scale trace/marker choices for Basic Replay. */
 export const BasicReplayAppearanceSettings = () => {
+    const rawTooltipId = useId()
+    const swapTooltipId = `basic-replay-swap-colors-${rawTooltipId.replace(/:/g, '')}`
     const $settings = lgs.settings.ui.replay
     const settings = useSnapshot($settings)
     const main = useOptionalSnapshot(lgs.stores.main)
@@ -84,11 +87,14 @@ export const BasicReplayAppearanceSettings = () => {
                                value={fill.color} swatches={swatches}
                                onInput={event => updatePresentation({fillColor: event.currentTarget.value})}/>
                 {canSwapColors && (
-                    <WaButton className="square-button small basic-replay-appearance__swap" size="s" appearance="plain"
-                              aria-label="Swap Replay fill and border colors" title="Swap Replay fill and border colors"
-                              onClick={handleSwapColors}>
-                        <WaIcon name="arrow-right-arrow-left" variant="regular" library={LGS1920_ICON_LIBRARY} size="s" aria-hidden="true"/>
-                    </WaButton>
+                    <>
+                        <WaButton className="square-button small basic-replay-appearance__swap" size="s" appearance="plain"
+                                  id={swapTooltipId} aria-label="Swap Replay fill and border colors"
+                                  onClick={handleSwapColors}>
+                            <WaIcon name="arrow-right-arrow-left" variant="regular" library={LGS1920_ICON_LIBRARY} size="s" aria-hidden="true"/>
+                        </WaButton>
+                        <WaTooltip for={swapTooltipId} placement="top">{'Swap Replay fill and border colors'}</WaTooltip>
+                    </>
                 )}
             </div>
             <WaRadioGroup className="basic-replay-appearance__border-mode wa-visually-hidden-label"

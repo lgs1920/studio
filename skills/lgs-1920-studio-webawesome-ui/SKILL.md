@@ -26,6 +26,14 @@ Workflow:
 6. Use FontAwesome icons through the existing integration and add shortcut documentation when introducing shortcuts.
 7. Test the component at narrow and wide layouts and in light or dark theme contexts when relevant.
 
+## Tooltips
+
+Do not use native HTML `title` attributes in interactive application UI. Use
+Web Awesome's `WaTooltip` React wrapper or `<wa-tooltip>`, associate it with a
+stable unique target `id` through the tooltip's `for` attribute, and keep an
+accessible name on icon-only controls. Preserve semantic title data, document
+titles, SVG `<title>` elements, and title metadata required by exported documents.
+
 ## Form controls and sizing
 
 Use `label-at-start` for every labeled Web Awesome form control by default, including inputs, number inputs, selects, switches, sliders, and groups. Supply the visible label through the component's `label` property or label slot. Choose another placement only when the component's established design requires it.

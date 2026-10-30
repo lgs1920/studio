@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,7 +39,7 @@ import {
 }                                 from '@Core/ui/widget-manager/widgetGridUtils'
 import {resolveWidgetResizeLimits} from '@Core/ui/widget-manager/widgetResizeUtils'
 import { useOptionalSnapshot }     from '@Utils/ValtioUtils'
-import { WaIcon }                 from '@awesome.me/webawesome/dist/react'
+import { WaIcon, WaTooltip }      from '@awesome.me/webawesome/dist/react'
 import classNames                 from 'classnames'
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Moveable                   from 'react-moveable'
@@ -468,6 +468,7 @@ const WidgetHost = ({
         const id = config.id
         return id && id.includes('#') ? id : __.ui.widgetManager.defineElementId(config.group, id)
     })
+    const collapsedTooltipId = `widget-collapsed-${String(widgetId).replace(/[^\w-]/g, '-')}`
     const selectedId = widget.current?.id ?? null
     const isSelected = selectedId === widgetId
                        || Boolean(config.isCropper
@@ -1998,21 +1999,26 @@ const WidgetHost = ({
                 onMouseLeave={handleMouseLeave}
             >
                 {effectiveCollapsed && (
-                    <div
-                        className="lgs-widget-collapsed-icon"
-                        data-collapsed-icon={renderedCollapsedIcon}
-                        data-widget-type={config.type}
-                        title={effectiveLocked ? 'Locked widget' : 'Collapsed widget'}
-                    >
-                        <WaIcon
-                            key={renderedCollapsedIcon}
-                            name={renderedCollapsedIcon}
-                            variant="regular"
-                            label={showLockedOverlay ? '' : (effectiveLocked ? 'Locked widget' : 'Collapsed widget')}
-                            onWaError={handleCollapsedIconError}
-                            aria-hidden={showLockedOverlay}
-                        />
-                    </div>
+                    <>
+                        <div
+                            id={collapsedTooltipId}
+                            className="lgs-widget-collapsed-icon"
+                            data-collapsed-icon={renderedCollapsedIcon}
+                            data-widget-type={config.type}
+                        >
+                            <WaIcon
+                                key={renderedCollapsedIcon}
+                                name={renderedCollapsedIcon}
+                                variant="regular"
+                                label={showLockedOverlay ? '' : (effectiveLocked ? 'Locked widget' : 'Collapsed widget')}
+                                onWaError={handleCollapsedIconError}
+                                aria-hidden={showLockedOverlay}
+                            />
+                        </div>
+                        <WaTooltip for={collapsedTooltipId} placement="top">
+                            {effectiveLocked ? 'Locked widget' : 'Collapsed widget'}
+                        </WaTooltip>
+                    </>
                 )}
                 {config.preserveChildrenWhenCollapsed
                  ? (
