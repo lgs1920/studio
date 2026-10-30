@@ -55,21 +55,31 @@ cone tip alone adjusts height. During preparation, dragging the simulated-route 
 visible source-trace distance from 60 to 1,000 metres, capped by track length.
 The arrow and dotted route both use Replay fill color.
 Basic and Expert video preparation also mount a transient on-map camera
-joystick: vertical input changes height/zoom, horizontal input changes pitch,
+joystick: vertical input changes pitch, horizontal input changes height/zoom,
 and diagonal input combines them without changing azimuth. Held deflection sets
 the adjustment rate: a displaced thumb continues changing the pose until release
-or return to center. Upward input and ArrowUp zoom in; downward input and
-ArrowDown zoom out. Elapsed animation-frame time keeps the rate independent of
-display frequency and bounds catch-up after browser suspension. The handle springs
-back on release while retaining the prepared pose. Its session API rejects
-writes during playback and capture. Pointer cancellation, window blur, Journey
-replacement, and unmount cancel pending input frames. The circular control uses
-the standard on-map card as its base. Three.js draws a smaller movable, concave
-on-map cuvette over a rounded on-map ball. The cuvette conforms to the ball's
-spherical surface and fades slightly near its edge; an on-map bevel defines the
-ball's edge. A grooved, on-map-colored crown stays fixed around the ball. Mesh
-depth, normals, perspective, and directional lighting provide the relief while transparent
-canvas pixels leave the themed background visible. The thumb keeps an on-map CSS fallback
+or return to center. Upward input and ArrowUp raise pitch toward the horizon;
+downward input and ArrowDown lower it toward the ground. Rightward input and
+ArrowRight zoom in; leftward input and ArrowLeft zoom out. Elapsed animation-frame
+time keeps the rate independent of display frequency and bounds catch-up after
+browser suspension. The handle springs back on release while retaining the
+prepared pose. Its session API rejects writes during playback and capture.
+Pointer cancellation, window blur, Journey replacement, and unmount cancel
+pending input frames. The transparent card host leaves the surrounding map
+visible. Three.js draws a smaller movable, concave on-map cuvette over a rounded
+on-map ball. The cuvette conforms to the ball's spherical surface and fades
+slightly near its edge. The wider seat ring has no base fill; broad, graded black
+shadows and a diffuse white highlight on the light-facing inner slope define its
+concavity. Both effects fade before its outer edge, which meets the map at ground
+level, while unshaded areas leave the map fully visible. A second, three-pixel
+contact ring with 0.8 alpha adds a dark seam at the ball's edge. Neutral
+directional lighting shades the seat's concave normals without tinting the other
+surfaces. The ball and cuvette share a slightly darkened tint blended from the
+on-map surface, Brand, and active seasonal accent; their vertex shading remains
+independent to preserve their different relief. A soft canvas shadow seats them
+into the map surface. Mesh depth, normals, perspective, and directional lighting
+provide relief to the ball and cuvette.
+The thumb keeps an on-map CSS fallback
 until WebGL is ready and whenever its context is unavailable. Focused arrow keys
 offer the same controls without
 visible buttons, labels, or measurements.

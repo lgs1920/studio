@@ -37,6 +37,7 @@ const CUVETTE_TRAVEL = 0.464
 const SEAT_RING_WIDTH = 0.18
 const SEAT_RING_DEPTH = 0.045
 const SEAT_RING_OUTER_FADE_START = 0.68
+const SEAT_RING_HIGHLIGHT_STRENGTH = 0.56
 const CONTACT_RING_WIDTH = 0.054
 const CONTACT_RING_DEPTH = 0.01
 const CONTACT_RING_ALPHA = 0.8
@@ -161,7 +162,7 @@ const createJoystickSeatGeometry = () => {
             (progress - SEAT_RING_OUTER_FADE_START) / (1 - SEAT_RING_OUTER_FADE_START)))
         const outerFade = 1 - outerFadeProgress ** 2 * (3 - 2 * outerFadeProgress)
         const highlight = lightFacing ** 0.9
-            * Math.exp(-(((progress - 0.32) / 0.2) ** 2)) * 0.42 * outerFade
+            * Math.exp(-(((progress - 0.32) / 0.2) ** 2)) * SEAT_RING_HIGHLIGHT_STRENGTH * outerFade
         const shadow = shadowFacing ** 1.2
             * (0.1 + groove ** 1.4 * 0.72) * outerFade
         const isHighlight = highlight > shadow

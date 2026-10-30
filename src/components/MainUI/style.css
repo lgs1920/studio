@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -1135,6 +1135,9 @@ body.mobile .orbit-widget-body {
 }
 
 :root[data-season-theme='spring'] {
+    /* Supplies the active spring accent to theme-aware 3D materials. */
+    --lgs-season-accent-color: rgb(175, 218, 188);
+
     & #lgs-boot-splash,
     & #lgs1920-container .welcome-branding {
         /* Sets route marker and spinner track colors for the spring theme. */
@@ -1147,6 +1150,9 @@ body.mobile .orbit-widget-body {
 }
 
 :root[data-season-theme='fall'] {
+    /* Supplies the active fall accent to theme-aware 3D materials. */
+    --lgs-season-accent-color: rgb(197, 110, 18);
+
     & #lgs-boot-splash,
     & #lgs1920-container .welcome-branding {
         /* Sets route marker and spinner track colors for the fall theme. */
@@ -1159,6 +1165,9 @@ body.mobile .orbit-widget-body {
 }
 
 :root[data-season-theme='winter'] {
+    /* Supplies the active winter accent to theme-aware 3D materials. */
+    --lgs-season-accent-color: rgb(219, 234, 254);
+
     & #lgs-boot-splash,
     & #lgs1920-container .welcome-branding {
         /* Sets route marker and spinner track colors for the winter theme. */

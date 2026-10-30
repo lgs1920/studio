@@ -151,11 +151,12 @@ height regardless of pointer radius; only the cone-tip handle edits height.
 Preparation still restores the saved normal camera view when it
 closes. The simulated route defaults to 1,000 metres, capped by the available
 track length; its arrow and dotted stroke use Replay fill color.
-An on-map preparation joystick controls height (vertical axis) and pitch
+An on-map preparation joystick controls pitch (vertical axis) and height/zoom
 (horizontal axis) independently of azimuth. Held thumb deflection controls the
 adjustment rate: maintaining a displaced thumb continues zooming or pitching.
-Upward input and ArrowUp zoom in by reducing camera height; downward input and
-ArrowDown zoom out by increasing it.
+Upward input and ArrowUp raise the pitch toward the horizon; downward input and
+ArrowDown lower it toward the ground. Rightward input and ArrowRight zoom in by
+reducing camera height; leftward input and ArrowLeft zoom out by increasing it.
 Updates use elapsed animation-frame time, with a bounded catch-up interval after
 browser suspension. Returning to center stops adjustment. Diagonals combine both
 controls. Release, pointer cancellation, focus
@@ -164,14 +165,21 @@ the handle to center without restoring the previous camera pose. Its public
 `updatePreparationCamera` session boundary persists the active Journey camera
 and applies it to Cesium without acquiring ownership. The transient `lgs-widget`
 uses the scene board and stays outside the visual-widget catalogue and captured
-video composition. Its circular pad uses the standard on-map card theme. A
-transparent Three.js scene draws a movable, concave on-map cuvette over a
-rounded on-map ball. The cuvette follows the ball's spherical surface, and an
-on-map bevel defines the ball's edge. The grooved, on-map-colored crown stays
-fixed around it. Its perspective angle is oblique, and the cuvette fades slightly
-as it nears the edge. Mesh depth, surface normals, and directional lighting
-provide the relief.
-Transparent canvas pixels leave the on-map disk visible around the hardware.
+video composition. Its transparent card host leaves the surrounding map
+visible. Three.js draws a movable, concave on-map cuvette over a rounded on-map
+ball. The cuvette follows the ball's spherical surface and fades slightly near
+its edge. A wider transparent seat ring has no base fill. Broadly graded black
+shadows and white highlights define the concavity. A diffuse
+light-facing highlight falls on the inner slope, and both effects fade before
+the outer edge, which meets the map at ground level. Unshaded areas leave the
+map fully visible. A second,
+three-pixel contact ring with 0.8 alpha adds a dark seam at the
+ball's edge. Neutral directional lighting shades the seat's concave normals
+without tinting the other surfaces. The ball and cuvette share a slightly
+darkened tint blended from the on-map surface, Brand, and active seasonal accent;
+their vertex shading remains independent to preserve their different relief. A
+soft canvas shadow seats the assembly into the map surface. Mesh depth, surface
+normals, and directional lighting provide relief to the ball and cuvette.
 The DOM thumb remains the pointer and keyboard target. It
 keeps its concave on-map fallback
 appearance while WebGL initializes or is unavailable, then becomes transparent

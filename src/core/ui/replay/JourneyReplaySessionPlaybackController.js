@@ -1254,9 +1254,11 @@ const refreshPreparationCamera = (mode, sample, options = {}) => {
  *
  * @param {Object} mode - Replay session.
  * @param {Object} updates - Prepared camera settings to merge.
+ * @param {Object} [options] - Preparation camera framing options.
+ * @param {boolean} [options.preserveCameraRange=false] - Keep joystick pitch changes from changing zoom.
  * @returns {Object|null} Saved pose, or null outside idle video preparation.
  */
-export const updatePreparationCamera = (mode, updates) => {
+export const updatePreparationCamera = (mode, updates, {preserveCameraRange = false} = {}) => {
     const video = globalThis.lgs?.stores?.ui?.video
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -1267,8 +1269,45 @@ export const updatePreparationCamera = (mode, updates) => {
         return null
     }
 
+    const cameraSettings = currentJourneyReplayCameraSettings()
+    const cameraUpdates = Object.assign({}, updates)
+    if (preserveCameraRange) {
+        const sample = state.replayPreparationSample ?? state.sampler?.atProgress?.(0) ?? null
+        const requestedAltitude = finiteNumber(updates?.altitude)
+        const requestedPitch = finiteNumber(updates?.pitch)
+        const currentPitch = finiteNumber(cameraSettings?.pitch)
+        const targetHeight = sample
+            ? finiteNumber(call.markerRenderHeightForSample?.(sample))
+                ?? finiteNumber(sample.altitude ?? sample.height)
+                ?? 0
+            : null
+        const groundOffsetMode = cameraSettings?.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
+
+        if (requestedAltitude !== null && requestedPitch !== null && currentPitch !== null
+            && targetHeight !== null) {
+            const requestedCameraHeight = groundOffsetMode
+                ? targetHeight + requestedAltitude
+                : requestedAltitude
+            const requestedHeightAboveTarget = Math.max(
+                CAMERA_REDIRECT_TERRAIN_CLEARANCE_METERS,
+                requestedCameraHeight - targetHeight,
+            )
+            const currentPitchRadians = currentPitch * Math.PI / 180
+            const requestedPitchRadians = requestedPitch * Math.PI / 180
+            // Apply zoom at the current pitch, then map the same range to the requested pitch.
+            const requestedRange = replayCameraRangeFromPitch(requestedHeightAboveTarget, currentPitchRadians)
+            const adjustedHeightAboveTarget = Math.max(
+                CAMERA_REDIRECT_TERRAIN_CLEARANCE_METERS,
+                requestedRange * Math.abs(Math.sin(requestedPitchRadians)),
+            )
+            cameraUpdates.altitude = groundOffsetMode
+                ? adjustedHeightAboveTarget
+                : targetHeight + adjustedHeightAboveTarget
+        }
+    }
+
     call.cancelPreparationCameraGesture?.()
-    const camera = call.persistCameraSettings?.(updates)
+    const camera = call.persistCameraSettings?.(cameraUpdates)
     if (camera) {
         refreshCamera(mode, {preparation: true, suppressMoveEvents: true, source: 'preparation-joystick'})
     }
