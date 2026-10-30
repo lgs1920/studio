@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -116,6 +116,7 @@ export class JourneyReplayPlaybackController {
                      captureFps = undefined,
                      videoTimeline = null,
                      replaySettings = null,
+                     isPOIInVideoCrop = null,
                  } = {}) => {
         this.#sampler = sampler
         this.#duration = safeDuration(duration)
@@ -125,6 +126,7 @@ export class JourneyReplayPlaybackController {
         const replayState = globalThis.lgs?.stores?.replay ?? null
         const activeReplaySettings = replaySettings ?? globalThis.lgs?.settings?.ui?.replay ?? replayState
         const nearbyPois = projectReplayPOIsOnSampler(replayState?.nearbyPois ?? [], this.#sampler)
+        const cropVisibilitySamples = new Map()
         this.#playbackProfile = createReplayPOISpeedProfile({
             entries: nearbyPois,
             totalDistance: this.#sampler?.totalDistance,
@@ -132,8 +134,29 @@ export class JourneyReplayPlaybackController {
             direction: this.#direction,
             basicSettings: activeReplaySettings?.basic,
             enabled: isJourneyReplayBasicMode({settings: activeReplaySettings, replay: replayState}),
+            isPOIInVideoCrop: typeof isPOIInVideoCrop === 'function'
+                ? (entry, progress) => {
+                    const cropVisible = isPOIInVideoCrop(entry, progress)
+                    const id = entry?.poi?.id ?? entry?.id
+                    if (id) {
+                        const samples = cropVisibilitySamples.get(id) ?? []
+                        samples.push(cropVisible)
+                        cropVisibilitySamples.set(id, samples)
+                    }
+                    return cropVisible === true || cropVisible === false
+                        ? cropVisible
+                        : entry?.inVideoCrop
+                }
+                : null,
         })
         if (replayState) {
+            const poiCropVisibility = {}
+            cropVisibilitySamples.forEach((samples, id) => {
+                if (samples.length > 0 && samples.every(value => value === true || value === false)) {
+                    poiCropVisibility[id] = samples.some(Boolean)
+                }
+            })
+            replayState.poiCropVisibility = poiCropVisibility
             replayState.poiPlaybackProfile = {
                 ...this.#playbackProfile,
                 journeySlug: this.#sampler?.journey?.slug ?? null,

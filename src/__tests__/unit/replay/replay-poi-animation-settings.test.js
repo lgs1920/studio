@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,6 @@
 
 import {
     isReplayPOIAnimationActiveAtProgress,
-    isReplayPOIAnimationEndpoint,
     isReplayPOIEndpoint,
     normalizeReplayPOIBehavior,
     resolveReplayPOIPresentation,
@@ -73,17 +72,31 @@ describe('Replay POI animation settings', () => {
         expect(isReplayPOIAnimationActiveAtProgress({...options, progress: 0.6})).toBe(false)
     })
 
-    it('keeps starter visibility user-controlled while allowing it to animate as a nearby POI', () => {
+    it('keeps endpoint visibility user-controlled while allowing authorized animation', () => {
         expect(isReplayPOIEndpoint({type: 'start'})).toBe(true)
         expect(isReplayPOIEndpoint({type: 'stop'})).toBe(true)
         expect(isReplayPOIEndpoint({type: 'starter'})).toBe(true)
         expect(isReplayPOIEndpoint({type: 'poi'})).toBe(false)
-        expect(isReplayPOIAnimationEndpoint({type: 'start'})).toBe(true)
-        expect(isReplayPOIAnimationEndpoint({type: 'stop'})).toBe(true)
-        expect(isReplayPOIAnimationEndpoint({type: 'starter'})).toBe(false)
-        expect(isReplayPOIAnimationEndpoint({type: 'poi'})).toBe(false)
 
-        const presentation = resolveReplayPOIPresentation({
+        for (const type of ['start', 'stop']) {
+            const presentation = resolveReplayPOIPresentation({
+                id: `journey-${type}`,
+                type,
+                visible: true,
+                replay: {visible: true},
+            }, {
+                replay: {
+                    active: true,
+                    basicPreparationActive: true,
+                    userMode: 'basic',
+                    animatedPOIIds: [`journey-${type}`],
+                },
+                settings: {userMode: 'basic', basic: {poiVisibilityMode: 'user'}},
+            })
+            expect(presentation).toMatchObject({animationActive: true, visible: true})
+        }
+
+        const starterPresentation = resolveReplayPOIPresentation({
             id: 'global-starter',
             type: 'starter',
             visible: true,
@@ -97,13 +110,10 @@ describe('Replay POI animation settings', () => {
             },
             settings: {userMode: 'basic', basic: {poiVisibilityMode: 'user'}},
         })
-        expect(presentation).toMatchObject({
-            animationActive: true,
-            visible: true,
-        })
+        expect(starterPresentation).toMatchObject({animationActive: true, visible: true})
     })
 
-    it('opens Basic POIs in a replay-clock window and never auto-opens Start or Stop', async () => {
+    it('animates Start and Stop POIs in replay-clock windows at their route endpoints', async () => {
         const poi = {id: 'poi-1', type: 'poi', replay: {visible: true}, expanded: false}
         const start = {id: 'poi-start', type: 'start', replay: {visible: true}, expanded: false}
         const stop = {id: 'poi-stop', type: 'stop', replay: {visible: true}, expanded: false}
@@ -115,12 +125,14 @@ describe('Replay POI animation settings', () => {
             [JOURNEY_REPLAY_INTERNAL_STATE]: {
                 sortedNearbyPois: [
                     {poi, projectedAbscissa: 500},
-                    {poi: start, projectedAbscissa: 200},
-                    {poi: stop, projectedAbscissa: 800},
+                    {poi: start, projectedAbscissa: 0},
+                    {poi: stop, projectedAbscissa: 1000},
                 ],
                 sampler: {totalDistance: 1000},
                 controller: {duration: 10},
                 replayPoiTriggered: new Set(),
+                replayPOIAppearanceState: new Map(),
+                lastReplayPOIProgress: null,
             },
             [JOURNEY_REPLAY_INTERNAL_CALL]: {updatePOIExpandedState},
         }
@@ -136,17 +148,165 @@ describe('Replay POI animation settings', () => {
             },
         })
 
+        await syncNearbyPOIsForSample(mode, {progress: 0.05, distanceFromStart: 50})
+        expect(updatePOIExpandedState).toHaveBeenCalledWith(start.id, true)
+        await syncNearbyPOIsForSample(mode, {progress: 0.1, distanceFromStart: 100})
+        expect(updatePOIExpandedState.mock.calls.filter(([poiId, expanded]) => poiId === start.id && expanded))
+            .toHaveLength(1)
+
         await syncNearbyPOIsForSample(mode, {progress: 0.39, distanceFromStart: 390})
-        expect(updatePOIExpandedState).not.toHaveBeenCalled()
+        expect(updatePOIExpandedState).toHaveBeenCalledWith(start.id, false)
 
         await syncNearbyPOIsForSample(mode, {progress: 0.4, distanceFromStart: 400})
-        expect(updatePOIExpandedState).toHaveBeenCalledTimes(1)
-        expect(updatePOIExpandedState).toHaveBeenLastCalledWith(poi.id, true)
-        expect(start.expanded).toBe(false)
-        expect(stop.expanded).toBe(false)
+        expect(updatePOIExpandedState).toHaveBeenCalledWith(poi.id, true)
 
         await syncNearbyPOIsForSample(mode, {progress: 0.6, distanceFromStart: 600})
         expect(updatePOIExpandedState).toHaveBeenLastCalledWith(poi.id, false)
+
+        await syncNearbyPOIsForSample(mode, {progress: 0.9, distanceFromStart: 900})
+        expect(updatePOIExpandedState).toHaveBeenCalledWith(stop.id, true)
+        await syncNearbyPOIsForSample(mode, {progress: 1, distanceFromStart: 1000})
+        expect(updatePOIExpandedState.mock.calls.filter(([poiId, expanded]) => poiId === stop.id && expanded))
+            .toHaveLength(1)
+    })
+
+    it('animates the visible Start again at arrival when the Stop flag is too close', async () => {
+        const start = {id: 'poi-start', type: 'start', replay: {visible: true}, expanded: false}
+        const stop = {id: 'poi-stop', type: 'stop', replay: {visible: true}, tooClose: true, expanded: false}
+        const journey = {slug: 'journey-close-endpoints', tracks: new Map([
+            ['track-1', {flags: {start: start.id, stop: stop.id}}],
+        ])}
+        const points = new Map([[start.id, start], [stop.id, stop]])
+        const updatePOIExpandedState = vi.fn(async (poiId, expanded) => {
+            points.get(poiId).expanded = expanded
+        })
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                sortedNearbyPois: [{poi: start, projectedAbscissa: 0}],
+                sampler: {totalDistance: 1000},
+                controller: {duration: 10},
+                replayPoiTriggered: new Set(),
+                replayPOIAppearanceState: new Map(),
+                lastReplayPOIProgress: null,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {updatePOIExpandedState},
+        }
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {userMode: 'basic', basic: {
+                poiVisibilityMode: 'yes',
+                animatePoisDuringJourneyReplay: true,
+                poiAnimationDurationSeconds: 2,
+            }}}},
+            stores: {
+                replay: {userMode: 'basic', basicPreparationActive: true, totalDistance: 1000},
+                main: {theJourney: journey, components: {pois: {list: points}}},
+            },
+        })
+
+        await syncNearbyPOIsForSample(mode, {progress: 0.05})
+        await syncNearbyPOIsForSample(mode, {progress: 0.5})
+        await syncNearbyPOIsForSample(mode, {progress: 1})
+
+        expect(updatePOIExpandedState.mock.calls.filter(([poiId, expanded]) => poiId === start.id && expanded))
+            .toHaveLength(2)
+        expect(updatePOIExpandedState).not.toHaveBeenCalledWith(stop.id, true)
+    })
+
+    it.each([true, false])('prepares expanded Start and Stop POIs only when Basic animation is enabled (%s)', async animate => {
+        const journey = {slug: 'journey-endpoint-animation'}
+        const start = {
+            id: 'poi-start', type: 'start', longitude: 0, latitude: 0,
+            replay: {animated: true}, expanded: true,
+        }
+        const stop = {
+            id: 'poi-stop', type: 'stop', longitude: 0.008986, latitude: 0,
+            replay: {animated: true}, expanded: true,
+        }
+        const entries = [start, stop].map(poi => ({poi, source: 'journey-poi'}))
+        const points = new Map(entries.map(entry => [entry.poi.id, entry.poi]))
+        const updatePOIExpandedState = vi.fn(async (poiId, expanded) => {
+            points.get(poiId).expanded = expanded
+        })
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                sortedNearbyPois: [],
+                replayPoiTriggered: new Set(),
+                replayPoiExpandedState: new Map(),
+                replayPOIAppearanceState: new Map(),
+                sampler: {
+                    samples: [
+                        {longitude: 0, latitude: 0},
+                        {longitude: 0.008986, latitude: 0},
+                    ],
+                    segments: [{startIndex: 0, endIndex: 1, startDistance: 0}],
+                    totalDistance: 1000,
+                },
+                controller: {duration: 10},
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                restoreNearbyPOIsAfterPlayback: vi.fn(async () => {}),
+                applyJourneyReplayPOIVisibility: vi.fn(),
+                replayPOICandidates: nearbyPois => nearbyPois.map(entry => entry.poi),
+                syncRuntimeNearbyPOIs: vi.fn(() => entries),
+                updatePOIExpandedState,
+            },
+        }
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {userMode: 'basic', basic: {
+                poiVisibilityMode: 'yes',
+                animatePoisDuringJourneyReplay: animate,
+            }}}},
+            stores: {
+                replay: {userMode: 'basic', totalDistance: 1000},
+                main: {theJourney: journey, components: {pois: {list: points}}},
+            },
+        })
+
+        await prepareNearbyPOIsForPlayback(mode)
+
+        expect(start.expanded).toBe(!animate)
+        expect(stop.expanded).toBe(!animate)
+        expect(mode[JOURNEY_REPLAY_INTERNAL_STATE].replayPoiExpandedState.size).toBe(animate ? 2 : 0)
+    })
+
+    it.each([
+        ['Basic', 'basic', {userMode: 'basic', basic: {poiVisibilityMode: 'user', animatePoisDuringJourneyReplay: false}}],
+        ['Expert', 'expert', {userMode: 'expert', animateAllPoisDuringJourneyReplay: false}],
+    ])('does not animate Start or Stop when %s Replay animation is disabled', async (_label, userMode, settings) => {
+        const endpointReplaySettings = userMode === 'expert'
+            ? {visible: true, animated: false}
+            : {visible: true}
+        const start = {id: 'poi-start', type: 'start', replay: endpointReplaySettings, expanded: false}
+        const stop = {id: 'poi-stop', type: 'stop', replay: endpointReplaySettings, expanded: false}
+        const points = new Map([[start.id, start], [stop.id, stop]])
+        const updatePOIExpandedState = vi.fn()
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                sortedNearbyPois: [
+                    {poi: start, projectedAbscissa: 0},
+                    {poi: stop, projectedAbscissa: 1000},
+                ],
+                sampler: {totalDistance: 1000},
+                controller: {duration: 10},
+                replayPoiTriggered: new Set(),
+                replayPOIAppearanceState: new Map(),
+                lastReplayPOIProgress: null,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {updatePOIExpandedState},
+        }
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: settings}},
+            stores: {
+                replay: {userMode, totalDistance: 1000, animatedPOIIds: []},
+                main: {components: {pois: {list: points}}},
+            },
+        })
+
+        await syncNearbyPOIsForSample(mode, {progress: 0.05})
+        await syncNearbyPOIsForSample(mode, {progress: 0.95})
+
+        expect(updatePOIExpandedState).not.toHaveBeenCalled()
+        expect(mode[JOURNEY_REPLAY_INTERNAL_STATE].replayPoiTriggered.size).toBe(0)
     })
 
     it('animates a global POI from the selected journey when the legacy journey alias is absent', async () => {

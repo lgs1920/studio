@@ -120,6 +120,9 @@ narrow crop, and at least one high-resolution output profile.
 - Dry run draws the trace during its Replay phase even when pre-Replay clips
   hide it, and its first, phase-boundary, and final trace geometry is exact.
 - The marker follows the same sample used by the trace.
+- The Start flag animates at Replay startup and the Stop flag at route arrival
+  only when global Replay and per-POI animation settings allow it; a `tooClose`
+  Stop stays hidden and the Start animates again at route arrival.
 - Start and stop visibility rules do not leak into the replay phase.
 - The final captured frame contains the declared completed trace.
 

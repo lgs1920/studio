@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -532,6 +532,7 @@ export const JourneyReplayDrawer = memo(() => {
         const playbackProfile = createReplayPOISpeedProfile({
             entries: (replayState.nearbyPois ?? []).map(entry => ({
                 ...entry,
+                inVideoCrop: replayState.poiCropVisibility?.[entry?.poi?.id],
                 poi: poiList.get(entry?.poi?.id) ?? entry?.poi,
             })),
             totalDistance: replayState.totalDistance,
@@ -560,6 +561,7 @@ export const JourneyReplayDrawer = memo(() => {
         effectiveReplaySettings.duration,
         isExpertMode,
         poiList,
+        replayState.poiCropVisibility,
         replayState.direction,
         replayState.nearbyPois,
         replayState.totalDistance,

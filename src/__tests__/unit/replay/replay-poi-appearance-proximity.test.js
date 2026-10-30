@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-29
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -78,6 +78,67 @@ const createReplayView = ({userMode, height, direction = 1, distances = [2000, 5
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Replay POI appearance proximity', () => {
+    it('animates the eligible POI when it overlaps a non-animated POI', async () => {
+        const hiddenPOI = {
+            id: 'hidden-overlap',
+            type: 'poi',
+            expanded: false,
+            replay: {animated: false, visible: true},
+        }
+        const animatedPOI = {
+            id: 'animated-overlap',
+            type: 'poi',
+            expanded: false,
+            replay: {animated: true, visible: true},
+        }
+        const poiList = new Map([
+            [hiddenPOI.id, hiddenPOI],
+            [animatedPOI.id, animatedPOI],
+        ])
+        const replay = {userMode: 'basic', direction: 1, totalDistance: 100000, animatedPOIIds: []}
+        const viewer = {
+            canvas: {clientWidth: 800, clientHeight: 600},
+            scene: {worldToWindowCoordinates: () => ({x: 400, y: 300})},
+        }
+        const entries = [hiddenPOI, animatedPOI].map(poi => ({poi, projectedAbscissa: 50000}))
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                sortedNearbyPois: entries,
+                replayPOIAppearanceState: new Map(),
+                replayPoiTriggered: new Set(),
+                sampler: {totalDistance: 100000},
+                controller: {duration: 10, direction: 1},
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                cesiumViewer: () => viewer,
+                poiEntities: () => [{position: {x: 0, y: 0, z: 0}}],
+                videoCropRect: () => ({left: 100, top: 100, width: 600, height: 400}),
+                updatePOIExpandedState: async (poiId, expanded) => {
+                    poiList.get(poiId).expanded = expanded
+                },
+                applyJourneyReplayPOIVisibility: vi.fn(),
+            },
+        }
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {
+                userMode: 'basic',
+                basic: {
+                    poiVisibilityMode: 'no',
+                    animatePoisDuringJourneyReplay: true,
+                    poiAnimationDurationSeconds: 2,
+                },
+            }}},
+            stores: {replay, main: {components: {pois: {list: poiList}}}},
+            viewer,
+        })
+
+        await syncNearbyPOIsForSample(mode, {progress: 0.5, distanceFromStart: 50000})
+
+        expect(replay.animatedPOIIds).toEqual(['animated-overlap'])
+        expect(hiddenPOI.expanded).toBe(false)
+        expect(animatedPOI.expanded).toBe(true)
+    })
+
     it.each(['basic', 'expert'].flatMap(userMode => [1000, 1000000].map(height => ({userMode, height}))))(
         'opens only POIs near the current passage in $userMode at height $height',
         async ({userMode, height}) => {

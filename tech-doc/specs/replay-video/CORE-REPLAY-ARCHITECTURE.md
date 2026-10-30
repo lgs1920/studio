@@ -72,6 +72,14 @@ duration starts. It then continues through the existing easing window. Overlappi
 windows share one slowdown envelope rather than stacking speed changes; each
 distinct POI keeps its own crawl zone. POIs more than 500 meters from the active
 Replay path do not add slowdown segments even when associated with the Journey.
+Slowdown profiles include only POIs whose Replay animation and visibility rules
+allow display and that project inside the video crop at a sampled route point in
+their display window. Hidden, non-animated, and out-of-crop POIs do not extend
+the Replay duration.
+When global Replay and per-POI animation settings allow it, the Start flag opens
+once when Replay starts, and the Stop flag opens once at route arrival. Stop
+flags marked `tooClose` remain excluded from nearby-POI selection; the visible
+Start flag also gets a separate arrival window when that final Stop is hidden.
 The replay timeline, Record duration, and playback toolbar include the added
 playback time.
 

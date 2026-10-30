@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-28
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,7 +36,25 @@ const poiEntry = (id, projectedAbscissa) => ({
 })
 
 describe('Basic Replay POI speed profile', () => {
-    it('merges overlapping POI windows, ramps around each POI, and holds for one second at each closest point', () => {
+    it('slows down for animated Start and Stop POIs at the route boundaries', () => {
+        const start = poiEntry('start', 0)
+        start.poi.type = 'start'
+        start.poi.expanded = false
+        const stop = poiEntry('stop', 1000)
+        stop.poi.type = 'stop'
+        stop.poi.expanded = false
+        const profile = createReplayPOISpeedProfile({
+            entries: [start, stop],
+            totalDistance: 1000,
+            replayDurationMillis: 10000,
+            basicSettings,
+            enabled: true,
+        })
+
+        expect(profile.playbackDurationMillis).toBeGreaterThan(10000)
+    })
+
+    it('merges overlapping POI windows, ramps around each POI, and preserves each crawl zone', () => {
         const profile = createReplayPOISpeedProfile({
             entries: [poiEntry('first', 500), poiEntry('second', 550)],
             totalDistance: 1000,
@@ -45,16 +63,16 @@ describe('Basic Replay POI speed profile', () => {
             enabled: true,
         })
 
-        const holds = profile.segments.filter(segment => segment.poiHold)
+        const crawlSegments = profile.segments.filter(segment => segment.poiCrawl)
         expect(profile.playbackDurationMillis).toBeGreaterThan(12500)
         expect(profile.playbackDurationMillis).toBeLessThan(14159)
-        expect(holds).toHaveLength(2)
-        expect(holds.map(({routeStartMillis}) => routeStartMillis)).toEqual([5000, 5500])
-        holds.forEach(({playbackEndMillis, playbackStartMillis}) => {
-            expect(playbackEndMillis - playbackStartMillis).toBeCloseTo(1000)
-        })
-        expect(holds.every(hold => hold.speedFactor === 0)).toBe(true)
-        expect(replayRouteTimeAtPlaybackTime(profile, holds[0].playbackStartMillis + 500)).toBe(5000)
+        expect(crawlSegments).toHaveLength(64)
+        expect(crawlSegments.some(({routeStartMillis, routeEndMillis}) => (
+            routeStartMillis < 5000 && routeEndMillis > 5000
+        ))).toBe(false)
+        expect(crawlSegments.some(({routeStartMillis, routeEndMillis}) => (
+            routeStartMillis < 5500 && routeEndMillis > 5500
+        ))).toBe(false)
         const playbackTime = replayPlaybackTimeAtRouteTime(profile, 5250)
         expect(replayRouteTimeAtPlaybackTime(profile, playbackTime)).toBeCloseTo(5250)
     })
@@ -70,31 +88,37 @@ describe('Basic Replay POI speed profile', () => {
 
         expect(profile.playbackDurationMillis).toBeGreaterThan(14000)
         expect(profile.playbackDurationMillis).toBeLessThan(14200)
-        expect(profile.segments.filter(segment => segment.poiHold)).toHaveLength(2)
+        expect(profile.segments.filter(segment => segment.poiCrawl)).toHaveLength(64)
     })
 
-    it('slows down for manually expanded POIs and POIs expanded by Replay animation', () => {
-        const manuallyExpanded = poiEntry('manual-expanded', 250)
-        manuallyExpanded.poi.replay.animated = false
+    it('slows down for the animated POI when a hidden POI overlaps it', () => {
+        const hiddenAndNonAnimated = poiEntry('hidden', 750)
+        hiddenAndNonAnimated.poi.expanded = true
+        hiddenAndNonAnimated.poi.replay.animated = false
         const animationExpanded = poiEntry('animation-expanded', 750)
         animationExpanded.poi.expanded = false
-        const collapsed = poiEntry('collapsed', 900)
-        collapsed.poi.expanded = false
-        collapsed.poi.replay.animated = false
+        const animatedOnly = createReplayPOISpeedProfile({
+            entries: [animationExpanded],
+            totalDistance: 1000,
+            replayDurationMillis: 10000,
+            basicSettings,
+            enabled: true,
+        })
         const profile = createReplayPOISpeedProfile({
-            entries: [manuallyExpanded, animationExpanded, collapsed],
+            entries: [hiddenAndNonAnimated, animationExpanded],
             totalDistance: 1000,
             replayDurationMillis: 10000,
             basicSettings,
             enabled: true,
         })
 
-        expect(profile.playbackDurationMillis).toBeGreaterThan(14000)
-        expect(profile.segments.filter(segment => segment.poiHold).map(segment => segment.routeStartMillis))
-            .toEqual([2500, 7500])
+        expect(profile.playbackDurationMillis).toBe(animatedOnly.playbackDurationMillis)
+        expect(profile.segments.filter(segment => segment.poiCrawl)).toHaveLength(
+            animatedOnly.segments.filter(segment => segment.poiCrawl).length,
+        )
     })
 
-    it('slows down for manually expanded non-animated POIs when Replay animation is disabled', () => {
+    it('does not slow down for manually expanded POIs when Replay animation is disabled', () => {
         const expanded = poiEntry('expanded', 500)
         expanded.poi.replay.animated = false
         const collapsed = poiEntry('collapsed', 800)
@@ -108,18 +132,46 @@ describe('Basic Replay POI speed profile', () => {
             enabled: true,
         })
 
-        expect(profile.playbackDurationMillis).toBeGreaterThan(12000)
-        const hold = profile.segments.find(segment => segment.poiHold)
-        expect(profile.segments.filter(segment => !segment.poiHold && segment.routeEndMillis <= 5000)
-            .map(segment => segment.speedFactor).at(0))
-            .toBeGreaterThan(profile.segments.findLast(segment => (
-                !segment.poiHold && segment.routeEndMillis <= hold.routeStartMillis
-            )).speedFactor)
-        expect(profile.segments.find(segment => (
-            !segment.poiHold && segment.routeStartMillis >= hold.routeEndMillis
-        )).speedFactor)
-            .toBeLessThan(profile.segments.filter(segment => !segment.poiHold).at(-1).speedFactor)
-        expect(profile.segments.filter(segment => segment.poiHold)).toHaveLength(1)
+        expect(profile.playbackDurationMillis).toBe(10000)
+        expect(profile.shouldSlowdown).toBe(false)
+    })
+
+    it('does not slow down for POIs hidden by visibility settings or outside the video crop', () => {
+        const hiddenByReplay = poiEntry('replay-hidden', 250)
+        hiddenByReplay.poi.replay.visible = false
+        const hiddenOnMap = poiEntry('map-hidden', 500)
+        hiddenOnMap.poi.visible = false
+        const outsideCrop = poiEntry('outside-crop', 750)
+        let cropChecks = 0
+        const profile = createReplayPOISpeedProfile({
+            entries: [hiddenByReplay, hiddenOnMap, outsideCrop],
+            totalDistance: 1000,
+            replayDurationMillis: 10000,
+            basicSettings,
+            enabled: true,
+            isPOIInVideoCrop: () => {
+                cropChecks += 1
+                return false
+            },
+        })
+
+        expect(profile.playbackDurationMillis).toBe(10000)
+        expect(profile.shouldSlowdown).toBe(false)
+        expect(cropChecks).toBe(3)
+    })
+
+    it('slows down when a POI enters the crop during its display window', () => {
+        const entry = poiEntry('crop-entry', 750)
+        const profile = createReplayPOISpeedProfile({
+            entries: [entry],
+            totalDistance: 1000,
+            replayDurationMillis: 10000,
+            basicSettings,
+            enabled: true,
+            isPOIInVideoCrop: (_entry, progress) => progress >= 0.85,
+        })
+
+        expect(profile.playbackDurationMillis).toBeGreaterThan(10000)
     })
 
     it('maps extended Replay timeline timestamps back to route progress', () => {
@@ -137,8 +189,8 @@ describe('Basic Replay POI speed profile', () => {
         })
 
         expect(timeline.durationMillis).toBe(profile.playbackDurationMillis)
-        const hold = profile.segments.find(segment => segment.poiHold)
-        expect(resolveReplayVideoFramePhase({timeline, frameTimeMs: hold.playbackStartMillis + 500}).progress)
+        const playbackTime = replayPlaybackTimeAtRouteTime(profile, 5000)
+        expect(resolveReplayVideoFramePhase({timeline, frameTimeMs: playbackTime}).progress)
             .toBeCloseTo(0.5)
     })
 

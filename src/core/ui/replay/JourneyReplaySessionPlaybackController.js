@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -94,6 +94,79 @@ import {
     REPLAY_MARKER_MODE_TRACE, getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
     normalizeJourneyReplayProgressionStyle, normalizeJourneyReplayReadiness, normalizeJourneyReplaySmoothing, normalizeJourneyReplayTrace,
 }                                                                                          from './JourneyReplayProgressionStyle'
+
+/** Check a POI against the crop using the camera pose that Replay uses at its route passage. */
+const isReplayPOIInVideoCropAtProgress = (mode, poi, progress) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const previousFrame = call.currentCameraFrame?.(null)
+    const scene = call.cesiumScene?.()
+    const sample = state.sampler?.atProgress?.(progress)
+    if (!previousFrame || !scene || !sample
+        || typeof call.cameraViewForSample !== 'function'
+        || typeof call.cameraRecenterFrame !== 'function'
+        || typeof call.applyCameraFrame !== 'function') {
+        return null
+    }
+
+    const journey = currentReplayJourney()
+    const replay = replayStore()
+    const settings = getJourneyReplaySettings({journey})
+    const cameraSettings = normalizeJourneyReplayCamera(
+        replay?.camera ?? currentJourneyReplayCameraSettings({journey}),
+    )
+    const markerSettings = normalizeJourneyReplayMarker(replay?.marker ?? settings.marker)
+    const previousAutoTrackingIgnoreUntil = state.cameraAutoTrackingIgnoreUntil
+    const previousApplyingView = state.cameraApplyingView
+    let cropVisible = null
+    try {
+        const view = call.cameraViewForSample({
+            sample,
+            progress,
+            source: 'refresh',
+            cameraSettings,
+            markerSettings,
+            previousHeading: null,
+            previousPitch: null,
+        })
+        if (!view) {
+            return null
+        }
+
+        const frame = call.cameraRecenterFrame({
+            sample: view.sample,
+            cameraAnchorSample: view.cameraAnchorSample,
+            heading: view.heading,
+            pitch: view.pitch,
+            roll: view.roll,
+            cameraSettings: view.cameraSettings ?? cameraSettings,
+            cameraHeight: view.cameraHeight,
+        })
+        if (!frame || !call.applyCameraFrame({
+            destination: frame.destination,
+            direction: frame.direction,
+            up: frame.correctedUp,
+        })) {
+            return null
+        }
+
+        cropVisible = call.isPOIInsideVideoCrop?.(poi) ?? null
+    }
+    catch {
+        cropVisible = null
+    }
+    finally {
+        try {
+            call.applyCameraFrame(previousFrame)
+        }
+        catch {
+        }
+        state.cameraAutoTrackingIgnoreUntil = previousAutoTrackingIgnoreUntil
+        state.cameraApplyingView = previousApplyingView
+    }
+
+    return cropVisible
+}
 
 /**
  * Seed a journey's first Replay camera from the live Cesium pose.
@@ -370,6 +443,11 @@ export const configure = (mode, options = {}) => {
             clips,
             captureFps: options.captureFps ?? store?.captureFps ?? 30,
             replaySettings: replay,
+            isPOIInVideoCrop: (entry, progress) => isReplayPOIInVideoCropAtProgress(
+                mode,
+                entry?.poi ?? entry,
+                progress,
+            ),
         })
 
         call.bindCesiumCameraBridge()

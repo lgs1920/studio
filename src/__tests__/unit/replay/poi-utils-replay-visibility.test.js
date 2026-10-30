@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-12
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -137,6 +137,21 @@ describe('POIUtils replay visibility', () => {
             visible: true,
             replay: {visible: true},
         }, true)).toBe(false)
+    })
+
+    it('allows animated Start and Stop flags through the replay visibility mask', () => {
+        globalThis.lgs.stores.replay.active = true
+        globalThis.lgs.stores.replay.userMode = 'expert'
+        globalThis.lgs.stores.replay.hideAllPoisDuringJourneyReplay = true
+        globalThis.lgs.settings = {ui: {replay: {userMode: 'expert', hideAllPoisDuringJourneyReplay: true}}}
+
+        for (const type of ['start', 'stop']) {
+            expect(POIUtils.setPOIVisibility({
+                type,
+                visible: true,
+                replay: {visible: false},
+            }, true, {allowReplayAnimation: true})).toBe(true)
+        }
     })
 
     it('forces Basic Replay Show all to reveal POIs regardless of their POI-level visibility preference', () => {

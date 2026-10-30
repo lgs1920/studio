@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-11
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,9 +41,6 @@ export const normalizeReplayPOIBehavior = settings => {
 
 /** Return whether the POI is an endpoint whose visibility remains user-controlled. */
 export const isReplayPOIEndpoint = poi => ['start', 'stop', 'starter'].includes(poi?.type)
-
-/** Return whether a POI marks a journey boundary that must not animate. */
-export const isReplayPOIAnimationEndpoint = poi => ['start', 'stop'].includes(poi?.type)
 
 /** Check whether a normalized replay sample falls inside the POI's centered animation window. */
 export const isReplayPOIAnimationActiveAtProgress = ({
@@ -136,7 +133,7 @@ export const resolveReplayPOIPresentation = (poi, {
 } = {}) => {
     const active = isReplayPOIPresentationActive(replay)
     const endpoint = isReplayPOIEndpoint(poi)
-    const animationActive = active && !isReplayPOIAnimationEndpoint(poi) && (allowReplayAnimation
+    const animationActive = active && (allowReplayAnimation
         || replay?.animatedPOIIds?.includes(poi?.id) === true)
     const basicMode = isJourneyReplayBasicMode({settings, replay})
     const behavior = normalizeReplayPOIBehavior(settings?.basic)

@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-28
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {isReplayPOIAnimationEndpoint, normalizeJourneyReplayPOISettings, normalizeReplayPOIBehavior} from './JourneyReplayPOISettings'
+import {normalizeJourneyReplayPOISettings, normalizeReplayPOIBehavior} from './JourneyReplayPOISettings'
 
 const DEFAULT_POI_PLAYBACK_SPEED_FACTOR = 0.5
 const DEFAULT_POI_SLOWDOWN_DURATION_MILLIS = 1000
@@ -82,6 +82,37 @@ const isPOINearReplayRoute = entry => {
     return distance === null || distance <= MAX_POI_REPLAY_DISTANCE_METERS
 }
 
+/** Return whether this POI can actually be shown as an animated Replay POI. */
+const canAnimatePOIInReplay = (entry, behavior) => {
+    const poi = entry?.poi ?? entry
+    const settings = normalizeJourneyReplayPOISettings(poi?.replay)
+    const isEndpoint = ['start', 'stop', 'starter'].includes(poi?.type)
+    const replayVisible = isEndpoint
+        || behavior.poiVisibilityMode !== 'user'
+        || settings.visible
+    return behavior.animatePoisDuringJourneyReplay
+        && settings.animated
+        && replayVisible
+        && poi?.visible !== false
+        && entry?.inVideoCrop !== false
+}
+
+/** Return an unmodified route timeline when no POI can produce a visible animation. */
+const createRouteOnlyProfile = (routeDuration, safeDirection, factor, shouldSlowdown = false) => ({
+    routeDurationMillis: routeDuration,
+    playbackDurationMillis: routeDuration,
+    direction: safeDirection,
+    shouldSlowdown,
+    speedFactor: factor,
+    segments: [{
+        routeStartMillis: 0,
+        routeEndMillis: routeDuration,
+        playbackStartMillis: 0,
+        playbackEndMillis: routeDuration,
+        speedFactor: 1,
+    }],
+})
+
 /**
  * Build a time-warp profile that slows around displayed POIs and crawls past each one.
  *
@@ -96,6 +127,7 @@ export const createReplayPOISpeedProfile = ({
     basicSettings = {},
     enabled = false,
     speedFactor = DEFAULT_POI_PLAYBACK_SPEED_FACTOR,
+    isPOIInVideoCrop = null,
 } = {}) => {
     const routeDuration = Math.max(0, finiteNumber(replayDurationMillis) ?? 0)
     const routeDistance = Math.max(0, finiteNumber(totalDistance) ?? 0)
@@ -104,44 +136,22 @@ export const createReplayPOISpeedProfile = ({
     const poiEntries = Array.isArray(entries) ? entries : []
     const displayDuration = Math.max(0, behavior.poiAnimationDurationSeconds * 1000)
     const safeDirection = Number(direction) < 0 ? -1 : 1
-    const hasExpandedPOI = poiEntries.some(entry => {
-        const poi = entry?.poi ?? entry
-        return poi?.expanded === true
-            && poi?.tooClose !== true
-            && isPOINearReplayRoute(entry)
-            && !isReplayPOIAnimationEndpoint(poi)
-    })
-    const shouldSlowdown = enabled && (behavior.animatePoisDuringJourneyReplay || hasExpandedPOI)
-
-    if (!shouldSlowdown || routeDuration <= 0
+    if (!enabled || !behavior.animatePoisDuringJourneyReplay || routeDuration <= 0
         || routeDistance <= 0 || displayDuration <= 0 || factor >= 1) {
-        return {
-            routeDurationMillis: routeDuration,
-            playbackDurationMillis: routeDuration,
-            direction: safeDirection,
-            shouldSlowdown: Boolean(shouldSlowdown),
-            speedFactor: factor,
-            segments: [{routeStartMillis: 0, routeEndMillis: routeDuration, playbackStartMillis: 0, playbackEndMillis: routeDuration, speedFactor: 1}],
-        }
+        return createRouteOnlyProfile(routeDuration, safeDirection, factor)
     }
 
     const windows = poiEntries.flatMap(entry => {
         const poi = entry?.poi ?? entry
-        if (!poi?.id || isReplayPOIAnimationEndpoint(poi)) {
+        if (!poi?.id) {
             return []
         }
 
-        const poiSettings = normalizeJourneyReplayPOISettings(poi.replay)
         if (poi.tooClose === true || !isPOINearReplayRoute(entry)) {
             return []
         }
 
-        const willExpandDuringAnimation = behavior.animatePoisDuringJourneyReplay && poiSettings.animated !== false
-        if (poi.expanded !== true && !willExpandDuringAnimation) {
-            return []
-        }
-
-        if (behavior.poiVisibilityMode === 'user' && poiSettings.visible === false) {
+        if (!canAnimatePOIInReplay(entry, behavior)) {
             return []
         }
 
@@ -150,15 +160,38 @@ export const createReplayPOISpeedProfile = ({
             return []
         }
 
+        const poiProgress = clamp(distance / routeDistance, 0, 1)
         const centerMillis = clamp(distance / routeDistance, 0, 1) * routeDuration
         const windowDuration = Math.min(displayDuration, routeDuration)
         const chronologicalStart = clamp(centerMillis - windowDuration / 2, 0, routeDuration - windowDuration)
         const chronologicalEnd = chronologicalStart + windowDuration
+        const cropProgressRadius = windowDuration / (2 * routeDuration)
+        const cropProgressSamples = [
+            clamp(poiProgress - cropProgressRadius, 0, 1),
+            poiProgress,
+            clamp(poiProgress + cropProgressRadius, 0, 1),
+        ]
+        const cropVisibilitySamples = typeof isPOIInVideoCrop === 'function'
+            ? cropProgressSamples.map(progress => isPOIInVideoCrop(entry, progress))
+            : []
+        const inVideoCrop = cropVisibilitySamples.includes(true)
+            ? true
+            : cropVisibilitySamples.length > 0 && cropVisibilitySamples.every(value => value === false)
+                ? false
+                : entry.inVideoCrop
+        if (inVideoCrop === false) {
+            return []
+        }
+
         const routeStartMillis = safeDirection < 0 ? routeDuration - chronologicalEnd : chronologicalStart
         const routeEndMillis = safeDirection < 0 ? routeDuration - chronologicalStart : chronologicalEnd
         const routeCenterMillis = safeDirection < 0 ? routeDuration - centerMillis : centerMillis
         return [{routeStartMillis, routeEndMillis, routeCenterMillis}]
     }).sort((left, right) => left.routeStartMillis - right.routeStartMillis)
+
+    if (windows.length === 0) {
+        return createRouteOnlyProfile(routeDuration, safeDirection, factor)
+    }
 
     // Merge overlapping windows while retaining each POI's crawl zone.
     const mergedWindows = windows.reduce((merged, window) => {
@@ -253,7 +286,7 @@ export const createReplayPOISpeedProfile = ({
         routeDurationMillis: routeDuration,
         playbackDurationMillis: playbackCursor,
         direction: safeDirection,
-        shouldSlowdown: Boolean(shouldSlowdown),
+        shouldSlowdown: windows.length > 0,
         speedFactor: factor,
         segments,
     }

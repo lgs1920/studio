@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -981,6 +981,7 @@ export class JourneyReplaySessionController {
             prepareNearbyPOIsForPlayback: (...args) => JourneyReplaySessionPOIController.prepareNearbyPOIsForPlayback(this, ...args),
             openNearbyPOIForPlayback: (...args) => JourneyReplaySessionPOIController.openNearbyPOIForPlayback(this, ...args),
             syncNearbyPOIsForSample: (...args) => JourneyReplaySessionPOIController.syncNearbyPOIsForSample(this, ...args),
+            isPOIInsideVideoCrop: (...args) => JourneyReplaySessionPOIController.isPOIInsideVideoCrop(this, ...args),
             interpolateReplayExportSample: (...args) => JourneyReplayClipController.interpolateReplayExportSample(this, ...args),
             focusTargetSampleForReplayExport: (...args) => JourneyReplayClipController.focusTargetSampleForReplayExport(this, ...args),
             replayExportBaseView: (...args) => JourneyReplayClipController.replayExportBaseView(this, ...args),

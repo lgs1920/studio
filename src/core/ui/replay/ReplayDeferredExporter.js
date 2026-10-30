@@ -140,7 +140,11 @@ const resolveReplayPOISpeedProfile = ({replay, journey, controller, replayDurati
 
     const basicSettings = currentBasicReplaySettingsForJourney(journey)
     const profile = createReplayPOISpeedProfile({
-        entries: projectReplayPOIsOnSampler(replay?.nearbyPois ?? [], controller?.sampler),
+        entries: projectReplayPOIsOnSampler(replay?.nearbyPois ?? [], controller?.sampler)
+            .map(entry => ({
+                ...entry,
+                inVideoCrop: replay?.poiCropVisibility?.[entry?.poi?.id],
+            })),
         totalDistance: controller?.sampler?.totalDistance,
         replayDurationMillis,
         direction,
