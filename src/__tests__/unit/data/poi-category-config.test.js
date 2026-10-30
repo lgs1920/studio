@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-25
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,8 @@ import {parse} from 'yaml'
 const settings = parse(readFileSync(new URL('../../../../public/settings.yaml', import.meta.url), 'utf8'))
 
 const addedCategories = [
-    ['drinking-water', 'Drinking Water', 'bottle-water'],
+    ['drinking-water', 'Water Point', 'faucet-drip'],
+    ['source', 'Natural Spring', 'droplet'],
     ['restroom', 'Restroom', 'restroom'],
     ['cafe', 'Cafe', 'mug-hot'],
     ['restaurant', 'Restaurant', 'utensils'],
@@ -30,6 +31,7 @@ const addedCategories = [
     ['train-stop', 'Train Stop', 'train'],
     ['bus-stop', 'Bus Stop', 'bus-stop'],
     ['cable-car', 'Cable Car', 'cable-car'],
+    ['winter-station', 'Winter Station', 'snowflake'],
     ['hazard', 'Hazard', 'triangle-exclamation'],
     ['first-aid', 'First Aid', 'kit-medical'],
     ['photo-spot', 'Photo Spot', 'camera'],

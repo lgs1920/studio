@@ -344,9 +344,12 @@ poi:
     # Picnic Area
     - title: Picnic Area
       slug: picnic-area
-    # Drinking Water
-    - title: Drinking Water
+    # Water Point
+    - title: Water Point
       slug: drinking-water
+    # Natural Spring
+    - title: Natural Spring
+      slug: source
     # Restroom
     - title: Restroom
       slug: restroom
@@ -368,6 +371,9 @@ poi:
     # Cable Car
     - title: Cable Car
       slug: cable-car
+    # Winter Station
+    - title: Winter Station
+      slug: winter-station
     # Hazard
     - title: Hazard
       slug: hazard
