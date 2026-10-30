@@ -135,6 +135,15 @@ export const VideoDownloadAndShareDialog = () => {
             // Read live lifecycle state without reconnecting the media subscription or releasing its URL.
             const isReplayVideoLinked = lgs.stores?.replay?.recordingSync === true
                 || lgs.stores?.replay?.basicPreparationActive === true
+            const exportCleanup = lgs.stores?.replay?.deferredExportPlan?.runtime?.exportPromise
+            if (exportCleanup) {
+                try {
+                    await exportCleanup
+                }
+                catch (error) {
+                    console.error('Unable to finish Replay export cleanup before scene restoration:', error)
+                }
+            }
             await preFocusVideoReplayScene({linked: isReplayVideoLinked})
             _replayScenePreFocused.current = true
         }
