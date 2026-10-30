@@ -4279,3 +4279,59 @@
 ## 2026-10-29 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/527403d0ed6b6814d10dc530cb415c5c408387f8)
 
 - Recorded automatically from Git history.
+
+## 2026-10-29 — [`fix: align replay joystick with on-map theme`](https://github.com/lgs1920/studio/commit/419e00ed13db88a35753c6644d31184e51085d1f)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`fix: theme crown around replay trackball`](https://github.com/lgs1920/studio/commit/1073c234bcab5fc35aa46bc0bc236ab05a901356)
+
+- Recorded automatically from Git history.
+
+## 2026-10-29 — [`fix: refine replay joystick on-map relief`](https://github.com/lgs1920/studio/commit/a18eb1bde2adb0caf2832895c0d43f4e85367c5d)
+
+- Recorded automatically from Git history.
+
+## 2026-10-30 — [`fix: refine replay camera joystick`](https://github.com/lgs1920/studio/commit/52c9a459e29e99fa163097aafb38d9d78ad24fa7)
+
+- Recorded automatically from Git history.
+
+## 2026-10-30 — [`fix: replace native UI titles with WaTooltip`](https://github.com/lgs1920/studio/commit/78484aa8c895cba8f7cedd6e18c4a071974e002d)
+
+- Recorded automatically from Git history.
+
+## 2026-10-30 — [`fix: hand off completed replay before scene cleanup`](https://github.com/lgs1920/studio/commit/9c13a2912f2d494df3a868292d4b3c35b922280f)
+
+- Recorded automatically from Git history.
+
+## 2026-10-30 — [`fix: wait for replay cleanup before camera restore`](https://github.com/lgs1920/studio/commit/ed431f356b965205af7d162d5ff49b6d37788a97)
+
+- Recorded automatically from Git history.
+
+## 2026-10-30 — [`fix: preserve replay media handoff on UI failure`](https://github.com/lgs1920/studio/commit/4adf0d9b8ebed0422c8dcfe3df6d1612181751c7)
+
+- Recorded automatically from Git history.
+
+## 2026-10-30 — [`feat: add configurable POI anchors and rotation`](https://github.com/lgs1920/studio/commit/e70e234192ec3b74fb0768a6b5bebf262efb6180)
+
+- Recorded automatically from Git history.
+
+## 2026-10-30 — [`feat: expand POI category catalog`](https://github.com/lgs1920/studio/commit/59f846806939757ee29e3b9a986683e599c6b5ba)
+
+- Recorded automatically from Git history.
+
+## 2026-10-30 — [`fix: align Replay POI animations and slowdown windows`](https://github.com/lgs1920/studio/commit/01f16798d89df662cacf30b2b3766c9c7ef555a9)
+
+- Recorded automatically from Git history.
+
+## 2026-10-30 — [`fix: refine Replay preparation joystick controls`](https://github.com/lgs1920/studio/commit/f979031af391e7f03f1a10d8f7765ce63b868b64)
+
+- Recorded automatically from Git history.
+
+## 2026-10-30 — [`fix: preserve geocoding dialog reopen requests`](https://github.com/lgs1920/studio/commit/b2e744893ca50ce3b223fee39d4f74e6e8ec0806)
+
+- Recorded automatically from Git history.
+
+## 2026-10-30 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/f81a7c56eeeff64a84bb05b4c583cb5a3637c911)
+
+- Recorded automatically from Git history.
