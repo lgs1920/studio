@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-24
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -59,6 +59,28 @@ describe('Map POI style', () => {
         expect(leaderStyle).toContain('transform: translate(-50%, -50%);')
         expect(leaderStyle).toContain('border-radius: 50%;')
         expect(leaderStyle).toContain('background-color: var(--lgs-poi-border-color);')
+    })
+
+    it('keeps left and right sticks attached to their selected card edge', () => {
+        const css = loadMapPOIStyle()
+        const leftStart = css.indexOf('.poi-card.poi-card--stick-left {')
+        const rightStart = css.indexOf('.poi-card.poi-card--stick-right {', leftStart + 1)
+        const rightEnd = css.indexOf('.used-in-menu .poi-card {', rightStart)
+        const leftStyle = css.slice(leftStart, rightStart)
+        const rightStyle = css.slice(rightStart, rightEnd)
+
+        expect(leftStyle).toContain('flex-direction: row-reverse;')
+        expect(leftStyle).toContain('rotate(calc(-1 * var(--poi-expanded-leader-angle, 0deg)))')
+        expect(leftStyle).toContain('transform-origin: right center;')
+        expect(leftStyle).toContain('right: 100%;')
+        expect(leftStyle).toContain('var(--poi-expanded-leader-x, 1rem) - var(--poi-expanded-leader-edge-offset, 0px)')
+        expect(leftStyle).toContain('right: calc(-1 * var(--poi-expanded-leader-edge-offset, 0px));')
+        expect(rightStyle).toContain('flex-direction: row;')
+        expect(rightStyle).toContain('rotate(var(--poi-expanded-leader-angle, 0deg))')
+        expect(rightStyle).toContain('transform-origin: left center;')
+        expect(rightStyle).toContain('left: 100%;')
+        expect(rightStyle).toContain('var(--poi-expanded-leader-x, 1rem) + var(--poi-expanded-leader-edge-offset, 0px)')
+        expect(rightStyle).toContain('left: var(--poi-expanded-leader-edge-offset, 0px);')
     })
 
     it('keeps the expanded title icon upright and the configured card width within its canvas', () => {
@@ -133,7 +155,7 @@ describe('Map POI style', () => {
             css.indexOf('.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-underline'),
         )
         expect(roundBadgeStyle).toContain('box-sizing: border-box;')
-        expect(roundBadgeStyle).toContain('padding: calc(0.35 * var(--lgs-font-size)) 0 calc(0.35 * var(--lgs-font-size)) calc(3.2 * var(--lgs-font-size));')
+        expect(roundBadgeStyle).toContain('padding: calc(0.35 * var(--lgs-font-size)) 0 calc(0.35 * var(--lgs-font-size)) calc(2.8 * var(--lgs-font-size) + var(--poi-border-width));')
         expect(roundBadgeStyle).toContain('inset: 0 0 0 calc(1.1 * var(--lgs-font-size));')
         expect(roundBadgeStyle).toContain('& .poi-title {\n        display: contents;')
         expect(roundBadgeStyle).toContain('left: 0;')

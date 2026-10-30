@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -126,6 +126,11 @@
     }
 }
 
+.poi-card.poi-card--expanded {
+    transform: rotate(var(--poi-widget-rotation, 0deg));
+    transform-origin: center;
+}
+
 .poi-card.poi-card--stick-above {
     flex-direction: column-reverse;
 
@@ -137,6 +142,77 @@
 
     & .poi-geographic-anchor {
         top: 0;
+    }
+}
+
+.poi-card.poi-card--stick-left,
+.poi-card.poi-card--stick-right {
+    /* Keep the full rotated stick visible while its projected width controls card spacing. */
+    width: max-content;
+    max-width: none;
+
+    & .poi-card-inner {
+        margin-bottom: 0;
+        margin-left: 0;
+    }
+
+    & .poi-expanded-leader-space {
+        align-self: stretch;
+        width: var(--poi-expanded-leader-x, 1rem);
+        height: auto;
+        margin-left: 0;
+    }
+
+    & .poi-expanded-leader {
+        top: var(--poi-expanded-leader-position, 50%);
+        width: var(--poi-expanded-leader-length, 1rem);
+        height: var(--poi-border-width);
+    }
+
+    & .poi-geographic-anchor {
+        top: calc(var(--poi-expanded-leader-position, 50%) + var(--poi-expanded-leader-y, 0px));
+    }
+}
+
+.poi-card.poi-card--stick-left {
+    flex-direction: row-reverse;
+
+    & .poi-expanded-leader-space {
+        /* --poi-expanded-leader-edge-offset aligns the stick with curved or skewed card outlines. */
+        width: max(0px, calc(var(--poi-expanded-leader-x, 1rem) - var(--poi-expanded-leader-edge-offset, 0px)));
+    }
+
+    & .poi-expanded-leader {
+        right: calc(-1 * var(--poi-expanded-leader-edge-offset, 0px));
+        left: auto;
+        transform: translateY(-50%) rotate(calc(-1 * var(--poi-expanded-leader-angle, 0deg)));
+        transform-origin: right center;
+    }
+
+    & .poi-geographic-anchor {
+        right: 100%;
+        left: auto;
+    }
+}
+
+.poi-card.poi-card--stick-right {
+    flex-direction: row;
+
+    & .poi-expanded-leader-space {
+        /* --poi-expanded-leader-edge-offset moves the right-side anchor onto the visible card outline. */
+        width: max(0px, calc(var(--poi-expanded-leader-x, 1rem) + var(--poi-expanded-leader-edge-offset, 0px)));
+    }
+
+    & .poi-expanded-leader {
+        right: auto;
+        left: var(--poi-expanded-leader-edge-offset, 0px);
+        transform: translateY(-50%) rotate(var(--poi-expanded-leader-angle, 0deg));
+        transform-origin: left center;
+    }
+
+    & .poi-geographic-anchor {
+        right: auto;
+        left: 100%;
     }
 }
 
@@ -187,7 +263,7 @@
     margin-left: var(--poi-menu-icons-column-width);
 
     & .poi-expanded-leader {
-        /* --poi-expanded-leader-angle controls inclination; positive CSS angles move its lower endpoint left. */
+        /* --poi-expanded-leader-angle tilts vertical sticks; side sticks apply it around their horizontal axis. */
         position: absolute;
         top: var(--poi-expanded-leader-gap, 0px);
         left: var(--poi-expanded-leader-position, 50%);
@@ -336,7 +412,7 @@
         display: grid;
         grid-template-columns: minmax(0, 1fr);
         box-sizing: border-box;
-        padding: calc(0.35 * var(--lgs-font-size)) 0 calc(0.35 * var(--lgs-font-size)) calc(3.2 * var(--lgs-font-size));
+        padding: calc(0.35 * var(--lgs-font-size)) 0 calc(0.35 * var(--lgs-font-size)) calc(2.8 * var(--lgs-font-size) + var(--poi-border-width));
         isolation: isolate;
 
         &::before {
@@ -955,6 +1031,10 @@
     max-width: var(--poi-expanded-dimension);
 }
 
+.map-poi-edit-preview-open .poi-card.poi-card--expanded {
+    transform-origin: var(--poi-widget-rotation-origin-x, center) var(--poi-widget-rotation-origin-y, center);
+}
+
 .map-poi-edit-preview-open > .poi-icon-wrapper {
     z-index: var(--lgs-ui-layer-zindex);
 }
@@ -1052,6 +1132,18 @@
     }
 }
 
+.map-poi-edit-tab-scroll-area {
+    width: 100%;
+    height: clamp(12rem, 36vh, 24rem);
+    min-height: 0;
+}
+
+.map-poi-edit-tab-scroll-content {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0 var(--lgs-gutter-s) var(--lgs-gutter-s) 0;
+}
+
 #pois-editor-drawer,
 #journey-editor-drawer {
     & .map-poi-edit-tabs::part(body),
@@ -1090,6 +1182,10 @@
         font-size: var(--lgs-font-size-s);
         font-weight: var(--wa-font-weight-bold);
     }
+}
+
+.map-poi-display-decoration-divider {
+    --spacing: var(--lgs-gutter-xxs);
 }
 
 .map-poi-display-controls {
@@ -1135,6 +1231,89 @@
     min-width: 0;
 }
 
+.map-poi-display-stick-anchor-layout {
+    --map-poi-display-stick-anchor-picker-height: 6.3rem;
+    --map-poi-display-stick-anchor-card-inset-block: 12%;
+    --map-poi-display-stick-anchor-card-inset-block-offset: 0.75rem;
+
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.map-poi-display-stick-anchor-label {
+    flex: 0 0 auto;
+    margin: 0;
+    padding-block-start: var(--map-poi-display-stick-anchor-card-inset-block-offset);
+    font-size: var(--lgs-font-size);
+    font-weight: var(--wa-font-weight-semibold);
+}
+
+.map-poi-display-stick-anchor-picker {
+    --map-poi-display-stick-anchor-fill-color: var(--wa-color-neutral-fill-quiet);
+    --map-poi-display-stick-anchor-border-color: var(--wa-color-neutral-border-normal);
+
+    position: relative;
+    flex: 0 1 16rem;
+    box-sizing: border-box;
+    width: min(100%, 16rem);
+    min-width: 0;
+    height: var(--map-poi-display-stick-anchor-picker-height);
+}
+
+.map-poi-display-stick-anchor-card {
+    position: absolute;
+    inset-block: var(--map-poi-display-stick-anchor-card-inset-block);
+    inset-inline-start: 35%;
+    inset-inline-end: 3%;
+    border: var(--wa-border-width-s) solid var(--map-poi-display-stick-anchor-border-color);
+    border-radius: var(--lgs-border-radius-s);
+    background-color: var(--map-poi-display-stick-anchor-fill-color);
+    pointer-events: none;
+}
+
+.map-poi-display-stick-anchor-point {
+    --map-poi-display-stick-anchor-point-size: 0.84rem;
+
+    position: absolute;
+    z-index: 1;
+    display: block;
+    box-sizing: border-box;
+    width: var(--map-poi-display-stick-anchor-point-size);
+    min-width: var(--map-poi-display-stick-anchor-point-size);
+    height: var(--map-poi-display-stick-anchor-point-size);
+    min-height: var(--map-poi-display-stick-anchor-point-size);
+    transform: translate(-50%, -50%);
+}
+
+.map-poi-display-stick-anchor-point::part(button) {
+    box-sizing: border-box;
+    width: var(--map-poi-display-stick-anchor-point-size);
+    min-width: var(--map-poi-display-stick-anchor-point-size);
+    height: var(--map-poi-display-stick-anchor-point-size);
+    min-height: var(--map-poi-display-stick-anchor-point-size);
+    padding: 0;
+    border-radius: var(--lgs-border-radius-xs);
+}
+
+.map-poi-display-stick-anchor-picker wa-button.map-poi-display-stick-anchor-point[aria-pressed="false"]::part(button) {
+    border-color: var(--map-poi-display-stick-anchor-border-color) !important;
+    background-color: var(--map-poi-display-stick-anchor-fill-color) !important;
+}
+
+.map-poi-display-stick-anchor-picker wa-button.map-poi-display-stick-anchor-point[aria-pressed="true"]::part(button) {
+    border-color: var(--wa-color-brand-border-normal) !important;
+    background-color: var(--wa-color-brand-fill-normal) !important;
+}
+
+.map-poi-edit-preview-open .poi-card.poi-card--stick-left,
+.map-poi-edit-preview-open .poi-card.poi-card--stick-right {
+    width: max-content;
+    max-width: none;
+}
+
 .map-poi-style-switch {
     display: block;
     width: 100%;
@@ -1144,6 +1323,10 @@
 
 #pois-editor-drawer .lgs-scrollbars .track-vertical {
     display: none !important;
+}
+
+#pois-editor-drawer .map-poi-edit-tab-scroll-area .lgs-scrollbars .track-vertical {
+    display: block !important;
 }
 
 .edit-map-poi-item {

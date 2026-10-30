@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,6 +20,9 @@ import {proxy} from 'valtio'
 import {proxyMap} from 'valtio/utils'
 
 vi.mock('@Components/DateTimeDisplay', () => ({DateTimeDisplay: () => null}))
+vi.mock('@Components/MainUI/LGSScrollbars', () => ({
+    LGSScrollbars: ({children}) => <div data-testid="lgs-scrollbar">{children}</div>,
+}))
 vi.mock('@Components/MainUI/MapPOI/MapPOICategorySelector', () => ({MapPOICategorySelector: () => null}))
 vi.mock('@Components/MainUI/MapPOI/MapPOIDisplaySettings', () => ({MapPOIDisplaySettings: () => null}))
 vi.mock('@Components/MainUI/MapPOI/MapPOIEditMenu', () => ({MapPOIEditMenu: () => null}))
@@ -127,6 +130,8 @@ describe('MapPOIEditContent Replay animation setting', () => {
         expect(replayControls.nextElementSibling).toBe(tabGroup)
         expect(tabGroup.contains(replayControls)).toBe(false)
         expect(animationSwitch.checked).toBe(false)
+        expect(tabGroup.querySelectorAll('.map-poi-edit-tab-scroll-area')).toHaveLength(3)
+        expect(tabGroup.querySelectorAll('[data-testid="lgs-scrollbar"]')).toHaveLength(3)
     })
 
     it('immediately persists the updated Replay animation setting', async () => {

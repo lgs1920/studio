@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,6 +50,7 @@ vi.mock('@Core/MapPOI', () => ({
 
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaIcon: ({className, name}) => <span className={className} data-icon-name={name}/>,
+    WaTooltip: () => null,
 }))
 
 import { MapPOIContent } from '@Components/MainUI/MapPOI/MapPOIContent'
@@ -206,6 +207,22 @@ describe('MapPOIContent display settings', () => {
         expect(card.classList.contains('poi-card--stick-horizontal-position-80')).toBe(true)
         expect(wrapper.style.getPropertyValue('--poi-expanded-leader-position'))
             .toBe('80%')
+    })
+
+    it.each(['left', 'right'])('renders the %s side stick on the matching POI edge', side => {
+        poiList.get('poi-1').display.stickPosition = side
+        poiList.get('poi-1').display.stickHorizontalPosition = 20
+        poiList.get('poi-1').display.stickAngle = 'straight'
+
+        render(<MapPOIContent poi="poi-1"/>)
+
+        const wrapper = document.querySelector('.poi-icon-wrapper')
+        const card = wrapper?.querySelector('.poi-card')
+
+        expect(card?.classList.contains(`poi-card--stick-${side}`)).toBe(true)
+        expect(wrapper?.style.getPropertyValue('--poi-expanded-leader-position')).toBe('20%')
+        expect(card?.querySelector('.poi-expanded-leader')).not.toBeNull()
+        expect(card?.querySelector('.poi-geographic-anchor')).not.toBeNull()
     })
 
     it('updates an underline POI when its background is disabled and enabled again', async () => {

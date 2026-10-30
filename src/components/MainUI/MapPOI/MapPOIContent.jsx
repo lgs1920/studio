@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import { DateTimeDisplay }                         from '@Components/DateTimeDis
 import { stylePOIDuotoneIcon }                     from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import { openPOIEditor }                           from '@Components/MainUI/MapPOI/openPOIEditor'
 import {
-    calculatePOICanvasCapturePadding, calculatePOIContentPixelOffset,
+    calculatePOICanvasCapturePadding, calculatePOIContentPixelOffset, calculatePOIStickEdgeOffset,
 }                                                   from '@Components/MainUI/MapPOI/poiCanvasGeometry'
 import {
     clearPOIHoverPreview, isPOIHoverPreviewActive, isPointerNearPOIHoverPreview, showPOIHoverPreview,
@@ -29,10 +29,12 @@ import { MapPOI }                                  from '@Core/MapPOI'
 import {
     normalizePOIDisplaySettings,
     POI_DISPLAY_DEFAULT_FONT_FAMILY,
+    POI_DISPLAY_DEFAULT_WIDGET_ROTATION,
     POI_DISPLAY_DEFAULT_STICK_ANGLE,
     POI_DISPLAY_DEFAULT_STICK_HORIZONTAL_POSITION,
     POI_DISPLAY_DEFAULT_STICK_LENGTH,
     POI_DISPLAY_DEFAULT_STICK_POSITION,
+    POI_DISPLAY_STICK_ANCHOR_POSITIONS,
     POI_DISPLAY_DEFAULT_STYLE,
     resolvePOIStickAngle,
     shouldDisplayPOIField,
@@ -41,10 +43,10 @@ import {
     normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
 import { ELEVATION_UNITS, UnitUtils }               from '@Utils/UnitUtils'
-import { WaIcon }                                  from '@awesome.me/webawesome/dist/react'
+import { WaIcon, WaTooltip }                       from '@awesome.me/webawesome/dist/react'
 import { snapdom }                                 from '@zumer/snapdom'
 import classNames                                  from 'classnames'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef } from 'react'
 import { proxy, useSnapshot }                      from 'valtio'
 import { createPOICanvasRenderQueue }              from '@Components/MainUI/MapPOI/poiCanvasRenderQueue'
 import './style.css'
@@ -86,6 +88,9 @@ const assertPOICanvasDimensions = (element, scale, ratio) => {
  * @returns {import('react').ReactNode} The POI content.
  */
 export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, collapsedPreview = false, style}) => {
+    const rawTooltipId = useId()
+    const tooltipIdPrefix = `map-poi-content-${rawTooltipId.replace(/:/g, '')}`
+    const _poiIconWrapper = useRef(null)
     const _poiContent = useRef(null)
     const _poiCanvasCaptureSurface = useRef(null)
     const _icon = useRef(null)
@@ -121,16 +126,25 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
     const selectedStickHorizontalPosition = point?.display?.stickHorizontalPosition
     const displaySettings = normalizePOIDisplaySettings(point?.display)
     const configuredStickAngle = displaySettings.stickAngle ?? POI_DISPLAY_DEFAULT_STICK_ANGLE
+    const widgetRotation = displaySettings.widgetRotation ?? POI_DISPLAY_DEFAULT_WIDGET_ROTATION
     const stickPosition = displaySettings.stickPosition ?? POI_DISPLAY_DEFAULT_STICK_POSITION
-    const stickHorizontalPosition = selectedStickHorizontalPosition
-        ?? displaySettings.stickHorizontalPosition
-        ?? POI_DISPLAY_DEFAULT_STICK_HORIZONTAL_POSITION
+    const horizontalStick = stickPosition === 'left' || stickPosition === 'right'
+    const selectedAnchorPosition = Number(selectedStickHorizontalPosition)
+    const stickHorizontalPosition = POI_DISPLAY_STICK_ANCHOR_POSITIONS.includes(selectedAnchorPosition)
+        ? selectedAnchorPosition
+        : displaySettings.stickHorizontalPosition ?? POI_DISPLAY_DEFAULT_STICK_HORIZONTAL_POSITION
     const poiStyle = selectedStyle ?? displaySettings.style ?? POI_DISPLAY_DEFAULT_STYLE
     const leaderAngle = resolvePOIStickAngle(configuredStickAngle, pointId)
     const leaderLength = displaySettings.stickLength ?? POI_DISPLAY_DEFAULT_STICK_LENGTH
     const leaderAngleRadians = leaderAngle * Math.PI / 180
-    const leaderOffsetX = (stickPosition === 'above' ? 1 : -1) * Math.sin(leaderAngleRadians) * leaderLength
-    const leaderOffsetY = Math.cos(leaderAngleRadians) * leaderLength
+    const leaderOffsetX = horizontalStick
+        ? Math.cos(leaderAngleRadians) * leaderLength
+        : (stickPosition === 'above' ? 1 : -1) * Math.sin(leaderAngleRadians) * leaderLength
+    const leaderOffsetY = horizontalStick
+        ? Math.sin(leaderAngleRadians) * leaderLength
+        : Math.cos(leaderAngleRadians) * leaderLength
+    const leaderCaptureBleed = horizontalStick ? Math.abs(leaderOffsetY) : Math.abs(leaderOffsetX)
+
     const fontFamily = displaySettings.fontFamily ?? POI_DISPLAY_DEFAULT_FONT_FAMILY
     const replaySettings = normalizeJourneyReplayPOISettings(point?.replay)
     const replayMasked = !presentation.visible
@@ -329,10 +343,18 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                     const slantedContentHeight = card.classList.contains('poi-card--style-slanted-banner')
                         ? card.querySelector('.poi-card-inner')?.getBoundingClientRect().height ?? 0
                         : 0
+                    const transformedCardBounds = card.getBoundingClientRect()
+                    const rotationBleed = Math.max(
+                        0,
+                        (transformedCardBounds.width - card.offsetWidth) / 2,
+                        (transformedCardBounds.height - card.offsetHeight) / 2,
+                    )
                     const capturePadding = expanded ? calculatePOICanvasCapturePadding({
                         borderWidth: Number.isFinite(borderWidth) ? borderWidth : 3,
                         openFrameLineWidth: Number.isFinite(openFrameLineWidth) ? openFrameLineWidth : 0,
                         slantedContentHeight,
+                        leaderBleed: leaderCaptureBleed,
+                        rotationBleed,
                     }) : 0
 
                     // Expand only the rasterization root so SnapDOM includes transformed and external strokes.
@@ -387,7 +409,51 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                 }
             })
         })
-    }, [isEmbedded, point?.expanded, replayActive, replayAnimationActive, replayMasked, hiddenBecauseTooClose, pointId, $pois.list])
+    }, [isEmbedded, point?.expanded, replayActive, replayAnimationActive, replayMasked, hiddenBecauseTooClose, pointId, $pois.list, leaderCaptureBleed])
+
+    useLayoutEffect(() => {
+        /** Align the stick endpoint with rounded or skewed visible POI outlines. */
+        const updatePOIStickEdgeOffset = () => {
+            const wrapper = _poiIconWrapper.current
+            const card = _poiContent.current?.querySelector('.poi-card-inner')
+            if (!wrapper || !card) {
+                return false
+            }
+
+            const cardStyle = window.getComputedStyle(card)
+            const edgeOffset = isExpanded && horizontalStick
+                ? calculatePOIStickEdgeOffset({
+                    style: poiStyle,
+                    side: stickPosition,
+                    width: card.offsetWidth,
+                    height: card.offsetHeight,
+                    position: stickHorizontalPosition,
+                    borderRadius: Number.parseFloat(cardStyle.borderTopLeftRadius),
+                })
+                : 0
+            const nextValue = `${edgeOffset}px`
+            if (wrapper.style.getPropertyValue('--poi-expanded-leader-edge-offset') === nextValue) {
+                return false
+            }
+
+            wrapper.style.setProperty('--poi-expanded-leader-edge-offset', nextValue)
+            return true
+        }
+
+        updatePOIStickEdgeOffset()
+        const card = _poiContent.current?.querySelector('.poi-card-inner')
+        if (!card || typeof ResizeObserver === 'undefined') {
+            return undefined
+        }
+
+        const observer = new ResizeObserver(() => {
+            if (updatePOIStickEdgeOffset() && !isEmbedded) {
+                renderToCanvas()
+            }
+        })
+        observer.observe(card)
+        return () => observer.disconnect()
+    }, [horizontalStick, isEmbedded, isExpanded, poiStyle, renderToCanvas, stickHorizontalPosition, stickPosition])
 
     useEffect(() => {
         if (isEmbedded || !pointId || (!replayMasked && !hiddenBecauseTooClose)) {
@@ -456,6 +522,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                   point?.display?.titleCategoryIcon,
                   point?.display?.titleAltitude,
                   point?.display?.maxWidth,
+                  point?.display?.widgetRotation,
                   point?.display?.fontFamily,
                   point?.display?.fontSize,
                   point?.display?.bold,
@@ -510,6 +577,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
 
     return (
         <div
+            ref={_poiIconWrapper}
             className={classNames(
                 'poi-icon-wrapper',
                 (!isExpanded || useInMenu) && 'poi-shrinked',
@@ -518,7 +586,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             )}
             data-poi-canvas-source={!isEmbedded ? pointId : undefined}
             style={{
-                // Inline tokens apply the saved POI typography and connector geometry to the preview and map card.
+                // Inline tokens apply saved POI typography, rotation, and connector geometry to the preview and map card.
                 '--lgs-poi-background-color': point?.background === false
                     ? 'transparent'
                     : point?.bgColor ?? lgs.colors.poiDefaultBackground,
@@ -529,11 +597,14 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                     ? 'var(--lgs-font-size)'
                     : `${displaySettings.fontSize}px`,
                 '--poi-font-style': displaySettings.italic ? 'italic' : 'normal',
+                '--poi-widget-rotation': `${widgetRotation}deg`,
                 '--poi-expanded-leader-angle': `${leaderAngle}deg`,
                 '--poi-expanded-leader-length': `${leaderLength}px`,
                 '--poi-expanded-leader-x': `${leaderOffsetX}px`,
                 '--poi-expanded-leader-y': `${leaderOffsetY}px`,
-                // Keep the connector and its geographic endpoint aligned to the selected card anchor.
+                // This offset moves side sticks from the card's layout edge onto its visible outline.
+                '--poi-expanded-leader-edge-offset': '0px',
+                // Keep the stick endpoint aligned to the selected point on the card edge.
                 '--poi-expanded-leader-position': `${stickHorizontalPosition}%`,
                 ...(typeof displaySettings.bold === 'boolean'
                     ? {'--poi-font-weight': displaySettings.bold ? 'bold' : 'normal'}
@@ -550,8 +621,10 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                         'poi-card',
                         isExpanded && !useInMenu && 'poi-card--expanded',
                         isExpanded && stickPosition === 'above' && 'poi-card--stick-above',
+                        isExpanded && stickPosition === 'left' && 'poi-card--stick-left',
+                        isExpanded && stickPosition === 'right' && 'poi-card--stick-right',
                         isExpanded && !useInMenu && `poi-card--style-${poiStyle}`,
-                        isExpanded && !useInMenu && `poi-card--stick-horizontal-position-${stickHorizontalPosition}`,
+                        isExpanded && !useInMenu && !horizontalStick && `poi-card--stick-horizontal-position-${stickHorizontalPosition}`,
                     )}
                     ref={_poiContent}
                 >
@@ -596,25 +669,31 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                                     </h3>
                                 </div>
                                 {point.location && displayLocation && (
-                                    <div className="poi-location" title={point.location}>
-                                        <WaIcon name="location-dot"
-                                                variant="regular"
-                                                onWaLoad={renderToCanvasAfterIconLoad}
-                                        />
-                                        <span>{point.location}</span>
-                                    </div>
+                                    <>
+                                        <div className="poi-location" id={`${tooltipIdPrefix}-location`}>
+                                            <WaIcon name="location-dot"
+                                                    variant="regular"
+                                                    onWaLoad={renderToCanvasAfterIconLoad}
+                                            />
+                                            <span>{point.location}</span>
+                                        </div>
+                                        <WaTooltip for={`${tooltipIdPrefix}-location`}>{point.location}</WaTooltip>
+                                    </>
                                 )}
 
                                 {point.category && displayCategory && (
-                                    <div className="poi-location" title={point.location}>
-                                        <WaIcon
-                                            name={isSvgIcon ? '' : iconName}
-                                            src={isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
-                                            variant="regular"
-                                            onWaLoad={renderToCanvasAfterIconLoad}
-                                        />
-                                        <span>{point.category}</span>
-                                    </div>
+                                    <>
+                                        <div className="poi-location" id={`${tooltipIdPrefix}-category`}>
+                                            <WaIcon
+                                                name={isSvgIcon ? '' : iconName}
+                                                src={isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
+                                                variant="regular"
+                                                onWaLoad={renderToCanvasAfterIconLoad}
+                                            />
+                                            <span>{point.category}</span>
+                                        </div>
+                                        <WaTooltip for={`${tooltipIdPrefix}-category`}>{point.location}</WaTooltip>
+                                    </>
                                 )}
 
 

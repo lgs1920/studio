@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,12 +20,18 @@ export const POI_DISPLAY_MIN_WIDTH = 120
 export const POI_DISPLAY_MAX_WIDTH = 400
 export const POI_DISPLAY_DEFAULT_WIDTH = 200
 export const POI_DISPLAY_WIDTH_STEP = 10
+export const POI_DISPLAY_DEFAULT_WIDGET_ROTATION = 0
+export const POI_DISPLAY_WIDGET_ROTATION_MIN = -90
+export const POI_DISPLAY_WIDGET_ROTATION_MAX = 90
+export const POI_DISPLAY_WIDGET_ROTATION_STEP = 1
 export const POI_DISPLAY_DEFAULT_FONT_FAMILY = 'System'
 export const POI_DISPLAY_DEFAULT_FONT_SIZE = 13
 export const POI_DISPLAY_DEFAULT_STICK_ANGLE = 'random'
 export const POI_DISPLAY_DEFAULT_STICK_LENGTH = 16
 export const POI_DISPLAY_DEFAULT_STICK_POSITION = 'below'
 export const POI_DISPLAY_DEFAULT_STICK_HORIZONTAL_POSITION = 50
+/** Supported anchor percentages measured along the selected POI card edge. */
+export const POI_DISPLAY_STICK_ANCHOR_POSITIONS = Object.freeze([20, 50, 80])
 export const POI_DISPLAY_DEFAULT_STYLE = 'pill'
 export const POI_DISPLAY_STICK_LENGTH_MAX = 200
 export const POI_DISPLAY_STYLES = [
@@ -42,7 +48,7 @@ export const POI_DISPLAY_STYLE_LABELS = Object.freeze({
     'icon-frame': 'Icon frame',
 })
 /** Version of the persisted per-POI display settings shape. */
-export const POI_DISPLAY_SETTINGS_SCHEMA_VERSION = 3
+export const POI_DISPLAY_SETTINGS_SCHEMA_VERSION = 5
 
 const DISPLAY_BOOLEAN_FIELDS = [
     'category',
@@ -97,7 +103,7 @@ export const getDefaultPOIDisplaySettings = () => {
 }
 
 /**
- * Normalize optional typography and connector settings without changing legacy POI defaults.
+ * Normalize optional typography, connector, and widget rotation settings without changing legacy POI defaults.
  *
  * @param {Object} source - Raw display settings.
  * @returns {Object} Supported optional settings explicitly present in the source.
@@ -120,6 +126,16 @@ const normalizeOptionalPOIDisplaySettings = source => {
             : POI_DISPLAY_DEFAULT_FONT_SIZE
     }
 
+    if (hasOwn('widgetRotation')) {
+        const rotation = Number(source.widgetRotation)
+        settings.widgetRotation = Number.isFinite(rotation)
+            ? Math.round(Math.min(
+                POI_DISPLAY_WIDGET_ROTATION_MAX,
+                Math.max(POI_DISPLAY_WIDGET_ROTATION_MIN, rotation),
+            ) / POI_DISPLAY_WIDGET_ROTATION_STEP) * POI_DISPLAY_WIDGET_ROTATION_STEP
+            : POI_DISPLAY_DEFAULT_WIDGET_ROTATION
+    }
+
     for (const field of ['bold', 'italic']) {
         if (hasOwn(field)) {
             settings[field] = source[field] === true
@@ -128,20 +144,20 @@ const normalizeOptionalPOIDisplaySettings = source => {
 
     if (hasOwn('stickAngle')) {
         const angle = `${source.stickAngle}`
-        settings.stickAngle = ['-45', 'vertical', '45', 'random'].includes(angle)
-            ? angle
+        settings.stickAngle = ['-45', '-30', 'vertical', 'straight', '30', '45', 'random'].includes(angle)
+            ? (angle === 'vertical' ? 'straight' : angle)
             : POI_DISPLAY_DEFAULT_STICK_ANGLE
     }
 
     if (hasOwn('stickPosition')) {
-        settings.stickPosition = ['above', 'below'].includes(source.stickPosition)
+        settings.stickPosition = ['above', 'below', 'left', 'right'].includes(source.stickPosition)
             ? source.stickPosition
             : POI_DISPLAY_DEFAULT_STICK_POSITION
     }
 
     if (hasOwn('stickHorizontalPosition')) {
         const position = Number(source.stickHorizontalPosition)
-        settings.stickHorizontalPosition = [20, 50, 80].includes(position)
+        settings.stickHorizontalPosition = POI_DISPLAY_STICK_ANCHOR_POSITIONS.includes(position)
             ? position
             : POI_DISPLAY_DEFAULT_STICK_HORIZONTAL_POSITION
     }
@@ -161,13 +177,18 @@ const normalizeOptionalPOIDisplaySettings = source => {
     return settings
 }
 
-/** Resolve a POI stick angle, using a stable ID-derived direction for the random choice. */
+/**
+ * Resolve a POI stick tilt, using a stable ID-derived direction for the random choice.
+ * @param {string} angle - Saved angle choice relative to the selected edge's straight axis.
+ * @param {string} poiId - POI identifier used to make the random choice stable.
+ * @returns {number} Resolved stick tilt in degrees.
+ */
 export const resolvePOIStickAngle = (angle, poiId) => {
-    if (angle === 'vertical') {
+    if (angle === 'vertical' || angle === 'straight') {
         return 0
     }
 
-    if (angle === '-45' || angle === '45') {
+    if (angle === '-45' || angle === '-30' || angle === '30' || angle === '45') {
         return Number(angle)
     }
 
@@ -180,7 +201,7 @@ export const resolvePOIStickAngle = (angle, poiId) => {
  * Normalize persisted POI display choices and migrate untouched legacy defaults.
  *
  * @param {Object|null|undefined} settings - Persisted display settings.
- * @returns {{category: boolean, titleCategoryIcon: boolean, titleAltitude: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number, fontFamily?: string, fontSize?: number, bold?: boolean, italic?: boolean, stickAngle?: string, stickPosition?: string, stickLength?: number, schemaVersion: number}}
+ * @returns {{category: boolean, titleCategoryIcon: boolean, titleAltitude: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number, fontFamily?: string, fontSize?: number, widgetRotation?: number, bold?: boolean, italic?: boolean, stickAngle?: string, stickPosition?: 'above'|'below'|'left'|'right', stickHorizontalPosition?: number, stickLength?: number, schemaVersion: number}}
  */
 export const normalizePOIDisplaySettings = (settings = null) => {
     const source = settings && typeof settings === 'object' ? settings : {}

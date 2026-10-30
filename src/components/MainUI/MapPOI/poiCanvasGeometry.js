@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,21 +32,85 @@ export const calculatePOIContentAnchor = (elementBounds, cardBounds, anchorBound
 })
 
 /**
+ * Resolve the horizontal offset from a side anchor's layout edge to its visible POI outline.
+ * @param {Object} geometry - POI outline and selected side-anchor geometry.
+ * @param {string} geometry.style - Selected POI display style.
+ * @param {'left'|'right'} geometry.side - Selected side of the POI card.
+ * @param {number} geometry.width - Untransformed POI card width in CSS pixels.
+ * @param {number} geometry.height - Untransformed POI card height in CSS pixels.
+ * @param {number} geometry.position - Anchor percentage along the side edge.
+ * @param {number} [geometry.borderRadius=0] - Used corner radius for the rounded style.
+ * @returns {number} Signed horizontal offset in CSS pixels from the card edge to its outline.
+ */
+export const calculatePOIStickEdgeOffset = ({
+    style,
+    side,
+    width,
+    height,
+    position,
+    borderRadius = 0,
+}) => {
+    if ((side !== 'left' && side !== 'right')
+        || !Number.isFinite(width)
+        || width <= 0
+        || !Number.isFinite(height)
+        || height <= 0
+        || !Number.isFinite(position)) {
+        return 0
+    }
+
+    const progress = Math.min(100, Math.max(0, position)) / 100
+    if (style === 'slanted-banner') {
+        return Math.tan(-15 * Math.PI / 180) * (progress - 0.5) * height
+    }
+
+    const radius = style === 'pill'
+        ? Math.min(width, height) / 2
+        : style === 'rounded' && Number.isFinite(borderRadius)
+            ? Math.min(Math.max(0, borderRadius), width / 2, height / 2)
+            : 0
+    const distanceFromEnd = Math.min(progress, 1 - progress) * height
+    if (!radius || distanceFromEnd >= radius) {
+        return 0
+    }
+
+    const distanceFromCornerCenter = radius - distanceFromEnd
+    const inset = radius - Math.sqrt(Math.max(0, radius ** 2 - distanceFromCornerCenter ** 2))
+    return side === 'left' ? inset : -inset
+}
+
+/**
  * Calculate per-side capture padding for visible POI artwork outside its layout box.
  *
  * @param {Object} geometry - Measured POI outline geometry.
  * @param {number} geometry.borderWidth - Base POI border width in CSS pixels.
  * @param {number} [geometry.openFrameLineWidth=0] - Open Frame stroke width in CSS pixels.
  * @param {number} [geometry.slantedContentHeight=0] - Slanted POI content height in CSS pixels.
+ * @param {number} [geometry.leaderBleed=0] - Stick overflow beyond its layout slot in CSS pixels.
+ * @param {number} [geometry.rotationBleed=0] - Rotated widget overflow beyond its layout box in CSS pixels.
  * @returns {number} Capture padding in CSS pixels.
  */
-export const calculatePOICanvasCapturePadding = ({borderWidth, openFrameLineWidth = 0, slantedContentHeight = 0}) => {
+export const calculatePOICanvasCapturePadding = ({
+    borderWidth,
+    openFrameLineWidth = 0,
+    slantedContentHeight = 0,
+    leaderBleed = 0,
+    rotationBleed = 0,
+}) => {
     const normalizedBorderWidth = Number.isFinite(borderWidth) ? Math.max(0, borderWidth) : 0
+    const normalizedLeaderBleed = Number.isFinite(leaderBleed) ? Math.max(0, leaderBleed) : 0
+    const normalizedRotationBleed = Number.isFinite(rotationBleed) ? Math.max(0, rotationBleed) : 0
     const slantedBleed = slantedContentHeight > 0
         ? Math.tan(15 * Math.PI / 180) * slantedContentHeight / 2 + normalizedBorderWidth
         : 0
 
-    return Math.ceil(Math.max(normalizedBorderWidth * 1.5, openFrameLineWidth, slantedBleed) + 1)
+    return Math.ceil(Math.max(
+        normalizedBorderWidth * 1.5,
+        openFrameLineWidth,
+        slantedBleed,
+        normalizedLeaderBleed,
+        normalizedRotationBleed,
+    ) + 1)
 }
 
 /**

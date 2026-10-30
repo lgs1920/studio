@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-27
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,14 +16,19 @@
 
 import { MapPOIContent } from '@Components/MainUI/MapPOI/MapPOIContent'
 import { POIUtils } from '@Utils/cesium/POIUtils'
-import { WaButton, WaIcon } from '@awesome.me/webawesome/dist/react'
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
 
 const PREVIEW_MAX_CANVAS_WIDTH = 1024
 const MIN_PREVIEW_HEIGHT = 125
 
-/** Copy the current Cesium canvas without the edited POI into a preview image. */
+/**
+ * Copy the current Cesium canvas without the edited POI into a preview image.
+ *
+ * @param {string} poiId - POI identifier to omit from the map capture.
+ * @returns {{image: string, width: number}|null} Captured image and its CSS-pixel width.
+ */
 const buildPOIEditPreviewBackground = poiId => {
     try {
         const source = lgs.canvas ?? lgs.viewer?.canvas
@@ -46,13 +51,14 @@ const buildPOIEditPreviewBackground = poiId => {
             }
             scene?.render?.()
 
+            const sourceWidth = source.getBoundingClientRect?.().width || source.width
             const width = Math.min(source.width, PREVIEW_MAX_CANVAS_WIDTH)
             const height = Math.max(1, Math.round(width * source.height / source.width))
             const canvas = document.createElement('canvas')
             canvas.width = width
             canvas.height = height
             canvas.getContext('2d')?.drawImage(source, 0, 0, source.width, source.height, 0, 0, width, height)
-            return canvas.toDataURL('image/webp', 0.8)
+            return {image: canvas.toDataURL('image/webp', 0.8), width: sourceWidth}
         }
         finally {
             if (entity) {
@@ -74,6 +80,8 @@ const buildPOIEditPreviewBackground = poiId => {
  * @returns {import('react').ReactNode} Open and collapsed POI previews.
  */
 export const MapPOIEditPreview = ({poi}) => {
+    const rawTooltipId = useId()
+    const tooltipIdPrefix = `map-poi-preview-${rawTooltipId.replace(/:/g, '')}`
     const poiList = useSnapshot(lgs.stores.main.components.pois.list)
     const point = poiList.get(poi)
     const _openArea = useRef(null)
@@ -91,6 +99,8 @@ export const MapPOIEditPreview = ({poi}) => {
     const updatePreviewSizing = useCallback(() => {
         const area = _openArea.current
         const card = _openContent.current?.querySelector('.poi-card-inner')
+        const widgetCard = _openContent.current?.querySelector('.poi-card.poi-card--expanded')
+        const geographicAnchor = widgetCard?.querySelector('.poi-geographic-anchor')
         const leaderSpace = _openContent.current?.querySelector('.poi-expanded-leader-space')
         const poiWrapper = _openContent.current?.querySelector('.poi-icon-wrapper')
         const width = card?.offsetWidth
@@ -101,11 +111,51 @@ export const MapPOIEditPreview = ({poi}) => {
             return
         }
 
+        if (widgetCard && geographicAnchor && poiWrapper) {
+            const cardTransform = widgetCard.style.transform
+            const wrapperTransform = poiWrapper.style.transform
+            let unrotatedCardBounds
+            let anchorBounds
+            try {
+                widgetCard.style.transform = 'none'
+                poiWrapper.style.transform = 'none'
+                unrotatedCardBounds = widgetCard.getBoundingClientRect()
+                anchorBounds = geographicAnchor.getBoundingClientRect()
+            }
+            finally {
+                widgetCard.style.transform = cardTransform
+                poiWrapper.style.transform = wrapperTransform
+            }
+            widgetCard.style.setProperty(
+                '--poi-widget-rotation-origin-x',
+                `${anchorBounds.left - unrotatedCardBounds.left}px`,
+            )
+            widgetCard.style.setProperty(
+                '--poi-widget-rotation-origin-y',
+                `${anchorBounds.top - unrotatedCardBounds.top}px`,
+            )
+        }
+
         const angle = Number.parseFloat(poiWrapper?.style.getPropertyValue('--poi-expanded-leader-angle')) || 0
         const length = Number.parseFloat(poiWrapper?.style.getPropertyValue('--poi-expanded-leader-length')) || 0
+        const horizontalStick = Boolean(_openContent.current?.querySelector('.poi-card--stick-left, .poi-card--stick-right'))
         const horizontalExtension = Math.abs(Math.sin(angle * Math.PI / 180) * length)
-        const contentWidth = width + Math.max(0, horizontalExtension - width / 2)
-        const contentHeight = height + (leaderSpace?.offsetHeight ?? 0)
+        const unrotatedContentWidth = horizontalStick
+            ? width + (leaderSpace?.offsetWidth ?? 0)
+            : width + Math.max(0, horizontalExtension - width / 2)
+        const leaderPosition = Number.parseFloat(poiWrapper?.style.getPropertyValue('--poi-expanded-leader-position')) || 50
+        const leaderOffsetY = Number.parseFloat(poiWrapper?.style.getPropertyValue('--poi-expanded-leader-y')) || 0
+        const anchorY = (height * leaderPosition / 100) + leaderOffsetY
+        const sideLeaderOverflow = Math.max(0, -anchorY) + Math.max(0, anchorY - height)
+        const unrotatedContentHeight = horizontalStick
+            ? height + sideLeaderOverflow
+            : height + (leaderSpace?.offsetHeight ?? 0)
+        const rotation = Number.parseFloat(poiWrapper?.style.getPropertyValue('--poi-widget-rotation')) || 0
+        const radians = rotation * Math.PI / 180
+        const absoluteCosine = Math.abs(Math.cos(radians))
+        const absoluteSine = Math.abs(Math.sin(radians))
+        const contentWidth = absoluteCosine * unrotatedContentWidth + absoluteSine * unrotatedContentHeight
+        const contentHeight = absoluteSine * unrotatedContentWidth + absoluteCosine * unrotatedContentHeight
         const overflows = contentWidth > availableWidth || contentHeight > availableHeight
         setRequiresFit(previous => previous === overflows ? previous : overflows)
         const nextScale = fitRequested
@@ -231,6 +281,10 @@ export const MapPOIEditPreview = ({poi}) => {
             : new ResizeObserver(updatePreviewSizing)
         if (_openArea.current) observer?.observe(_openArea.current)
         if (_openContent.current) observer?.observe(_openContent.current)
+        const card = _openContent.current?.querySelector('.poi-card-inner')
+        const leaderSpace = _openContent.current?.querySelector('.poi-expanded-leader-space')
+        if (card) observer?.observe(card)
+        if (leaderSpace) observer?.observe(leaderSpace)
         return () => observer?.disconnect()
     }, [point, updatePreviewSizing])
 
@@ -247,7 +301,12 @@ export const MapPOIEditPreview = ({poi}) => {
             className="map-poi-edit-preview"
             aria-label="POI preview"
             style={{
-                ...(background ? {backgroundImage: `url(${String(background)})`} : {}),
+                ...(background ? {
+                    backgroundImage: `url(${background.image})`,
+                    // Keep the captured map at its original CSS-pixel scale inside the cropped preview.
+                    backgroundSize: `${background.width}px`,
+                    backgroundRepeat: 'no-repeat',
+                } : {}),
                 ...(previewHeight ? {height: `${Number(previewHeight)}px`} : {}),
             }}
         >
@@ -276,30 +335,40 @@ export const MapPOIEditPreview = ({poi}) => {
                 />
             </div>
             {requiresFit && (
-                <WaButton
-                    className="map-poi-edit-preview-fit square-button small"
-                    size="s"
-                    variant="brand"
-                    appearance="filled-outlined"
-                    aria-label={fitRequested ? 'Restore POI preview size' : 'Scale POI to fit preview'}
-                    title={fitRequested ? 'Restore POI preview size' : 'Scale POI to fit preview'}
-                    onClick={handleFitToggle}
-                >
-                    <WaIcon name={fitRequested ? 'expand' : 'compress'} variant="regular"/>
-                </WaButton>
+                <>
+                    <WaButton
+                        id={`${tooltipIdPrefix}-fit`}
+                        className="map-poi-edit-preview-fit square-button small"
+                        size="s"
+                        variant="brand"
+                        appearance="filled-outlined"
+                        aria-label={fitRequested ? 'Restore POI preview size' : 'Scale POI to fit preview'}
+                        onClick={handleFitToggle}
+                    >
+                        <WaIcon name={fitRequested ? 'expand' : 'compress'} variant="regular"/>
+                    </WaButton>
+                    <WaTooltip for={`${tooltipIdPrefix}-fit`} placement="top">
+                        {fitRequested ? 'Restore POI preview size' : 'Scale POI to fit preview'}
+                    </WaTooltip>
+                </>
             )}
             {previewHeight > MIN_PREVIEW_HEIGHT && (
-                <WaButton
-                    className="map-poi-edit-preview-reset square-button small"
-                    size="s"
-                    variant="brand"
-                    appearance="filled-outlined"
-                    aria-label="Restore initial POI preview height"
-                    title="Restore initial POI preview height"
-                    onClick={handleResetPreviewSize}
-                >
-                    <WaIcon name="arrow-rotate-left" variant="regular"/>
-                </WaButton>
+                <>
+                    <WaButton
+                        id={`${tooltipIdPrefix}-reset-height`}
+                        className="map-poi-edit-preview-reset square-button small"
+                        size="s"
+                        variant="brand"
+                        appearance="filled-outlined"
+                        aria-label="Restore initial POI preview height"
+                        onClick={handleResetPreviewSize}
+                    >
+                        <WaIcon name="arrow-rotate-left" variant="regular"/>
+                    </WaButton>
+                    <WaTooltip for={`${tooltipIdPrefix}-reset-height`} placement="top">
+                        {'Restore initial POI preview height'}
+                    </WaTooltip>
+                </>
             )}
             {(canIncreaseHeight || isResizing) && (
                 <div

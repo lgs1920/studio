@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -64,7 +64,7 @@ export class MapPOI extends MapElement {
     description
 
     /**
-     * @type {{category: boolean, titleCategoryIcon: boolean, titleAltitude: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number, fontFamily?: string, fontSize?: number, bold?: boolean, italic?: boolean, style?: string, stickAngle?: string, stickPosition?: string, stickHorizontalPosition?: number, stickLength?: number, schemaVersion: number}}
+     * @type {{category: boolean, titleCategoryIcon: boolean, titleAltitude: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number, fontFamily?: string, fontSize?: number, widgetRotation?: number, bold?: boolean, italic?: boolean, style?: string, stickAngle?: string, stickPosition?: 'above'|'below'|'left'|'right', stickHorizontalPosition?: number, stickLength?: number, schemaVersion: number}}
      */
     display = normalizePOIDisplaySettings()
 

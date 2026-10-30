@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
-    WaButton: ({children}) => <button>{children}</button>,
+    WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaButtonGroup: ({children}) => <div>{children}</div>,
     WaDivider:  () => <hr/>,
     WaIcon: () => <span/>,
@@ -49,6 +49,7 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
             {children}
         </label>
     ),
+    WaTooltip: () => null,
 }))
 
 import { MapPOIDisplaySettings } from '@Components/MainUI/MapPOI/MapPOIDisplaySettings'
@@ -135,20 +136,52 @@ describe('MapPOIDisplaySettings', () => {
         expect(within(appearanceGroup).getByRole('combobox', {name: 'Style'}).value).toBe('pill')
         expect(within(appearanceGroup).getByRole('combobox', {name: 'Style'}).textContent).not.toMatch(/\b(?:01|02|05|08|16|19|24|34)\b/)
         expect(within(appearanceGroup).getByRole('checkbox', {name: 'Background'}).checked).toBe(true)
-        expect(within(stickGroup).getByRole('combobox', {name: 'Horizontal anchor'}).value).toBe('50')
+        expect(within(stickGroup).getByRole('group', {name: 'Anchor'})).toBeTruthy()
+        expect(within(stickGroup).getByRole('button', {name: 'Bottom 50%'}).getAttribute('aria-pressed')).toBe('true')
         expect(within(appearanceGroup).getByRole('slider', {name: 'Width'}).value).toBe('200')
         expect(screen.getAllByRole('separator')).toHaveLength(2)
     })
 
     it('persists selected POI styles and horizontal stick anchors', () => {
         const onDisplayValueChange = vi.fn()
-        render(<MapPOIDisplaySettings panel="decoration" poi="poi-1" onDisplayValueChange={onDisplayValueChange}/>)
+        render(<MapPOIDisplaySettings
+            panel="decoration"
+            poi="poi-1"
+            display={{stickPosition: 'below', stickAngle: 'straight'}}
+            onDisplayValueChange={onDisplayValueChange}
+        />)
 
         fireEvent.change(screen.getByRole('combobox', {name: 'Style'}), {target: {value: 'slanted-banner'}})
-        fireEvent.change(screen.getByRole('combobox', {name: 'Horizontal anchor'}), {target: {value: '80'}})
+        fireEvent.click(screen.getByRole('button', {name: 'Right 80%'}))
 
         expect(onDisplayValueChange).toHaveBeenNthCalledWith(1, 'style', 'slanted-banner')
-        expect(onDisplayValueChange).toHaveBeenNthCalledWith(2, 'stickHorizontalPosition', '80')
+        expect(onDisplayValueChange).toHaveBeenNthCalledWith(2, {
+            stickPosition: 'right',
+            stickHorizontalPosition: 80,
+        })
+    })
+
+    it('stores the side chosen in the anchor picker without reversing it', () => {
+        const onDisplayValueChange = vi.fn()
+        render(<MapPOIDisplaySettings
+            panel="decoration"
+            poi="poi-1"
+            display={{stickPosition: 'left', stickAngle: 'straight', stickHorizontalPosition: 50}}
+            onDisplayValueChange={onDisplayValueChange}
+        />)
+
+        const anchorPicker = screen.getByRole('group', {name: 'Anchor'})
+        fireEvent.click(within(anchorPicker).getByRole('button', {name: 'Right 50%'}))
+        fireEvent.click(within(anchorPicker).getByRole('button', {name: 'Left 20%'}))
+
+        expect(onDisplayValueChange).toHaveBeenNthCalledWith(1, {
+            stickPosition: 'right',
+            stickHorizontalPosition: 50,
+        })
+        expect(onDisplayValueChange).toHaveBeenNthCalledWith(2, {
+            stickPosition: 'left',
+            stickHorizontalPosition: 20,
+        })
     })
 
     it('notifies the editor when the category icon choice changes', () => {

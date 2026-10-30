@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -415,7 +415,7 @@ canvas {
  * Buttons
  ******************************************************************************/
 
-:is(wa-button, .wa-button):is(:not([variant]), [variant="neutral"], [variant="brand"]):not([appearance="plain"]):not([appearance="Plain"]):not([appearance="outlined"]):not([appearance="Outlined"])::part(base) {
+:is(wa-button, .wa-button):not(.map-poi-display-stick-anchor-point):is(:not([variant]), [variant="neutral"], [variant="brand"]):not([appearance="plain"]):not([appearance="Plain"]):not([appearance="outlined"]):not([appearance="Outlined"])::part(base) {
     display: flex;
     align-items: center;
     color: var(--lgs-button-color);
@@ -424,7 +424,7 @@ canvas {
     gap: var(--lgs-gutter-s);
 }
 
-:is(wa-button, .wa-button):is(:not([variant]), [variant="neutral"], [variant="brand"]):not([appearance="plain"]):not([appearance="Plain"]):not([appearance="outlined"]):not([appearance="Outlined"]):not(.button--disabled):hover::part(base) {
+:is(wa-button, .wa-button):not(.map-poi-display-stick-anchor-point):is(:not([variant]), [variant="neutral"], [variant="brand"]):not([appearance="plain"]):not([appearance="Plain"]):not([appearance="outlined"]):not([appearance="Outlined"]):not(.button--disabled):hover::part(base) {
     color: var(--lgs-button-hover-color);
     border-color: var(--lgs-button-border-hover-color);
     background-color: var(--lgs-button-bg-hover-color);

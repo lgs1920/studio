@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import {describe, expect, it, vi} from 'vitest'
 import {
     calculatePOICanvasCapturePadding,
     calculatePOIContentPixelOffset,
+    calculatePOIStickEdgeOffset,
 } from '@Components/MainUI/MapPOI/poiCanvasGeometry'
 
 describe('POI canvas geometry', () => {
@@ -59,6 +60,17 @@ describe('POI canvas geometry', () => {
         }
 
         expect(calculatePOIContentPixelOffset(element, 100, 100)).toEqual({x: 0, y: 0})
+    })
+
+    it.each([
+        {name: 'pill left', geometry: {style: 'pill', side: 'left', width: 200, height: 50, position: 20}, expected: 5},
+        {name: 'pill right', geometry: {style: 'pill', side: 'right', width: 200, height: 50, position: 20}, expected: -5},
+        {name: 'pill center', geometry: {style: 'pill', side: 'right', width: 200, height: 50, position: 50}, expected: 0},
+        {name: 'slanted upper edge', geometry: {style: 'slanted-banner', side: 'left', width: 200, height: 100, position: 20}, expected: 8.0384757729},
+        {name: 'slanted lower edge', geometry: {style: 'slanted-banner', side: 'right', width: 200, height: 100, position: 80}, expected: -8.0384757729},
+        {name: 'rounded corner', geometry: {style: 'rounded', side: 'right', width: 100, height: 50, position: 10, borderRadius: 10}, expected: -1.3397459622},
+    ])('aligns a $name anchor with its visible outline', ({geometry, expected}) => {
+        expect(calculatePOIStickEdgeOffset(geometry)).toBeCloseTo(expected, 6)
     })
 
     it.each([

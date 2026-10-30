@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-06
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@ import { useCallback, useMemo }                       from 'react'
  * @param {Object} props.element - The snapshot of the element
  * @param {number} props.localRotation - Current rotation state from parent
  * @param {Function} props.applyRotation - Function to update rotation
+ * @param {boolean} [props.showNumberInput=true] - Whether to show the numeric input above the slider.
  * @param {number} [props.min=-180]
  * @param {number} [props.max=180]
  * @param {number} [props.step=1]
@@ -30,6 +31,7 @@ import { useCallback, useMemo }                       from 'react'
 export const RotationElement = ({
                                     localRotation,
                                     applyRotation,
+                                    showNumberInput = true,
                                     min = -90,
                                     max = 90,
                                     step = 1,
@@ -52,18 +54,19 @@ export const RotationElement = ({
 
     return (
         <>
-            <WaNumberInput
-                appearance="filled"
-                label-at-start
-                className="half-width"
-                size="s"
-                type="number"
-                value={displayValue}
-                step={step}
-                min={min}
-                max={max}
-                onInput={(e) => handleRotationInput(e.target.value)}
-            >
+            {showNumberInput && (
+                <WaNumberInput
+                    appearance="filled"
+                    label-at-start
+                    className="half-width"
+                    size="s"
+                    type="number"
+                    value={displayValue}
+                    step={step}
+                    min={min}
+                    max={max}
+                    onInput={(e) => handleRotationInput(e.target.value)}
+                >
                     <span slot="label">
                     {'Rotation (deg)'}
                         {isRotated && (
@@ -72,11 +75,13 @@ export const RotationElement = ({
                                 <WaIcon size="s" name="arrow-rotate-left" variant="regular"/>
                             </WaButton>
                         )}
-                </span>
-            </WaNumberInput>
+                    </span>
+                </WaNumberInput>
+            )}
             <WaSlider
                 label-at-start
-                half-width
+                label={showNumberInput ? undefined : 'Rotation (deg)'}
+                className={showNumberInput ? 'half-width' : undefined}
                 size="s"
                 min={min}
                 max={max}
