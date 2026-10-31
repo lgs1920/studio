@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-30
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,6 +42,7 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
 }))
 
 import {MapPOIEditPreview} from '@Components/MainUI/MapPOI/MapPOIEditPreview'
+import {POIUtils} from '@Utils/cesium/POIUtils'
 
 /**
  * Create the POI state required by the preview.
@@ -55,8 +56,11 @@ const createPOI = () => ({
 
 describe('MapPOIEditPreview', () => {
     let drawImage
+    let entity
     let poiList
+    let postRenderListeners
     let resizeObserverObserve
+    let viewer
 
     beforeEach(() => {
         drawImage = vi.fn()
@@ -72,6 +76,17 @@ describe('MapPOIEditPreview', () => {
             observe = resizeObserverObserve
             disconnect = vi.fn()
         })
+        entity = {show: true, billboard: {show: true}}
+        postRenderListeners = new Set()
+        viewer = {
+            entities: {getById: vi.fn(() => entity)},
+            render: vi.fn(() => {
+                for (const listener of Array.from(postRenderListeners)) {
+                    listener()
+                }
+            }),
+        }
+        POIUtils.getEntityContainer.mockReturnValue(null)
 
         poiList = proxyMap([['poi-1', proxy(createPOI())]])
         globalThis.lgs = {
@@ -80,7 +95,16 @@ describe('MapPOIEditPreview', () => {
                 height: 1800,
                 getBoundingClientRect: () => ({width: 1440}),
             },
-            scene: {render: vi.fn(), requestRender: vi.fn()},
+            viewer,
+            scene: {
+                postRender: {
+                    addEventListener: vi.fn(listener => {
+                        postRenderListeners.add(listener)
+                        return () => postRenderListeners.delete(listener)
+                    }),
+                },
+                requestRender: vi.fn(),
+            },
             stores: proxy({main: {components: {pois: {list: poiList}}}}),
         }
     })
@@ -111,6 +135,17 @@ describe('MapPOIEditPreview', () => {
             1024,
             640,
         )
+    })
+
+    it('copies the displayed canvas without changing visibility or requesting Cesium frames', () => {
+        render(<MapPOIEditPreview poi="poi-1"/>)
+
+        expect(drawImage).toHaveBeenCalledOnce()
+        expect(entity.show).toBe(true)
+        expect(entity.billboard.show).toBe(true)
+        expect(viewer.render).not.toHaveBeenCalled()
+        expect(globalThis.lgs.scene.requestRender).not.toHaveBeenCalled()
+        expect(globalThis.lgs.scene.postRender.addEventListener).not.toHaveBeenCalled()
     })
 
     it('observes the POI card and stick slot when recalculating preview bounds', () => {
