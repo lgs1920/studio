@@ -426,6 +426,11 @@
     }
 }
 
+.poi-card.poi-card--style-label .poi-expanded-leader-space .poi-expanded-leader,
+.poi-card.poi-card--style-label .poi-geographic-anchor::after {
+    background-color: var(--lgs-poi-border-color);
+}
+
 .poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-side-accent {
     border: var(--poi-border-width) solid var(--lgs-poi-border-color);
 }
