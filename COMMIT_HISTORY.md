@@ -4375,3 +4375,7 @@
 ## 2026-10-31 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/b5d26d5033e3bd969e35bcdfc27fff44d0813563)
 
 - Recorded automatically from Git history.
+
+## 2026-10-31 — [`docs(replay): add Codex stabilization plan for 1.0.0`](https://github.com/lgs1920/studio/commit/8f6f253f56d7c73c0e059990fca3ae268535b1b3)
+
+- Recorded automatically from Git history.
