@@ -4343,3 +4343,35 @@
 ## 2026-10-31 — [`test: allow reviewed POI creation proxy`](https://github.com/lgs1920/studio/commit/8d2a59a45258f46cd27886ec22c7bc01246eca73)
 
 - Recorded automatically from Git history.
+
+## 2026-10-31 — [`fix: hold Replay endpoint POIs for one second`](https://github.com/lgs1920/studio/commit/f6d4afa4850d6a77e90e5c3061ccbafda2c5cc08)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`fix: refresh expanded POI stick anchor`](https://github.com/lgs1920/studio/commit/420da5369c3368bfab6d36208f81bdb410d2af13)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`fix: capture POI preview without map marker`](https://github.com/lgs1920/studio/commit/d0870e6dff600055bd2ab2d91c96d109362bf89f)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`fix: stabilize Replay POI animation endpoints`](https://github.com/lgs1920/studio/commit/f94dcc0f16e233fe7c6aab2d4ad57dea16a065e2)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`fix: refresh POI map overlays and interactions`](https://github.com/lgs1920/studio/commit/ce758951f0a8b526353af0cca1cfab3683b4ab71)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`fix: capture POI editor background without hiding marker`](https://github.com/lgs1920/studio/commit/3629819f2035b34fd7d39d34e4854a2a1b41cfeb)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`fix: improve POI mode switching`](https://github.com/lgs1920/studio/commit/6f8cbff958c6011bc6702fce1dd5376173b0830a)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/b5d26d5033e3bd969e35bcdfc27fff44d0813563)
+
+- Recorded automatically from Git history.
