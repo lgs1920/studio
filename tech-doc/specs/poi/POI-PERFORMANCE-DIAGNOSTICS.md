@@ -44,7 +44,8 @@ local storage, IndexedDB, or the server.
 - Position-only changes update the existing Cesium entity without a new SnapDOM
   capture when the displayed POI content does not include the changed values.
 - Replay POI visibility and candidate counts, nearby POI synchronization duration
-  and candidate counts, crop checks, and stop-clip mask ticks.
+  and candidate counts, nearby entries and POI-list entries scanned, crop checks,
+  and stop-clip mask ticks.
 - Replay entity-container lookups and scans, effective visibility writes, and
   repeated writes skipped when entity and billboard visibility already match.
 - Replay entity lookup reuses POI entity references for the lifetime of a Replay

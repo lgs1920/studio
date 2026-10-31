@@ -230,7 +230,7 @@ export const resolveJourneyReplayPOI =  (mode, entry) => {
             ?? entry.poi
     }
 
-export const replayPOICandidates = (mode, nearbyPois = null) => {
+export const replayPOICandidates = (mode, nearbyPois = null, nearbyPOIIds = null) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
@@ -256,9 +256,22 @@ export const replayPOICandidates = (mode, nearbyPois = null) => {
             ? store.nearbyPois
             : []
 
-        runtimeNearbyPois.forEach(entry => addPOI(call.resolveJourneyReplayPOI(entry)))
-        addList(globalThis.lgs?.stores?.main?.components?.pois?.list)
-        addList(globalThis.__?.ui?.poiManager?.list)
+        runtimeNearbyPois.forEach(entry => {
+            const poi = call.resolveJourneyReplayPOI(entry)
+            addPOI(poi)
+            if (poi?.id && nearbyPOIIds instanceof Set) {
+                nearbyPOIIds.add(poi.id)
+            }
+        })
+        const storePOIList = globalThis.lgs?.stores?.main?.components?.pois?.list
+        const managerPOIList = globalThis.__?.ui?.poiManager?.list
+        addList(storePOIList)
+        if (managerPOIList !== storePOIList) {
+            addList(managerPOIList)
+        }
+        poiPerformance.record('replay.candidateListEntries',
+            (Number(storePOIList?.size) || 0) + (managerPOIList !== storePOIList ? Number(managerPOIList?.size) || 0 : 0),
+        )
         return Array.from(candidates.values())
     }
 
@@ -302,13 +315,9 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
             : Array.isArray(store?.nearbyPois)
             ? store.nearbyPois
             : []
-        const nearbyPOIIds = new Set(
-            runtimeNearbyPois
-                .map(entry => call.resolveJourneyReplayPOI(entry)?.id)
-                .filter(Boolean),
-        )
-
-        const candidates = call.replayPOICandidates(runtimeNearbyPois)
+        const nearbyPOIIds = new Set()
+        const candidates = call.replayPOICandidates(runtimeNearbyPois, nearbyPOIIds)
+        poiPerformance.record('replay.nearbyCandidateEntries', runtimeNearbyPois.length)
         poiPerformance.record('replay.visibilityCandidates', candidates.length)
         for (const poi of candidates) {
             if (!poi?.id) {
