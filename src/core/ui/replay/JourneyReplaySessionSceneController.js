@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -1006,15 +1006,17 @@ export const bindRenderer = (mode, ) => {
                     const startPOIId = firstTrack?.flags?.start?.id
                         ?? firstTrack?.flags?.start
                         ?? state.sortedNearbyPois?.find?.(entry => entry?.poi?.type === 'start')?.poi?.id
-                    const openStartPOI = startPOIId
-                        ? call.openNearbyPOIForPlayback?.(startPOIId)
-                        : null
-                    if (openStartPOI && typeof openStartPOI.catch === 'function') {
-                        void openStartPOI.catch(error => {
+                    void call.syncNearbyPOIsForSample(startSample ?? detail.sample ?? null, {isReplayStart: true})
+                        .then(async () => {
+                            if (startPOIId) {
+                                await call.openNearbyPOIForPlayback?.(startPOIId)
+                            }
+                            call.applyJourneyReplayPOIVisibility?.()
+                            globalThis.lgs?.scene?.requestRender?.()
+                        })
+                        .catch(error => {
                             console.error(`[Replay POI] Failed to open Start POI ${startPOIId} at playback start.`, error)
                         })
-                    }
-                    void call.syncNearbyPOIsForSample(startSample ?? detail.sample ?? null, {isReplayStart: true})
                     traceStep('sync-nearby-pois.end')
                 }
                 catch (error) {

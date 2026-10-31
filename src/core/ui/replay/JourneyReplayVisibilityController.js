@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -294,7 +294,9 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
             const settings = normalizeJourneyReplayPOISettings(poi.replay)
             const isEndpoint = isReplayPOIEndpoint(poi)
             const visibilityMode = isEndpoint ? 'user' : poiVisibilityMode
-            const shouldApplyVisibility = nearbyPOIIds.has(poi.id)
+            const animationActive = state.replayPoiTriggered.has(poi.id)
+            const shouldApplyVisibility = animationActive
+                || nearbyPOIIds.has(poi.id)
                 || visibilityMode !== 'user'
                 || settings.visible === false
                 || poi.visible === false
@@ -304,7 +306,6 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
 
             const visibleBeforePlayback = state.replayPOIVisibilityState.get(poi.id)?.visible
                 ?? call.isPOIVisibleBeforePlayback(poi)
-            const animationActive = state.replayPoiTriggered.has(poi.id)
             const visibleByUser = isEndpoint
                 ? settings.visible !== false
                 : visibleBeforePlayback && settings.visible !== false

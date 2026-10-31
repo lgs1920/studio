@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -1477,7 +1477,7 @@ export const renderReplayExportFrame = async (mode, {
                     logicalFrame,
                 })
                 call.recordReplayCameraAltitude()
-                await call.syncNearbyPOIsForSample(sample)
+                await call.syncNearbyPOIsForSample(sample, {phase})
                 if (typeof call.currentReplayClipCameraState === 'function') {
                     state.clipCameraContinuity = call.currentReplayClipCameraState({
                         sample,

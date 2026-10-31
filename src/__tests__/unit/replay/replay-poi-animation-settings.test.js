@@ -113,6 +113,41 @@ describe('Replay POI animation settings', () => {
         expect(starterPresentation).toMatchObject({animationActive: true, visible: true})
     })
 
+    it('keeps Start expanded through every departure hold frame without a nearby entry or passage duration', async () => {
+        const start = {id: 'start', type: 'start', visible: true, expanded: false,
+            replay: {animated: true, displayDurationSeconds: 0}}
+        const journey = {tracks: new Map([['track', {flags: {start: start.id}}]])}
+        const points = new Map([[start.id, start]])
+        const updatePOIExpandedState = vi.fn(async (id, expanded) => {
+            points.get(id).expanded = expanded
+        })
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                sortedNearbyPois: [], sampler: {journey, totalDistance: 1000},
+                controller: {duration: 10}, replayPoiTriggered: new Set(),
+                replayPOIAppearanceState: new Map(), lastReplayPOIProgress: null,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {updatePOIExpandedState},
+        }
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {userMode: 'expert'}}},
+            stores: {main: {components: {pois: {list: points}}},
+                replay: {active: true, userMode: 'expert', nearbyPois: [],
+                    replayFramePhase: {kind: 'replay', routeLocalMillis: 9000}}},
+        })
+        for (const localMillis of [0, 500, 999]) {
+            await syncNearbyPOIsForSample(mode, {progress: 0}, {
+                phase: {kind: 'replay', endpointPause: 'start', routeLocalMillis: 0, localMillis},
+            })
+            expect(start.expanded).toBe(true)
+            expect(globalThis.lgs.stores.replay.animatedPOIIds).toContain(start.id)
+        }
+        await syncNearbyPOIsForSample(mode, {progress: 0.01}, {
+            phase: {kind: 'replay', endpointPause: null, routeLocalMillis: 100},
+        })
+        expect(start.expanded).toBe(false)
+    })
+
     it('animates Start and Stop POIs in replay-clock windows at their route endpoints', async () => {
         const poi = {id: 'poi-1', type: 'poi', replay: {visible: true}, expanded: false}
         const start = {id: 'poi-start', type: 'start', replay: {visible: true}, expanded: false}
@@ -735,7 +770,7 @@ describe('Replay POI animation settings', () => {
 
         const preparation = prepareNearbyPOIsForPlayback(mode)
 
-        expect(applyJourneyReplayPOIVisibility).toHaveBeenCalledOnce()
+        expect(applyJourneyReplayPOIVisibility).toHaveBeenCalledTimes(2)
         expect(mode[JOURNEY_REPLAY_INTERNAL_STATE].replayPoiTriggered.size).toBe(0)
         expect(restoreNearbyPOIsAfterPlayback).toHaveBeenCalledOnce()
 

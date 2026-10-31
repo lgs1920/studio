@@ -1,6 +1,3 @@
-### Replay export duration regression
-
-Investigate why the same Replay video now takes more than 10 minutes to export instead of about 4 minutes at the same quality. Sampling changes may be involved, but this has not been confirmed.
 
 ### Fix Path follow-up requests
 
@@ -14,5 +11,5 @@ Investigate why the same Replay video now takes more than 10 minutes to export i
 - Investigate why moving an expanded POI does not work.
 - Verify POI animation behavior during Replay transitions in both all-hidden and all-shown visibility modes.
 - Test the end-of-Replay dialog when the video is lost and clarify the expected user choice.
-- Verify whether a two-second display duration corresponds to two seconds of Replay time.
 - Investigate why a Replay failure at the end restarts playback from the beginning and loses the video.
+- Investigate why a POI added to the current Journey is sometimes omitted from Replay animation until the application is restarted.

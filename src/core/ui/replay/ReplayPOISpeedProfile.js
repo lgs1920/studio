@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-28
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -88,8 +88,8 @@ const canAnimatePOIInReplay = (entry, behavior) => {
     const settings = normalizeJourneyReplayPOISettings(poi?.replay)
     const isEndpoint = ['start', 'stop', 'starter'].includes(poi?.type)
     const replayVisible = isEndpoint
-        || behavior.poiVisibilityMode !== 'user'
-        || settings.visible
+        ? settings.visible
+        : behavior.poiVisibilityMode !== 'user' || settings.visible
     return behavior.animatePoisDuringJourneyReplay
         && settings.animated
         && replayVisible
