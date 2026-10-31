@@ -6,6 +6,7 @@ describe implemented behavior, current architecture, or validation evidence.
 - [Replay, camera, and video](replay-video/README.md)
 - [Cesium, mapping, and environment](cesium/README.md)
 - [Journeys, tracks, and data](data/README.md)
+- [POI rendering and diagnostics](poi/README.md)
 - [User interface, widgets, and assets](ui-widgets/README.md)
 - [Runtime, events, and application platform](platform/README.md)
 - [Build, quality, and delivery](delivery/README.md)

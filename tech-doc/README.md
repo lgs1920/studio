@@ -38,6 +38,7 @@ below by engineering domain rather than storage directory.
 - [Camera HPR orientation sphere](todo/CORE-CAMERA-HPR-THREEJS-SPHERE-WIDGET-SPEC.md)
 - [Replay video resolution profiles](todo/REPLAY_VIDEO_RESOLUTION_PROFILES_SPEC.md)
 - [Replay HQ export performance optimization plan](todo/CORE-REPLAY-HQ-VIDEO-EXPORT-PERFORMANCE-OPTIMIZATION-PLAN.md)
+- [POI map and Replay rendering performance optimization plan](todo/CORE-POI-MAP-REPLAY-RENDERING-PERFORMANCE-OPTIMIZATION-PLAN.md)
 - [Replay video quality and resizing extension](todo/CORE-REPLAY-HQ-VIDEO-QUALITY-AND-RESIZE-SPEC.md)
 - [Video widget](todo/VIDEO_WIDGET_SPEC.md)
 
@@ -57,6 +58,16 @@ below by engineering domain rather than storage directory.
 - [Journey time and Cesium lighting](todo/CORE-JOURNEY-CESIUM-TIME-LIGHTING-SPEC.md)
 - [Layer time filtering](todo/CORE-LAYER-TIME-FILTER-SPEC.md)
 - [CesiumJS MVT layers research](todo/CORE-CESIUM-MVT-LAYERS-RESEARCH.md)
+
+## POI Rendering
+
+### Current
+
+- [POI performance diagnostics](specs/poi/POI-PERFORMANCE-DIAGNOSTICS.md)
+
+### Planned
+
+- [POI map and Replay rendering performance optimization plan](todo/CORE-POI-MAP-REPLAY-RENDERING-PERFORMANCE-OPTIMIZATION-PLAN.md)
 
 ## Journeys, Tracks, and Data
 
