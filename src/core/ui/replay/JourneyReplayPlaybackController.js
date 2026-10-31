@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,7 @@ import {publishReplayTimelineTime} from './ReplayFramePublisher'
 import {buildReplayVideoTimeline, resolveReplayVideoFramePhase} from './ReplayVideoTimeline'
 import {projectReplayPOIsOnSampler} from './JourneyReplayPOIProjection'
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
+import {resolveReplayEndpointPOIPauseMillis} from './JourneyReplayPOISettings'
 import {
     createReplayPOISpeedProfile,
     isReplayPOICrawlAtPlaybackTime,
@@ -149,6 +150,12 @@ export class JourneyReplayPlaybackController {
                 }
                 : null,
         })
+        const endpointPOIPauseMillis = resolveReplayEndpointPOIPauseMillis({
+            sampler: this.#sampler,
+            settings: activeReplaySettings,
+            replay: replayState,
+            direction: this.#direction,
+        })
         if (replayState) {
             const poiCropVisibility = {}
             cropVisibilitySamples.forEach((samples, id) => {
@@ -163,7 +170,9 @@ export class JourneyReplayPlaybackController {
             }
         }
         if (videoTimeline && this.#playbackProfile.playbackDurationMillis === this.#duration * MILLIS
-            && !videoTimeline.replayProgressProfile) {
+            && !videoTimeline.replayProgressProfile
+            && (Number(videoTimeline.endpointPOIPauseMillis?.start) || 0) === endpointPOIPauseMillis.start
+            && (Number(videoTimeline.endpointPOIPauseMillis?.end) || 0) === endpointPOIPauseMillis.end) {
             this.#videoTimeline = videoTimeline
         }
         else if (clips !== undefined || captureFps !== undefined || !this.#videoTimeline || videoTimeline) {
@@ -175,6 +184,7 @@ export class JourneyReplayPlaybackController {
                       ?? 30,
                 direction: this.#direction,
                 clips: clips ?? videoTimeline?.clips ?? null,
+                endpointPOIPauseMillis,
                 replayProgressProfile: this.#playbackProfile.playbackDurationMillis !== this.#duration * MILLIS
                     ? this.#playbackProfile
                     : null,
@@ -374,7 +384,9 @@ export class JourneyReplayPlaybackController {
         this.#pauseDuration = 0
         this.#pausedAt = 0
         this.#lastGlobalUpdate = 0
-        this.#startedAt = this.#now() - this.#elapsedFromProgress(this.#progress)
+        const startsAtJourneyEndpoint = this.#direction > 0 ? this.#progress === 0 : this.#progress === 1
+        const initialElapsed = startsAtJourneyEndpoint ? 0 : this.#elapsedFromProgress(this.#progress)
+        this.#startedAt = this.#now() - initialElapsed
 
         const sample = this.currentSample()
         this.#syncStore(sample, {force: true})
@@ -449,15 +461,27 @@ export class JourneyReplayPlaybackController {
 
     #elapsedFromProgress = progress => {
         const playbackProgress = this.#direction > 0 ? progress : 1 - progress
-        return replayPlaybackTimeAtRouteTime(
+        const startPOIPauseMillis = Number(this.#videoTimeline?.endpointPOIPauseMillis?.start) || 0
+        return startPOIPauseMillis + replayPlaybackTimeAtRouteTime(
             this.#playbackProfile,
             clamp(playbackProgress, 0, 1) * this.#duration * MILLIS,
         )
     }
 
     #progressFromElapsed = elapsed => {
-        const playbackProgress = replayRouteTimeAtPlaybackTime(this.#playbackProfile, elapsed) / (this.#duration * MILLIS)
+        const startPOIPauseMillis = Number(this.#videoTimeline?.endpointPOIPauseMillis?.start) || 0
+        const routeDurationMillis = this.#playbackProfile?.playbackDurationMillis ?? this.#duration * MILLIS
+        const routeElapsed = clamp(elapsed - startPOIPauseMillis, 0, routeDurationMillis)
+        const playbackProgress = replayRouteTimeAtPlaybackTime(this.#playbackProfile, routeElapsed) / (this.#duration * MILLIS)
         return this.#direction > 0 ? playbackProgress : 1 - playbackProgress
+    }
+
+    /** Resolve elapsed wall time while keeping pauses frozen in the active clock. */
+    #activePlaybackElapsedMillis = () => {
+        const clockNow = this.#paused ? this.#pausedAt : this.#now()
+        return this.#running
+            ? Math.max(0, clockNow - this.#startedAt - this.#pauseDuration)
+            : this.#elapsedFromProgress(this.#progress)
     }
 
     #schedule = () => {
@@ -482,9 +506,11 @@ export class JourneyReplayPlaybackController {
         }
 
         try {
-            const elapsed = this.#now() - this.#startedAt - this.#pauseDuration
-            const playbackProgress = elapsed / (this.#playbackProfile?.playbackDurationMillis ?? this.#duration * MILLIS)
-            const reachedEnd = playbackProgress >= 1
+            const elapsed = this.#activePlaybackElapsedMillis()
+            const startPOIPauseMillis = Number(this.#videoTimeline?.endpointPOIPauseMillis?.start) || 0
+            const endPOIPauseMillis = Number(this.#videoTimeline?.endpointPOIPauseMillis?.end) || 0
+            const routeDurationMillis = this.#playbackProfile?.playbackDurationMillis ?? this.#duration * MILLIS
+            const reachedEnd = elapsed >= startPOIPauseMillis + routeDurationMillis + endPOIPauseMillis
 
             this.#progress = this.#progressFromElapsed(elapsed)
             const sample = this.currentSample()
@@ -504,7 +530,7 @@ export class JourneyReplayPlaybackController {
                 this.#running = false
                 this.#paused = false
                 this.#frame = null
-                this.#syncStore(sample, {force: true})
+                this.#syncStore(sample, {force: true, playbackElapsedMillis: elapsed})
                 this.#emit(REPLAY_EVENT_END, sample)
                 return
             }
@@ -518,10 +544,16 @@ export class JourneyReplayPlaybackController {
     /** Build one frame detail with its playback or explicit scrub source. */
     #eventDetail = (sample, source = 'replay-clock') => {
         const runtimeFrame = globalThis.lgs?.stores?.replay?.dynamicFrameState ?? null
+        const playbackElapsedMillis = this.#activePlaybackElapsedMillis()
+        const routeElapsedMillis = Math.max(
+            0,
+            playbackElapsedMillis - (Number(this.#videoTimeline?.endpointPOIPauseMillis?.start) || 0),
+        )
         const poiCameraFreeze = source !== 'scrub'
+            && playbackElapsedMillis >= (Number(this.#videoTimeline?.endpointPOIPauseMillis?.start) || 0)
             && isReplayPOICrawlAtPlaybackTime(
                 this.#playbackProfile,
-                this.#elapsedFromProgress(this.#progress),
+                routeElapsedMillis,
             )
         const logicalFrame = createJourneyReplayLogicalFrame({
             sample,
@@ -587,7 +619,7 @@ export class JourneyReplayPlaybackController {
         return true
     }
 
-    #syncStore = (sample, {force = false} = {}) => {
+    #syncStore = (sample, {force = false, playbackElapsedMillis = null} = {}) => {
         const store = globalThis.lgs?.stores?.replay
         if (!store) {
             return
@@ -601,9 +633,15 @@ export class JourneyReplayPlaybackController {
             this.#playbackProfile,
             clamp(playbackProgress, 0, 1) * this.#duration * MILLIS,
         )
+        const activePlaybackElapsedMillis = Number.isFinite(playbackElapsedMillis)
+            ? Math.max(0, playbackElapsedMillis)
+            : this.#activePlaybackElapsedMillis()
+        const phaseElapsedMillis = this.#running || Number.isFinite(playbackElapsedMillis)
+            ? activePlaybackElapsedMillis
+            : (Number(this.#videoTimeline?.endpointPOIPauseMillis?.start) || 0) + replayElapsedMillis
         const frameTimeMs = Math.min(
             this.#videoTimeline?.durationMillis ?? this.#duration * MILLIS,
-            (replayPhase?.startMillis ?? 0) + replayElapsedMillis,
+            (replayPhase?.startMillis ?? 0) + phaseElapsedMillis,
         )
         const resolvedPhase = this.videoFramePhaseAtTime(frameTimeMs)
         const phase = {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-01
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -143,6 +143,7 @@ export const replayClipSignature = clips => JSON.stringify({
  * @param {number} options.direction - Playback direction.
  * @param {Object|null} options.clips - Replay clip lists.
  * @param {Object|null} options.replayProgressProfile - Optional route-time mapping for Replay playback.
+ * @param {{start?: number, end?: number}} options.endpointPOIPauseMillis - Optional endpoint holds in milliseconds.
  * @returns {Object} Canonical replay video timeline.
  */
 export const buildReplayVideoTimeline = ({
@@ -151,6 +152,7 @@ export const buildReplayVideoTimeline = ({
     direction = 1,
     clips = null,
     replayProgressProfile = null,
+    endpointPOIPauseMillis = null,
 } = {}) => {
     const normalizedClips = normalizeJourneyReplayClips(clips ?? {})
     const safeDirectionValue = Number(direction) < 0 ? -1 : 1
@@ -193,11 +195,16 @@ export const buildReplayVideoTimeline = ({
     })
 
     const safeReplayDuration = Math.max(0, finiteNumber(replayDurationMillis, 0) ?? 0)
+    const safeStartPOIPauseMillis = Math.max(0, finiteNumber(endpointPOIPauseMillis?.start, 0) ?? 0)
+    const safeEndPOIPauseMillis = Math.max(0, finiteNumber(endpointPOIPauseMillis?.end, 0) ?? 0)
     const replayPhase = pushPhase({
         kind: 'replay',
         slot: 'replay',
         anchorProgress: safeDirectionValue < 0 ? 1 : 0,
-        durationMillis: safeReplayDuration,
+        durationMillis: safeStartPOIPauseMillis + safeReplayDuration + safeEndPOIPauseMillis,
+        routeDurationMillis: safeReplayDuration,
+        startPOIPauseMillis: safeStartPOIPauseMillis,
+        endPOIPauseMillis: safeEndPOIPauseMillis,
     })
 
     normalizedClips.stop.forEach(clip => {
@@ -224,6 +231,10 @@ export const buildReplayVideoTimeline = ({
         frameIntervalMs,
         direction: safeDirectionValue,
         replayDurationMillis: safeReplayDuration,
+        endpointPOIPauseMillis: {
+            start: safeStartPOIPauseMillis,
+            end: safeEndPOIPauseMillis,
+        },
         replayProgressProfile,
         durationMillis,
         frameCount,
@@ -252,7 +263,7 @@ export const resolveReplayVideoFramePhase = ({
 } = {}) => {
     const frameIntervalMs = timeline?.frameIntervalMs
                            ?? (timeline?.fps > 0 ? (1000 / timeline.fps) : (1000 / DEFAULT_FPS))
-    const resolvePhaseFrameMetrics = ({phase = null, localMillis = 0} = {}) => {
+    const resolvePhaseFrameMetrics = ({phase = null, localMillis = 0, durationMillis = null} = {}) => {
         if (!phase) {
             return {
                 phaseFrameIndex: 0,
@@ -262,7 +273,7 @@ export const resolveReplayVideoFramePhase = ({
 
         const phaseIndex = timeline?.phases?.indexOf?.(phase) ?? -1
         const isLastTimelinePhase = phaseIndex >= 0 && phaseIndex === timeline.phases.length - 1
-        const duration = Math.max(0, Number(phase.durationMillis) || 0)
+        const duration = Math.max(0, Number(durationMillis ?? phase.durationMillis) || 0)
         const baseFrameCount = Math.max(1, Math.ceil(duration / frameIntervalMs))
         const phaseFrameCount = isLastTimelinePhase && duration > 0
                                 ? baseFrameCount + 1
@@ -310,14 +321,47 @@ export const resolveReplayVideoFramePhase = ({
 
     const localMillis = Math.max(0, Math.min(phase.durationMillis, timeMs - phase.startMillis))
     const localProgress = phase.durationMillis > 0 ? clampProgress(localMillis / phase.durationMillis) : 1
+    const startPOIPauseMillis = phase.kind === 'replay'
+        ? Math.max(0, Number(phase.startPOIPauseMillis) || 0)
+        : 0
+    const routeDurationMillis = phase.kind === 'replay'
+        ? Math.max(0, Number(phase.routeDurationMillis ?? phase.durationMillis) || 0)
+        : 0
+    const endPOIPauseMillis = phase.kind === 'replay'
+        ? Math.max(0, Number(phase.endPOIPauseMillis) || 0)
+        : 0
+    const routeLocalMillis = Math.max(0, Math.min(
+        routeDurationMillis,
+        localMillis - startPOIPauseMillis,
+    ))
+    const routeLocalProgress = routeDurationMillis > 0 ? routeLocalMillis / routeDurationMillis : localProgress
+    const endpointPause = phase.kind === 'replay' && startPOIPauseMillis > 0 && localMillis < startPOIPauseMillis
+        ? 'start'
+        : phase.kind === 'replay'
+            && endPOIPauseMillis > 0
+            && localMillis >= startPOIPauseMillis + routeDurationMillis
+            ? 'end'
+            : null
     const replayProgress = phase.kind === 'replay'
-        ? progressAtReplayPlaybackTime(timeline, localMillis, localProgress)
+        ? endpointPause === 'start'
+            ? phase.anchorProgress
+            : endpointPause === 'end'
+                ? (Number(timeline?.direction) < 0 ? 0 : 1)
+                : progressAtReplayPlaybackTime(timeline, routeLocalMillis, routeLocalProgress)
         : phase.anchorProgress
     const poiCameraFreeze = phase.kind === 'replay'
-        && isReplayPOICrawlAtPlaybackTime(timeline?.replayProgressProfile, localMillis)
+        && endpointPause === null
+        && isReplayPOICrawlAtPlaybackTime(timeline?.replayProgressProfile, routeLocalMillis)
     const metrics = resolvePhaseFrameMetrics({phase, localMillis})
-    const replayFrameIndex = phase.kind === 'replay' ? metrics.phaseFrameIndex : null
-    const replayFrameCount = phase.kind === 'replay' ? metrics.phaseFrameCount : null
+    const replayFrameMetrics = phase.kind === 'replay'
+        ? resolvePhaseFrameMetrics({
+            phase,
+            localMillis: routeLocalMillis,
+            durationMillis: routeDurationMillis,
+        })
+        : null
+    const replayFrameIndex = replayFrameMetrics?.phaseFrameIndex ?? null
+    const replayFrameCount = replayFrameMetrics?.phaseFrameCount ?? null
     const finalFrame = Boolean(
         isFinalSceneFrame
         || frame?.isLast === true
@@ -337,6 +381,8 @@ export const resolveReplayVideoFramePhase = ({
         frameIndex,
         frameCount: timeline.frameCount,
         progress: replayProgress,
+        endpointPause,
+        routeLocalMillis,
         poiCameraFreeze,
         localProgress,
         localMillis,
@@ -346,6 +392,7 @@ export const resolveReplayVideoFramePhase = ({
         isFinalSceneFrame: finalFrame,
         isLastPhaseFrame: metrics.phaseFrameIndex >= (metrics.phaseFrameCount - 1),
         isLastTwoReplayFrames: phase.kind === 'replay'
+                               && endpointPause !== 'start'
                                && replayFrameCount !== null
                                && (replayFrameCount - replayFrameIndex) <= 2,
     }

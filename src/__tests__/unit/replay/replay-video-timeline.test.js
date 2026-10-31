@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-01
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -91,6 +91,39 @@ describe('ReplayVideoTimeline', () => {
             frameCount: 451,
             frameTimeMs: 15_000,
             isFinalSceneFrame: true,
+        }))
+    })
+
+    it('holds the route endpoint clock for enabled POI animation pauses', () => {
+        const timeline = buildReplayVideoTimeline({
+            replayDurationMillis: 4000,
+            fps: 10,
+            endpointPOIPauseMillis: {start: 1000, end: 1000},
+        })
+
+        expect(timeline.durationMillis).toBe(6000)
+        expect(timeline.replayPhase).toEqual(expect.objectContaining({
+            startMillis: 0,
+            endMillis: 6000,
+            durationMillis: 6000,
+            routeDurationMillis: 4000,
+            startPOIPauseMillis: 1000,
+            endPOIPauseMillis: 1000,
+        }))
+        expect(resolveReplayVideoFramePhase({timeline, frameTimeMs: 0})).toEqual(expect.objectContaining({
+            endpointPause: 'start',
+            progress: 0,
+            routeLocalMillis: 0,
+        }))
+        expect(resolveReplayVideoFramePhase({timeline, frameTimeMs: 1000})).toEqual(expect.objectContaining({
+            endpointPause: null,
+            progress: 0,
+            routeLocalMillis: 0,
+        }))
+        expect(resolveReplayVideoFramePhase({timeline, frameTimeMs: 5000})).toEqual(expect.objectContaining({
+            endpointPause: 'end',
+            progress: 1,
+            routeLocalMillis: 4000,
         }))
     })
 
@@ -183,6 +216,119 @@ describe('ReplayVideoTimeline', () => {
             expect(globalThis.lgs.stores.replay.dynamicFrameState.phase).toEqual(
                 expect.objectContaining({kind: 'post-replay', frameTimeMs: 6000}),
             )
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('waits at enabled Start and arrival POIs on the Interactive clock', () => {
+        const previousLgs = globalThis.lgs
+        const frames = []
+        let now = 0
+        let ended = false
+        const start = {id: 'journey-start', type: 'start', replay: {visible: true, animated: true}}
+        const stop = {id: 'journey-stop', type: 'stop', replay: {visible: true, animated: true}}
+        const journey = {tracks: new Map([['track-1', {flags: {start: start.id, stop: stop.id}}]])}
+        const sampler = {
+            hasSamples: true,
+            journey,
+            totalDistance: 1000,
+            atProgress: progress => ({journeyElapsedMillis: progress * 2000, journeyDurationMillis: 2000}),
+        }
+        const replaySettings = {userMode: 'expert', animateAllPoisDuringJourneyReplay: true}
+        globalThis.lgs = {
+            settings: {ui: {replay: replaySettings}},
+            stores: {
+                replay: {userMode: 'expert', captureFps: 10},
+                main: {components: {pois: {list: new Map([[start.id, start], [stop.id, stop]])}}},
+            },
+            events: {emit: () => {}},
+            scene: {requestRender: () => {}},
+        }
+
+        try {
+            const controller = new JourneyReplayPlaybackController({
+                requestFrame: callback => {
+                    frames.push(callback)
+                    return frames.length
+                },
+                cancelFrame: () => {},
+                now: () => now,
+            })
+            controller.configure({sampler, duration: 2, replaySettings, captureFps: 10})
+            controller.on('replay/end', () => {
+                ended = true
+            })
+            controller.start()
+
+            expect(controller.videoTimeline.endpointPOIPauseMillis).toEqual({start: 1000, end: 1000})
+            expect(globalThis.lgs.stores.replay.dynamicFrameState.phase).toEqual(expect.objectContaining({
+                endpointPause: 'start',
+                frameTimeMs: 0,
+                progress: 0,
+                routeLocalMillis: 0,
+            }))
+
+            now = 999
+            frames.shift()()
+            expect(globalThis.lgs.stores.replay.dynamicFrameState.phase.endpointPause).toBe('start')
+            expect(ended).toBe(false)
+
+            now = 1000
+            frames.shift()()
+            expect(globalThis.lgs.stores.replay.dynamicFrameState.phase).toEqual(expect.objectContaining({
+                endpointPause: null,
+                frameTimeMs: 1000,
+                progress: 0,
+            }))
+
+            now = 3000
+            frames.shift()()
+            expect(globalThis.lgs.stores.replay.dynamicFrameState.phase).toEqual(expect.objectContaining({
+                endpointPause: 'end',
+                frameTimeMs: 3000,
+                progress: 1,
+                routeLocalMillis: 2000,
+            }))
+            expect(ended).toBe(false)
+
+            now = 3999
+            frames.shift()()
+            expect(ended).toBe(false)
+
+            now = 4000
+            frames.shift()()
+            expect(ended).toBe(true)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('omits endpoint holds when Basic Replay POI animation is disabled', () => {
+        const previousLgs = globalThis.lgs
+        const start = {id: 'journey-start', type: 'start', replay: {visible: true, animated: true}}
+        const stop = {id: 'journey-stop', type: 'stop', replay: {visible: true, animated: true}}
+        const journey = {tracks: new Map([['track-1', {flags: {start: start.id, stop: stop.id}}]])}
+        const replaySettings = {userMode: 'basic', basic: {animatePoisDuringJourneyReplay: false}}
+        globalThis.lgs = {
+            settings: {ui: {replay: replaySettings}},
+            stores: {
+                replay: {userMode: 'basic'},
+                main: {components: {pois: {list: new Map([[start.id, start], [stop.id, stop]])}}},
+            },
+        }
+
+        try {
+            const controller = new JourneyReplayPlaybackController({requestFrame: () => 1, cancelFrame: () => {}, now: () => 0})
+            controller.configure({
+                sampler: {hasSamples: true, journey, totalDistance: 1000, atProgress: () => ({})},
+                duration: 2,
+                replaySettings,
+            })
+
+            expect(controller.videoTimeline.endpointPOIPauseMillis).toEqual({start: 0, end: 0})
         }
         finally {
             globalThis.lgs = previousLgs

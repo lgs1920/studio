@@ -77,11 +77,14 @@ allow display and that project inside the video crop at a sampled route point in
 their display window. Hidden, non-animated, and out-of-crop POIs do not extend
 the Replay duration.
 When global Replay and per-POI animation settings allow it, the Start flag opens
-once when Replay starts, and the Stop flag opens once at route arrival. Stop
+once when Replay starts, then the canonical clock holds the departure marker
+for one second before route movement. At route arrival, the Stop flag opens once
+and the clock holds the arrival marker for one second before completion. Stop
 flags marked `tooClose` remain excluded from nearby-POI selection; the visible
-Start flag also gets a separate arrival window when that final Stop is hidden.
-The replay timeline, Record duration, and playback toolbar include the added
-playback time.
+Start flag also gets the one-second arrival hold when that final Stop is hidden.
+The holds keep the route sample and trace at their endpoints and are included in
+the shared Replay and export timeline. A hold is omitted when its endpoint is
+hidden or its animation is disabled.
 
 Basic and Expert MP4 recording temporarily suspend the main viewer's default render loop.
 Each capture flush calls `Viewer.render()` after resizing and requesting the

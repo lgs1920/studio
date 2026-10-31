@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,6 +37,7 @@ import {
 import {
     buildReplayVideoTimeline, replayClipSignature, resolveReplayVideoFramePhase,
 }                              from '@Core/ui/replay/ReplayVideoTimeline'
+import {resolveReplayEndpointPOIPauseMillis} from '@Core/ui/replay/JourneyReplayPOISettings'
 import {
     buildReplayVideoComposerOverlays, flushReplayVideoOverlayCanvases, isReplayVideoWidgetReady,
 }                              from '@Core/ui/replay/ReplayVideoOverlayComposer'
@@ -2150,11 +2151,19 @@ export const prepareReplayDeferredExportPlan = ({
     })
     const timelineReplayDurationMillis = poiSpeedProfile?.playbackDurationMillis ?? replayDurationMillis
     const replayClips = resolveReplayExportClips({replay, journey})
+    const endpointPOIPauseMillis = resolveReplayEndpointPOIPauseMillis({
+        sampler: controller?.sampler,
+        journey,
+        settings: globalThis.lgs?.settings?.ui?.replay ?? replay,
+        replay,
+        direction,
+    })
     const videoTimeline = buildReplayVideoTimeline({
         replayDurationMillis: timelineReplayDurationMillis,
         fps,
         direction,
         clips: replayClips,
+        endpointPOIPauseMillis,
         replayProgressProfile: poiSpeedProfile,
     })
     const exportWindow = resolveReplayExportWindow({replay, timeline: videoTimeline})

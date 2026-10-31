@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -152,10 +152,14 @@ export class ReplayFrameResolver {
         if (speedProfile) {
             const routeDuration = Math.max(0, Number(speedProfile.routeDurationMillis) || 0)
             const routeTime = localProgress * routeDuration
-            return replayPhase.startMillis + replayPlaybackTimeAtRouteTime(speedProfile, routeTime)
+            return replayPhase.startMillis
+                   + (Number(replayPhase.startPOIPauseMillis) || 0)
+                   + replayPlaybackTimeAtRouteTime(speedProfile, routeTime)
         }
 
-        return replayPhase.startMillis + (localProgress * replayPhase.durationMillis)
+        return replayPhase.startMillis
+               + (Number(replayPhase.startPOIPauseMillis) || 0)
+               + (localProgress * (Number(replayPhase.routeDurationMillis) || replayPhase.durationMillis))
     }
 
     /**

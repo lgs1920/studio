@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -64,6 +64,7 @@ import { replayVideoTraceDebug }                                                
 import {
     isReplayPOIAnimationActiveAtProgress,
     normalizeJourneyReplayPOISettings,
+    shouldAnimateReplayPOI,
 }                                                                                          from './JourneyReplayPOISettings'
 import {projectReplayPOIsOnSampler} from './JourneyReplayPOIProjection'
 
@@ -213,17 +214,6 @@ const publishAnimatedPOIs = ids => {
     }
 }
 
-/** Let a POI-level opt-out override Replay-wide animation switches. */
-const shouldAnimateReplayPOI = (behavior, settings) => {
-    if (settings.animated === false) {
-        return false
-    }
-
-    return behavior.basicMode
-        ? behavior.animatePoisDuringJourneyReplay
-        : behavior.animateAllPoisDuringJourneyReplay || settings.animated !== false
-}
-
 /** Refresh nearby POIs for the selected Replay journey. */
 export const syncRuntimeNearbyPOIs = (_mode, journey = currentReplayJourney()) => {
     const store = replayStore()
@@ -368,7 +358,7 @@ export const prepareNearbyPOIsForPlayback = async mode => {
  *
  * @param {object} mode - Replay session mode.
  * @param {string} poiId - POI identifier to open.
- * @returns {Promise<void>} Completion of the expanded-state update.
+ * @returns {Promise<boolean>} Whether the POI was authorized for animation.
  */
 export const openNearbyPOIForPlayback = async (mode, poiId) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -383,7 +373,7 @@ export const openNearbyPOIForPlayback = async (mode, poiId) => {
     const shouldAnimate = shouldAnimateReplayPOI(behavior, settings)
     const hiddenEndpoint = (poi?.type === 'start' || poi?.type === 'stop') && settings.visible === false
     if (!poi || !shouldAnimate || hiddenEndpoint) {
-        return
+        return false
     }
     state.replayPoiTriggered.add(poiId)
     publishAnimatedPOIs(state.replayPoiTriggered)
@@ -391,6 +381,7 @@ export const openNearbyPOIForPlayback = async (mode, poiId) => {
     call.setPOIEntityVisibility(poi, true, {allowReplayAnimation: true})
     globalThis.lgs?.scene?.requestRender?.()
     await call.updatePOIExpandedState(poiId, true)
+    return true
 }
 
 /**
@@ -453,7 +444,7 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
         state.lastReplayPOIProgress = traversalProgress
         const replayPhase = replay?.replayFramePhase
         const playbackClockMillis = replayPhase?.kind === 'replay'
-            ? finiteNumber(replayPhase.localMillis)
+            ? finiteNumber(replayPhase.routeLocalMillis ?? replayPhase.localMillis)
             : null
         const currentReplaySeconds = playbackClockMillis === null
             ? Math.max(0, Math.min(1, traversalProgress)) * replayDurationSeconds
@@ -514,7 +505,7 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                     ? poiAnimationDurationSeconds
                     : poiSettings.displayDurationSeconds
                 for (const passage of passages) {
-                    const startsAtReplayBoundary = isReplayStart
+                    const startsAtReplayBoundary = (isReplayStart || replayPhase?.endpointPause === 'start')
                         && poi.type === 'start'
                         && passage.key === 'primary'
                     const passageProgress = Math.max(0, Math.min(1, passage.distance / totalDistance))

@@ -122,7 +122,9 @@ narrow crop, and at least one high-resolution output profile.
 - The marker follows the same sample used by the trace.
 - The Start flag animates at Replay startup and the Stop flag at route arrival
   only when global Replay and per-POI animation settings allow it; a `tooClose`
-  Stop stays hidden and the Start animates again at route arrival.
+  Stop stays hidden and the Start animates again at route arrival. Hold the
+  departure and arrival samples for one second each, only when their endpoint
+  animations are enabled, in both interactive playback and deterministic export.
 - Start and stop visibility rules do not leak into the replay phase.
 - The final captured frame contains the declared completed trace.
 

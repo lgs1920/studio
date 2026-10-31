@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -189,7 +189,9 @@ const normalizeTimelineOptions = options => {
         const hasFpsOverride = options.fps !== undefined || options.captureFps !== undefined
         const hasDirectionOverride = options.direction !== undefined
         const hasClipOverride = options.clips !== undefined
-        if (!hasReplayDurationOverride && !hasFpsOverride && !hasDirectionOverride && !hasClipOverride) {
+        const hasEndpointPauseOverride = options.endpointPOIPauseMillis !== undefined
+        if (!hasReplayDurationOverride && !hasFpsOverride && !hasDirectionOverride && !hasClipOverride
+            && !hasEndpointPauseOverride) {
             return options.videoTimeline
         }
 
@@ -201,6 +203,8 @@ const normalizeTimelineOptions = options => {
             fps:                options.fps ?? options.videoTimeline.fps ?? 30,
             direction:          options.direction ?? options.videoTimeline.direction ?? 1,
             clips:              options.clips ?? options.videoTimeline.clips,
+            endpointPOIPauseMillis: options.endpointPOIPauseMillis
+                ?? options.videoTimeline.endpointPOIPauseMillis,
             replayProgressProfile: options.replayProgressProfile
                 ?? options.videoTimeline.replayProgressProfile
                 ?? null,
@@ -210,6 +214,8 @@ const normalizeTimelineOptions = options => {
             && refreshedTimeline.replayDurationMillis === options.videoTimeline.replayDurationMillis
             && refreshedTimeline.fps === options.videoTimeline.fps
             && refreshedTimeline.direction === options.videoTimeline.direction
+            && refreshedTimeline.endpointPOIPauseMillis?.start === options.videoTimeline.endpointPOIPauseMillis?.start
+            && refreshedTimeline.endpointPOIPauseMillis?.end === options.videoTimeline.endpointPOIPauseMillis?.end
             ? options.videoTimeline
             : refreshedTimeline
     }
@@ -219,6 +225,7 @@ const normalizeTimelineOptions = options => {
         fps: options?.fps ?? options?.captureFps ?? 30,
         direction: options?.direction ?? 1,
         clips: options?.clips ?? null,
+        endpointPOIPauseMillis: options?.endpointPOIPauseMillis ?? null,
     })
 }
 
@@ -329,7 +336,9 @@ const resolveTerminalReplayStartMillis = (timeline, frameTimeline) => {
     })
     const replayFrameCount = Math.max(1, Number(phaseAtStart.replayFrameCount) || 1)
     const terminalFrameIndex = Math.max(0, replayFrameCount - 2)
-    const terminalMillis = replayPhase.startMillis + (terminalFrameIndex * timeline.frameIntervalMs)
+    const terminalMillis = replayPhase.startMillis
+        + (Number(replayPhase.startPOIPauseMillis) || 0)
+        + (terminalFrameIndex * timeline.frameIntervalMs)
     return Math.max(
         replayPhase.startMillis,
         Math.min(replayPhase.endMillis, terminalMillis),
@@ -352,7 +361,7 @@ const createFrameState = ({timeline, phase, frame}) => ({
     direction: timeline.direction,
     durationMillis: timeline.replayDurationMillis,
     elapsedMillis: phase.kind === 'replay'
-        ? phase.localProgress * timeline.replayDurationMillis
+        ? (phase.routeLocalMillis ?? (phase.endpointPause === 'start' ? 0 : timeline.replayDurationMillis))
         : phase.anchorProgress <= 0 ? 0 : timeline.replayDurationMillis,
     frameIndex: frame.index,
     frameCount: frame.frameCount,

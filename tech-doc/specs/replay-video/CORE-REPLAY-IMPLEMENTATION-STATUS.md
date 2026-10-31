@@ -261,8 +261,10 @@ subject to the validation gates below.
 
 - Start opens when Replay starts and Stop opens at route arrival when global and
   per-POI animation settings allow; a Start flag also opens at arrival when its
-  `tooClose` Stop is hidden. Endpoint data presentation and the pause-aware
-  animation scheduler remain tracked in the POI animation TODO.
+  `tooClose` Stop is hidden. Enabled endpoint animations now hold the shared
+  Replay clock for one second at departure and arrival. Paused POI display
+  windows and complete paired endpoint data presentation remain tracked in the
+  POI animation TODO.
 - The canonical frame contract coexists with mutable session controllers and
   compatibility store projections.
 - Camera qualification still uses parts of the reactive runtime correction
