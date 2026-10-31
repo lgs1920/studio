@@ -4339,3 +4339,7 @@
 ## 2026-10-30 — [`docs: add replay export performance and quality plans`](https://github.com/lgs1920/studio/commit/8f9df6c52cddc43fc6d780f04452a1a3bd32a9d7)
 
 - Recorded automatically from Git history.
+
+## 2026-10-31 — [`test: allow reviewed POI creation proxy`](https://github.com/lgs1920/studio/commit/8d2a59a45258f46cd27886ec22c7bc01246eca73)
+
+- Recorded automatically from Git history.
