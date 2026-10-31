@@ -54,7 +54,7 @@ The following observations come from a static source inspection, not a browser b
 | `src/Utils/cesium/POIUtils.js` | Creates/updates Cesium entities and billboards, computes visibility and distance scale, and prevents duplicate entities in different containers. Existing entities have many graphical properties rewritten by `draw()`. |
 | `src/components/MainUI/MapPOI/poiHoverPreviewStore.js` | Owns one active transient DOM preview; hides the matching billboard and restores it when the preview closes. |
 
-`src/components/MainUI/MainUI.jsx` mounts `MapPOIMonitor`, which mounts `MapPOICluster`; the cluster creates one `MapPOI` instance for every loaded POI. `src/components/cesium/MapPOI.jsx` therefore has a reachable per-POI `requestAnimationFrame` projection loop in the current main UI. This establishes reachability, not cost: profile it with realistic POI counts before changing the scheduler.
+`src/components/MainUI/MainUI.jsx` mounts `MapPOIMonitor`, which mounts `MapPOICluster`; the cluster creates one `MapPOI` instance for every loaded POI. `src/components/cesium/MapPOI.jsx` projects a POI only while its transient hover/title overlay is active. That work now runs once initially and then from Cesium `postRender` events, with camera-change and animation-frame fallbacks; it no longer schedules a perpetual animation-frame loop when `postRender` is available. This reduces idle projection work by construction, but matched browser profiling is still required to quantify the effect.
 
 A Shift-hover preview path exists but is currently guarded by `DISABLE_POI_SHIFT_HOVER_FOR_DIAGNOSTIC = true` in `MapPOIContent.jsx`. Do not reactivate it or delete it incidentally; verify its intended product state.
 
@@ -130,7 +130,9 @@ Replay candidate follow-up: `POIManager.list` is a getter for the same POI `prox
 
 Replay sample follow-up: `syncNearbyPOIsForSample()` now reuses a per-preparation unique nearby-POI array rather than allocating and filling a `Map` on every Replay sample. It is built from the already-projected candidates, preserves the Start POI override at route distance zero, and is cleared when playback state is restored or the Replay session is disposed. The original per-sample deduplication remains as a fallback if sample synchronization runs without preparation. Diagnostic snapshots count cache hits; Replay scale and visual timing still need regression validation.
 
-Repeated-route POI follow-up: POI projection records distinct local passage abscissas on the corrected Replay sampler, including repeated visits when a route retraces the same geometry. Ordinary POIs animate at both the outbound and return passages; each passage has independent crop-entry state and a separate Basic Replay slowdown window. Start/Stop endpoint handling continues to use its existing single primary projection and endpoint rules. Adjacent equal-distance samples are collapsed, repeated projections within 25 m of the closest passage are considered the same POI route, and at most the first and last distinct visits are retained. This needs regression coverage for `A-B-C-B-A`, reverse playback, crop entry, and endpoint boundaries before claiming verified timing.
+Repeated-route POI follow-up: POI projection records each separate near-POI route encounter on the corrected Replay sampler, including repeated visits when a route retraces the same geometry. Consecutive route samples within 25 m of the closest route passage are grouped into one encounter, with a 5 m exit hysteresis to avoid splitting on GPS noise; distinct encounters farther along the route remain separate. Ordinary POIs animate at every detected encounter, with independent crop-entry state, display timer, and Basic Replay slowdown window. Start/Stop endpoint handling continues to use its existing single primary projection and endpoint rules. Regression coverage for `A-B-C-B-A`, reverse playback, crop entry, and endpoint boundaries remains outstanding; timing has not been browser-validated.
+
+Replay passage indexing follow-up: playback preparation now stores normalized route progress for every POI passage and builds a sorted passage index plus a POI-ID lookup. Each sample binary-searches that index within the maximum supported POI display duration and adds currently open POIs, then evaluates crop entry and exact animation state for the resulting subset. The 60-second search bound is shared with POI display-duration normalization. `replay.syncActiveCandidates` records the selected count alongside the existing total candidate count. A missing preparation cache retains the previous full-candidate fallback. This reduces candidate evaluation by construction when most route passages are outside the active horizon; measured gains, search-boundary parity, seek/reverse behavior, and browser coverage remain outstanding.
 
 Exploratory profile supplied by the user (hardware, browser version, elapsed capture window, loaded/visible POI totals, and interaction sequence were not included): 3 mounted `MapPOIContent` surfaces; 363 projection ticks taking 339,979 ms cumulatively (936.6 ms average, 2,334 ms p95 among retained samples); five SnapDOM calls taking 20,422 ms total (4,084 ms average); five `toCanvas()` calls taking 1,847 ms total; five requests waited 13,404 ms total in the capture queue; three captures committed and two were discarded. The long awaited projection span is consistent with terrain sampling in `SceneUtils.degreesToPixelsCoordinates()`, but the provided aggregates do not establish that as the sole cause. The capture timings identify SnapDOM as the largest measured capture stage. Follow-up instrumentation now records capture reasons and stale-discard phases; stale captures are checked immediately after SnapDOM so obsolete work skips `toCanvas()`. Treat these numbers as a diagnostic sample, not a comparable baseline or a speedup result.
 
@@ -158,6 +160,17 @@ Do not confuse changes to geographic data with a temporary runtime animation pos
 Introduce narrowly scoped helpers/services only after examining the current component contract. Prefer incremental patches to `POIManager`, `POIUtils` and `MapPOIContent` over replacing the entire rendering layer. Preserve the existing asynchronous stale-capture guards and temporary Replay state behavior.
 
 **Acceptance:** moving or hiding a POI whose appearance did not change causes zero new SnapDOM captures; pixel output remains equivalent to the baseline; tests cover position, visibility and scene replacement.
+
+Implementation update (2026-10-31): `POIUtils.updatePosition()` now skips an
+assignment and render request when the effective Cesium position is unchanged;
+`toggleVisibility()` likewise requests a frame only when entity or billboard
+visibility differs. Tests cover the no-op and changed paths. The supplied
+diagnostic sample showed 363 map projection ticks for three mounted content
+surfaces, so transient hover/title projection now listens to Cesium `postRender`
+instead of scheduling a continuous RAF when that event is available. Async work
+is coalesced and unchanged projected state avoids React updates. These changes
+are structurally bounded but have no matched browser benchmark or visual parity
+result yet.
 
 ## 7. Phase 2 — Visual revision tracking and bounded image reuse (P1)
 
@@ -187,12 +200,12 @@ Possible staged approach:
 2. Mount a POI's capture surface when its appearance is first needed or invalidated; mount rich interactive DOM when expanded/edited/previewed.
 3. Reuse a previously captured surface when no visual revision changed; do not remount unnecessarily.
 4. Scope Valtio subscriptions to the particular POI and minimal Replay-derived state. Avoid having all POI components rerender because the global Replay sample advanced.
-5. Precompute a map/set of nearby and animated POI IDs outside individual component renders; avoid `replay.nearbyPois.find(...)` for every POI on every relevant global update.
+5. Precompute a map/set of nearby and animated POI IDs outside individual component renders; avoid `replay.nearbyPois.find(...)` for every POI on every relevant global update. The rich content path now builds a weakly held POI-ID index once per nearby-POI snapshot, and Replay presentation builds an animated-ID set once per animated-ID array. The map-overlay path no longer performs an unused nearby-POI search. This avoids repeated linear membership searches but does not yet narrow every Valtio subscription.
 6. Preserve Cesium picking and event bindings even when rich DOM is not mounted.
 
 This is a larger architecture change. Perform it only after the smaller Phase 1/2 optimizations have been measured and explicitly approved. Confirm no hidden dependency on mounted DOM for image lifecycle, location refresh, icon load or canvas events.
 
-The `MapPOICluster`/`src/components/cesium/MapPOI.jsx` RAF loop is reachable in the current application. Use the opt-in projection tick metrics and browser traces to establish its cost. If measurements justify a change, replace per-POI async projection/terrain work with an event-driven, single-owner scheduler for the small subset of active DOM overlays, not with one RAF for every POI. Avoid awaiting terrain sampling on every animation frame.
+The `MapPOICluster`/`src/components/cesium/MapPOI.jsx` projection path is reachable in the current application. It now schedules work from Cesium `postRender` for the small subset of active DOM overlays, with camera-change and RAF fallbacks. Avoid awaiting terrain sampling on every animation frame.
 
 ## 9. Phase 4 — Differential Replay visibility (P1)
 
@@ -225,7 +238,7 @@ Candidate design:
 - Precompute stable route abscissae and candidate presentation windows when the Journey, route geometry, POI positions, Replay settings or playback direction is changed.
 - Use a time/distance window index to select possible active POIs; evaluate dynamic crop entry and exact presentation state only for relevant candidates plus currently open POIs.
 - Rebuild or invalidate the index on seek, reverse direction, timeline duration or speed change, crop/camera mode change, POI edit, Journey change or reroute.
-- Account for start/stop endpoint behavior, co-located endpoints, `MAX_REPLAY_POI_APPEARANCES`, multiple visits to the same POI, animated opt-outs and open-card display timers.
+- Account for start/stop endpoint behavior, co-located endpoints, every detected passage for ordinary POIs, animated opt-outs and open-card display timers.
 - Preserve the behavior that a POI admitted early by crop entry may stay visible until the route marker reaches it, with time-based closure afterward. A simple fixed window threshold is not a correct replacement.
 
 Do not replace the canonical Replay clock with `Date.now()`, a new RAF clock, or timer-based UI animation. A jump directly to an arbitrary timestamp must yield the same POI image and visibility state as rendering that timestamp in a sequential export, subject to the existing explicit appearance-state semantics. Document any unavoidable state-history behavior and test it.
@@ -236,7 +249,7 @@ Do not replace the canonical Replay clock with `Date.now()`, a new RAF clock, or
 
 ### Entity ownership and lookup
 
-`POIUtils.draw()` can reassign all billboard properties on existing entities. `removeEntityFromOtherContainers()` checks the main entity collection and every data source; `JourneyReplayVisibilityController.poiEntities()` scans these collections on cache miss and reuses session-cached entity references afterward. Profile the remaining ownership scans in `POIUtils.draw()`.
+`POIUtils.draw()` now resolves existing Cesium property values and writes entity or billboard fields only when their effective values change. It requests a render only when an existing POI actually changes. Diagnostics count billboard writes and skipped writes, including image replacements. `removeEntityFromOtherContainers()` still checks the main entity collection and every data source; it now records scan-call counts, collection counts, and elapsed cleanup time. `JourneyReplayVisibilityController.poiEntities()` scans these collections on cache miss and reuses session-cached entity references afterward. Matched browser profiling and ownership-scan results remain outstanding.
 
 Where useful, maintain a validated, session-scoped lookup for `poiId -> {entity, container, viewer/target, scene revision}`. Invalidate on removal, data-source migration, scene replacement, target handoff, and disposal. Do not keep dead Cesium entities or accidentally leak the main viewer into isolated HQ export.
 
@@ -246,7 +259,7 @@ Existing `scaleByDistance` already reduces billboard scale with distance. If den
 
 ### DOM hover and movement
 
-Keep HTML overlay previews transient and limited in number. If active, project only selected/hovered/expanded overlays from the correct camera in one coordinator, update CSS transform only when the projected coordinates change, and hide offscreen/occluded overlays. No per-POI React `setState` at full camera FPS for hundreds of POIs. Ensure overlay coordinates are measured relative to the map canvas rather than global window dimensions and remain accurate with panels, zoom, resize and DPR.
+Keep HTML overlay previews transient and limited in number. The single active POI hover/title overlay now projects from Cesium `postRender` events, coalesces overlapping asynchronous terrain/projection work, and skips React state updates when screen coordinates or scale are unchanged. Camera-change and animation-frame fallbacks remain for scenes without a `postRender` event. Browser checks must still confirm position, occlusion, resize, panels, zoom and DPR behavior; coordinates currently retain the existing window-relative layout contract.
 
 ## 12. Replay video export parity
 

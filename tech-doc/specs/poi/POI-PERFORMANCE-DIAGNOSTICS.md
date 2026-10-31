@@ -43,9 +43,14 @@ local storage, IndexedDB, or the server.
 - Cesium POI draw duration, entity creates/updates and billboard image replacements.
 - Position-only changes update the existing Cesium entity without a new SnapDOM
   capture when the displayed POI content does not include the changed values.
+- Repeated POI position updates are skipped when the resolved Cesium position is
+  unchanged. Visibility toggles request a render only when the entity or its
+  billboard visibility actually changes.
 - Replay POI visibility and candidate counts, nearby POI synchronization duration
   and candidate counts, nearby entries and POI-list entries scanned, crop checks,
-  unique-candidate cache hits, and stop-clip mask ticks.
+  unique-candidate cache hits, nearby-entry index lookups/builds, and stop-clip
+  mask ticks. It also counts animated-POI membership lookups and snapshot-index
+  builds used by the presentation resolver.
 - Replay entity-container lookups and scans, effective visibility writes, and
   repeated writes skipped when entity and billboard visibility already match.
 - Replay entity lookup reuses POI entity references for the lifetime of a Replay
@@ -55,7 +60,11 @@ local storage, IndexedDB, or the server.
   Replay session or when its viewer/scene collections change.
 - Map POI projection tick count and duration. Projection now runs only for the
   POI whose hover title or DOM preview is active, since these coordinates are
-  consumed by those transient overlays.
+  consumed by those transient overlays. It performs an initial projection and
+  then listens to Cesium `postRender`; camera-change and animation-frame
+  fallbacks cover environments without that event. Overlapping async projections
+  are coalesced, and unchanged screen coordinates or scale do not trigger
+  React state updates.
 
 Duration metrics expose count, total, average, maximum, and approximate p50/p95
 from the most recent bounded sample ring. The number of metric names and samples
