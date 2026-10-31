@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -83,10 +83,12 @@ const createPOI = display => ({
 describe('MapPOIContent display settings', () => {
     let poiList
     let requestAnimationFrame
+    let originalResizeObserver
 
     beforeEach(() => {
         drawPOI.mockClear()
         vi.mocked(snapdom).mockReset()
+        originalResizeObserver = globalThis.ResizeObserver
         poiList = proxyMap([['poi-1', createPOI({
             category:    true,
             titleCategoryIcon: true,
@@ -144,6 +146,12 @@ describe('MapPOIContent display settings', () => {
     afterEach(() => {
         cleanup()
         vi.restoreAllMocks()
+        if (originalResizeObserver === undefined) {
+            delete globalThis.ResizeObserver
+        }
+        else {
+            globalThis.ResizeObserver = originalResizeObserver
+        }
         globalThis.lgs = undefined
         globalThis.__ = undefined
     })
@@ -407,6 +415,30 @@ describe('MapPOIContent display settings', () => {
                 .toBe('400px')
             expect(requestAnimationFrame.mock.calls.length).toBeGreaterThan(initialRenderCount)
         })
+    })
+
+    it('refreshes the expanded POI anchor when its card resizes without changing the stick edge offset', () => {
+        let notifyResize
+        globalThis.ResizeObserver = class {
+            constructor(callback) {
+                notifyResize = callback
+            }
+
+            observe = vi.fn()
+            disconnect = vi.fn()
+        }
+
+        const {container} = render(<MapPOIContent poi="poi-1"/>)
+        const card = container.querySelector('.poi-card-inner')
+        const initialRenderCount = requestAnimationFrame.mock.calls.length
+        Object.defineProperties(card, {
+            offsetWidth: {configurable: true, value: 320},
+            offsetHeight: {configurable: true, value: 160},
+        })
+
+        act(() => notifyResize([{target: card}]))
+
+        expect(requestAnimationFrame.mock.calls.length).toBeGreaterThan(initialRenderCount)
     })
 
     it('clamps an expanded POI width to the configured maximum', () => {

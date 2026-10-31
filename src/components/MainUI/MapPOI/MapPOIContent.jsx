@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -446,8 +446,15 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             return undefined
         }
 
+        const previousCardSize = {width: card.offsetWidth, height: card.offsetHeight}
         const observer = new ResizeObserver(() => {
-            if (updatePOIStickEdgeOffset() && !isEmbedded) {
+            const width = card.offsetWidth
+            const height = card.offsetHeight
+            const cardSizeChanged = width !== previousCardSize.width || height !== previousCardSize.height
+            previousCardSize.width = width
+            previousCardSize.height = height
+            const edgeOffsetChanged = updatePOIStickEdgeOffset()
+            if ((cardSizeChanged || edgeOffsetChanged) && !isEmbedded) {
                 renderToCanvas()
             }
         })
