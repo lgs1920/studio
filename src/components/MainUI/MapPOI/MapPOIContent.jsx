@@ -45,7 +45,6 @@ import {
     normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
 import { ELEVATION_UNITS, UnitUtils }               from '@Utils/UnitUtils'
-import { POIUtils }                                 from '@Utils/cesium/POIUtils'
 import { WaIcon, WaTooltip }                       from '@awesome.me/webawesome/dist/react'
 import { snapdom }                                 from '@zumer/snapdom'
 import classNames                                  from 'classnames'
@@ -79,7 +78,7 @@ const assertPOICanvasDimensions = (element, scale, ratio) => {
  * @typedef {Object} MapPOIContentProps
  * @property {string} poi - ID of the POI to display.
  * @property {boolean} [useInMenu=false] - Render the compact menu version.
- * @property {boolean} [domPreview=false] - Render a transient expanded DOM preview without map event handlers.
+ * @property {boolean} [domPreview=false] - Render a transient DOM preview without map event handlers.
  * @property {boolean} [collapsedPreview=false] - Render a transient collapsed DOM preview without map event handlers.
  * @property {object} [style] - Additional styles for the POI content wrapper.
  */
@@ -96,8 +95,9 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
     const _poiIconWrapper = useRef(null)
     const _poiContent = useRef(null)
     const _poiCanvasCaptureSurface = useRef(null)
-    const _icon = useRef(null)
     const _renderRequestId = useRef(0)
+    const _previousExpanded = useRef(null)
+    const _iconLoadRenderTimer = useRef(null)
 
     const unitSystem = useSnapshot(lgs.settings.unitSystem)
     const coordinateSystem = useSnapshot(lgs.settings.coordinateSystem)
@@ -222,15 +222,11 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             return
         }
 
-        showPOIHoverPreview(point, {releaseAfterRender: true})
-        void Promise.resolve(__.ui.poiManager.updatePOI(point.id, {expanded: !point.expanded})).then(updatedPOI => {
-            if (!updatedPOI) {
-                return
-            }
-
-            POIUtils.toggleVisibility(updatedPOI)
-        }).catch(error => {
-            clearPOIHoverPreview(point.id)
+        void Promise.resolve(__.ui.poiManager.updatePOI(
+            point.id,
+            {expanded: !point.expanded},
+            {skipLocationUpdate: true},
+        )).catch(error => {
             console.error(`[POI] Unable to toggle expanded state for ${point.id}:`, error)
         })
     }, [isEmbedded, point])
@@ -324,7 +320,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
               ])
 
     /** Synchronizes DOM content to map canvas */
-    const renderToCanvas = useCallback(() => {
+    const renderToCanvas = useCallback((options = {}) => {
         // Invalidate pending captures even when this update masks the POI.
         const renderRequestId = ++_renderRequestId.current
         if (isEmbedded || replayMasked || hiddenBecauseTooClose || !pointId) {
@@ -349,7 +345,8 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             }
 
             const scale = 2
-            const ratio = window.devicePixelRatio || 1
+            // SnapDOM's default DPR multiplies scale; cap output at 2 px/CSS px on every display.
+            const ratio = 1
             const element = _poiCanvasCaptureSurface.current
             const card = _poiContent.current
             if (!element || !card) {
@@ -364,6 +361,13 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             let canvas
             let pixelOffset
             try {
+                for (const icon of element.querySelectorAll('wa-icon')) {
+                    await stylePOIDuotoneIcon(icon)
+                }
+                if (!isCurrentRender()) {
+                    return
+                }
+
                 // Measure the layout SnapDOM will capture, including transformed descendants.
                 element.style.display = 'block'
                 element.style.width = 'max-content'
@@ -398,7 +402,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                 // Expand only the rasterization root so SnapDOM includes transformed and external strokes.
                 element.style.padding = `${capturePadding}px`
                 assertPOICanvasDimensions(element, scale, ratio)
-                const snap = await snapdom(element, {scale, outerShadows: 'subtree'})
+                const snap = await snapdom(element, {scale, dpr: ratio, outerShadows: 'subtree'})
                 canvas = await snap.toCanvas()
                 if (!isCurrentRender() || _poiCanvasCaptureSurface.current !== element
                     || _poiContent.current !== card) {
@@ -444,8 +448,31 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                 console.error(`Error rendering POI ${pointId} to canvas:`, error)
             }
             completePOIHoverPreviewRender(pointId)
+        }, {
+            priority: options?.priority === true,
+            allowOverflow: options?.priority === true,
         })
     }, [isEmbedded, point?.expanded, replayActive, replayAnimationActive, replayMasked, hiddenBecauseTooClose, pointId, $pois.list, leaderCaptureBleed])
+
+    const handlePOIIconLoad = useCallback((event) => {
+        stylePOIDuotoneIcon(event?.target)
+            .catch(error => console.error('Error styling POI icon:', error))
+            .finally(() => {
+                if (_iconLoadRenderTimer.current) {
+                    clearTimeout(_iconLoadRenderTimer.current)
+                }
+                _iconLoadRenderTimer.current = setTimeout(() => {
+                    _iconLoadRenderTimer.current = null
+                    renderToCanvas()
+                }, 32)
+            })
+    }, [renderToCanvas])
+
+    useEffect(() => () => {
+        if (_iconLoadRenderTimer.current) {
+            clearTimeout(_iconLoadRenderTimer.current)
+        }
+    }, [])
 
     useLayoutEffect(() => {
         /** Align the stick endpoint with rounded or skewed visible POI outlines. */
@@ -515,38 +542,20 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         void mapPOI.utils.draw(mapPOI)
     }, [isEmbedded, pointId, replayMasked, hiddenBecauseTooClose, $pois.list])
 
-    const renderToCanvasAfterIconLoad = useCallback((event = null) => {
-        const icon = event?.target ?? _icon.current
-
-        stylePOIDuotoneIcon(icon)
-            .catch(error => console.error('Error styling POI icon:', error))
-            .finally(renderToCanvas)
-    }, [renderToCanvas])
-
     useEffect(() => {
         if (isEmbedded || !pointId) {
             return
         }
 
-        const renderRequestRef = _renderRequestId
-        const observer = new MutationObserver(renderToCanvas)
-        if (_poiContent.current) {
-            observer.observe(_poiContent.current, {
-                childList: true,
-                attributes: true,
-                characterData: true,
-                subtree:   true,
-            })
-        }
-
         addEventListeners(poi)
-        renderToCanvas()
+        const expanded = point?.expanded === true
+        const priority = _previousExpanded.current !== null && _previousExpanded.current !== expanded
+        _previousExpanded.current = expanded
+        renderToCanvas({priority})
 
         return () => {
-            renderRequestRef.current++
-            observer.disconnect()
+            _renderRequestId.current++
             removeEventListeners(poi)
-            clearPOIHoverPreview(pointId)
         }
     }, [
                   isEmbedded,
@@ -561,6 +570,10 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                   point?.height,
                   point?.simulatedHeight,
                   point?.location,
+                  point?.time,
+                  point?.timeZone,
+                  iconName,
+                  isSvgIcon,
                   point?.display?.category,
                   point?.display?.titleCategoryIcon,
                   point?.display?.titleAltitude,
@@ -599,24 +612,13 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                   poi,
               ])
 
+    useEffect(() => () => clearPOIHoverPreview(pointId), [pointId])
+
     useEffect(() => {
-        if (isEmbedded || isExpanded || !_icon.current) {
-            return
+        if (replayMasked || hiddenBecauseTooClose) {
+            clearPOIHoverPreview(pointId)
         }
-
-        let cancelled = false
-        stylePOIDuotoneIcon(_icon.current)
-            .catch(error => console.error('Error styling POI icon:', error))
-            .finally(() => {
-                if (!cancelled) {
-                    renderToCanvas()
-                }
-            })
-
-        return () => {
-            cancelled = true
-        }
-    }, [isEmbedded, isExpanded, iconName, isSvgIcon, point?.visible, renderToCanvas])
+    }, [hiddenBecauseTooClose, pointId, replayMasked])
 
     return (
         <div
@@ -703,7 +705,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                                             src={isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
                                             className="poi-category-title-icon"
                                             variant="regular"
-                                            onWaLoad={renderToCanvasAfterIconLoad}
+                                            onWaLoad={handlePOIIconLoad}
                                         />
                                     )}
                                     <h3>
@@ -716,7 +718,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                                         <div className="poi-location" id={`${tooltipIdPrefix}-location`}>
                                             <WaIcon name="location-dot"
                                                     variant="regular"
-                                                    onWaLoad={renderToCanvasAfterIconLoad}
+                                                    onWaLoad={handlePOIIconLoad}
                                             />
                                             <span>{point.location}</span>
                                         </div>
@@ -731,7 +733,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                                                 name={isSvgIcon ? '' : iconName}
                                                 src={isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
                                                 variant="regular"
-                                                onWaLoad={renderToCanvasAfterIconLoad}
+                                                onWaLoad={handlePOIIconLoad}
                                             />
                                             <span>{point.category}</span>
                                         </div>
@@ -774,14 +776,13 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                             </div>
                         ) : (
                             <WaIcon
-                                ref={_icon}
                                  key={point?.category}
                                 name={iconVisible ? (!isSvgIcon ? iconName : '') : 'mask'}
                                 src={iconVisible && isSvgIcon ? `${ICONS_PATH}/${iconName}` : ''}
                                 className="poi-as-flag poi-duotone-icon"
                                 variant="regular"
                                 family="duotone"
-                                onWaLoad={renderToCanvasAfterIconLoad}
+                                onWaLoad={handlePOIIconLoad}
                             />
                          )}
                     </div>

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-11
- * Last modified: 2026-10-11
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -71,5 +71,22 @@ describe('POI canvas render queue', () => {
         releaseActive()
         await vi.waitFor(() => expect(captureLatest).toHaveBeenCalledOnce())
         expect(captureSuperseded).not.toHaveBeenCalled()
+    })
+
+    it('runs an interactive expansion before older queued POI captures', async () => {
+        const enqueue = createPOICanvasRenderQueue(1)
+        let releaseActive
+        const activeCapture = new Promise(resolve => {
+            releaseActive = resolve
+        })
+        const started = []
+
+        enqueue('active', () => activeCapture)
+        enqueue('older', () => started.push('older'))
+        enqueue('clicked', () => started.push('clicked'), {priority: true})
+
+        releaseActive()
+        await vi.waitFor(() => expect(started[0]).toBe('clicked'))
+        await vi.waitFor(() => expect(started).toEqual(['clicked', 'older']))
     })
 })

@@ -631,4 +631,55 @@ describe('MapPOIContent display settings', () => {
             pixelOffset: {x: 50, y: 15},
         }))
     })
+
+    it('replaces the shrinked capture with the correctly anchored first expanded capture', async () => {
+        const poi = poiList.get('poi-1')
+        poi.expanded = false
+        const compactCanvas = document.createElement('canvas')
+        compactCanvas.width = 200
+        compactCanvas.height = 200
+        const expandedCanvas = document.createElement('canvas')
+        expandedCanvas.width = 640
+        expandedCanvas.height = 400
+        const getBoundingClientRect = HTMLElement.prototype.getBoundingClientRect
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
+            if (this.classList?.contains('poi-canvas-capture-surface')) {
+                return poi.expanded
+                    ? {left: 10, top: 20, right: 310, bottom: 200, width: 300, height: 180}
+                    : {left: 10, top: 20, right: 110, bottom: 120, width: 100, height: 100}
+            }
+            if (this.classList?.contains('poi-geographic-anchor')) {
+                return {left: 170, top: 190, right: 170, bottom: 190, width: 0, height: 0}
+            }
+            if (this.classList?.contains('poi-card-inner')) {
+                return {left: 20, right: 80, top: 20, bottom: 80, width: 60, height: 60}
+            }
+
+            return getBoundingClientRect.call(this)
+        })
+        vi.mocked(snapdom).mockImplementation(async () => poi.expanded
+            ? {
+                meta: {vbW: 320, vbH: 200, contentX: 10, contentY: 10},
+                toCanvas: async () => expandedCanvas,
+            }
+            : {meta: {}, toCanvas: async () => compactCanvas})
+
+        render(<MapPOIContent poi="poi-1"/>)
+
+        await waitFor(() => expect(drawPOI).toHaveBeenCalled())
+        const compactRenderCount = drawPOI.mock.calls.length
+
+        await act(async () => {
+            poi.expanded = true
+        })
+
+        await waitFor(() => {
+            const latestPOI = drawPOI.mock.calls.at(-1)?.[0]
+            expect(drawPOI.mock.calls.length).toBeGreaterThan(compactRenderCount)
+            expect(latestPOI?.expanded).toBe(true)
+            expect(latestPOI?.image?.src).toBe(expandedCanvas)
+        })
+
+        expect(drawPOI.mock.calls.at(-1)[0].pixelOffset).toEqual({x: -10, y: -80})
+    })
 })
