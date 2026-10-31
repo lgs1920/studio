@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-27
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,12 +24,29 @@ const PREVIEW_MAX_CANVAS_WIDTH = 1024
 const MIN_PREVIEW_HEIGHT = 125
 
 /**
- * Copy the current Cesium canvas without the edited POI into a preview image.
+ * Copy the current Cesium canvas into a POI editor preview image.
+ *
+ * @param {HTMLCanvasElement} source - Cesium canvas to copy.
+ * @returns {{image: string, width: number}} Captured image and its CSS-pixel width.
+ */
+const capturePOIEditPreviewCanvas = source => {
+    const sourceWidth = source.getBoundingClientRect?.().width || source.width
+    const width = Math.min(source.width, PREVIEW_MAX_CANVAS_WIDTH)
+    const height = Math.max(1, Math.round(width * source.height / source.width))
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    canvas.getContext('2d')?.drawImage(source, 0, 0, source.width, source.height, 0, 0, width, height)
+    return {image: canvas.toDataURL('image/webp', 0.8), width: sourceWidth}
+}
+
+/**
+ * Render the map with the edited POI hidden and copy that completed frame.
  *
  * @param {string} poiId - POI identifier to omit from the map capture.
- * @returns {{image: string, width: number}|null} Captured image and its CSS-pixel width.
+ * @returns {Promise<{image: string, width: number}|null>} Captured image and its CSS-pixel width.
  */
-const buildPOIEditPreviewBackground = poiId => {
+const buildPOIEditPreviewBackground = async poiId => {
     try {
         const source = lgs.canvas ?? lgs.viewer?.canvas
         if (!source?.width || !source?.height) {
@@ -38,32 +55,76 @@ const buildPOIEditPreviewBackground = poiId => {
 
         const scene = lgs.scene ?? lgs.viewer?.scene
         const currentPOI = lgs.stores.main.components.pois.list.get(poiId)
-        const entity = currentPOI?.id
-            ? POIUtils.getEntityContainer(currentPOI)?.getById(currentPOI.id)
-            : null
-        const previousEntityShow = entity?.show
-        const previousBillboardShow = entity?.billboard?.show
+        const viewer = lgs.viewer
+        const containers = new Set([
+            currentPOI?.id ? POIUtils.getEntityContainer(currentPOI) : null,
+            viewer?.entities,
+            ...Array.from(
+                {length: viewer?.dataSources?.length ?? 0},
+                (_, index) => viewer.dataSources.get(index)?.entities,
+            ),
+        ].filter(Boolean))
+        const entities = currentPOI?.id
+            ? Array.from(containers, container => container.getById(currentPOI.id)).filter(Boolean)
+            : []
+        const previousVisibility = entities.map(entity => ({
+            entity,
+            entityShow: entity.show,
+            billboardShow: entity.billboard?.show,
+        }))
 
         try {
-            if (entity) {
+            for (const entity of entities) {
                 entity.show = false
-                if (entity.billboard) entity.billboard.show = false
+                if (entity.billboard) {
+                    entity.billboard.show = false
+                }
             }
-            scene?.render?.()
 
-            const sourceWidth = source.getBoundingClientRect?.().width || source.width
-            const width = Math.min(source.width, PREVIEW_MAX_CANVAS_WIDTH)
-            const height = Math.max(1, Math.round(width * source.height / source.width))
-            const canvas = document.createElement('canvas')
-            canvas.width = width
-            canvas.height = height
-            canvas.getContext('2d')?.drawImage(source, 0, 0, source.width, source.height, 0, 0, width, height)
-            return {image: canvas.toDataURL('image/webp', 0.8), width: sourceWidth}
+            if (entities.length > 0 && typeof viewer?.render === 'function'
+                && typeof scene?.postRender?.addEventListener === 'function') {
+                // Capture inside Cesium's completed frame, before restoring the live POI.
+                return await new Promise((resolve, reject) => {
+                    let removePostRender
+                    removePostRender = scene.postRender.addEventListener(() => {
+                        removePostRender?.()
+                        try {
+                            resolve(capturePOIEditPreviewCanvas(source))
+                        }
+                        catch (error) {
+                            reject(error)
+                        }
+                    })
+
+                    try {
+                        viewer.render()
+                    }
+                    catch (error) {
+                        removePostRender?.()
+                        reject(error)
+                    }
+                })
+            }
+
+            if (entities.length > 0) {
+                if (typeof viewer?.render === 'function') {
+                    viewer.render()
+                }
+                else {
+                    scene?.render?.()
+                }
+            }
+
+            return capturePOIEditPreviewCanvas(source)
         }
         finally {
-            if (entity) {
-                entity.show = previousEntityShow
-                if (entity.billboard) entity.billboard.show = previousBillboardShow
+            for (const {entity, entityShow, billboardShow} of previousVisibility) {
+                entity.show = entityShow
+                if (entity.billboard) {
+                    entity.billboard.show = billboardShow
+                }
+            }
+            if (entities.length > 0) {
                 scene?.requestRender?.()
             }
         }
@@ -268,10 +329,18 @@ export const MapPOIEditPreview = ({poi}) => {
     }
 
     useEffect(() => {
+        let cancelled = false
         const frame = requestAnimationFrame(() => {
-            setBackground(buildPOIEditPreviewBackground(poi))
+            void buildPOIEditPreviewBackground(poi).then(snapshot => {
+                if (!cancelled) {
+                    setBackground(snapshot)
+                }
+            })
         })
-        return () => cancelAnimationFrame(frame)
+        return () => {
+            cancelled = true
+            cancelAnimationFrame(frame)
+        }
     }, [poi])
 
     useLayoutEffect(() => {
