@@ -155,38 +155,52 @@ export const createReplayPOISpeedProfile = ({
             return []
         }
 
-        const distance = finiteNumber(entry?.projectedAbscissa)
-        if (distance === null) {
-            return []
-        }
+        const isEndpoint = ['start', 'stop'].includes(poi?.type)
+        const projectedPassages = Array.isArray(entry?.projectedPassages) ? entry.projectedPassages : []
+        const passageDistances = isEndpoint || projectedPassages.length === 0
+            ? [entry?.projectedAbscissa]
+            : projectedPassages.map(passage => passage?.projectedAbscissa)
 
-        const poiProgress = clamp(distance / routeDistance, 0, 1)
-        const centerMillis = clamp(distance / routeDistance, 0, 1) * routeDuration
-        const windowDuration = Math.min(displayDuration, routeDuration)
-        const chronologicalStart = clamp(centerMillis - windowDuration / 2, 0, routeDuration - windowDuration)
-        const chronologicalEnd = chronologicalStart + windowDuration
-        const cropProgressRadius = windowDuration / (2 * routeDuration)
-        const cropProgressSamples = [
-            clamp(poiProgress - cropProgressRadius, 0, 1),
-            poiProgress,
-            clamp(poiProgress + cropProgressRadius, 0, 1),
-        ]
-        const cropVisibilitySamples = typeof isPOIInVideoCrop === 'function'
-            ? cropProgressSamples.map(progress => isPOIInVideoCrop(entry, progress))
-            : []
-        const inVideoCrop = cropVisibilitySamples.includes(true)
-            ? true
-            : cropVisibilitySamples.length > 0 && cropVisibilitySamples.every(value => value === false)
-                ? false
-                : entry.inVideoCrop
-        if (inVideoCrop === false) {
-            return []
-        }
+        return passageDistances.flatMap((passageDistance, passageIndex) => {
+            const distance = finiteNumber(passageDistance)
+            if (distance === null) {
+                return []
+            }
 
-        const routeStartMillis = safeDirection < 0 ? routeDuration - chronologicalEnd : chronologicalStart
-        const routeEndMillis = safeDirection < 0 ? routeDuration - chronologicalStart : chronologicalEnd
-        const routeCenterMillis = safeDirection < 0 ? routeDuration - centerMillis : centerMillis
-        return [{routeStartMillis, routeEndMillis, routeCenterMillis}]
+            const passageEntry = {
+                ...entry,
+                projectedAbscissa: distance,
+                replayPassageIndex: passageIndex,
+            }
+            const poiProgress = clamp(distance / routeDistance, 0, 1)
+            const centerMillis = poiProgress * routeDuration
+            const windowDuration = Math.min(displayDuration, routeDuration)
+            const chronologicalStart = clamp(centerMillis - windowDuration / 2, 0, routeDuration - windowDuration)
+            const chronologicalEnd = chronologicalStart + windowDuration
+            const cropProgressRadius = windowDuration / (2 * routeDuration)
+            const cropProgressSamples = [
+                clamp(poiProgress - cropProgressRadius, 0, 1),
+                poiProgress,
+                clamp(poiProgress + cropProgressRadius, 0, 1),
+            ]
+            const cropVisibilitySamples = typeof isPOIInVideoCrop === 'function'
+                ? cropProgressSamples.map(progress => isPOIInVideoCrop(passageEntry, progress))
+                : []
+            const passageCropVisibility = entry?.inVideoCropPassages?.[passageIndex]
+            const inVideoCrop = cropVisibilitySamples.includes(true)
+                ? true
+                : cropVisibilitySamples.length > 0 && cropVisibilitySamples.every(value => value === false)
+                    ? false
+                    : passageCropVisibility ?? entry.inVideoCrop
+            if (inVideoCrop === false) {
+                return []
+            }
+
+            const routeStartMillis = safeDirection < 0 ? routeDuration - chronologicalEnd : chronologicalStart
+            const routeEndMillis = safeDirection < 0 ? routeDuration - chronologicalStart : chronologicalEnd
+            const routeCenterMillis = safeDirection < 0 ? routeDuration - centerMillis : centerMillis
+            return [{routeStartMillis, routeEndMillis, routeCenterMillis}]
+        })
     }).sort((left, right) => left.routeStartMillis - right.routeStartMillis)
 
     if (windows.length === 0) {

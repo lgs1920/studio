@@ -145,6 +145,7 @@ const resolveReplayPOISpeedProfile = ({replay, journey, controller, replayDurati
             .map(entry => ({
                 ...entry,
                 inVideoCrop: replay?.poiCropVisibility?.[entry?.poi?.id],
+                inVideoCropPassages: replay?.poiCropPassageVisibility?.[entry?.poi?.id],
             })),
         totalDistance: controller?.sampler?.totalDistance,
         replayDurationMillis,

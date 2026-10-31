@@ -125,6 +125,31 @@ import {
 
 const MAX_REPLAY_POI_APPEARANCES = 2
 
+/** Resolve the selected Journey's Start and Stop POIs for Replay presentation. */
+const replayJourneyEndpoints = (journey, poiList) => {
+    const journeyTracks = Array.from(journey?.tracks?.values?.() ?? [])
+    const journeyStartReference = journeyTracks[0]?.flags?.start
+    const journeyStartId = typeof journeyStartReference === 'object'
+        ? journeyStartReference?.id
+        : journeyStartReference
+    const journeyStopReference = journeyTracks.at(-1)?.flags?.stop
+    const journeyStopId = typeof journeyStopReference === 'object'
+        ? journeyStopReference?.id
+        : journeyStopReference
+    const startPOI = poiList?.get?.(journeyStartId)
+        ?? (typeof journeyStartReference === 'object' ? journeyStartReference : null)
+    const stopPOI = poiList?.get?.(journeyStopId)
+        ?? (typeof journeyStopReference === 'object' ? journeyStopReference : null)
+
+    return {
+        journeyStartId,
+        journeyStopId,
+        startPOI,
+        stopPOI,
+        coLocatedStartId: stopPOI?.tooClose === true ? journeyStartId : null,
+    }
+}
+
 /**
  * Project a POI into the active Replay view and check its crop bounds.
  * @param {object} mode - Replay session mode.
@@ -263,6 +288,7 @@ export const restoreNearbyPOIsAfterPlayback = async (mode, ) => {
         state.lastReplayPOIProgress = null
         publishAnimatedPOIs(state.replayPoiTriggered)
         state.sortedNearbyPois = []
+        state.replayUniqueNearbyPOIs = null
 
         await Promise.all(restoreEntries.map(([poiId, expanded]) => call.updatePOIExpandedState(poiId, expanded === true)))
     }
@@ -331,6 +357,29 @@ export const prepareNearbyPOIsForPlayback = async mode => {
         })
 
         state.sortedNearbyPois = sortedNearbyPois
+        const uniqueSourcePOIs = sortedNearbyPois.length > 0
+            ? sortedNearbyPois
+            : replayStore()?.nearbyPois ?? nearbyPois
+        const uniqueNearbyPOIs = new Map()
+        uniqueSourcePOIs.forEach(entry => {
+            const poiId = entry?.poi?.id
+            if (poiId && !uniqueNearbyPOIs.has(poiId)) {
+                uniqueNearbyPOIs.set(poiId, entry)
+            }
+        })
+        const endpointPOIs = replayJourneyEndpoints(
+            journey,
+            globalThis.lgs?.stores?.main?.components?.pois?.list,
+        )
+        const startPOI = endpointPOIs.startPOI
+            ?? sortedNearbyPois.find(entry => entry?.poi?.type === 'start')?.poi
+        if (startPOI?.id) {
+            uniqueNearbyPOIs.set(startPOI.id, {
+                poi: startPOI,
+                projectedAbscissa: 0,
+            })
+        }
+        state.replayUniqueNearbyPOIs = Array.from(uniqueNearbyPOIs.values())
         state.replayPOIAppearanceState.clear()
         state.lastReplayPOIProgress = null
 
@@ -450,33 +499,27 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
             : Math.max(0, playbackClockMillis / 1000)
         const currentJourney = state.sampler?.journey ?? currentReplayJourney()
         const currentPOIList = globalThis.lgs?.stores?.main?.components?.pois?.list
-        const journeyTracks = Array.from(currentJourney?.tracks?.values?.() ?? [])
-        const journeyStartReference = journeyTracks[0]?.flags?.start
-        const journeyStartId = typeof journeyStartReference === 'object'
-            ? journeyStartReference?.id
-            : journeyStartReference
-        const journeyStopReference = journeyTracks.at(-1)?.flags?.stop
-        const journeyStopId = typeof journeyStopReference === 'object'
-            ? journeyStopReference?.id
-            : journeyStopReference
-        const journeyStop = currentPOIList?.get?.(journeyStopId)
-            ?? (typeof journeyStopReference === 'object' ? journeyStopReference : null)
-        const coLocatedStartId = journeyStop?.tooClose === true ? journeyStartId : null
+        const endpointPOIs = replayJourneyEndpoints(currentJourney, currentPOIList)
+        const {coLocatedStartId} = endpointPOIs
 
         if (shouldAnimatePOIs) {
-            const uniqueNearbyPois = new Map(replayNearbyPois
-                .map(entry => [entry?.poi?.id, entry])
-                .filter(([poiId]) => Boolean(poiId)))
-            const startPOI = currentPOIList?.get?.(journeyStartId)
-                ?? (typeof journeyStartReference === 'object' ? journeyStartReference : null)
+            const hasPreparedUniqueNearbyPOIs = Array.isArray(state.replayUniqueNearbyPOIs)
+            const startPOI = endpointPOIs.startPOI
                 ?? replayNearbyPois.find(entry => entry?.poi?.type === 'start')?.poi
-            if (startPOI?.id) {
-                uniqueNearbyPois.set(startPOI.id, {
-                    poi: startPOI,
-                    projectedAbscissa: 0,
-                })
+            let uniqueNearbyPois = state.replayUniqueNearbyPOIs
+            if (hasPreparedUniqueNearbyPOIs) {
+                poiPerformance.record('replay.uniqueCandidateCacheHit')
             }
-            for (const entry of uniqueNearbyPois.values()) {
+            if (!hasPreparedUniqueNearbyPOIs) {
+                const fallbackUniqueNearbyPOIs = new Map(replayNearbyPois
+                    .map(entry => [entry?.poi?.id, entry])
+                    .filter(([poiId]) => Boolean(poiId)))
+                if (startPOI?.id) {
+                    fallbackUniqueNearbyPOIs.set(startPOI.id, {poi: startPOI, projectedAbscissa: 0})
+                }
+                uniqueNearbyPois = Array.from(fallbackUniqueNearbyPOIs.values())
+            }
+            for (const entry of uniqueNearbyPois) {
                 const poiId = entry?.poi?.id
                 const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId) ?? entry?.poi
                 if (!poiId || !poi) {
@@ -484,15 +527,22 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                 }
 
                 const isEndpoint = poi.type === 'start' || poi.type === 'stop'
-                const projectedDistance = finiteNumber(entry?.projectedAbscissa)
-                const passages = projectedDistance === null
-                    ? []
-                    : [
-                        {key: 'primary', distance: projectedDistance},
-                        ...(poi.type === 'start' && poiId === coLocatedStartId
-                            ? [{key: 'arrival', distance: totalDistance}]
-                            : []),
-                    ]
+                const projectedPassages = Array.isArray(entry?.projectedPassages)
+                    ? entry.projectedPassages
+                    : []
+                // Endpoint flags retain their established primary and arrival rules.
+                const poiPassages = isEndpoint || projectedPassages.length === 0
+                    ? [{key: 'primary', projectedAbscissa: entry?.projectedAbscissa}]
+                    : projectedPassages.map((passage, index) => ({
+                        key: index === 0 ? 'primary' : `repeat-${index}`,
+                        projectedAbscissa: passage?.projectedAbscissa,
+                    }))
+                const passages = poiPassages
+                    .map(passage => ({key: passage.key, distance: finiteNumber(passage.projectedAbscissa)}))
+                    .filter(passage => passage.distance !== null)
+                if (poi.type === 'start' && poiId === coLocatedStartId) {
+                    passages.push({key: 'arrival', distance: totalDistance})
+                }
                 const poiSettings = normalizeJourneyReplayPOISettings(poi.replay)
                 const animateThisPOI = shouldAnimateReplayPOI({
                     basicMode,
@@ -511,7 +561,8 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                             : poiId
                         const appearance = state.replayPOIAppearanceState.get(appearanceKey)
                         if (appearance) {
-                            appearance.insideCrop = false
+                            appearance.insideCropByPassage ??= new Map()
+                            appearance.insideCropByPassage.set(passage.key, false)
                         }
                     }
                     continue
@@ -550,7 +601,16 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                     const nearPassage = startsAtReplayBoundary || inPassageWindow || atTraversalEnd
                     // A wide camera view can contain the whole route. Crop entry must
                     // not open distant POIs before their route-relative approach window.
-                    const projectedCropVisible = replay?.poiCropVisibility?.[poiId] === true
+                    const passageIndex = passage.key.startsWith('repeat-')
+                        ? Number(passage.key.slice('repeat-'.length))
+                        : 0
+                    const passageCropVisibility = passage.key === 'arrival'
+                        ? undefined
+                        : replay?.poiCropPassageVisibility?.[poiId]?.[passageIndex]
+                    const projectedCropVisible = passageCropVisibility === true
+                        || (passageCropVisibility === undefined
+                            && (isEndpoint || projectedPassages.length <= 1)
+                            && replay?.poiCropVisibility?.[poiId] === true)
                     const insideCrop = atEndpointEvent
                         || (nearPassage
                             && (projectedCropVisible || isPOIInsideVideoCrop(mode, poi) !== false))
@@ -558,17 +618,19 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                         ? `${poiId}:endpoint:${passage.key}`
                         : poiId
                     const appearance = state.replayPOIAppearanceState.get(appearanceKey) ?? {
-                        insideCrop: false,
+                        insideCropByPassage: new Map(),
                         startTimes: [],
                     }
+                    appearance.insideCropByPassage ??= new Map()
+                    const wasInsideCrop = appearance.insideCropByPassage.get(passage.key) === true
                     const maximumAppearances = isEndpoint ? 1 : MAX_REPLAY_POI_APPEARANCES
-                    if (insideCrop && !appearance.insideCrop && appearance.startTimes.length < maximumAppearances) {
+                    if (insideCrop && !wasInsideCrop && appearance.startTimes.length < maximumAppearances) {
                         // Keep an early crop entry visible until the marker reaches the POI, then start its display timer.
                         appearance.startTimes.push({
                             displayStartedAt: markerReachedPOI ? currentReplaySeconds : null,
                         })
                     }
-                    appearance.insideCrop = insideCrop
+                    appearance.insideCropByPassage.set(passage.key, insideCrop)
                     state.replayPOIAppearanceState.set(appearanceKey, appearance)
 
                     if (appearance.startTimes.some(startTime => {

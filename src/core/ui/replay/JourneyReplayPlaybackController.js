@@ -140,9 +140,14 @@ export class JourneyReplayPlaybackController {
                     const cropVisible = isPOIInVideoCrop(entry, progress)
                     const id = entry?.poi?.id ?? entry?.id
                     if (id) {
-                        const samples = cropVisibilitySamples.get(id) ?? []
+                        const passageSamples = cropVisibilitySamples.get(id) ?? new Map()
+                        const passageIndex = Number.isInteger(entry?.replayPassageIndex)
+                            ? entry.replayPassageIndex
+                            : 0
+                        const samples = passageSamples.get(passageIndex) ?? []
                         samples.push(cropVisible)
-                        cropVisibilitySamples.set(id, samples)
+                        passageSamples.set(passageIndex, samples)
+                        cropVisibilitySamples.set(id, passageSamples)
                     }
                     return cropVisible === true || cropVisible === false
                         ? cropVisible
@@ -158,12 +163,23 @@ export class JourneyReplayPlaybackController {
         })
         if (replayState) {
             const poiCropVisibility = {}
-            cropVisibilitySamples.forEach((samples, id) => {
-                if (samples.length > 0 && samples.every(value => value === true || value === false)) {
-                    poiCropVisibility[id] = samples.some(Boolean)
+            const poiCropPassageVisibility = {}
+            cropVisibilitySamples.forEach((passages, id) => {
+                const passageVisibility = []
+                const allSamples = []
+                passages.forEach((samples, passageIndex) => {
+                    allSamples.push(...samples)
+                    if (samples.length > 0 && samples.every(value => value === true || value === false)) {
+                        passageVisibility[passageIndex] = samples.some(Boolean)
+                    }
+                })
+                if (allSamples.length > 0 && allSamples.every(value => value === true || value === false)) {
+                    poiCropVisibility[id] = allSamples.some(Boolean)
                 }
+                poiCropPassageVisibility[id] = passageVisibility
             })
             replayState.poiCropVisibility = poiCropVisibility
+            replayState.poiCropPassageVisibility = poiCropPassageVisibility
             replayState.poiPlaybackProfile = {
                 ...this.#playbackProfile,
                 journeySlug: this.#sampler?.journey?.slug ?? null,
