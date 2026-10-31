@@ -231,7 +231,13 @@ export const MapPOIDisplaySettings = memo(({
                             label="Style"
                             label-at-start
                             value={style}
-                            onChange={event => onDisplayValueChange('style', event.target.value)}
+                            onChange={event => {
+                                const nextStyle = event.target.value
+                                onDisplayValueChange('style', nextStyle)
+                                if (nextStyle === 'label') {
+                                    onStyleChange('background', {target: {checked: false}})
+                                }
+                            }}
                         >
                             {POI_DISPLAY_STYLES.map(styleId => (
                                 <WaOption key={styleId} value={styleId}>{POI_DISPLAY_STYLE_LABELS[styleId]}</WaOption>
@@ -242,7 +248,8 @@ export const MapPOIDisplaySettings = memo(({
                                 className="map-poi-style-switch"
                                 size="xs"
                                 label-at-start
-                                checked={background}
+                                checked={style === 'label' ? false : background}
+                                disabled={style === 'label'}
                                 onChange={event => onStyleChange('background', event)}
                             >
                                 {'Background'}

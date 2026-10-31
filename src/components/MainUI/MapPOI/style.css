@@ -415,6 +415,17 @@
     padding-inline: calc(3 * var(--poi-padding));
 }
 
+.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-label {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+
+    & .poi-card-inner-background {
+        display: none;
+    }
+}
+
 .poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-side-accent {
     border: var(--poi-border-width) solid var(--lgs-poi-border-color);
 }
