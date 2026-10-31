@@ -102,7 +102,7 @@ export const createReplayPOIEntityLookup = viewer => {
 
         const owningContainer = POIUtils.getEntityContainer(poi)
         const cached = entries.get(poi.id)
-        if (cached?.parent === poi.parent && cached.owningContainer === owningContainer) {
+        if (cached && cached.parent === poi.parent && cached.owningContainer === owningContainer) {
             entries.delete(poi.id)
             entries.set(poi.id, cached)
             poiPerformance.record('replay.entityLookupCacheHit')

@@ -20,11 +20,14 @@ import nearestPointOnLine from '@turf/nearest-point-on-line'
 
 // Accept small GPS offsets between outbound and return traces of the same road.
 const REPLAY_POI_PASSAGE_DISTANCE_TOLERANCE_METERS = 25
-const REPLAY_POI_DISTANCE_PLATEAU_EPSILON_METERS = 0.01
+const REPLAY_POI_PASSAGE_EXIT_HYSTERESIS_METERS = 5
 const REPLAY_POI_PASSAGE_ABSCISSA_EPSILON_METERS = 1
-/** Find every distinct local route passage near a POI, collapsing adjacent samples. */
+/** Find every separate route encounter near a POI, grouping nearby samples into one passage. */
 const projectPOIPassages = (position, paths, nearest) => {
     const passages = []
+    const nearestRouteDistance = Number.isFinite(nearest?.distance) ? nearest.distance : Number.POSITIVE_INFINITY
+    const encounterDistance = nearestRouteDistance + REPLAY_POI_PASSAGE_DISTANCE_TOLERANCE_METERS
+    const encounterExitDistance = encounterDistance + REPLAY_POI_PASSAGE_EXIT_HYSTERESIS_METERS
     paths.forEach(({segment, samples}) => {
         const distances = samples.map(sample => turfDistance(
             position,
@@ -34,33 +37,22 @@ const projectPOIPassages = (position, paths, nearest) => {
 
         let index = 0
         while (index < distances.length) {
-            const plateauStart = index
-            let plateauEnd = index
-            while (plateauEnd + 1 < distances.length
-                && Math.abs(distances[plateauEnd + 1] - distances[plateauStart])
-                    <= REPLAY_POI_DISTANCE_PLATEAU_EPSILON_METERS) {
-                plateauEnd += 1
+            while (index < distances.length && distances[index] > encounterDistance) {
+                index += 1
+            }
+            if (index >= distances.length) {
+                break
             }
 
-            const distance = distances[plateauStart]
-            const previousDistance = distances[plateauStart - 1] ?? Number.POSITIVE_INFINITY
-            const nextDistance = distances[plateauEnd + 1] ?? Number.POSITIVE_INFINITY
-            const isLocalMinimum = distance <= previousDistance + REPLAY_POI_DISTANCE_PLATEAU_EPSILON_METERS
-                && distance <= nextDistance + REPLAY_POI_DISTANCE_PLATEAU_EPSILON_METERS
-                && (distance < previousDistance - REPLAY_POI_DISTANCE_PLATEAU_EPSILON_METERS
-                    || distance < nextDistance - REPLAY_POI_DISTANCE_PLATEAU_EPSILON_METERS
-                    || plateauStart === 0
-                    || plateauEnd === distances.length - 1)
-            if (!isLocalMinimum) {
-                index = plateauEnd + 1
-                continue
+            const encounterStartIndex = index
+            while (index < distances.length && distances[index] <= encounterExitDistance) {
+                index += 1
             }
-
-            const localStartIndex = Math.max(0, plateauStart - 1)
-            const localEndIndex = Math.min(samples.length - 1, plateauEnd + 1)
+            const encounterEndIndex = index - 1
+            const localStartIndex = Math.max(0, encounterStartIndex - 1)
+            const localEndIndex = Math.min(samples.length - 1, encounterEndIndex + 1)
             const localSamples = samples.slice(localStartIndex, localEndIndex + 1)
             if (localSamples.length < 2) {
-                index = plateauEnd + 1
                 continue
             }
             const localPath = lineString(localSamples.map(sample => [sample.longitude, sample.latitude]))
@@ -73,7 +65,6 @@ const projectPOIPassages = (position, paths, nearest) => {
                 projectedAbscissa: segmentStartDistance + projection.properties.totalDistance,
                 projectedPoint: projection.geometry.coordinates,
             })
-            index = plateauEnd + 1
         }
     })
 

@@ -45,7 +45,7 @@ import {
     shouldDisplayPOIField,
 }                                                   from '@Core/POIDisplaySettings'
 import {
-    normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
+    getJourneyReplayPOIEntry, normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
 import { ELEVATION_UNITS, UnitUtils }               from '@Utils/UnitUtils'
 import { WaIcon, WaTooltip }                       from '@awesome.me/webawesome/dist/react'
@@ -126,9 +126,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
     const pointLatitude = point?.latitude
     const pointLocation = point?.location
     const pointCountryCode = point?.countryCode
-    const replayEntry = Array.isArray(replay.nearbyPois)
-        ? replay.nearbyPois.find(entry => entry?.poi?.id === point?.id)
-        : null
+    const replayEntry = getJourneyReplayPOIEntry(replay.nearbyPois, point?.id)
     const presentation = resolveReplayPOIPresentation(point, {replay})
     const replayActive = presentation.active
     // Read optional settings directly so Valtio subscribes when a field is first added.

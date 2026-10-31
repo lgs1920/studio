@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,8 @@
 
 import {JourneyReplayPathSampler, REPLAY_SCOPE_ALL_TRACKS} from '@Core/ui/replay/JourneyReplayPathSampler'
 import {projectReplayPOIsOnSampler} from '@Core/ui/replay/JourneyReplayPOIProjection'
+import {point} from '@turf/helpers'
+import turfDistance from '@turf/distance'
 import {getFixPathSourceFingerprint} from '@Utils/cesium/fixPathCorrections'
 import {findNearestJourneyProjection} from '@Core/ui/POIManager'
 import {afterEach, describe, expect, it, vi} from 'vitest'
@@ -61,5 +63,47 @@ describe('Replay POI trigger projection', () => {
         expect(entry.projectedAbscissa / sampler.totalDistance).toBeCloseTo(0.75, 8)
         expect(projectReplayPOIsOnSampler([], sampler)).toEqual([])
         expect(projectReplayPOIsOnSampler([{poi}], {samples: [], segments: []})).toEqual([])
+    })
+
+    it('keeps every separated visit while grouping nearby noisy samples into one passage', () => {
+        const coordinates = [
+            [0, 0],
+            [0.0094, 0],
+            [0.00985, 0],
+            [0.01005, 0],
+            [0.00995, 0],
+            [0.01004, 0],
+            [0.0105, 0],
+            [0.02, 0],
+            [0.0105, 0],
+            [0.01004, 0],
+            [0.00995, 0],
+            [0.01005, 0],
+            [0.00985, 0],
+            [0.0094, 0],
+            [0, 0],
+        ]
+        let distanceFromStart = 0
+        const samples = coordinates.map(([longitude, latitude], index) => {
+            if (index > 0) {
+                distanceFromStart += turfDistance(
+                    point(coordinates[index - 1]),
+                    point([longitude, latitude]),
+                    {units: 'meters'},
+                )
+            }
+            return {longitude, latitude, distanceFromStart}
+        })
+        const sampler = {
+            samples,
+            segments: [{startIndex: 0, endIndex: samples.length - 1, startDistance: 0}],
+        }
+        const [entry] = projectReplayPOIsOnSampler([{
+            poi: {id: 'poi-b', longitude: 0.01, latitude: 0},
+        }], sampler)
+
+        expect(entry.projectedPassages).toHaveLength(2)
+        expect(entry.projectedPassages[0].projectedAbscissa)
+            .toBeLessThan(entry.projectedPassages[1].projectedAbscissa)
     })
 })

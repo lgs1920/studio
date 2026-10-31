@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-28
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -89,6 +89,22 @@ describe('Basic Replay POI speed profile', () => {
         expect(profile.playbackDurationMillis).toBeGreaterThan(14000)
         expect(profile.playbackDurationMillis).toBeLessThan(14200)
         expect(profile.segments.filter(segment => segment.poiCrawl)).toHaveLength(64)
+    })
+
+    it('adds a crawl window for every projected passage of the same POI in reverse playback', () => {
+        const repeatedPoi = poiEntry('repeated-poi', 200)
+        repeatedPoi.projectedPassages = [200, 500, 800].map(projectedAbscissa => ({projectedAbscissa}))
+        const profile = createReplayPOISpeedProfile({
+            entries: [repeatedPoi],
+            totalDistance: 1000,
+            replayDurationMillis: 30000,
+            direction: -1,
+            basicSettings,
+            enabled: true,
+        })
+
+        expect(profile.direction).toBe(-1)
+        expect(profile.segments.filter(segment => segment.poiCrawl)).toHaveLength(96)
     })
 
     it('slows down for the animated POI when a hidden POI overlaps it', () => {

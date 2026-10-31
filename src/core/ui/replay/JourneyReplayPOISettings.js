@@ -15,12 +15,57 @@
  ******************************************************************************/
 
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
+import {poiPerformance} from '@Core/ui/POIPerformance'
 
 export const DEFAULT_REPLAY_POI_DISPLAY_DURATION_SECONDS = 3
 export const DEFAULT_REPLAY_POI_ANIMATION_DURATION_SECONDS = 2
+/** Upper bound used to index Replay POI presentation windows. */
+export const MAX_REPLAY_POI_DISPLAY_DURATION_SECONDS = 60
+// Replay store writers replace these arrays when membership changes; do not mutate them in place.
+const nearbyPOIEntryIndexes = new WeakMap()
+const replayAnimatedPOIIndexes = new WeakMap()
 /** Keep enabled endpoint POI animations on screen for a short framing pause. */
 export const REPLAY_ENDPOINT_POI_PAUSE_MILLIS = 1000
 export const REPLAY_POI_VISIBILITY_MODES = Object.freeze(['yes', 'no', 'user'])
+
+/** Find a POI entry through an index cached for this Valtio snapshot array. */
+export const getJourneyReplayPOIEntry = (nearbyPois, poiId) => {
+    if (!Array.isArray(nearbyPois) || !poiId) {
+        return null
+    }
+    poiPerformance.record('replay.nearbyEntryLookups')
+
+    let entriesByPOIId = nearbyPOIEntryIndexes.get(nearbyPois)
+    if (!entriesByPOIId) {
+        poiPerformance.record('replay.nearbyEntryIndexBuilds')
+        entriesByPOIId = new Map()
+        for (const entry of nearbyPois) {
+            const entryPOIId = entry?.poi?.id
+            if (entryPOIId && !entriesByPOIId.has(entryPOIId)) {
+                entriesByPOIId.set(entryPOIId, entry)
+            }
+        }
+        nearbyPOIEntryIndexes.set(nearbyPois, entriesByPOIId)
+    }
+
+    return entriesByPOIId.get(poiId) ?? null
+}
+
+/** Check animated membership with a Set cached by Replay snapshot array identity. */
+const isReplayPOIInAnimatedSnapshot = (animatedPOIIds, poiId) => {
+    if (!Array.isArray(animatedPOIIds) || !poiId) {
+        return false
+    }
+    poiPerformance.record('replay.animatedPOILookups')
+    let animatedPOIIdSet = replayAnimatedPOIIndexes.get(animatedPOIIds)
+    if (!animatedPOIIdSet) {
+        poiPerformance.record('replay.animatedPOIIndexBuilds')
+        animatedPOIIdSet = new Set(animatedPOIIds)
+        replayAnimatedPOIIndexes.set(animatedPOIIds, animatedPOIIdSet)
+    }
+
+    return animatedPOIIdSet.has(poiId)
+}
 
 /** Let a POI-level opt-out override Replay-wide animation switches. */
 export const shouldAnimateReplayPOI = (behavior, settings) => {
@@ -109,7 +154,7 @@ export const normalizeJourneyReplayPOISettings = (settings = {}) => {
             clamp(
                 finiteNumber(settings?.displayDurationSeconds) ?? defaults.displayDurationSeconds,
                 0,
-                60,
+                MAX_REPLAY_POI_DISPLAY_DURATION_SECONDS,
             ),
         ),
         visible:  settings?.visible !== false,
@@ -201,7 +246,7 @@ export const resolveReplayPOIPresentation = (poi, {
     const active = isReplayPOIPresentationActive(replay)
     const endpoint = isReplayPOIEndpoint(poi)
     const animationActive = active && (allowReplayAnimation
-        || replay?.animatedPOIIds?.includes(poi?.id) === true)
+        || isReplayPOIInAnimatedSnapshot(replay?.animatedPOIIds, poi?.id))
     const basicMode = isJourneyReplayBasicMode({settings, replay})
     const behavior = normalizeReplayPOIBehavior(settings?.basic)
     const forceShow = active && basicMode && !endpoint && behavior.poiVisibilityMode === 'yes'

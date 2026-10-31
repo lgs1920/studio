@@ -63,6 +63,7 @@ import {
 import { replayVideoTraceDebug }                                                           from './ReplayVideoTraceDebug'
 import {
     isReplayPOIAnimationActiveAtProgress,
+    MAX_REPLAY_POI_DISPLAY_DURATION_SECONDS,
     normalizeJourneyReplayPOISettings,
     shouldAnimateReplayPOI,
 }                                                                                          from './JourneyReplayPOISettings'
@@ -146,6 +147,71 @@ const replayJourneyEndpoints = (journey, poiList) => {
         stopPOI,
         coLocatedStartId: stopPOI?.tooClose === true ? journeyStartId : null,
     }
+}
+
+/** Prepare stable Replay passage distances and normalized progress for one POI. */
+const prepareReplayPOIPassages = (entry, totalDistance, isEndpoint, includeArrival = false) => {
+    const projectedPassages = Array.isArray(entry?.projectedPassages) ? entry.projectedPassages : []
+    const distances = isEndpoint || projectedPassages.length === 0
+        ? [{key: 'primary', index: 0, distance: finiteNumber(entry?.projectedAbscissa)}]
+        : projectedPassages.map((passage, index) => ({
+            key: index === 0 ? 'primary' : `repeat-${index}`,
+            index,
+            distance: finiteNumber(passage?.projectedAbscissa),
+        }))
+    const preparedPassages = distances
+        .filter(passage => passage.distance !== null)
+        .map(passage => ({
+            ...passage,
+            progress: totalDistance > 0 ? Math.max(0, Math.min(1, passage.distance / totalDistance)) : 0,
+        }))
+
+    if (includeArrival && totalDistance > 0) {
+        preparedPassages.push({key: 'arrival', index: null, distance: totalDistance, progress: 1})
+    }
+
+    return preparedPassages
+}
+
+/** Find the first passage index whose normalized route progress is in range. */
+const lowerBoundReplayPOIPassageProgress = (passages, minimumProgress) => {
+    let lower = 0
+    let upper = passages.length
+    while (lower < upper) {
+        const middle = Math.floor((lower + upper) / 2)
+        if (passages[middle].progress < minimumProgress) {
+            lower = middle + 1
+        }
+        else {
+            upper = middle
+        }
+    }
+    return lower
+}
+
+/** Select nearby presentation candidates and currently open POIs for one Replay sample. */
+const replayPOICandidatesForProgress = (state, progress, replayDurationSeconds, fallbackEntries) => {
+    const entriesById = state.replayUniqueNearbyPOIById
+    const passageIndex = state.replayPOIPassageProgressIndex
+    if (!(entriesById instanceof Map) || !Array.isArray(passageIndex)) {
+        return fallbackEntries
+    }
+
+    const progressRadius = Math.min(1, MAX_REPLAY_POI_DISPLAY_DURATION_SECONDS / replayDurationSeconds + 1e-9)
+    const normalizedProgress = Math.max(0, Math.min(1, progress))
+    const minimumProgress = Math.max(0, normalizedProgress - progressRadius)
+    const maximumProgress = Math.min(1, normalizedProgress + progressRadius)
+    const firstPassageIndex = lowerBoundReplayPOIPassageProgress(passageIndex, minimumProgress)
+    const candidateIds = new Set(state.replayPoiTriggered)
+    for (let index = firstPassageIndex; index < passageIndex.length; index += 1) {
+        const passage = passageIndex[index]
+        if (passage.progress > maximumProgress) {
+            break
+        }
+        candidateIds.add(passage.poiId)
+    }
+
+    return Array.from(candidateIds, poiId => entriesById.get(poiId)).filter(Boolean)
 }
 
 /**
@@ -287,6 +353,9 @@ export const restoreNearbyPOIsAfterPlayback = async (mode, ) => {
         publishAnimatedPOIs(state.replayPoiTriggered)
         state.sortedNearbyPois = []
         state.replayUniqueNearbyPOIs = null
+        state.replayUniqueNearbyPOIById = null
+        state.replayPOIPassageProgressIndex = null
+        state.replayStartPOI = null
 
         await Promise.all(restoreEntries.map(([poiId, expanded]) => call.updatePOIExpandedState(poiId, expanded === true)))
     }
@@ -371,13 +440,35 @@ export const prepareNearbyPOIsForPlayback = async mode => {
         )
         const startPOI = endpointPOIs.startPOI
             ?? sortedNearbyPois.find(entry => entry?.poi?.type === 'start')?.poi
+        state.replayStartPOI = startPOI ?? null
         if (startPOI?.id) {
             uniqueNearbyPOIs.set(startPOI.id, {
                 poi: startPOI,
                 projectedAbscissa: 0,
             })
         }
-        state.replayUniqueNearbyPOIs = Array.from(uniqueNearbyPOIs.values())
+        const totalDistance = finiteNumber(state.sampler?.totalDistance) ?? 0
+        state.replayUniqueNearbyPOIs = Array.from(uniqueNearbyPOIs.values()).map(entry => {
+            const poi = entry?.poi
+            return {
+                ...entry,
+                replayPassages: prepareReplayPOIPassages(
+                    entry,
+                    totalDistance,
+                    ['start', 'stop'].includes(poi?.type),
+                    poi?.type === 'start' && poi?.id === endpointPOIs.coLocatedStartId,
+                ),
+            }
+        })
+        state.replayUniqueNearbyPOIById = new Map(state.replayUniqueNearbyPOIs
+            .filter(entry => entry?.poi?.id)
+            .map(entry => [entry.poi.id, entry]))
+        state.replayPOIPassageProgressIndex = state.replayUniqueNearbyPOIs
+            .flatMap(entry => (entry?.replayPassages ?? []).map(passage => ({
+                poiId: entry.poi.id,
+                progress: passage.progress,
+            })))
+            .sort((left, right) => left.progress - right.progress)
         state.replayPOIAppearanceState.clear()
         state.lastReplayPOIProgress = null
 
@@ -495,11 +586,12 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
         const currentPOIList = globalThis.lgs?.stores?.main?.components?.pois?.list
         const endpointPOIs = replayJourneyEndpoints(currentJourney, currentPOIList)
         const {coLocatedStartId} = endpointPOIs
+        const hasPreparedUniqueNearbyPOIs = Array.isArray(state.replayUniqueNearbyPOIs)
+        const startPOI = endpointPOIs.startPOI
+            ?? state.replayStartPOI
+            ?? (!hasPreparedUniqueNearbyPOIs ? replayNearbyPois.find(entry => entry?.poi?.type === 'start')?.poi : null)
 
         if (shouldAnimatePOIs) {
-            const hasPreparedUniqueNearbyPOIs = Array.isArray(state.replayUniqueNearbyPOIs)
-            const startPOI = endpointPOIs.startPOI
-                ?? replayNearbyPois.find(entry => entry?.poi?.type === 'start')?.poi
             let uniqueNearbyPois = state.replayUniqueNearbyPOIs
             if (hasPreparedUniqueNearbyPOIs) {
                 poiPerformance.record('replay.uniqueCandidateCacheHit')
@@ -513,6 +605,13 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                 }
                 uniqueNearbyPois = Array.from(fallbackUniqueNearbyPOIs.values())
             }
+            uniqueNearbyPois = replayPOICandidatesForProgress(
+                state,
+                progress,
+                replayDurationSeconds,
+                uniqueNearbyPois,
+            )
+            poiPerformance.record('replay.syncActiveCandidates', uniqueNearbyPois.length)
             for (const entry of uniqueNearbyPois) {
                 const poiId = entry?.poi?.id
                 const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId) ?? entry?.poi
@@ -525,18 +624,14 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                     ? entry.projectedPassages
                     : []
                 // Endpoint flags retain their established primary and arrival rules.
-                const poiPassages = isEndpoint || projectedPassages.length === 0
-                    ? [{key: 'primary', projectedAbscissa: entry?.projectedAbscissa}]
-                    : projectedPassages.map((passage, index) => ({
-                        key: index === 0 ? 'primary' : `repeat-${index}`,
-                        projectedAbscissa: passage?.projectedAbscissa,
-                    }))
-                const passages = poiPassages
-                    .map(passage => ({key: passage.key, distance: finiteNumber(passage.projectedAbscissa)}))
-                    .filter(passage => passage.distance !== null)
-                if (poi.type === 'start' && poiId === coLocatedStartId) {
-                    passages.push({key: 'arrival', distance: totalDistance})
-                }
+                const passages = Array.isArray(entry?.replayPassages)
+                    ? entry.replayPassages
+                    : prepareReplayPOIPassages(
+                        entry,
+                        totalDistance,
+                        isEndpoint,
+                        poi.type === 'start' && poiId === coLocatedStartId,
+                    )
                 const poiSettings = normalizeJourneyReplayPOISettings(poi.replay)
                 const animateThisPOI = shouldAnimateReplayPOI({
                     basicMode,
@@ -575,8 +670,7 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                         expandedIds.add(poiId)
                         continue
                     }
-                    const passageProgress = Math.max(0, Math.min(1, passage.distance / totalDistance))
-                    const traversalTargetProgress = direction < 0 ? 1 - passageProgress : passageProgress
+                    const traversalTargetProgress = direction < 0 ? 1 - passage.progress : passage.progress
                     const markerReachedPOI = traversalProgress >= traversalTargetProgress
                     const inPassageWindow = isReplayPOIAnimationActiveAtProgress({
                         progress,
@@ -595,9 +689,7 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                     const nearPassage = startsAtReplayBoundary || inPassageWindow || atTraversalEnd
                     // A wide camera view can contain the whole route. Crop entry must
                     // not open distant POIs before their route-relative approach window.
-                    const passageIndex = passage.key.startsWith('repeat-')
-                        ? Number(passage.key.slice('repeat-'.length))
-                        : 0
+                    const passageIndex = passage.index ?? 0
                     const passageCropVisibility = passage.key === 'arrival'
                         ? undefined
                         : replay?.poiCropPassageVisibility?.[poiId]?.[passageIndex]
@@ -613,33 +705,33 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                         : poiId
                     const appearance = state.replayPOIAppearanceState.get(appearanceKey) ?? {
                         insideCropByPassage: new Map(),
-                        startTimes: [],
+                        startTimesByPassage: new Map(),
                     }
                     appearance.insideCropByPassage ??= new Map()
+                    appearance.startTimesByPassage ??= new Map(
+                        (appearance.startTimes ?? []).map((startTime, index) => [
+                            startTime.passageKey ?? (index === 0 ? 'primary' : `legacy-${index}`),
+                            startTime,
+                        ]),
+                    )
+                    delete appearance.startTimes
                     const wasInsideCrop = appearance.insideCropByPassage.get(passage.key) === true
-                    const passageAlreadyStarted = appearance.startTimes.some(startTime => startTime.passageKey === passage.key)
-                    if (insideCrop && !wasInsideCrop && !passageAlreadyStarted) {
+                    let passageStartTime = appearance.startTimesByPassage.get(passage.key)
+                    if (insideCrop && !wasInsideCrop && !passageStartTime) {
                         // Keep an early crop entry visible until the marker reaches the POI, then start its display timer.
-                        appearance.startTimes.push({
-                            passageKey: passage.key,
+                        passageStartTime = {
                             displayStartedAt: markerReachedPOI ? currentReplaySeconds : null,
-                        })
+                        }
+                        appearance.startTimesByPassage.set(passage.key, passageStartTime)
                     }
                     appearance.insideCropByPassage.set(passage.key, insideCrop)
                     state.replayPOIAppearanceState.set(appearanceKey, appearance)
 
-                    if (appearance.startTimes.some(startTime => {
-                        if (startTime.passageKey !== passage.key) {
-                            return false
-                        }
-
-                        if (startTime.displayStartedAt === null && markerReachedPOI) {
-                            startTime.displayStartedAt = currentReplaySeconds
-                        }
-
-                        return startTime.displayStartedAt === null
-                            || currentReplaySeconds < startTime.displayStartedAt + displayDurationSeconds
-                    })) {
+                    if (passageStartTime?.displayStartedAt === null && markerReachedPOI) {
+                        passageStartTime.displayStartedAt = currentReplaySeconds
+                    }
+                    if (passageStartTime && (passageStartTime.displayStartedAt === null
+                        || currentReplaySeconds < passageStartTime.displayStartedAt + displayDurationSeconds)) {
                         expandedIds.add(poiId)
                     }
                 }

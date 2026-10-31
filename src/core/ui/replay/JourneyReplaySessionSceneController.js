@@ -255,6 +255,9 @@ export const dispose = (mode, ) => {
         state.replayPOIEntityLookup?.dispose?.()
         state.replayPOIEntityLookup = null
         state.replayUniqueNearbyPOIs = null
+        state.replayUniqueNearbyPOIById = null
+        state.replayPOIPassageProgressIndex = null
+        state.replayStartPOI = null
         disposeReplaySceneFrameQualifier(mode)
         call.stop({emit: false})
         const preparationExitCameraState = state.preparationExitCameraState

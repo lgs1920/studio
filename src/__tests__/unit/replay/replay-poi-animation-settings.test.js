@@ -15,12 +15,14 @@
  ******************************************************************************/
 
 import {
+    getJourneyReplayPOIEntry,
     isReplayPOIAnimationActiveAtProgress,
     isReplayPOIEndpoint,
     normalizeReplayPOIBehavior,
     resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
 import {afterEach, describe, expect, it, vi} from 'vitest'
+import {proxy, snapshot} from 'valtio'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {
     prepareNearbyPOIsForPlayback,
@@ -32,6 +34,57 @@ import {applyJourneyReplayPOIVisibility} from '@Core/ui/replay/JourneyReplayVisi
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Replay POI animation settings', () => {
+    it('indexes nearby entries once per immutable snapshot and retains first-match semantics', () => {
+        const store = proxy({nearbyPois: [
+            {poi: {id: 'poi-1'}, source: 'first'},
+            {poi: {id: 'poi-1'}, source: 'duplicate'},
+            {poi: {id: 'poi-2'}},
+        ]})
+        const nearbyPois = snapshot(store).nearbyPois
+        const firstEntry = nearbyPois[0]
+        let indexIterations = 0
+        const indexedNearbyPois = new Proxy(nearbyPois, {
+            get: (target, property, receiver) => {
+                if (property === Symbol.iterator) {
+                    indexIterations += 1
+                }
+                return Reflect.get(target, property, receiver)
+            },
+        })
+
+        expect(getJourneyReplayPOIEntry(indexedNearbyPois, 'poi-1')).toBe(firstEntry)
+        expect(getJourneyReplayPOIEntry(indexedNearbyPois, 'poi-2')).toBe(nearbyPois[2])
+        expect(getJourneyReplayPOIEntry(indexedNearbyPois, 'missing')).toBeNull()
+        expect(getJourneyReplayPOIEntry(indexedNearbyPois, null)).toBeNull()
+        expect(indexIterations).toBe(1)
+
+        store.nearbyPois = [{poi: {id: 'poi-1'}, source: 'replacement'}]
+        const nextSnapshot = snapshot(store).nearbyPois
+        const replacement = nextSnapshot[0]
+        expect(nextSnapshot).not.toBe(nearbyPois)
+        expect(getJourneyReplayPOIEntry(nextSnapshot, 'poi-1')).toBe(replacement)
+    })
+
+    it('resolves animated membership from the immutable per-POI snapshot index', () => {
+        const replayStore = proxy({active: true, userMode: 'expert', animatedPOIIds: ['poi-1']})
+        const firstSnapshot = snapshot(replayStore)
+        expect(resolveReplayPOIPresentation(
+            {id: 'poi-1', visible: true}, {replay: firstSnapshot},
+        ).animationActive).toBe(true)
+        expect(resolveReplayPOIPresentation(
+            {id: 'poi-2', visible: true}, {replay: firstSnapshot},
+        ).animationActive).toBe(false)
+
+        replayStore.animatedPOIIds = ['poi-2']
+        const nextSnapshot = snapshot(replayStore)
+        expect(resolveReplayPOIPresentation(
+            {id: 'poi-1', visible: true}, {replay: nextSnapshot},
+        ).animationActive).toBe(false)
+        expect(resolveReplayPOIPresentation(
+            {id: 'poi-2', visible: true}, {replay: nextSnapshot},
+        ).animationActive).toBe(true)
+    })
+
     it('defaults Basic Replay POIs to user visibility, no animation, and a two-second duration', () => {
         expect(normalizeReplayPOIBehavior()).toEqual({
             poiVisibilityMode: 'user',
@@ -70,6 +123,65 @@ describe('Replay POI animation settings', () => {
         expect(isReplayPOIAnimationActiveAtProgress({...options, progress: 0.5})).toBe(true)
         expect(isReplayPOIAnimationActiveAtProgress({...options, progress: 0.599})).toBe(true)
         expect(isReplayPOIAnimationActiveAtProgress({...options, progress: 0.6})).toBe(false)
+    })
+
+    it('indexes long Replay windows and still updates an already-open POI after it leaves the index range', async () => {
+        const passageProgresses = [0.1, 0.5, 0.9]
+        const pois = passageProgresses.map((progress, index) => ({
+            id: `poi-${index}`,
+            type: 'poi',
+            expanded: false,
+            replay: {visible: true, animated: true, displayDurationSeconds: 2},
+        }))
+        const entries = pois.map((poi, index) => ({
+            poi,
+            projectedAbscissa: (index + 1) * 100,
+            replayPassages: [{
+                key: 'primary',
+                index: 0,
+                distance: passageProgresses[index] * 1000,
+                progress: passageProgresses[index],
+            }],
+        }))
+        const poiList = new Map(pois.map(poi => [poi.id, poi]))
+        const updatePOIExpandedState = vi.fn(async (poiId, expanded) => {
+            poiList.get(poiId).expanded = expanded
+        })
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                sortedNearbyPois: entries,
+                replayUniqueNearbyPOIs: entries,
+                replayUniqueNearbyPOIById: new Map(entries.map(entry => [entry.poi.id, entry])),
+                replayPOIPassageProgressIndex: entries.map(entry => ({
+                    poiId: entry.poi.id,
+                    progress: entry.replayPassages[0].progress,
+                })),
+                replayPoiTriggered: new Set(),
+                replayPOIAppearanceState: new Map(),
+                sampler: {journey: {tracks: new Map()}, totalDistance: 1000},
+                controller: {duration: 1200, direction: 1},
+                lastReplayPOIProgress: null,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {updatePOIExpandedState},
+        }
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {userMode: 'basic', basic: {
+                poiVisibilityMode: 'yes',
+                animatePoisDuringJourneyReplay: true,
+                poiAnimationDurationSeconds: 2,
+            }}}},
+            stores: {
+                replay: {userMode: 'basic', basicPreparationActive: true, totalDistance: 1000},
+                main: {theJourney: {tracks: new Map()}, components: {pois: {list: poiList}}},
+            },
+        })
+
+        await syncNearbyPOIsForSample(mode, {progress: 0.5, distanceFromStart: 500})
+        expect(pois.map(poi => poi.expanded)).toEqual([false, true, false])
+
+        await syncNearbyPOIsForSample(mode, {progress: 0.56, distanceFromStart: 560})
+        expect(pois.map(poi => poi.expanded)).toEqual([false, false, false])
+        expect(updatePOIExpandedState).toHaveBeenCalledWith(pois[1].id, false)
     })
 
     it('keeps endpoint visibility user-controlled while allowing authorized animation', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -163,7 +163,7 @@ describe('JourneyReplaySessionSceneController', () => {
             setContinuousRender: vi.fn(),
             startReplayCameraAltitudeTracking: vi.fn(),
             smoothedGuide: vi.fn(() => null),
-            syncNearbyPOIsForSample: vi.fn(),
+            syncNearbyPOIsForSample: vi.fn(async () => {}),
         })
         state.deferStartCameraRecenter = true
         globalThis.lgs = {
