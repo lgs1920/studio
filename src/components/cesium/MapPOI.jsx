@@ -18,6 +18,7 @@ import { MapPOIContent }                   from '@Components/MainUI/MapPOI/MapPO
 import {
     normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
+import {poiPerformance} from '@Core/ui/POIPerformance'
 import {
     clearPOIHoverPreview, clearPOIHoverTitlePreview, getPOIHoverPreview, getPOIHoverTitle,
     isPOIHoverPreviewTransitionActive, setPOIHoverPreviewPosition, subscribeToPOIHoverPreview,
@@ -62,6 +63,8 @@ export const MapPOI = memo(({point}) => {
     const presentation = resolveReplayPOIPresentation(thePOI, {replay})
     const replayActive = presentation.active
     const replaySettings = normalizeJourneyReplayPOISettings(thePOI?.replay)
+    const shouldProjectForHover = presentation.visible
+        && (hoverPreviewActive || (hoverTitleActive && !thePOI?.expanded))
 
     useEffect(() => {
         if (hoverPreviewActive && ((thePOI?.expanded && !isPOIHoverPreviewTransitionActive(thePOI.id))
@@ -75,14 +78,22 @@ export const MapPOI = memo(({point}) => {
         }
     }, [hoverTitleActive, presentation.visible, thePOI?.expanded, thePOI?.id, tooFar])
     useEffect(() => {
+        if (!shouldProjectForHover) {
+            setPixels(null)
+            return undefined
+        }
+
         let cancelled = false
         let rafId = null
 
         const tick = async () => {
+            const tickStartedAt = poiPerformance.start('mapPOI.projectionTick')
+            poiPerformance.record('mapPOI.projectionTickCount')
             if (cancelled || !hasPOI || !hasCoordinates) {
                 setPixels(null)
                 clearPOIHoverPreview(point)
                 clearPOIHoverTitlePreview(point)
+                poiPerformance.end('mapPOI.projectionTick', tickStartedAt)
                 return
             }
 
@@ -91,11 +102,13 @@ export const MapPOI = memo(({point}) => {
                 setPixels(null)
                 clearPOIHoverPreview(point)
                 clearPOIHoverTitlePreview(point)
+                poiPerformance.end('mapPOI.projectionTick', tickStartedAt)
                 return
             }
 
             const coords = await __.ui.sceneManager.degreesToPixelsCoordinates(currentPOI, true)
             if (cancelled) {
+                poiPerformance.end('mapPOI.projectionTick', tickStartedAt)
                 return
             }
 
@@ -112,6 +125,7 @@ export const MapPOI = memo(({point}) => {
             const scaleInfo = POIUtils.adaptScaleToDistance(currentPOI)
             setScale(scaleInfo.scale)
             setTooFar(scaleInfo.tooFar)
+            poiPerformance.end('mapPOI.projectionTick', tickStartedAt)
 
             rafId = __.requestAnimationFrame(tick)
         }
@@ -137,6 +151,7 @@ export const MapPOI = memo(({point}) => {
                   replayActive,
                   replayEntry?.poi?.id,
                   replaySettings.visible,
+                  shouldProjectForHover,
                   list,
                   point,
               ])

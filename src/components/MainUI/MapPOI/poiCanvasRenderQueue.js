@@ -19,7 +19,7 @@
  * pending work for a POI when a newer render request arrives.
  *
  * @param {number} maxConcurrent - Maximum number of captures running at once.
- * @returns {(key: unknown, render: () => Promise<void>, options?: {priority?: boolean, allowOverflow?: boolean}) => void}
+ * @returns {Function} Queue callable with a cancel(key) method for pending work.
  */
 export const createPOICanvasRenderQueue = (maxConcurrent = 2) => {
     const pendingRenders = new Map()
@@ -73,6 +73,12 @@ export const createPOICanvasRenderQueue = (maxConcurrent = 2) => {
                 .then(nextQueuedRender.render)
                 .catch(error => console.error('Queued POI canvas render failed:', error))
                 .finally(() => {
+                    try {
+                        nextQueuedRender.onSettled?.()
+                    }
+                    catch (error) {
+                        console.error('Queued POI canvas settlement failed:', error)
+                    }
                     activeRenders--
                     activeKeys.delete(nextKey)
                     if (isOverflowRender) {
@@ -83,7 +89,13 @@ export const createPOICanvasRenderQueue = (maxConcurrent = 2) => {
         }
     }
 
-    return (key, render, {priority = false, allowOverflow = false} = {}) => {
+    const enqueue = (key, render, {
+        priority = false,
+        allowOverflow = false,
+        onSettled = null,
+        onSuperseded = null,
+        onCancelled = null,
+    } = {}) => {
         if (key === undefined || key === null || typeof render !== 'function') {
             return
         }
@@ -91,9 +103,17 @@ export const createPOICanvasRenderQueue = (maxConcurrent = 2) => {
         const previousRender = priorityRenders.get(key) ?? pendingRenders.get(key)
         const isPriority = priority || previousRender?.priority === true
         const canOverflow = allowOverflow || previousRender?.allowOverflow === true
+        if (previousRender) {
+            try {
+                previousRender.onSuperseded?.()
+            }
+            catch (error) {
+                console.error('Queued POI canvas supersession callback failed:', error)
+            }
+        }
         pendingRenders.delete(key)
         priorityRenders.delete(key)
-        const queuedRender = {render, priority: isPriority, allowOverflow: canOverflow}
+        const queuedRender = {render, priority: isPriority, allowOverflow: canOverflow, onSettled, onSuperseded, onCancelled}
         if (isPriority) {
             priorityRenders.set(key, queuedRender)
         }
@@ -102,4 +122,23 @@ export const createPOICanvasRenderQueue = (maxConcurrent = 2) => {
         }
         runPendingRenders()
     }
+
+    enqueue.cancel = key => {
+        const queuedRender = priorityRenders.get(key) ?? pendingRenders.get(key)
+        if (!queuedRender) {
+            return false
+        }
+        priorityRenders.delete(key)
+        pendingRenders.delete(key)
+        try {
+            queuedRender.onCancelled?.()
+        }
+        catch (error) {
+            console.error('Queued POI canvas cancellation callback failed:', error)
+        }
+        runPendingRenders()
+        return true
+    }
+
+    return enqueue
 }

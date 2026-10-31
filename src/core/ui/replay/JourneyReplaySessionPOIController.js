@@ -67,6 +67,7 @@ import {
     shouldAnimateReplayPOI,
 }                                                                                          from './JourneyReplayPOISettings'
 import {projectReplayPOIsOnSampler} from './JourneyReplayPOIProjection'
+import {poiPerformance} from '@Core/ui/POIPerformance'
 
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
@@ -131,6 +132,7 @@ const MAX_REPLAY_POI_APPEARANCES = 2
  * @returns {boolean|null} Crop visibility, or null when no render target is available.
  */
 export const isPOIInsideVideoCrop = (mode, poi) => {
+    poiPerformance.record('replay.cropChecks')
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     const viewer = call.cesiumViewer?.()
     const scene = call.cesiumScene?.() ?? viewer?.scene
@@ -401,11 +403,13 @@ export const openNearbyPOIForPlayback = async (mode, poiId) => {
  * @returns {Promise<void>} Completion of POI presentation updates.
  */
 export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStart = false, phase = null} = {}) => {
+    const performanceStartedAt = poiPerformance.start('replay.syncNearbyPOIs')
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         state.replayPOIAppearanceState ??= new Map()
         const progress = finiteNumber(sample?.progress)
         if (progress === null) {
+            poiPerformance.end('replay.syncNearbyPOIs', performanceStartedAt)
             return
         }
 
@@ -413,6 +417,7 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
             ? state.sortedNearbyPois
             : replayStore()?.nearbyPois ?? []
         const replayNearbyPois = Array.isArray(nearbyPois) ? nearbyPois : []
+        poiPerformance.record('replay.syncCandidates', replayNearbyPois.length)
         const {
             basicMode,
             poiVisibilityMode,
@@ -610,6 +615,7 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
         if (collapsedIds.length > 0 || newlyExpandedIds.length > 0) {
             call.applyJourneyReplayPOIVisibility?.()
         }
+        poiPerformance.end('replay.syncNearbyPOIs', performanceStartedAt)
     }
 
     /**

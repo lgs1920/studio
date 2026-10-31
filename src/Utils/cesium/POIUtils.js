@@ -21,6 +21,7 @@ import {
     isReplayPOIPresentationActive,
     resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
+import {poiPerformance} from '@Core/ui/POIPerformance'
 
 import { Canvg, Property } from 'canvg'
 import {
@@ -96,6 +97,28 @@ export class POIUtils {
     static requestRender = () => {
         const scene = globalThis.lgs?.viewer?.scene ?? globalThis.lgs?.scene
         scene?.requestRender?.()
+    }
+
+    /** Update only an existing POI entity's geographic position. */
+    static updatePosition = poi => {
+        if (!poi?.id || !globalThis.lgs?.viewer
+            || !Number.isFinite(poi.longitude) || !Number.isFinite(poi.latitude)) {
+            return false
+        }
+
+        const entity = POIUtils.getEntityContainer(poi)?.getById(poi.id)
+        if (!entity) {
+            return false
+        }
+
+        entity.position = Cartesian3.fromDegrees(
+            poi.longitude,
+            poi.latitude,
+            poi.simulatedHeight ?? poi.height,
+        )
+        poiPerformance.record('cesium.positionOnlyUpdate')
+        POIUtils.requestRender()
+        return true
     }
 
 
@@ -259,6 +282,7 @@ export class POIUtils {
      *     found.
      */
     static draw = async (poi, parentVisibility = true) => {
+        const drawStartedAt = poiPerformance.start('cesium.draw')
         // Default dimensions if poi.image is undefined
         const width = poi.image?.width ?? 32
         const height = poi.image?.height ?? 32
@@ -298,7 +322,8 @@ export class POIUtils {
         // Get entity container
         const container = POIUtils.getEntityContainer(poi)
         if (!container) {
-            return null;
+            poiPerformance.end('cesium.draw', drawStartedAt)
+            return null
         }
 
         POIUtils.removeEntityFromOtherContainers(poi, container)
@@ -306,6 +331,10 @@ export class POIUtils {
         // Check for existing entity
         const entity = container.getById(poi.id)
         if (entity) {
+            poiPerformance.record('cesium.entityUpdated')
+            if (entity.billboard?.image !== billboard.image) {
+                poiPerformance.record('cesium.billboardImageReplaced')
+            }
             entity.show = options.show
             entity.position = options.position
             // Update billboard properties
@@ -329,10 +358,12 @@ export class POIUtils {
         }
         else {
             // Create new entity
+            poiPerformance.record('cesium.entityCreated')
             container.add({...options, billboard: new BillboardGraphics(billboard)})
         }
 
         POIUtils.requestRender()
+        poiPerformance.end('cesium.draw', drawStartedAt)
         return entity || container.getById(poi.id)
     }
 

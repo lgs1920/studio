@@ -28,6 +28,9 @@ import {
 } from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
 import { ICONS_PATH, WIDGET_SYSTEM_FONT_STACK }     from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
+import { poiPerformance }                           from '@Core/ui/POIPerformance'
+import { POIUtils }                                from '@Utils/cesium/POIUtils'
+import { poiCanvasImageCache }                      from '@Components/MainUI/MapPOI/poiCanvasImageCache'
 import {
     normalizePOIDisplaySettings,
     POI_DISPLAY_DEFAULT_FONT_FAMILY,
@@ -90,11 +93,15 @@ const assertPOICanvasDimensions = (element, scale, ratio) => {
  * @returns {import('react').ReactNode} The POI content.
  */
 export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, collapsedPreview = false, style}) => {
+    poiPerformance.record('react.render')
     const rawTooltipId = useId()
     const tooltipIdPrefix = `map-poi-content-${rawTooltipId.replace(/:/g, '')}`
     const _poiIconWrapper = useRef(null)
     const _poiContent = useRef(null)
     const _poiCanvasCaptureSurface = useRef(null)
+    const _poiCanvasCache = useRef(null)
+    const _activeCapture = useRef(null)
+    const _appearanceRevision = useRef(0)
     const _renderRequestId = useRef(0)
     const _previousExpanded = useRef(null)
     const _iconLoadRenderTimer = useRef(null)
@@ -148,6 +155,8 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         : Math.cos(leaderAngleRadians) * leaderLength
     const leaderCaptureBleed = horizontalStick ? Math.abs(leaderOffsetY) : Math.abs(leaderOffsetX)
 
+    useEffect(() => poiPerformance.mountContent(), [])
+
     const fontFamily = displaySettings.fontFamily ?? POI_DISPLAY_DEFAULT_FONT_FAMILY
     const replaySettings = normalizeJourneyReplayPOISettings(point?.replay)
     const replayMasked = !presentation.visible
@@ -175,6 +184,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         ? explicitTitleAltitude
         : simulatedTitleAltitude
     const displayTitleAltitudeValue = Number.isFinite(titleAltitude) && titleAltitude > 0 && displayTitleAltitude
+    const displayHeightContent = displayAltitudeValue || displayTitleAltitudeValue
     const formattedTitleAltitude = displayTitleAltitudeValue
         ? UnitUtils.formatMetric(titleAltitude, {units: ELEVATION_UNITS, format: '%d'}).full
         : ''
@@ -189,6 +199,43 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
 
     const iconName = point?.categoryIcon(point?.category)
     const isSvgIcon = iconName?.endsWith('.svg')
+
+    const cardExpanded = point?.expanded === true
+    const poiVisualSignature = JSON.stringify([
+        pointType,
+        cardExpanded,
+        cardExpanded ? point?.title : null,
+        cardExpanded && displayCategory ? point?.category : null,
+        ICONS_PATH,
+        iconName,
+        isSvgIcon,
+        iconVisible,
+        point?.visible,
+        point?.color ?? lgs.colors.poiDefault,
+        point?.bgColor ?? lgs.colors.poiDefaultBackground,
+        point?.background,
+        cardExpanded ? poiStyle : null,
+        [fontFamily, displaySettings.fontSize, displaySettings.bold, displaySettings.italic, widgetRotation],
+        cardExpanded ? displaySettings : null,
+        cardExpanded && pointLocation && displayLocation ? pointLocation : null,
+        cardExpanded && displayAltitudeValue ? point?.height : null,
+        cardExpanded && displayTitleAltitudeValue ? titleAltitude : null,
+        cardExpanded && displayCoordinates ? [pointLatitude, pointLongitude] : null,
+        cardExpanded && displayDateTimeValue ? [point?.time, point?.timeZone, pointLongitude, pointLatitude] : null,
+        cardExpanded ? [displayCategory, displayTitleCategoryIcon, displayLocation, displayAltitude,
+            displayTitleAltitude, displayCoordinates, displayDateTime, isTitleOnly] : null,
+        cardExpanded ? [replayActive, replayAnimationActive, replaySettings.visible, replaySettings.hiddenFields] : null,
+        cardExpanded ? unitSystem : null,
+        cardExpanded ? coordinateSystem : null,
+        lgs.colors.poiDefault,
+        lgs.colors.poiDefaultBackground,
+        globalThis.document?.documentElement?.className,
+        globalThis.document?.body?.className,
+        globalThis.document?.documentElement?.getAttribute('data-season-theme'),
+        globalThis.document?.body?.getAttribute('data-on-map-theme'),
+        style,
+        cardExpanded ? [leaderAngle, leaderLength, leaderCaptureBleed] : null,
+    ])
 
     /** Handles drawer opening for editing */
     const handleEditor = useCallback(async (event, entity) => {
@@ -321,26 +368,124 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
 
     /** Synchronizes DOM content to map canvas */
     const renderToCanvas = useCallback((options = {}) => {
-        // Invalidate pending captures even when this update masks the POI.
-        const renderRequestId = ++_renderRequestId.current
-        if (isEmbedded || replayMasked || hiddenBecauseTooClose || !pointId) {
+        const element = _poiCanvasCaptureSurface.current
+        const card = _poiContent.current
+        const captureSurface = _poiCanvasCaptureSurface.current
+        const layoutSignature = [
+            card?.offsetWidth,
+            card?.offsetHeight,
+            card?.scrollWidth,
+            card?.scrollHeight,
+            captureSurface?.scrollWidth,
+            captureSurface?.scrollHeight,
+            globalThis.devicePixelRatio ?? 1,
+            globalThis.document?.fonts?.status,
+        ]
+        const visualSignature = `${JSON.stringify([poiVisualSignature, layoutSignature])}:${_appearanceRevision.current}`
+        const canCapture = !isEmbedded && !replayMasked && !hiddenBecauseTooClose && Boolean(pointId)
+        if (!canCapture) {
+            if (_activeCapture.current?.requestId === _renderRequestId.current) {
+                poiPerformance.record('capture.invalidated')
+                poiPerformance.record('capture.invalidated.suppressed')
+            }
+            _renderRequestId.current++
+            _activeCapture.current = null
+            poiPerformance.record('capture.request.suppressed')
             return
         }
 
-        const expanded = point?.expanded === true
-        queuePOICanvasRender(_poiContent, async () => {
-            /** Reject captures whose logical presentation changed while rasterizing. */
-            const isCurrentRender = () => {
-                const currentPoint = $pois.list.get(pointId)
-                const currentPresentation = resolveReplayPOIPresentation(currentPoint)
-                return renderRequestId === _renderRequestId.current && Boolean(currentPoint)
-                    && (currentPoint.expanded === true) === expanded && currentPresentation.visible
-                    && currentPresentation.active === replayActive
-                    && currentPresentation.animationActive === replayAnimationActive
-                    && (!isPOIHoverPreviewActive(pointId) || isPOIHoverPreviewTransitionActive(pointId))
-            }
+        const reason = options?.reason ?? 'visual-state-effect'
+        poiPerformance.record('capture.request')
+        poiPerformance.record(`capture.request.${reason}`)
+        if (_activeCapture.current?.signature === visualSignature
+            && _activeCapture.current.requestId === _renderRequestId.current) {
+            poiPerformance.record('capture.deduplicated')
+            return
+        }
+        if (_activeCapture.current?.requestId === _renderRequestId.current) {
+            poiPerformance.record('capture.invalidated')
+            poiPerformance.record(`capture.invalidated.${reason}`)
+        }
 
-            if (!isCurrentRender()) {
+        // Invalidate pending captures even when this update masks the POI.
+        const renderRequestId = ++_renderRequestId.current
+        _activeCapture.current = {signature: visualSignature, requestId: renderRequestId}
+        const expanded = point?.expanded === true
+        let discardRecorded = false
+        const isCaptureCurrent = () => {
+            const currentPoint = $pois.list.get(pointId)
+            const currentPresentation = resolveReplayPOIPresentation(currentPoint)
+            return renderRequestId === _renderRequestId.current && Boolean(currentPoint)
+                && (currentPoint.expanded === true) === expanded && currentPresentation.visible
+                && currentPresentation.active === replayActive
+                && currentPresentation.animationActive === replayAnimationActive
+                && (!isPOIHoverPreviewActive(pointId) || isPOIHoverPreviewTransitionActive(pointId))
+        }
+        const isCurrentRender = phase => {
+            const current = isCaptureCurrent()
+            if (!current && !discardRecorded) {
+                discardRecorded = true
+                poiPerformance.record('capture.discarded')
+                poiPerformance.record(`capture.discarded.${phase}`)
+            }
+            return current
+        }
+
+        const localCanvas = _poiCanvasCache.current?.signature === visualSignature
+            && _poiCanvasCache.current.surface === element && _poiCanvasCache.current.card === card
+            ? _poiCanvasCache.current
+            : null
+        const cachedCanvas = element && card
+            ? localCanvas ?? poiCanvasImageCache.get(visualSignature)
+            : null
+        if (cachedCanvas) {
+            if (!isCurrentRender('immediate-cache-hit')) {
+                _activeCapture.current = null
+                return
+            }
+            if (queuePOICanvasRender.cancel(_poiContent)) {
+                poiPerformance.record('capture.queueCancelledByCache')
+            }
+            _poiCanvasCache.current = {
+                ...cachedCanvas,
+                signature: visualSignature,
+                surface: element,
+                card,
+            }
+            poiPerformance.record('capture.queueBypassedForCache')
+            void Promise.resolve()
+                .then(async () => {
+                    if (!isCurrentRender('before-cache-draw')) {
+                        return
+                    }
+                    const currentPoint = $pois.list.get(pointId)
+                    const mapPOI = new MapPOI(currentPoint)
+                    mapPOI.image = {
+                        src: cachedCanvas.canvas,
+                        width: cachedCanvas.width,
+                        height: cachedCanvas.height,
+                    }
+                    mapPOI.pixelOffset = cachedCanvas.pixelOffset
+                    await mapPOI.utils.draw(mapPOI)
+                    poiPerformance.record(localCanvas ? 'capture.cacheHit' : 'capture.sharedCacheHit')
+                })
+                .catch(error => console.error(`Error reusing POI ${pointId} canvas:`, error))
+                .finally(() => {
+                    if (isCaptureCurrent()) {
+                        completePOIHoverPreviewRender(pointId)
+                    }
+                    if (_activeCapture.current?.requestId === renderRequestId) {
+                        _activeCapture.current = null
+                    }
+                })
+            return
+        }
+
+        const queuedAt = poiPerformance.start('capture.queueWait')
+        queuePOICanvasRender(_poiContent, async () => {
+            poiPerformance.end('capture.queueWait', queuedAt)
+            poiPerformance.record('capture.started')
+            if (!isCurrentRender('before-snapdom')) {
                 return
             }
 
@@ -354,6 +499,46 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                 return
             }
 
+            const cachedCanvas = _poiCanvasCache.current
+            const localCanvas = cachedCanvas?.signature === visualSignature
+                && cachedCanvas.surface === element && cachedCanvas.card === card
+                ? cachedCanvas
+                : null
+            const sharedCanvas = localCanvas ?? poiCanvasImageCache.get(visualSignature)
+            if (sharedCanvas) {
+                const currentPoint = $pois.list.get(pointId)
+                if (!currentPoint || !isCurrentRender('cache-hit')) {
+                    return
+                }
+                _poiCanvasCache.current = {
+                    ...sharedCanvas,
+                    signature: visualSignature,
+                    surface: element,
+                    card,
+                }
+                const sharedCacheState = poiCanvasImageCache.snapshot()
+                poiPerformance.record('capture.sharedCacheEntries', sharedCacheState.entryCount)
+                poiPerformance.record('capture.sharedCacheBytes', sharedCacheState.retainedBytes)
+                try {
+                    const mapPOI = new MapPOI(currentPoint)
+                    mapPOI.image = {
+                        src: sharedCanvas.canvas,
+                        width: sharedCanvas.width,
+                        height: sharedCanvas.height,
+                    }
+                    mapPOI.pixelOffset = sharedCanvas.pixelOffset
+                    await mapPOI.utils.draw(mapPOI)
+                    poiPerformance.record(localCanvas ? 'capture.cacheHit' : 'capture.sharedCacheHit')
+                }
+                catch (error) {
+                    console.error(`Error reusing POI ${pointId} canvas:`, error)
+                }
+                completePOIHoverPreviewRender(pointId)
+                return
+            }
+            poiPerformance.record('capture.cacheMiss')
+            poiPerformance.record('capture.sharedCacheMiss')
+
             const originalDisplay = element.style.display
             const originalWidth = element.style.width
             const originalBoxSizing = element.style.boxSizing
@@ -364,7 +549,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                 for (const icon of element.querySelectorAll('wa-icon')) {
                     await stylePOIDuotoneIcon(icon)
                 }
-                if (!isCurrentRender()) {
+                if (!isCurrentRender('after-icon-styling')) {
                     return
                 }
 
@@ -402,16 +587,40 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                 // Expand only the rasterization root so SnapDOM includes transformed and external strokes.
                 element.style.padding = `${capturePadding}px`
                 assertPOICanvasDimensions(element, scale, ratio)
-                const snap = await snapdom(element, {scale, dpr: ratio, outerShadows: 'subtree'})
-                canvas = await snap.toCanvas()
-                if (!isCurrentRender() || _poiCanvasCaptureSurface.current !== element
-                    || _poiContent.current !== card) {
+                const sharedCapture = await poiCanvasImageCache.getOrCreate(visualSignature, async () => {
+                    const snapStartedAt = poiPerformance.start('capture.snapdom')
+                    const snap = await snapdom(element, {scale, dpr: ratio, outerShadows: 'subtree'})
+                    poiPerformance.end('capture.snapdom', snapStartedAt)
+                    if (!isCurrentRender('after-snapdom')) {
+                        return null
+                    }
+                    const canvasStartedAt = poiPerformance.start('capture.toCanvas')
+                    const renderedCanvas = await snap.toCanvas()
+                    poiPerformance.end('capture.toCanvas', canvasStartedAt)
+                    poiPerformance.record('capture.canvasPixels', renderedCanvas.width * renderedCanvas.height)
+                    poiPerformance.record('capture.canvasBytesEstimate', renderedCanvas.width * renderedCanvas.height * 4)
+                    if (!isCurrentRender('after-to-canvas')) {
+                        return null
+                    }
+
+                    const width = renderedCanvas.width / scale / ratio
+                    const height = renderedCanvas.height / scale / ratio
+                    return {
+                        canvas: renderedCanvas,
+                        width,
+                        height,
+                        pixelOffset: calculatePOIContentPixelOffset(element, width, height, snap.meta),
+                    }
+                })
+                if (!sharedCapture.entry || !isCurrentRender('after-shared-capture')
+                    || _poiCanvasCaptureSurface.current !== element || _poiContent.current !== card) {
                     return
                 }
-
-                const width = canvas.width / scale / ratio
-                const height = canvas.height / scale / ratio
-                pixelOffset = calculatePOIContentPixelOffset(element, width, height, snap.meta)
+                canvas = sharedCapture.entry.canvas
+                pixelOffset = sharedCapture.entry.pixelOffset
+                if (sharedCapture.source === 'inflight') {
+                    poiPerformance.record('capture.sharedInflightHit')
+                }
             }
             catch (error) {
                 console.error(`Error rendering POI ${pointId} to canvas:`, error)
@@ -426,15 +635,29 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             }
 
             const currentPoint = $pois.list.get(pointId)
-            if (!canvas || !isCurrentRender() || _poiCanvasCaptureSurface.current !== element
+            if (!canvas || !isCurrentRender('before-commit') || _poiCanvasCaptureSurface.current !== element
                 || _poiContent.current !== card) {
                 return
             }
 
             try {
                 const mapPOI = new MapPOI(currentPoint)
-                const width = canvas.width / scale / ratio
-                const height = canvas.height / scale / ratio
+                const cachedCanvas = poiCanvasImageCache.get(visualSignature)
+                if (!cachedCanvas) {
+                    poiPerformance.record('capture.sharedCacheRejected')
+                }
+                const width = cachedCanvas?.width ?? canvas.width / scale / ratio
+                const height = cachedCanvas?.height ?? canvas.height / scale / ratio
+                const sharedCanvas = cachedCanvas ?? {canvas, width, height, pixelOffset}
+                const sharedCacheState = poiCanvasImageCache.snapshot()
+                poiPerformance.record('capture.sharedCacheEntries', sharedCacheState.entryCount)
+                poiPerformance.record('capture.sharedCacheBytes', sharedCacheState.retainedBytes)
+                _poiCanvasCache.current = {
+                    signature: visualSignature,
+                    surface: element,
+                    card,
+                    ...sharedCanvas,
+                }
                 mapPOI.image = {
                     // Cesium accepts canvases directly; a data URL needlessly copies the pixel buffer.
                     src:    canvas,
@@ -443,6 +666,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                 }
                 mapPOI.pixelOffset = pixelOffset
                 await mapPOI.utils.draw(mapPOI)
+                poiPerformance.record('capture.committed')
             }
             catch (error) {
                 console.error(`Error rendering POI ${pointId} to canvas:`, error)
@@ -451,8 +675,31 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         }, {
             priority: options?.priority === true,
             allowOverflow: options?.priority === true,
+            onSettled: () => {
+                if (_activeCapture.current?.requestId === renderRequestId) {
+                    _activeCapture.current = null
+                }
+            },
+            onSuperseded: () => {
+                poiPerformance.record('capture.queueSuperseded')
+                poiPerformance.record(`capture.queueSuperseded.${reason}`)
+            },
+            onCancelled: () => {
+                poiPerformance.record('capture.queueCancelled')
+            },
         })
-    }, [isEmbedded, point?.expanded, replayActive, replayAnimationActive, replayMasked, hiddenBecauseTooClose, pointId, $pois.list, leaderCaptureBleed])
+    }, [isEmbedded, point?.expanded, replayActive, replayAnimationActive, replayMasked, hiddenBecauseTooClose, pointId, $pois.list, leaderCaptureBleed, poiVisualSignature])
+
+    useEffect(() => {
+        if (isEmbedded || !pointId) {
+            return
+        }
+
+        const currentPoint = $pois.list.get(pointId)
+        if (currentPoint) {
+            POIUtils.updatePosition(currentPoint)
+        }
+    }, [isEmbedded, pointId, pointParent, pointLongitude, pointLatitude, point?.height, point?.simulatedHeight, $pois.list])
 
     const handlePOIIconLoad = useCallback((event) => {
         stylePOIDuotoneIcon(event?.target)
@@ -463,7 +710,10 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                 }
                 _iconLoadRenderTimer.current = setTimeout(() => {
                     _iconLoadRenderTimer.current = null
-                    renderToCanvas()
+                    _appearanceRevision.current += 1
+                    _poiCanvasCache.current = null
+                    poiPerformance.record('capture.cacheInvalidated.iconLoad')
+                    renderToCanvas({reason: 'icon-load'})
                 }, 32)
             })
     }, [renderToCanvas])
@@ -472,6 +722,8 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         if (_iconLoadRenderTimer.current) {
             clearTimeout(_iconLoadRenderTimer.current)
         }
+        _poiCanvasCache.current = null
+        _activeCapture.current = null
     }, [])
 
     useLayoutEffect(() => {
@@ -518,7 +770,10 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             previousCardSize.height = height
             const edgeOffsetChanged = updatePOIStickEdgeOffset()
             if ((cardSizeChanged || edgeOffsetChanged) && !isEmbedded) {
-                renderToCanvas()
+                _appearanceRevision.current += 1
+                _poiCanvasCache.current = null
+                poiPerformance.record('capture.cacheInvalidated.resize')
+                renderToCanvas({reason: 'resize'})
             }
         })
         observer.observe(card)
@@ -550,8 +805,9 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         addEventListeners(poi)
         const expanded = point?.expanded === true
         const priority = _previousExpanded.current !== null && _previousExpanded.current !== expanded
+        const reason = priority ? 'expanded-state' : 'visual-state-effect'
         _previousExpanded.current = expanded
-        renderToCanvas({priority})
+        renderToCanvas({priority, reason})
 
         return () => {
             _renderRequestId.current++
@@ -567,8 +823,8 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                   point?.bgColor,
                   point?.background,
                   point?.display?.style,
-                  point?.height,
-                  point?.simulatedHeight,
+                  displayHeightContent ? point?.height : null,
+                  displayHeightContent ? point?.simulatedHeight : null,
                   point?.location,
                   point?.time,
                   point?.timeZone,
@@ -591,8 +847,8 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                   point?.display?.altitude,
                   point?.display?.coordinates,
                   point?.display?.dateTime,
-                  point?.longitude,
-                  point?.latitude,
+                  displayCoordinates ? pointLongitude : null,
+                  displayCoordinates ? pointLatitude : null,
                   point?.type,
                   point?.visible,
                   point?.tooClose,
@@ -604,6 +860,8 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                   replaySettings.hiddenFields.category,
                   replaySettings.hiddenFields.altitude,
                   replaySettings.hiddenFields.coordinates,
+                  displayCoordinates,
+                  displayHeightContent,
                   unitSystem,
                   coordinateSystem,
                   renderToCanvas,
