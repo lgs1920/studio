@@ -22,9 +22,7 @@ import nearestPointOnLine from '@turf/nearest-point-on-line'
 const REPLAY_POI_PASSAGE_DISTANCE_TOLERANCE_METERS = 25
 const REPLAY_POI_DISTANCE_PLATEAU_EPSILON_METERS = 0.01
 const REPLAY_POI_PASSAGE_ABSCISSA_EPSILON_METERS = 1
-const MAX_REPLAY_POI_PASSAGES = 2
-
-/** Find up to two distinct local route passages near a POI, collapsing adjacent samples. */
+/** Find every distinct local route passage near a POI, collapsing adjacent samples. */
 const projectPOIPassages = (position, paths, nearest) => {
     const passages = []
     paths.forEach(({segment, samples}) => {
@@ -107,11 +105,7 @@ const projectPOIPassages = (position, paths, nearest) => {
         .filter((passage, index, ordered) => index === 0
             || passage.projectedAbscissa - ordered[index - 1].projectedAbscissa > REPLAY_POI_PASSAGE_ABSCISSA_EPSILON_METERS)
 
-    if (distinctPassages.length <= MAX_REPLAY_POI_PASSAGES) {
-        return distinctPassages
-    }
-
-    return [distinctPassages[0], distinctPassages.at(-1)]
+    return distinctPassages
 }
 
 /**

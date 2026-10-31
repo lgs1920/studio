@@ -123,8 +123,6 @@ import {
     safeCartesian3Lerp,
 } from './JourneyReplaySessionShared'
 
-const MAX_REPLAY_POI_APPEARANCES = 2
-
 /** Resolve the selected Journey's Start and Stop POIs for Replay presentation. */
 const replayJourneyEndpoints = (journey, poiList) => {
     const journeyTracks = Array.from(journey?.tracks?.values?.() ?? [])
@@ -491,12 +489,8 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
         }
         state.lastReplayPOIProgress = traversalProgress
         const replayPhase = phase ?? replay?.replayFramePhase
-        const playbackClockMillis = replayPhase?.kind === 'replay'
-            ? finiteNumber(replayPhase.routeLocalMillis ?? replayPhase.localMillis)
-            : null
-        const currentReplaySeconds = playbackClockMillis === null
-            ? Math.max(0, Math.min(1, traversalProgress)) * replayDurationSeconds
-            : Math.max(0, playbackClockMillis / 1000)
+        // POI display timers follow route time so playback slowdowns cannot expire them early.
+        const currentReplaySeconds = Math.max(0, Math.min(1, traversalProgress)) * replayDurationSeconds
         const currentJourney = state.sampler?.journey ?? currentReplayJourney()
         const currentPOIList = globalThis.lgs?.stores?.main?.components?.pois?.list
         const endpointPOIs = replayJourneyEndpoints(currentJourney, currentPOIList)
@@ -623,10 +617,11 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                     }
                     appearance.insideCropByPassage ??= new Map()
                     const wasInsideCrop = appearance.insideCropByPassage.get(passage.key) === true
-                    const maximumAppearances = isEndpoint ? 1 : MAX_REPLAY_POI_APPEARANCES
-                    if (insideCrop && !wasInsideCrop && appearance.startTimes.length < maximumAppearances) {
+                    const passageAlreadyStarted = appearance.startTimes.some(startTime => startTime.passageKey === passage.key)
+                    if (insideCrop && !wasInsideCrop && !passageAlreadyStarted) {
                         // Keep an early crop entry visible until the marker reaches the POI, then start its display timer.
                         appearance.startTimes.push({
+                            passageKey: passage.key,
                             displayStartedAt: markerReachedPOI ? currentReplaySeconds : null,
                         })
                     }
@@ -634,6 +629,10 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                     state.replayPOIAppearanceState.set(appearanceKey, appearance)
 
                     if (appearance.startTimes.some(startTime => {
+                        if (startTime.passageKey !== passage.key) {
+                            return false
+                        }
+
                         if (startTime.displayStartedAt === null && markerReachedPOI) {
                             startTime.displayStartedAt = currentReplaySeconds
                         }
