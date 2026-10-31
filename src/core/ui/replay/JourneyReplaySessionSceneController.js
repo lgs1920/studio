@@ -252,6 +252,8 @@ export const cancelPendingSceneRestore = (mode) => {
 export const dispose = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        state.replayPOIEntityLookup?.dispose?.()
+        state.replayPOIEntityLookup = null
         disposeReplaySceneFrameQualifier(mode)
         call.stop({emit: false})
         const preparationExitCameraState = state.preparationExitCameraState

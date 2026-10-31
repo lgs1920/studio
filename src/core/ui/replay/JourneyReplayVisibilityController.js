@@ -32,6 +32,35 @@ import {
 } from './JourneyReplayRuntime'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {currentReplayJourney} from './ReplayUserModeConstants'
+import {poiPerformance} from '@Core/ui/POIPerformance'
+import {createReplayPOIEntityLookup} from './ReplayPOIEntityLookup'
+
+/** Return the lookup cache owned by the current Replay session and viewer. */
+const replayPOIEntityLookup = mode => {
+    const state = mode?.[JOURNEY_REPLAY_INTERNAL_STATE]
+    const viewer = globalThis.lgs?.viewer
+    if (!state || !viewer) {
+        state?.replayPOIEntityLookup?.dispose()
+        if (state) {
+            state.replayPOIEntityLookup = null
+        }
+        return null
+    }
+
+    let lookup = state.replayPOIEntityLookup
+    if (lookup && (lookup.viewer !== viewer
+        || lookup.scene !== viewer.scene
+        || lookup.entities !== viewer.entities
+        || lookup.dataSources !== viewer.dataSources)) {
+        lookup.dispose()
+        lookup = null
+    }
+    if (!lookup) {
+        lookup = createReplayPOIEntityLookup(viewer)
+        state.replayPOIEntityLookup = lookup
+    }
+    return lookup
+}
 
 /**
  * Apply a temporary Replay filter to a journey's track render sources without
@@ -155,42 +184,34 @@ export const restoreCurrentJourneyVisibility = (mode, {restorePOIs = true} = {})
         globalThis.lgs?.scene?.requestRender?.()
     }
 
-export const poiEntities =  (mode, poi) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
-        if (!poi?.id || !globalThis.lgs?.viewer) {
-            return []
-        }
-
-        const entities = []
-        const addEntity = entity => {
-            if (entity && !entities.includes(entity)) {
-                entities.push(entity)
-            }
-        }
-
-        addEntity(POIUtils.getEntityContainer(poi)?.getById?.(poi.id))
-        addEntity(globalThis.lgs.viewer.entities?.getById?.(poi.id))
-
-        const dataSources = globalThis.lgs.viewer.dataSources
-        const length = Number(dataSources?.length) || 0
-        for (let index = 0; index < length; index++) {
-            addEntity(dataSources.get(index)?.entities?.getById?.(poi.id))
-        }
-
-        return entities
+export const poiEntities = (mode, poi) => {
+    if (!poi?.id) {
+        return []
     }
+    return replayPOIEntityLookup(mode)?.get(poi) ?? []
+}
 
 export const setPOIEntityVisibility = (mode, poi, visible, {allowReplayAnimation = false} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
+        const effectiveVisibility = POIUtils.setPOIVisibility(poi, visible, {allowReplayAnimation})
         call.poiEntities(poi).forEach(entity => {
-            const effectiveVisibility = POIUtils.setPOIVisibility(poi, visible, {allowReplayAnimation})
-            entity.show = effectiveVisibility
-            if (entity.billboard) {
+            const entityVisibilityMatches = isVisibleProperty(mode, entity.show) === effectiveVisibility
+            const billboardVisibilityMatches = !entity.billboard
+                || isVisibleProperty(mode, entity.billboard.show) === effectiveVisibility
+            if (entityVisibilityMatches && billboardVisibilityMatches) {
+                poiPerformance.record('replay.visibilityWriteSkipped')
+                return
+            }
+
+            if (!entityVisibilityMatches) {
+                entity.show = effectiveVisibility
+                poiPerformance.record('replay.entityShowWrites')
+            }
+            if (entity.billboard && !billboardVisibilityMatches) {
                 entity.billboard.show = effectiveVisibility
+                poiPerformance.record('replay.billboardShowWrites')
             }
         })
     }
@@ -270,6 +291,7 @@ export const isPOIVisibleBeforePlayback =  (mode, poi) => {
     }
 
 export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
+    const performanceStartedAt = poiPerformance.start('replay.visibility')
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
@@ -286,7 +308,9 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
                 .filter(Boolean),
         )
 
-        for (const poi of call.replayPOICandidates(runtimeNearbyPois)) {
+        const candidates = call.replayPOICandidates(runtimeNearbyPois)
+        poiPerformance.record('replay.visibilityCandidates', candidates.length)
+        for (const poi of candidates) {
             if (!poi?.id) {
                 continue
             }
@@ -324,6 +348,7 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
 
             call.setPOIEntityVisibility(poi, visibleDuringPlayback, {allowReplayAnimation: animationActive})
         }
+        poiPerformance.end('replay.visibility', performanceStartedAt)
     }
 
 /**
@@ -423,6 +448,7 @@ export const startStopClipPOIMaskLoop = (mode) => {
         call.applyJourneyReplayPOIVisibility()
         const tick = () => {
             state.stopClipPOIMaskFrame = null
+            poiPerformance.record('replay.stopClipMaskTick')
             call.applyJourneyReplayPOIVisibility()
             state.stopClipPOIMaskFrame = globalThis.__?.requestAnimationFrame?.(tick)
                 ?? globalThis.requestAnimationFrame?.(tick)
