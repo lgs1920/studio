@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-12
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,7 @@ const createEntityContainer = () => {
         container: {
             values:  [],
             getById: id => entities.get(id),
+            removeById: id => entities.delete(id),
             add:     entity => {
                 entities.set(entity.id, entity)
                 return entity
@@ -285,6 +286,117 @@ describe('POIUtils replay visibility', () => {
         expect(propertyValue(entity.billboard.show)).toBe(false)
         expect(globalThis.lgs.viewer.scene.render).not.toHaveBeenCalled()
         expect(globalThis.lgs.viewer.scene.requestRender).toHaveBeenCalledTimes(2)
+    })
+
+    it('skips Cesium property writes and render requests when an existing POI is unchanged', async () => {
+        const poi = {
+            id: 'poi-stable',
+            name: 'Stable POI',
+            longitude: 2,
+            latitude: 48,
+            height: 100,
+            visible: true,
+            scale: 1,
+            image: {src: 'stable-image', width: 40, height: 20},
+        }
+        const entity = await POIUtils.draw(poi)
+        const originalPosition = entity.position
+        const originalImage = entity.billboard.image
+        const originalScale = entity.billboard.scale
+        globalThis.lgs.viewer.scene.requestRender.mockClear()
+
+        await POIUtils.draw({...poi, image: {...poi.image}})
+
+        expect(entity.position).toBe(originalPosition)
+        expect(entity.billboard.image).toBe(originalImage)
+        expect(entity.billboard.scale).toBe(originalScale)
+        expect(globalThis.lgs.viewer.scene.requestRender).not.toHaveBeenCalled()
+
+        await POIUtils.draw({...poi, longitude: 2.001, scale: 0.8, image: {...poi.image}})
+
+        expect(entity.position).not.toBe(originalPosition)
+        expect(entity.billboard.image).toBe(originalImage)
+        expect(entity.billboard.scale).not.toBe(originalScale)
+        expect(globalThis.lgs.viewer.scene.requestRender).toHaveBeenCalledOnce()
+    })
+
+    it('skips redundant geographic position updates while retaining the success result', async () => {
+        const poi = {
+            id: 'poi-position-stable',
+            name: 'Stable position POI',
+            longitude: 2,
+            latitude: 48,
+            height: 100,
+            visible: true,
+            image: {src: 'position-image', width: 40, height: 20},
+        }
+        const entity = await POIUtils.draw(poi)
+        const originalPosition = entity.position
+        globalThis.lgs.viewer.scene.requestRender.mockClear()
+
+        expect(POIUtils.updatePosition(poi)).toBe(true)
+        expect(entity.position).toBe(originalPosition)
+        expect(globalThis.lgs.viewer.scene.requestRender).not.toHaveBeenCalled()
+
+        expect(POIUtils.updatePosition({...poi, longitude: 2.001})).toBe(true)
+        expect(entity.position).not.toBe(originalPosition)
+        expect(globalThis.lgs.viewer.scene.requestRender).toHaveBeenCalledOnce()
+    })
+
+    it('requests a render only when the effective POI visibility changes', async () => {
+        const poi = {
+            id: 'poi-visibility-stable',
+            name: 'Stable visibility POI',
+            longitude: 2,
+            latitude: 48,
+            height: 100,
+            visible: true,
+            image: {src: 'visibility-image', width: 40, height: 20},
+        }
+        const entity = await POIUtils.draw(poi)
+        globalThis.lgs.viewer.scene.requestRender.mockClear()
+
+        expect(POIUtils.toggleVisibility(poi)).toBe(true)
+        expect(globalThis.lgs.viewer.scene.requestRender).not.toHaveBeenCalled()
+
+        poi.visible = false
+        expect(POIUtils.toggleVisibility(poi)).toBe(true)
+        expect(entity.show).toBe(false)
+        expect(propertyValue(entity.billboard.show)).toBe(false)
+        expect(globalThis.lgs.viewer.scene.requestRender).toHaveBeenCalledOnce()
+    })
+
+    it('removes duplicate entities when a POI moves between the main collection and a data source', async () => {
+        const mainContainer = globalThis.lgs.viewer.entities
+        const {container: journeyContainer} = createEntityContainer()
+        const journeyDataSource = {name: 'journey#gpx', entities: journeyContainer}
+        globalThis.lgs.viewer.dataSources = {
+            length: 1,
+            get: index => index === 0 ? journeyDataSource : undefined,
+            getByName: name => name === journeyDataSource.name ? [journeyDataSource] : [],
+        }
+        const poi = {
+            id: 'poi-container-move',
+            name: 'POI container move',
+            longitude: 2,
+            latitude: 48,
+            height: 100,
+            visible: true,
+            image: {src: 'container-image', width: 40, height: 20},
+        }
+
+        const mainEntity = await POIUtils.draw(poi)
+        expect(mainContainer.getById(poi.id)).toBe(mainEntity)
+
+        poi.parent = 'journey#gpx'
+        const journeyEntity = await POIUtils.draw(poi)
+        expect(mainContainer.getById(poi.id)).toBeUndefined()
+        expect(journeyContainer.getById(poi.id)).toBe(journeyEntity)
+
+        poi.parent = null
+        const restoredEntity = await POIUtils.draw(poi)
+        expect(journeyContainer.getById(poi.id)).toBeUndefined()
+        expect(mainContainer.getById(poi.id)).toBe(restoredEntity)
     })
 
     it('scales an anchored POI pixel offset with the billboard distance scale', async () => {

@@ -26,7 +26,7 @@ import {poiPerformance} from '@Core/ui/POIPerformance'
 import { Canvg, Property } from 'canvg'
 import {
     BillboardGraphics, Cartesian2, Cartesian3, Cartographic, HeightReference, HorizontalOrigin, JulianDate,
-    NearFarScalar, VerticalOrigin,
+    NearFarScalar, Property as CesiumProperty, VerticalOrigin,
 }                          from 'cesium' // Pin Marker Type
 
 // Pin Marker Type
@@ -47,6 +47,44 @@ export const POI_PROFILER = 'profiler'
 const finiteNumber = value => {
     const number = Number(value)
     return Number.isFinite(number) ? number : null
+}
+
+/** Resolve a Cesium property while allowing plain values from lightweight entity fixtures. */
+const cesiumPropertyValue = (property, time) => typeof property?.getValue === 'function'
+    ? CesiumProperty.getValueOrUndefined(property, time)
+    : property
+
+/** Compare a Cesium property value with a proposed constant graphics value. */
+const cesiumPropertyMatches = (property, value, time) => {
+    const currentValue = cesiumPropertyValue(property, time)
+    if (currentValue === value) {
+        return true
+    }
+    if (currentValue instanceof Cartesian2 && value instanceof Cartesian2) {
+        return Cartesian2.equals(currentValue, value)
+    }
+    if (currentValue instanceof Cartesian3 && value instanceof Cartesian3) {
+        return Cartesian3.equals(currentValue, value)
+    }
+    if (currentValue instanceof NearFarScalar && value instanceof NearFarScalar) {
+        return NearFarScalar.equals(currentValue, value)
+    }
+    return false
+}
+
+/** Assign a billboard constant only when its resolved Cesium value changes. */
+const assignBillboardPropertyIfChanged = (billboard, name, value, time) => {
+    if (cesiumPropertyMatches(billboard[name], value, time)) {
+        poiPerformance.record('cesium.billboardPropertyWriteSkipped')
+        return false
+    }
+
+    billboard[name] = value
+    poiPerformance.record('cesium.billboardPropertyWrite')
+    if (name === 'image') {
+        poiPerformance.record('cesium.billboardImageReplaced')
+    }
+    return true
 }
 
 /**
@@ -111,11 +149,18 @@ export class POIUtils {
             return false
         }
 
-        entity.position = Cartesian3.fromDegrees(
+        const position = Cartesian3.fromDegrees(
             poi.longitude,
             poi.latitude,
             poi.simulatedHeight ?? poi.height,
         )
+        const currentPosition = cesiumPropertyValue(entity.position, JulianDate.now())
+        if (Cartesian3.equals(currentPosition, position)) {
+            poiPerformance.record('cesium.positionOnlyUpdateSkipped')
+            return true
+        }
+
+        entity.position = position
         poiPerformance.record('cesium.positionOnlyUpdate')
         POIUtils.requestRender()
         return true
@@ -160,23 +205,38 @@ export class POIUtils {
         return lgs.viewer.entities
     }
 
+    /**
+     * Remove duplicate POI entities from every collection except the target container.
+     * @param {object} poi - POI whose duplicate entity instances should be removed.
+     * @param {object} targetContainer - Entity collection that should retain the POI.
+     * @returns {boolean} Whether any duplicate entity was removed.
+     */
     static removeEntityFromOtherContainers = (poi, targetContainer) => {
         if (!poi?.id || !lgs.viewer) {
-            return
+            return false
         }
 
+        const scanStartedAt = poiPerformance.start('cesium.containerCleanup')
+        const dataSources = lgs.viewer.dataSources
+        const dataSourceCount = Number(dataSources?.length) || 0
+        poiPerformance.record('cesium.containerScanCalls')
+        poiPerformance.record('cesium.entityContainersScanned', dataSourceCount + 1)
+        let removed = false
         const removeFrom = entities => {
             if (!entities || entities === targetContainer || !entities.getById(poi.id)) {
                 return
             }
 
             entities.removeById(poi.id)
+            removed = true
         }
 
         removeFrom(lgs.viewer.entities)
-        for (let index = 0; index < lgs.viewer.dataSources.length; index++) {
-            removeFrom(lgs.viewer.dataSources.get(index).entities)
+        for (let index = 0; index < dataSourceCount; index += 1) {
+            removeFrom(dataSources.get(index)?.entities)
         }
+        poiPerformance.end('cesium.containerCleanup', scanStartedAt)
+        return removed
     }
 
 
@@ -229,11 +289,19 @@ export class POIUtils {
         }
 
         // Update visibility state
-        entity.show = POIUtils.setPOIVisibility(poi, poi.visible)
-        if (entity.billboard) {
-            entity.billboard.show = entity.show
+        const visible = POIUtils.setPOIVisibility(poi, poi.visible)
+        const currentTime = JulianDate.now()
+        let changed = false
+        if (entity.show !== visible) {
+            entity.show = visible
+            changed = true
         }
-        POIUtils.requestRender()
+        if (entity.billboard) {
+            changed = assignBillboardPropertyIfChanged(entity.billboard, 'show', visible, currentTime) || changed
+        }
+        if (changed) {
+            POIUtils.requestRender()
+        }
         return true
     }
 
@@ -326,43 +394,58 @@ export class POIUtils {
             return null
         }
 
-        POIUtils.removeEntityFromOtherContainers(poi, container)
+        const removedFromOtherContainers = POIUtils.removeEntityFromOtherContainers(poi, container)
 
         // Check for existing entity
         const entity = container.getById(poi.id)
         if (entity) {
             poiPerformance.record('cesium.entityUpdated')
-            if (entity.billboard?.image !== billboard.image) {
-                poiPerformance.record('cesium.billboardImageReplaced')
+            const currentTime = JulianDate.now()
+            let changed = removedFromOtherContainers
+            if (entity.name !== options.name) {
+                entity.name = options.name
+                changed = true
             }
-            entity.show = options.show
-            entity.position = options.position
-            // Update billboard properties
+            if (entity.show !== options.show) {
+                entity.show = options.show
+                changed = true
+            }
+            const currentPosition = cesiumPropertyValue(entity.position, currentTime)
+            if (!Cartesian3.equals(currentPosition, options.position)) {
+                entity.position = options.position
+                changed = true
+            }
+
             if (entity.billboard) {
-                entity.billboard.image = billboard.image
-                entity.billboard.width = billboard.width
-                entity.billboard.height = billboard.height
-                entity.billboard.scale = billboard.scale
-                entity.billboard.scaleByDistance = billboard.scaleByDistance
-                entity.billboard.pixelOffset = billboard.pixelOffset
-                entity.billboard.pixelOffsetScaleByDistance = billboard.pixelOffsetScaleByDistance
-                entity.billboard.horizontalOrigin = billboard.horizontalOrigin
-                entity.billboard.verticalOrigin = billboard.verticalOrigin
-                entity.billboard.heightReference = billboard.heightReference
-                entity.billboard.disableDepthTestDistance = billboard.disableDepthTestDistance
-                entity.billboard.show = billboard.show
+                changed = assignBillboardPropertyIfChanged(entity.billboard, 'image', billboard.image, currentTime) || changed
+                changed = assignBillboardPropertyIfChanged(entity.billboard, 'width', billboard.width, currentTime) || changed
+                changed = assignBillboardPropertyIfChanged(entity.billboard, 'height', billboard.height, currentTime) || changed
+                changed = assignBillboardPropertyIfChanged(entity.billboard, 'scale', billboard.scale, currentTime) || changed
+                changed = assignBillboardPropertyIfChanged(entity.billboard, 'scaleByDistance', billboard.scaleByDistance, currentTime) || changed
+                changed = assignBillboardPropertyIfChanged(entity.billboard, 'pixelOffset', billboard.pixelOffset, currentTime) || changed
+                changed = assignBillboardPropertyIfChanged(entity.billboard, 'pixelOffsetScaleByDistance', billboard.pixelOffsetScaleByDistance, currentTime) || changed
+                changed = assignBillboardPropertyIfChanged(entity.billboard, 'horizontalOrigin', billboard.horizontalOrigin, currentTime) || changed
+                changed = assignBillboardPropertyIfChanged(entity.billboard, 'verticalOrigin', billboard.verticalOrigin, currentTime) || changed
+                changed = assignBillboardPropertyIfChanged(entity.billboard, 'heightReference', billboard.heightReference, currentTime) || changed
+                changed = assignBillboardPropertyIfChanged(entity.billboard, 'disableDepthTestDistance', billboard.disableDepthTestDistance, currentTime) || changed
+                changed = assignBillboardPropertyIfChanged(entity.billboard, 'show', billboard.show, currentTime) || changed
             }
             else {
                 entity.billboard = new BillboardGraphics(billboard)
+                changed = true
+            }
+
+            if (changed) {
+                POIUtils.requestRender()
             }
         }
         else {
             // Create new entity
             poiPerformance.record('cesium.entityCreated')
             container.add({...options, billboard: new BillboardGraphics(billboard)})
+            POIUtils.requestRender()
         }
 
-        POIUtils.requestRender()
         poiPerformance.end('cesium.draw', drawStartedAt)
         return entity || container.getById(poi.id)
     }

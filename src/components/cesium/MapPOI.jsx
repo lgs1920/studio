@@ -24,6 +24,7 @@ import {
     isPOIHoverPreviewTransitionActive, setPOIHoverPreviewPosition, subscribeToPOIHoverPreview,
 } from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
 import { POIUtils }                                       from '@Utils/cesium/POIUtils'
+import {subscribeToPOIProjectionUpdates} from './poiProjectionScheduler'
 import { memo, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { useSnapshot }                                    from 'valtio'
 import { proxy }                           from 'valtio'
@@ -57,9 +58,6 @@ export const MapPOI = memo(({point}) => {
         [thePOI?.id],
     )
     const hoverTitleActive = useSyncExternalStore(subscribeHoverPreview, getHoverTitleSnapshot, () => false)
-    const replayEntry = Array.isArray(replay.nearbyPois)
-                            ? replay.nearbyPois.find(entry => entry?.poi?.id === thePOI?.id)
-                            : null
     const presentation = resolveReplayPOIPresentation(thePOI, {replay})
     const replayActive = presentation.active
     const replaySettings = normalizeJourneyReplayPOISettings(thePOI?.replay)
@@ -84,9 +82,16 @@ export const MapPOI = memo(({point}) => {
         }
 
         let cancelled = false
-        let rafId = null
+        let projectionPending = false
+        let projectionQueued = false
 
         const tick = async () => {
+            if (projectionPending) {
+                projectionQueued = true
+                return
+            }
+
+            projectionPending = true
             const tickStartedAt = poiPerformance.start('mapPOI.projectionTick')
             poiPerformance.record('mapPOI.projectionTickCount')
             if (cancelled || !hasPOI || !hasCoordinates) {
@@ -94,6 +99,7 @@ export const MapPOI = memo(({point}) => {
                 clearPOIHoverPreview(point)
                 clearPOIHoverTitlePreview(point)
                 poiPerformance.end('mapPOI.projectionTick', tickStartedAt)
+                projectionPending = false
                 return
             }
 
@@ -103,17 +109,21 @@ export const MapPOI = memo(({point}) => {
                 clearPOIHoverPreview(point)
                 clearPOIHoverTitlePreview(point)
                 poiPerformance.end('mapPOI.projectionTick', tickStartedAt)
+                projectionPending = false
                 return
             }
 
             const coords = await __.ui.sceneManager.degreesToPixelsCoordinates(currentPOI, true)
             if (cancelled) {
                 poiPerformance.end('mapPOI.projectionTick', tickStartedAt)
+                projectionPending = false
                 return
             }
 
             if (coords?.visible) {
-                setPixels({x: coords.x, y: coords.y})
+                setPixels(previous => previous?.x === coords.x && previous?.y === coords.y
+                    ? previous
+                    : {x: coords.x, y: coords.y})
                 setPOIHoverPreviewPosition(currentPOI.id, coords.x, window.innerHeight - coords.y)
             }
             else {
@@ -123,20 +133,30 @@ export const MapPOI = memo(({point}) => {
             }
 
             const scaleInfo = POIUtils.adaptScaleToDistance(currentPOI)
-            setScale(scaleInfo.scale)
-            setTooFar(scaleInfo.tooFar)
+            setScale(previous => previous === scaleInfo.scale ? previous : scaleInfo.scale)
+            setTooFar(previous => previous === scaleInfo.tooFar ? previous : scaleInfo.tooFar)
             poiPerformance.end('mapPOI.projectionTick', tickStartedAt)
+            projectionPending = false
 
-            rafId = __.requestAnimationFrame(tick)
+            if (projectionQueued && !cancelled) {
+                projectionQueued = false
+                void tick()
+            }
         }
 
         void tick()
 
+        const removeProjectionUpdates = subscribeToPOIProjectionUpdates({
+            scene: lgs.scene,
+            camera: lgs.camera,
+            requestFrame: callback => __.requestAnimationFrame(callback),
+            cancelFrame: frameId => __.cancelAnimationFrame(frameId),
+            onUpdate: () => void tick(),
+        })
+
         return () => {
             cancelled = true
-            if (rafId) {
-                __.cancelAnimationFrame(rafId)
-            }
+            removeProjectionUpdates?.()
         }
     }, [
                   hasPOI,
@@ -149,7 +169,6 @@ export const MapPOI = memo(({point}) => {
                   thePOI?.visible,
                   thePOI?.tooClose,
                   replayActive,
-                  replayEntry?.poi?.id,
                   replaySettings.visible,
                   shouldProjectForHover,
                   list,
