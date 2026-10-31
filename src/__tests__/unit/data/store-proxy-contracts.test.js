@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -224,6 +224,7 @@ describe('Valtio static guardrails', () => {
             'src/components/MainUI/MapPOI/MapPOIEditContent.jsx': 1,
             'src/components/MainUI/MapPOI/MapPOIEditMenu.jsx':    1,
             'src/components/MainUI/MapPOI/MapPOIListItem.jsx':    1,
+            'src/components/MainUI/MapPOI/POICreationToastContent.jsx': 1,
             'src/components/MainUI/credits/CreditsBar.jsx':       1,
         }
         const matches = sourceMatches(/\bproxy\s*\(/)
