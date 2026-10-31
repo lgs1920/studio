@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -295,18 +295,11 @@ export const MapPOIDisplaySettings = memo(({
                                             className={`map-poi-display-stick-anchor-point map-poi-display-stick-anchor-point--${side.className}-${position} ${selected ? 'map-poi-display-stick-anchor-point--selected' : 'map-poi-display-stick-anchor-point--unselected'}`}
                                             style={{
                                                 left: `${coordinates.left}%`,
-                                                top: `${coordinates.top}%`,
-                                                // Set the Web Awesome button colors per anchor state, independent of inherited theme variants.
-                                                '--wa-color-fill-normal': selected
-                                                    ? 'var(--wa-color-brand-fill-normal)'
-                                                    : 'var(--map-poi-display-stick-anchor-fill-color)',
-                                                '--wa-color-border-normal': selected
-                                                    ? 'var(--wa-color-brand-border-normal)'
-                                                    : 'var(--map-poi-display-stick-anchor-border-color)',
+                                                top: `${coordinates.top}%`
                                             }}
                                             size="xs"
                                             variant={selected ? 'brand' : 'neutral'}
-                                            appearance={selected ? 'filled' : 'filled-outlined'}
+                                            appearance={selected ? 'accent' : 'filled-outlined'}
                                             aria-label={label}
                                             aria-pressed={selected}
                                             onClick={() => handleStickAnchorChange(side.value, position)}

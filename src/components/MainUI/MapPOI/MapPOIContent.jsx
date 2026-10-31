@@ -19,10 +19,12 @@ import { DateTimeDisplay }                         from '@Components/DateTimeDis
 import { stylePOIDuotoneIcon }                     from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import { openPOIEditor }                           from '@Components/MainUI/MapPOI/openPOIEditor'
 import {
-    calculatePOICanvasCapturePadding, calculatePOIContentPixelOffset, calculatePOIStickEdgeOffset,
+    calculatePOICanvasCapturePadding, calculatePOIContentPixelOffset, calculatePOIStickEdgeOffset, measurePOICanvasOverflow,
 }                                                   from '@Components/MainUI/MapPOI/poiCanvasGeometry'
 import {
-    clearPOIHoverPreview, isPOIHoverPreviewActive, isPointerNearPOIHoverPreview, showPOIHoverPreview,
+    clearPOIHoverPreview, clearPOIHoverTitlePreview, completePOIHoverPreviewRender,
+    isPointerNearPOIHoverPreview, isPOIHoverPreviewActive,
+    isPOIHoverPreviewTransitionActive, showPOIHoverPreview, showPOIHoverTitlePreview,
 } from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
 import { ICONS_PATH, WIDGET_SYSTEM_FONT_STACK }     from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
@@ -43,6 +45,7 @@ import {
     normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
 import { ELEVATION_UNITS, UnitUtils }               from '@Utils/UnitUtils'
+import { POIUtils }                                 from '@Utils/cesium/POIUtils'
 import { WaIcon, WaTooltip }                       from '@awesome.me/webawesome/dist/react'
 import { snapdom }                                 from '@zumer/snapdom'
 import classNames                                  from 'classnames'
@@ -219,8 +222,30 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             return
         }
 
-        void __.ui.poiManager.updatePOI(point.id, {expanded: !point.expanded})
+        showPOIHoverPreview(point, {releaseAfterRender: true})
+        void Promise.resolve(__.ui.poiManager.updatePOI(point.id, {expanded: !point.expanded})).then(updatedPOI => {
+            if (!updatedPOI) {
+                return
+            }
+
+            POIUtils.toggleVisibility(updatedPOI)
+        }).catch(error => {
+            clearPOIHoverPreview(point.id)
+            console.error(`[POI] Unable to toggle expanded state for ${point.id}:`, error)
+        })
     }, [isEmbedded, point])
+
+    /** Track hover on visible billboards regardless of their expanded state. */
+    const handlePOIHover = useCallback(() => {
+        if (!isEmbedded && presentation.visible && !hiddenBecauseTooClose) {
+            showPOIHoverTitlePreview(point)
+        }
+    }, [hiddenBecauseTooClose, isEmbedded, point, presentation.visible])
+
+    /** Remove the title overlay after the pointer leaves this reduced POI. */
+    const handlePOIHoverEnd = useCallback(() => {
+        clearPOIHoverTitlePreview(pointId)
+    }, [pointId])
 
     /** Show this collapsed POI while Shift is held over its Cesium billboard. */
     const handleShiftHover = useCallback(() => {
@@ -264,17 +289,21 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         __.canvasEvents.onDoubleTap(handleEditor, {entity: poiId, preventLowerPriority: true})
         __.canvasEvents.onRightClick(openContextMenu, {entity: poiId, preventLowerPriority: true})
         __.canvasEvents.onLongTap(openContextMenu, {entity: poiId, preventLowerPriority: true})
+        __.canvasEvents.on('MOUSE_ENTER', handlePOIHover, {entity: poiId})
+        __.canvasEvents.on('MOUSE_LEAVE', handlePOIHoverEnd, {entity: poiId})
         if (!DISABLE_POI_SHIFT_HOVER_FOR_DIAGNOSTIC) {
             __.canvasEvents.on('SHIFT#MOUSE_ENTER', handleShiftHover, {entity: poiId})
             __.canvasEvents.on('SHIFT#MOUSE_LEAVE', handleShiftHoverEnd, {entity: poiId})
             __.canvasEvents.onKeyDown(handleShiftDown, {entity: poiId, keys: ['shift']})
             __.canvasEvents.onKeyUp(handleShiftUp, {entity: false, keys: ['shift']})
         }
-    }, [handleEditor, handlePOIClick, handleShiftDown, handleShiftHover, handleShiftHoverEnd, handleShiftUp, openContextMenu])
+    }, [handleEditor, handlePOIClick, handlePOIHover, handlePOIHoverEnd, handleShiftDown, handleShiftHover,
+        handleShiftHoverEnd, handleShiftUp, openContextMenu])
 
     const removeEventListeners = useCallback((poiId) => {
         __.canvasEvents.removeAllListenersByEntity(poiId)
         __.canvasEvents.offKeyUp(handleShiftUp)
+        clearPOIHoverTitlePreview(poiId)
     }, [handleShiftUp])
 
     useEffect(() => {
@@ -303,111 +332,118 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         }
 
         const expanded = point?.expanded === true
-        __.requestAnimationFrame(() => {
-            queuePOICanvasRender(_poiContent, async () => {
-                /** Reject captures whose logical presentation changed while rasterizing. */
-                const isCurrentRender = () => {
-                    const currentPoint = $pois.list.get(pointId)
-                    const currentPresentation = resolveReplayPOIPresentation(currentPoint)
-                    return renderRequestId === _renderRequestId.current && Boolean(currentPoint)
-                        && (currentPoint.expanded === true) === expanded && currentPresentation.visible
-                        && currentPresentation.active === replayActive
-                        && currentPresentation.animationActive === replayAnimationActive
-                        && !isPOIHoverPreviewActive(pointId)
-                }
-
-                if (!isCurrentRender()) {
-                    return
-                }
-
-                const scale = 2
-                const ratio = window.devicePixelRatio || 1
-                const element = _poiCanvasCaptureSurface.current
-                const card = _poiContent.current
-                if (!element || !card) {
-                    return
-                }
-
-                const originalDisplay = element.style.display
-                const originalWidth = element.style.width
-                const originalBoxSizing = element.style.boxSizing
-                const originalPadding = element.style.padding
-                let canvas
-                let pixelOffset
-                try {
-                    const cardStyle = window.getComputedStyle(card)
-                    const borderWidth = Number.parseFloat(cardStyle.getPropertyValue('--poi-border-width'))
-                    const openFrameLineWidth = Number.parseFloat(
-                        cardStyle.getPropertyValue('--poi-open-frame-line-width'),
-                    )
-                    const slantedContentHeight = card.classList.contains('poi-card--style-slanted-banner')
-                        ? card.querySelector('.poi-card-inner')?.getBoundingClientRect().height ?? 0
-                        : 0
-                    const transformedCardBounds = card.getBoundingClientRect()
-                    const rotationBleed = Math.max(
-                        0,
-                        (transformedCardBounds.width - card.offsetWidth) / 2,
-                        (transformedCardBounds.height - card.offsetHeight) / 2,
-                    )
-                    const capturePadding = expanded ? calculatePOICanvasCapturePadding({
-                        borderWidth: Number.isFinite(borderWidth) ? borderWidth : 3,
-                        openFrameLineWidth: Number.isFinite(openFrameLineWidth) ? openFrameLineWidth : 0,
-                        slantedContentHeight,
-                        leaderBleed: leaderCaptureBleed,
-                        rotationBleed,
-                    }) : 0
-
-                    // Expand only the rasterization root so SnapDOM includes transformed and external strokes.
-                    element.style.display = 'block'
-                    element.style.width = 'max-content'
-                    element.style.boxSizing = 'content-box'
-                    element.style.padding = `${capturePadding}px`
-                    assertPOICanvasDimensions(element, scale, ratio)
-                    const snap = await snapdom(element, {scale})
-                    canvas = await snap.toCanvas()
-                    if (!isCurrentRender() || _poiCanvasCaptureSurface.current !== element
-                        || _poiContent.current !== card) {
-                        return
-                    }
-
-                    const width = canvas.width / scale / ratio
-                    const height = canvas.height / scale / ratio
-                    pixelOffset = calculatePOIContentPixelOffset(element, width, height)
-                }
-                catch (error) {
-                    console.error(`Error rendering POI ${pointId} to canvas:`, error)
-                    return
-                }
-                finally {
-                    element.style.display = originalDisplay
-                    element.style.width = originalWidth
-                    element.style.boxSizing = originalBoxSizing
-                    element.style.padding = originalPadding
-                }
-
+        queuePOICanvasRender(_poiContent, async () => {
+            /** Reject captures whose logical presentation changed while rasterizing. */
+            const isCurrentRender = () => {
                 const currentPoint = $pois.list.get(pointId)
-                if (!canvas || !isCurrentRender() || _poiCanvasCaptureSurface.current !== element
+                const currentPresentation = resolveReplayPOIPresentation(currentPoint)
+                return renderRequestId === _renderRequestId.current && Boolean(currentPoint)
+                    && (currentPoint.expanded === true) === expanded && currentPresentation.visible
+                    && currentPresentation.active === replayActive
+                    && currentPresentation.animationActive === replayAnimationActive
+                    && (!isPOIHoverPreviewActive(pointId) || isPOIHoverPreviewTransitionActive(pointId))
+            }
+
+            if (!isCurrentRender()) {
+                return
+            }
+
+            const scale = 2
+            const ratio = window.devicePixelRatio || 1
+            const element = _poiCanvasCaptureSurface.current
+            const card = _poiContent.current
+            if (!element || !card) {
+                completePOIHoverPreviewRender(pointId)
+                return
+            }
+
+            const originalDisplay = element.style.display
+            const originalWidth = element.style.width
+            const originalBoxSizing = element.style.boxSizing
+            const originalPadding = element.style.padding
+            let canvas
+            let pixelOffset
+            try {
+                // Measure the layout SnapDOM will capture, including transformed descendants.
+                element.style.display = 'block'
+                element.style.width = 'max-content'
+                element.style.boxSizing = 'content-box'
+                element.style.padding = '0px'
+                const cardStyle = window.getComputedStyle(card)
+                const borderWidth = Number.parseFloat(cardStyle.getPropertyValue('--poi-border-width'))
+                const openFrameLineWidth = Number.parseFloat(
+                    cardStyle.getPropertyValue('--poi-open-frame-line-width'),
+                )
+                const slantedContentHeight = card.classList.contains('poi-card--style-slanted-banner')
+                    ? card.querySelector('.poi-card-inner')?.getBoundingClientRect().height ?? 0
+                    : 0
+                const transformedCardBounds = card.getBoundingClientRect()
+                const rotationBleed = Math.max(
+                    0,
+                    (transformedCardBounds.width - card.offsetWidth) / 2,
+                    (transformedCardBounds.height - card.offsetHeight) / 2,
+                )
+                const leaderEndpointBleed = Number.isFinite(borderWidth)
+                    ? Math.max(0, borderWidth * 1.5)
+                    : 4.5
+                const capturePadding = expanded ? calculatePOICanvasCapturePadding({
+                    borderWidth: Number.isFinite(borderWidth) ? borderWidth : 3,
+                    openFrameLineWidth: Number.isFinite(openFrameLineWidth) ? openFrameLineWidth : 0,
+                    slantedContentHeight,
+                    leaderBleed: leaderCaptureBleed,
+                    rotationBleed,
+                    leaderEndpointBleed,
+                }) + measurePOICanvasOverflow(element) : 0
+
+                // Expand only the rasterization root so SnapDOM includes transformed and external strokes.
+                element.style.padding = `${capturePadding}px`
+                assertPOICanvasDimensions(element, scale, ratio)
+                const snap = await snapdom(element, {scale, outerShadows: 'subtree'})
+                canvas = await snap.toCanvas()
+                if (!isCurrentRender() || _poiCanvasCaptureSurface.current !== element
                     || _poiContent.current !== card) {
                     return
                 }
 
-                try {
-                    const mapPOI = new MapPOI(currentPoint)
-                    const width = canvas.width / scale / ratio
-                    const height = canvas.height / scale / ratio
-                    mapPOI.image = {
-                        // Cesium accepts canvases directly; a data URL needlessly copies the pixel buffer.
-                        src:    canvas,
-                        width,
-                        height,
-                    }
-                    mapPOI.pixelOffset = pixelOffset
-                    await mapPOI.utils.draw(mapPOI)
+                const width = canvas.width / scale / ratio
+                const height = canvas.height / scale / ratio
+                pixelOffset = calculatePOIContentPixelOffset(element, width, height, snap.meta)
+            }
+            catch (error) {
+                console.error(`Error rendering POI ${pointId} to canvas:`, error)
+                completePOIHoverPreviewRender(pointId)
+                return
+            }
+            finally {
+                element.style.display = originalDisplay
+                element.style.width = originalWidth
+                element.style.boxSizing = originalBoxSizing
+                element.style.padding = originalPadding
+            }
+
+            const currentPoint = $pois.list.get(pointId)
+            if (!canvas || !isCurrentRender() || _poiCanvasCaptureSurface.current !== element
+                || _poiContent.current !== card) {
+                return
+            }
+
+            try {
+                const mapPOI = new MapPOI(currentPoint)
+                const width = canvas.width / scale / ratio
+                const height = canvas.height / scale / ratio
+                mapPOI.image = {
+                    // Cesium accepts canvases directly; a data URL needlessly copies the pixel buffer.
+                    src:    canvas,
+                    width,
+                    height,
                 }
-                catch (error) {
-                    console.error(`Error rendering POI ${pointId} to canvas:`, error)
-                }
-            })
+                mapPOI.pixelOffset = pixelOffset
+                await mapPOI.utils.draw(mapPOI)
+            }
+            catch (error) {
+                console.error(`Error rendering POI ${pointId} to canvas:`, error)
+            }
+            completePOIHoverPreviewRender(pointId)
         })
     }, [isEmbedded, point?.expanded, replayActive, replayAnimationActive, replayMasked, hiddenBecauseTooClose, pointId, $pois.list, leaderCaptureBleed])
 

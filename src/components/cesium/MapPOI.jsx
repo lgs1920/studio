@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-23
- * Last modified: 2026-10-28
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,8 @@ import {
     normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
 import {
-    clearPOIHoverPreview, getPOIHoverPreview, setPOIHoverPreviewPosition, subscribeToPOIHoverPreview,
+    clearPOIHoverPreview, clearPOIHoverTitlePreview, getPOIHoverPreview, getPOIHoverTitle,
+    isPOIHoverPreviewTransitionActive, setPOIHoverPreviewPosition, subscribeToPOIHoverPreview,
 } from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
 import { POIUtils }                                       from '@Utils/cesium/POIUtils'
 import { memo, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
@@ -50,6 +51,11 @@ export const MapPOI = memo(({point}) => {
         [thePOI?.id],
     )
     const hoverPreviewActive = useSyncExternalStore(subscribeHoverPreview, getHoverPreviewSnapshot, () => false)
+    const getHoverTitleSnapshot = useCallback(
+        () => getPOIHoverTitle(thePOI?.id),
+        [thePOI?.id],
+    )
+    const hoverTitleActive = useSyncExternalStore(subscribeHoverPreview, getHoverTitleSnapshot, () => false)
     const replayEntry = Array.isArray(replay.nearbyPois)
                             ? replay.nearbyPois.find(entry => entry?.poi?.id === thePOI?.id)
                             : null
@@ -58,10 +64,16 @@ export const MapPOI = memo(({point}) => {
     const replaySettings = normalizeJourneyReplayPOISettings(thePOI?.replay)
 
     useEffect(() => {
-        if (hoverPreviewActive && (thePOI?.expanded || tooFar || !presentation.visible)) {
+        if (hoverPreviewActive && ((thePOI?.expanded && !isPOIHoverPreviewTransitionActive(thePOI.id))
+            || tooFar || !presentation.visible)) {
             clearPOIHoverPreview(thePOI.id)
         }
     }, [hoverPreviewActive, presentation.visible, thePOI?.expanded, thePOI?.id, tooFar])
+    useEffect(() => {
+        if (hoverTitleActive && (tooFar || !presentation.visible)) {
+            clearPOIHoverTitlePreview(thePOI.id)
+        }
+    }, [hoverTitleActive, presentation.visible, thePOI?.expanded, thePOI?.id, tooFar])
     useEffect(() => {
         let cancelled = false
         let rafId = null
@@ -70,6 +82,7 @@ export const MapPOI = memo(({point}) => {
             if (cancelled || !hasPOI || !hasCoordinates) {
                 setPixels(null)
                 clearPOIHoverPreview(point)
+                clearPOIHoverTitlePreview(point)
                 return
             }
 
@@ -77,6 +90,7 @@ export const MapPOI = memo(({point}) => {
             if (!currentPOI?.id || !Number.isFinite(currentPOI.latitude) || !Number.isFinite(currentPOI.longitude)) {
                 setPixels(null)
                 clearPOIHoverPreview(point)
+                clearPOIHoverTitlePreview(point)
                 return
             }
 
@@ -92,6 +106,7 @@ export const MapPOI = memo(({point}) => {
             else {
                 setPixels(null)
                 clearPOIHoverPreview(currentPOI.id)
+                clearPOIHoverTitlePreview(currentPOI.id)
             }
 
             const scaleInfo = POIUtils.adaptScaleToDistance(currentPOI)
@@ -161,6 +176,21 @@ export const MapPOI = memo(({point}) => {
                             '--poi-expanded-dimension': `${thePOI.display?.maxWidth ?? 200}px`,
                         }}
                     />
+                </div>
+            }
+            {pixels && hoverTitleActive && !thePOI.expanded && !tooFar && presentation.visible &&
+                <div
+                    className="poi-map-overlay-details"
+                    role="tooltip"
+                    style={{
+                        position: 'absolute',
+                        bottom: window.innerHeight - pixels.y + 17 * (scale ?? 1),
+                        left: pixels.x,
+                        transform: 'translate(-50%, calc(-100% - var(--lgs-gutter-xs)))',
+                        zIndex: viewable.get(thePOI.id),
+                    }}
+                >
+                    {thePOI.title?.trim() || 'Point Of Interest'}
                 </div>
             }
         </>

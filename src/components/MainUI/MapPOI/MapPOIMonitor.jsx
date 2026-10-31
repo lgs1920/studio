@@ -8,16 +8,18 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-05-09
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { MapPOIContent } from '@Components/MainUI/MapPOI/MapPOIContent'
+import { MapPOICluster } from '@Components/MainUI/MapPOI/MapPOICluster'
 import { POIS_EDITOR_DRAWER } from '@Core/constants'
 import {
-    clearPOIHoverPreview, getActivePOIHoverPreviewId, isPointerNearPOIHoverPreview,
+    clearPOIHoverPreview, clearPOIHoverTitlePreview, getActivePOIHoverPreviewId,
+    isPointerNearPOIHoverPreview,
 } from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
 import { useSnapshot }        from 'valtio'
 import { useEffect, useRef }  from 'react'
@@ -47,8 +49,13 @@ export const MapPOIMonitor = () => {
 
     useEffect(() => {
         const canvas = lgs.viewer?.canvas
-        /** Clear the transient preview before map picking handles a click or drag. */
-        const clearPreview = () => clearPOIHoverPreview()
+        /** Clear the hidden Shift preview before map picking handles a click or drag. */
+        const clearActivePreview = () => clearPOIHoverPreview()
+        /** Clear all hover state when the pointer leaves the viewer or the window loses focus. */
+        const clearHoverState = () => {
+            clearActivePreview()
+            clearPOIHoverTitlePreview()
+        }
         /** Keep the preview over its original screen anchor after hiding its Cesium billboard. */
         const clearPreviewOutsidePOI = event => {
             const poiId = getActivePOIHoverPreviewId()
@@ -64,23 +71,23 @@ export const MapPOIMonitor = () => {
         /** Clear the transient preview when Shift is released outside the focused canvas. */
         const clearPreviewOnShiftUp = event => {
             if (event.key.toLowerCase() === 'shift') {
-                clearPreview()
+                clearActivePreview()
             }
         }
 
-        document.addEventListener('pointerdown', clearPreview, true)
+        document.addEventListener('pointerdown', clearActivePreview, true)
         document.addEventListener('pointermove', clearPreviewOutsidePOI, true)
         document.addEventListener('keyup', clearPreviewOnShiftUp, true)
-        canvas?.addEventListener('pointerleave', clearPreview)
-        window.addEventListener('blur', clearPreview)
+        canvas?.addEventListener('pointerleave', clearHoverState)
+        window.addEventListener('blur', clearHoverState)
 
         return () => {
-            document.removeEventListener('pointerdown', clearPreview, true)
+            document.removeEventListener('pointerdown', clearActivePreview, true)
             document.removeEventListener('pointermove', clearPreviewOutsidePOI, true)
             document.removeEventListener('keyup', clearPreviewOnShiftUp, true)
-            canvas?.removeEventListener('pointerleave', clearPreview)
-            window.removeEventListener('blur', clearPreview)
-            clearPreview()
+            canvas?.removeEventListener('pointerleave', clearHoverState)
+            window.removeEventListener('blur', clearHoverState)
+            clearHoverState()
         }
     }, [])
 
@@ -176,10 +183,13 @@ export const MapPOIMonitor = () => {
     }
 
     return (
-        <div id="map-poi-list">
-            {Array.from(currentList, ([id, poi]) => (
-                <MapPOIContent key={id} poi={poi.id}/>
-            ))}
-        </div>
+        <>
+            <div id="map-poi-list">
+                {Array.from(currentList, ([id, poi]) => (
+                    <MapPOIContent key={id} poi={poi.id}/>
+                ))}
+            </div>
+            <MapPOICluster/>
+        </>
     )
 }

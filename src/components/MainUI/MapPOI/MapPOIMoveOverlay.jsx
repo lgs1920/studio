@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-29
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -841,7 +841,7 @@ export const MapPOIMoveOverlay = () => {
             )}
             {candidate && anchor && (
                 <div
-                    className="poi-move-details"
+                    className="poi-move-details poi-map-overlay-details"
                     ref={_details}
                     style={{
                         left: `${overlayPoint?.x ?? 0}px`,

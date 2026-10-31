@@ -54,6 +54,10 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
 }))
 
 import { MapPOIContent } from '@Components/MainUI/MapPOI/MapPOIContent'
+import {
+    clearPOIHoverTitlePreview, getPOIHoverTitle,
+} from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
+import { POIUtils } from '@Utils/cesium/POIUtils'
 import {snapdom} from '@zumer/snapdom'
 
 /**
@@ -145,6 +149,7 @@ describe('MapPOIContent display settings', () => {
 
     afterEach(() => {
         cleanup()
+        clearPOIHoverTitlePreview()
         vi.restoreAllMocks()
         if (originalResizeObserver === undefined) {
             delete globalThis.ResizeObserver
@@ -164,6 +169,30 @@ describe('MapPOIContent display settings', () => {
         act(canvasEvents.onClick.mock.calls[0][0])
 
         expect(globalThis.__.ui.poiManager.updatePOI).toHaveBeenCalledWith('poi-1', {expanded: false})
+    })
+
+    it.each([false, true])('uses the hand cursor on enter and restores it on leave when expanded=%s', expanded => {
+        poiList.get('poi-1').expanded = expanded
+        const canvas = document.createElement('canvas')
+        canvas.style.cursor = 'crosshair'
+        canvas.style.color = 'rgb(20, 30, 40)'
+        globalThis.lgs.viewer = {scene: {canvas}}
+        vi.spyOn(POIUtils, 'setPOIVisibility').mockReturnValue(true)
+        const {unmount} = render(<MapPOIContent poi="poi-1"/>)
+        const events = globalThis.__.canvasEvents.on.mock.calls
+        const enter = events.find(([name]) => name === 'MOUSE_ENTER')[1]
+        const leave = events.find(([name]) => name === 'MOUSE_LEAVE')[1]
+
+        act(enter)
+        expect(getPOIHoverTitle('poi-1')).toBe(true)
+        expect(canvas.style.cursor).toBe('pointer')
+        act(leave)
+        expect(getPOIHoverTitle('poi-1')).toBe(false)
+        expect(canvas.style.cursor).toBe('crosshair')
+
+        act(enter)
+        unmount()
+        expect(canvas.style.cursor).toBe('crosshair')
     })
 
     it('renders configured fields on the expanded map POI', () => {
@@ -574,5 +603,32 @@ describe('MapPOIContent display settings', () => {
         expect(captureSurface.style.boxSizing).toBe('')
         expect(captureSurface.style.padding).toBe('')
         expect(drawPOI).toHaveBeenCalledWith(expect.objectContaining({id: 'poi-1', image: {src: canvas, width: 200, height: 120}}))
+    })
+
+    it('positions an expanded POI from the SnapDOM viewBox origin', async () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = 400
+        canvas.height = 200
+        vi.mocked(snapdom).mockResolvedValue({
+            meta: {vbW: 200, vbH: 100, contentX: 20, contentY: 10},
+            toCanvas: async () => canvas,
+        })
+        render(<MapPOIContent poi="poi-1"/>)
+
+        const captureSurface = document.querySelector('.poi-canvas-capture-surface')
+        vi.spyOn(captureSurface, 'getBoundingClientRect')
+            .mockReturnValue({left: 10, top: 20, right: 110, bottom: 60, width: 100, height: 40})
+        vi.spyOn(captureSurface.querySelector('.poi-geographic-anchor'), 'getBoundingClientRect')
+            .mockReturnValue({left: 40, top: 45, right: 40, bottom: 45, width: 0, height: 0})
+
+        await act(async () => {})
+        await act(async () => {
+            requestAnimationFrame.mock.calls.map(([callback]) => callback).forEach(callback => callback())
+        })
+
+        expect(drawPOI).toHaveBeenCalledWith(expect.objectContaining({
+            id: 'poi-1',
+            pixelOffset: {x: 50, y: 15},
+        }))
     })
 })

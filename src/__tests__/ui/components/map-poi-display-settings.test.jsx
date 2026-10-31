@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -182,6 +182,31 @@ describe('MapPOIDisplaySettings', () => {
             stickPosition: 'left',
             stickHorizontalPosition: 20,
         })
+    })
+
+    it('uses the standard Brand appearance for the selected anchor and centers anchors on the card edges', () => {
+        render(<MapPOIDisplaySettings
+            panel="decoration"
+            poi="poi-1"
+            display={{stickPosition: 'right', stickAngle: 'straight', stickHorizontalPosition: 50}}
+            onDisplayValueChange={vi.fn()}
+        />)
+
+        const anchorPicker = screen.getByRole('group', {name: 'Anchor'})
+        const selected = within(anchorPicker).getByRole('button', {name: 'Right 50%'})
+        const topAnchor = within(anchorPicker).getByRole('button', {name: 'Top 20%'})
+        const bottomAnchor = within(anchorPicker).getByRole('button', {name: 'Bottom 80%'})
+
+        expect(selected.getAttribute('aria-pressed')).toBe('true')
+        expect(selected.getAttribute('variant')).toBe('brand')
+        expect(selected.getAttribute('appearance')).toBe('accent')
+        expect(selected.style.getPropertyValue('--wa-color-fill-normal')).toBe('')
+        expect(selected.style.left).toBe('97%')
+        expect(selected.style.top).toBe('50%')
+        expect(topAnchor.style.left).toBe('47.4%')
+        expect(topAnchor.style.top).toBe('12%')
+        expect(bottomAnchor.style.left).toBe('84.6%')
+        expect(bottomAnchor.style.top).toBe('88%')
     })
 
     it('notifies the editor when the category icon choice changes', () => {

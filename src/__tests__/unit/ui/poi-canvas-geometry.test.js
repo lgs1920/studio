@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,9 +19,23 @@ import {
     calculatePOICanvasCapturePadding,
     calculatePOIContentPixelOffset,
     calculatePOIStickEdgeOffset,
+    measurePOICanvasOverflow,
 } from '@Components/MainUI/MapPOI/poiCanvasGeometry'
 
 describe('POI canvas geometry', () => {
+    it.each([
+        {left: -40, right: 200, top: 0, bottom: 100, expected: 40},
+        {left: 0, right: 245, top: 0, bottom: 100, expected: 45},
+        {left: 0, right: 200, top: -30, bottom: 100, expected: 30},
+        {left: 0, right: 200, top: 0, bottom: 155, expected: 55},
+    ])('reserves transformed artwork outside each capture edge: $expected px', ({expected, ...bounds}) => {
+        const element = {
+            getBoundingClientRect: () => ({left: 0, right: 200, top: 0, bottom: 100}),
+            querySelectorAll: () => [{getBoundingClientRect: () => ({...bounds, width: 200, height: 100})}],
+        }
+        expect(measurePOICanvasOverflow(element)).toBe(expected)
+    })
+
     it('keeps the visible card centered as the configured maximum width changes', () => {
         const measurements = [
             {
@@ -77,6 +91,11 @@ describe('POI canvas geometry', () => {
         {name: 'round endpoint', geometry: {borderWidth: 3}, expectedPadding: 6},
         {name: 'Open Frame stroke', geometry: {borderWidth: 3, openFrameLineWidth: 4.5}, expectedPadding: 6},
         {name: 'slanted frame', geometry: {borderWidth: 3, slantedContentHeight: 120}, expectedPadding: 21},
+        {
+            name: 'rotated stick endpoint',
+            geometry: {borderWidth: 3, rotationBleed: 10, leaderEndpointBleed: 4.5},
+            expectedPadding: 16,
+        },
     ])('pads capture for $name overflow', ({geometry, expectedPadding}) => {
         expect(calculatePOICanvasCapturePadding(geometry)).toBe(expectedPadding)
     })
@@ -107,5 +126,29 @@ describe('POI canvas geometry', () => {
 
         expect(offset.x).toBeCloseTo(expectedX)
         expect(offset.y).toBeCloseTo(expectedY)
+    })
+
+    it('accounts for SnapDOM bleed when aligning the geographic anchor', () => {
+        const anchor = {getBoundingClientRect: () => ({left: 160, top: 160})}
+        const card = {getBoundingClientRect: () => ({left: 20, right: 120})}
+        const element = {
+            getBoundingClientRect: () => ({left: 20, right: 320, top: 20, bottom: 320, width: 300, height: 300}),
+            querySelector: vi.fn(selector => {
+                if (selector === '.poi-geographic-anchor') {
+                    return anchor
+                }
+
+                return selector === '.poi-card-inner' ? card : null
+            }),
+        }
+
+        const offset = calculatePOIContentPixelOffset(element, 340, 360, {
+            vbW: 340,
+            vbH: 360,
+            contentX: 20,
+            contentY: 30,
+        })
+
+        expect(offset).toEqual({x: 10, y: 10})
     })
 })

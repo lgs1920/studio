@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2025-02-14
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,7 @@ export const MapPOICluster = () => {
     const list = useSnapshot(lgs.stores.main.components.pois.list)
     return (
         <div id="poi-list">
-            {__.ui.sceneManager.is3D && Array.from(list.keys()).map((id) => (
+            {Array.from(list.keys()).map((id) => (
                 <MapPOI key={id} point={id}/>
             ))}
         </div>

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -95,6 +95,27 @@
     background: var(--wa-color-warning-fill-normal);
 }
 
+.poi-map-overlay-details {
+    font-size: var(--lgs-font-size-s);
+    font-weight: normal;
+    position: absolute;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--lgs-gutter-xs) var(--lgs-gutter-s);
+    max-width: calc(100% - 2 * var(--lgs-gutter-s));
+    flex-wrap: wrap;
+    white-space: normal;
+    text-align: center;
+    color: var(--wa-color-brand-on-quiet);
+    border: 0;
+    border-radius: var(--lgs-border-radius-s);
+    background: color-mix(in oklab, var(--wa-color-brand-fill-quiet) 15%, transparent);
+    text-shadow: 0 1px 4px color-mix(in oklab, black 34%, transparent);
+    backdrop-filter: blur(var(--lgs-blur));
+    pointer-events: none;
+    gap: var(--lgs-gutter-xs);
+}
 
 .poi-canvas-capture-surface {
     display: contents;
@@ -1288,7 +1309,7 @@
     transform: translate(-50%, -50%);
 }
 
-.map-poi-display-stick-anchor-point::part(button) {
+.map-poi-display-stick-anchor-point::part(base) {
     box-sizing: border-box;
     width: var(--map-poi-display-stick-anchor-point-size);
     min-width: var(--map-poi-display-stick-anchor-point-size);
@@ -1298,14 +1319,9 @@
     border-radius: var(--lgs-border-radius-xs);
 }
 
-.map-poi-display-stick-anchor-picker wa-button.map-poi-display-stick-anchor-point[aria-pressed="false"]::part(button) {
+.map-poi-display-stick-anchor-picker wa-button.map-poi-display-stick-anchor-point[aria-pressed="false"]::part(base) {
     border-color: var(--map-poi-display-stick-anchor-border-color) !important;
     background-color: var(--map-poi-display-stick-anchor-fill-color) !important;
-}
-
-.map-poi-display-stick-anchor-picker wa-button.map-poi-display-stick-anchor-point[aria-pressed="true"]::part(button) {
-    border-color: var(--wa-color-brand-border-normal) !important;
-    background-color: var(--wa-color-brand-fill-normal) !important;
 }
 
 .map-poi-edit-preview-open .poi-card.poi-card--stick-left,
@@ -1780,27 +1796,6 @@
         outline-offset: 2px;
     }
 
-    & .poi-move-details {
-        font-size: var(--lgs-font-size-s);
-        font-weight: normal;
-        position: absolute;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: var(--lgs-gutter-xs) var(--lgs-gutter-s);
-        max-width: calc(100% - 2 * var(--lgs-gutter-s));
-        flex-wrap: wrap;
-        white-space: normal;
-        text-align: center;
-        color: var(--wa-color-brand-on-quiet);
-        border: 0;
-        border-radius: var(--lgs-border-radius-s);
-        background: color-mix(in oklab, var(--wa-color-brand-fill-quiet) 15%, transparent);
-        text-shadow: 0 1px 4px color-mix(in oklab, black 34%, transparent);
-        backdrop-filter: blur(var(--lgs-blur));
-        pointer-events: none;
-        gap: var(--lgs-gutter-xs);
-    }
 }
 
 body.poi-move-hiding-system-cursor,

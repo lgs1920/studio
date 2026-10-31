@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-30
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -88,6 +88,7 @@ export const calculatePOIStickEdgeOffset = ({
  * @param {number} [geometry.slantedContentHeight=0] - Slanted POI content height in CSS pixels.
  * @param {number} [geometry.leaderBleed=0] - Stick overflow beyond its layout slot in CSS pixels.
  * @param {number} [geometry.rotationBleed=0] - Rotated widget overflow beyond its layout box in CSS pixels.
+ * @param {number} [geometry.leaderEndpointBleed=0] - Extra radius needed around the stick's geographic endpoint.
  * @returns {number} Capture padding in CSS pixels.
  */
 export const calculatePOICanvasCapturePadding = ({
@@ -96,10 +97,14 @@ export const calculatePOICanvasCapturePadding = ({
     slantedContentHeight = 0,
     leaderBleed = 0,
     rotationBleed = 0,
+    leaderEndpointBleed = 0,
 }) => {
     const normalizedBorderWidth = Number.isFinite(borderWidth) ? Math.max(0, borderWidth) : 0
     const normalizedLeaderBleed = Number.isFinite(leaderBleed) ? Math.max(0, leaderBleed) : 0
     const normalizedRotationBleed = Number.isFinite(rotationBleed) ? Math.max(0, rotationBleed) : 0
+    const normalizedLeaderEndpointBleed = Number.isFinite(leaderEndpointBleed)
+        ? Math.max(0, leaderEndpointBleed)
+        : 0
     const slantedBleed = slantedContentHeight > 0
         ? Math.tan(15 * Math.PI / 180) * slantedContentHeight / 2 + normalizedBorderWidth
         : 0
@@ -109,8 +114,24 @@ export const calculatePOICanvasCapturePadding = ({
         openFrameLineWidth,
         slantedBleed,
         normalizedLeaderBleed,
-        normalizedRotationBleed,
+        normalizedRotationBleed + normalizedLeaderEndpointBleed,
     ) + 1)
+}
+
+/** Measure transformed artwork extending beyond the capture root's layout box. */
+export const measurePOICanvasOverflow = element => {
+    const bounds = element.getBoundingClientRect()
+    let overflow = 0
+    for (const child of element.querySelectorAll('.poi-card, .poi-card *')) {
+        const childBounds = child.getBoundingClientRect()
+        if (!childBounds.width && !childBounds.height && !child.matches('.poi-geographic-anchor')) {
+            continue
+        }
+        overflow = Math.max(overflow,
+            bounds.left - childBounds.left, childBounds.right - bounds.right,
+            bounds.top - childBounds.top, childBounds.bottom - bounds.bottom)
+    }
+    return Math.ceil(overflow)
 }
 
 /**
@@ -119,10 +140,11 @@ export const calculatePOICanvasCapturePadding = ({
  * @param {HTMLElement} element - The DOM element captured into the billboard canvas.
  * @param {number} canvasWidth - The captured canvas width in CSS pixels.
  * @param {number} canvasHeight - The captured canvas height in CSS pixels.
+ * @param {Object} [captureMeta] - SnapDOM capture geometry, including bleed around the element.
  * @returns {{x: number, y: number}} Billboard pixel offset that aligns the geographic anchor. Cesium uses screen
  *     coordinates for pixel offsets, so positive y moves the image down.
  */
-export const calculatePOIContentPixelOffset = (element, canvasWidth, canvasHeight) => {
+export const calculatePOIContentPixelOffset = (element, canvasWidth, canvasHeight, captureMeta = {}) => {
     const elementBounds = element.getBoundingClientRect()
     const cardBounds = element.querySelector('.poi-card-inner')?.getBoundingClientRect()
     const anchorBounds = element.querySelector('.poi-geographic-anchor')?.getBoundingClientRect()
@@ -138,11 +160,21 @@ export const calculatePOIContentPixelOffset = (element, canvasWidth, canvasHeigh
         return {x: 0, y: 0}
     }
 
-    const anchorRatio = (anchorX - elementBounds.left) / elementBounds.width
-    const anchorVerticalRatio = (anchorY - elementBounds.top) / elementBounds.height
+    const viewBoxWidth = Number(captureMeta?.vbW)
+    const viewBoxHeight = Number(captureMeta?.vbH)
+    const contentX = Number(captureMeta?.contentX)
+    const contentY = Number(captureMeta?.contentY)
+    const scaleX = Number.isFinite(viewBoxWidth) && viewBoxWidth > 0
+        ? canvasWidth / viewBoxWidth
+        : canvasWidth / elementBounds.width
+    const scaleY = Number.isFinite(viewBoxHeight) && viewBoxHeight > 0
+        ? canvasHeight / viewBoxHeight
+        : canvasHeight / elementBounds.height
+    const anchorCanvasX = (Number.isFinite(contentX) ? contentX : 0) + anchorX - elementBounds.left
+    const anchorCanvasY = (Number.isFinite(contentY) ? contentY : 0) + anchorY - elementBounds.top
 
     return {
-        x: canvasWidth * (0.5 - anchorRatio),
-        y: canvasHeight * (0.5 - anchorVerticalRatio),
+        x: canvasWidth / 2 - anchorCanvasX * scaleX,
+        y: canvasHeight / 2 - anchorCanvasY * scaleY,
     }
 }

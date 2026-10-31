@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-03-01
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -90,6 +90,13 @@ const journeyForPOI = poi => globalThis.__?.ui?.poiManager?.getJourneyForPOI?.(p
 
 
 export class POIUtils {
+
+
+    /** Request a map frame after updating a POI entity. */
+    static requestRender = () => {
+        const scene = globalThis.lgs?.viewer?.scene ?? globalThis.lgs?.scene
+        scene?.requestRender?.()
+    }
 
 
     /**
@@ -203,7 +210,7 @@ export class POIUtils {
         if (entity.billboard) {
             entity.billboard.show = entity.show
         }
-        lgs.viewer.scene.requestRender()
+        POIUtils.requestRender()
         return true
     }
 
@@ -325,7 +332,7 @@ export class POIUtils {
             container.add({...options, billboard: new BillboardGraphics(billboard)})
         }
 
-        lgs.viewer.scene.requestRender()
+        POIUtils.requestRender()
         return entity || container.getById(poi.id)
     }
 

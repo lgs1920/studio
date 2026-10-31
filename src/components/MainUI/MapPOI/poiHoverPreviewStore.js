@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-26
+ * Last modified: 2026-10-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,9 @@ import { POIUtils } from '@Utils/cesium/POIUtils'
 
 let activePOIId = null
 let activePOIPosition = null
+let activePOIReleaseAfterRender = false
+let activePOITitleId = null
+let previousPOITitleCursor = null
 const listenersByPOI = new Map()
 
 /** Notify only the POI components whose preview state changed. */
@@ -29,6 +32,9 @@ const notify = (...poiIds) => {
 
 /** Get the ID of the POI currently shown as an expanded DOM preview. */
 export const getPOIHoverPreview = poiId => activePOIId === poiId
+
+/** Check whether a POI currently owns the compact hover title. */
+export const getPOIHoverTitle = poiId => activePOITitleId === poiId
 
 /** Get the owner of the single active hover preview, if any. */
 export const getActivePOIHoverPreviewId = () => activePOIId
@@ -72,6 +78,49 @@ export const isPointerNearPOIHoverPreview = (poiId, x, y, radius = 30) => {
 /** Check whether a POI currently owns the expanded DOM preview. */
 export const isPOIHoverPreviewActive = poiId => activePOIId === poiId
 
+/** Check whether a transition preview must remain until its replacement image is rendered. */
+export const isPOIHoverPreviewTransitionActive = poiId => activePOIId === poiId && activePOIReleaseAfterRender
+
+/** Track a visible hovered POI so its projected overlay can display the title. */
+export const showPOIHoverTitlePreview = poi => {
+    if (!poi?.id || activePOIId === poi.id) {
+        return false
+    }
+
+    if (activePOITitleId === poi.id) {
+        return true
+    }
+
+    const previousPOIId = activePOITitleId
+    const canvas = globalThis.lgs?.viewer?.scene?.canvas ?? globalThis.lgs?.viewer?.canvas
+    if (!previousPOIId) {
+        previousPOITitleCursor = canvas?.style?.cursor ?? ''
+    }
+    activePOITitleId = poi.id
+    if (canvas?.style) {
+        canvas.style.cursor = 'pointer'
+    }
+    notify(previousPOIId, activePOITitleId)
+    return true
+}
+
+/** Clear the compact title overlay for the POI that owns it. */
+export const clearPOIHoverTitlePreview = (poiId = null) => {
+    if (!activePOITitleId || (poiId && activePOITitleId !== poiId)) {
+        return false
+    }
+
+    const previousPOIId = activePOITitleId
+    activePOITitleId = null
+    const canvas = globalThis.lgs?.viewer?.scene?.canvas ?? globalThis.lgs?.viewer?.canvas
+    if (canvas?.style) {
+        canvas.style.cursor = previousPOITitleCursor ?? ''
+    }
+    previousPOITitleCursor = null
+    notify(previousPOIId)
+    return true
+}
+
 /** Resolve the Cesium entity for the currently stored POI. */
 const getPOIEntity = poi => POIUtils.getEntityContainer(poi)?.getById(poi?.id) ?? null
 
@@ -93,14 +142,32 @@ const restorePOIEntity = poi => {
  * Show a collapsed, visible POI as a DOM preview and hide its Cesium billboard.
  *
  * @param {object} poi - POI represented by the picked Cesium entity.
+ * @param {object} [options] - Preview lifecycle options.
+ * @param {boolean} [options.releaseAfterRender=false] - Clear the preview after its next canvas image is ready.
  * @returns {boolean} Whether the POI became the active preview.
  */
-export const showPOIHoverPreview = poi => {
-    if (!poi?.id || poi.expanded === true || POIUtils.setPOIVisibility(poi, true) !== true) {
+export const showPOIHoverPreview = (poi, {releaseAfterRender = false} = {}) => {
+    if (!poi?.id || (poi.expanded === true && !releaseAfterRender)
+        || POIUtils.setPOIVisibility(poi, true) !== true) {
         return false
     }
 
+    if (!releaseAfterRender) {
+        clearPOIHoverTitlePreview()
+    }
+
     if (activePOIId === poi.id) {
+        activePOIReleaseAfterRender ||= releaseAfterRender
+        if (releaseAfterRender) {
+            const entity = getPOIEntity(poi)
+            if (entity) {
+                entity.show = true
+                if (entity.billboard) {
+                    entity.billboard.show = true
+                }
+                POIUtils.requestRender()
+            }
+        }
         return true
     }
 
@@ -111,16 +178,28 @@ export const showPOIHoverPreview = poi => {
         return false
     }
 
-    entity.show = false
-    if (entity.billboard) {
-        entity.billboard.show = false
+    if (!releaseAfterRender) {
+        entity.show = false
+        if (entity.billboard) {
+            entity.billboard.show = false
+        }
     }
 
     activePOIId = poi.id
     activePOIPosition = null
+    activePOIReleaseAfterRender = releaseAfterRender
     notify(activePOIId)
-    globalThis.lgs?.scene?.requestRender?.()
+    POIUtils.requestRender()
     return true
+}
+
+/** Release the transition preview after the matching Cesium image is drawn. */
+export const completePOIHoverPreviewRender = poiId => {
+    if (!isPOIHoverPreviewTransitionActive(poiId)) {
+        return false
+    }
+
+    return clearPOIHoverPreview(poiId)
 }
 
 /**
@@ -137,12 +216,13 @@ export const clearPOIHoverPreview = (poiId = null) => {
     const previousPOIId = activePOIId
     activePOIId = null
     activePOIPosition = null
+    activePOIReleaseAfterRender = false
     const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get(previousPOIId)
     if (poi) {
         restorePOIEntity(poi)
     }
 
     notify(previousPOIId)
-    globalThis.lgs?.scene?.requestRender?.()
+    POIUtils.requestRender()
     return true
 }
