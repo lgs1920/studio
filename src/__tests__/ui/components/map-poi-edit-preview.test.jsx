@@ -154,7 +154,8 @@ describe('MapPOIEditPreview', () => {
         await waitFor(() => {
             expect(container.querySelector('.map-poi-edit-preview-background').style.backgroundSize).toBe('1440px')
         })
-        expect(container.querySelector('.map-poi-edit-preview-background').style.backgroundRepeat).toBe('no-repeat')
+        expect(container.querySelector('.map-poi-edit-preview-background').style.backgroundImage)
+            .toContain('blob:captured-map')
 
         expect(drawImage).toHaveBeenCalledWith(
             capturedBitmap,
