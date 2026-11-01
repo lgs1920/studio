@@ -21,6 +21,7 @@ implementation documents. Implemented and historical documents belong under
 
 ## Replay and Video
 
+- [Replay export dependency and encoder addendum](CORE-REPLAY-EXPORT-DEPENDENCIES-AND-ENCODER-ADDENDUM.md) — reviewed against `1.0.0`
 - [Replay Timeline performance audit and improvement proposals](CORE-REPLAY-TIMELINE-PERFORMANCE-AUDIT.md)
 - [Parallel HQ workspace execution analysis](REPLAY-PARALLEL-WORKSPACE-EXECUTION-ANALYSIS.md)
 
