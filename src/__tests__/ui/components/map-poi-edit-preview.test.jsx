@@ -8,22 +8,34 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-30
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, render, waitFor} from '@testing-library/react'
+import {act, cleanup, fireEvent, render, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
 import {proxyMap} from 'valtio/utils'
 
 vi.mock('@Components/MainUI/MapPOI/MapPOIContent', () => ({
-    MapPOIContent: ({domPreview}) => domPreview ? (
-        <div className="poi-icon-wrapper">
-            <div className="poi-card poi-card--expanded poi-card--stick-right">
-                <div className="poi-card-inner"/>
+    MapPOIContent: ({domPreview, style}) => domPreview ? (
+        <div
+            className="poi-icon-wrapper"
+            style={{
+                '--poi-border-width': '6px',
+                '--poi-custom-border-width': '6px',
+                '--poi-expanded-leader-position': '50%',
+                '--poi-expanded-leader-angle': '0deg',
+                '--poi-expanded-leader-length': '16px',
+                '--poi-expanded-leader-y': '0px',
+                '--poi-widget-rotation': '0deg',
+                ...style,
+            }}
+        >
+            <div className="poi-card poi-card--expanded poi-card--style-open-frame poi-card--stick-right">
+                <div className="poi-card-inner poi-card-inner--style-open-frame"/>
                 <div className="poi-expanded-leader-space">
                     <span className="poi-geographic-anchor"/>
                 </div>
@@ -39,6 +51,7 @@ vi.mock('@Utils/cesium/POIUtils', () => ({
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaIcon: () => <span/>,
+    WaTooltip: ({children}) => <span>{children}</span>,
 }))
 
 import {MapPOIEditPreview} from '@Components/MainUI/MapPOI/MapPOIEditPreview'
@@ -59,23 +72,34 @@ describe('MapPOIEditPreview', () => {
     let entity
     let poiList
     let postRenderListeners
+    let resizeObserverCallbacks
     let resizeObserverObserve
     let viewer
+    let capturedBitmap
 
     beforeEach(() => {
         drawImage = vi.fn()
         vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => ({drawImage}))
-        vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/webp;base64,captured-map')
+        vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(callback => callback(new Blob(['map'])))
+        vi.stubGlobal('createImageBitmap', vi.fn(async () => capturedBitmap))
+        vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:captured-map')
+        vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
         vi.stubGlobal('requestAnimationFrame', callback => {
             callback(0)
             return 1
         })
         vi.stubGlobal('cancelAnimationFrame', vi.fn())
         resizeObserverObserve = vi.fn()
+        resizeObserverCallbacks = []
         vi.stubGlobal('ResizeObserver', class {
+            constructor(callback) {
+                resizeObserverCallbacks.push(callback)
+            }
+
             observe = resizeObserverObserve
             disconnect = vi.fn()
         })
+        capturedBitmap = {close: vi.fn()}
         entity = {show: true, billboard: {show: true}}
         postRenderListeners = new Set()
         viewer = {
@@ -86,7 +110,7 @@ describe('MapPOIEditPreview', () => {
                 }
             }),
         }
-        POIUtils.getEntityContainer.mockReturnValue(null)
+        POIUtils.getEntityContainer.mockReturnValue({getById: vi.fn(() => entity)})
 
         poiList = proxyMap([['poi-1', proxy(createPOI())]])
         globalThis.lgs = {
@@ -116,36 +140,55 @@ describe('MapPOIEditPreview', () => {
         globalThis.lgs = undefined
     })
 
-    it('shows the captured map at the Cesium canvas CSS-pixel width', async () => {
+    it('shows the captured map at the Cesium canvas CSS-pixel width after removing the POI', async () => {
         const {container} = render(<MapPOIEditPreview poi="poi-1"/>)
+        expect(entity.show).toBe(false)
+        expect(entity.billboard.show).toBe(false)
+        expect(globalThis.lgs.scene.postRender.addEventListener).toHaveBeenCalledOnce()
+
+        await act(async () => {
+            for (const listener of Array.from(postRenderListeners)) listener()
+            for (const listener of Array.from(postRenderListeners)) listener()
+        })
 
         await waitFor(() => {
-            expect(container.querySelector('.map-poi-edit-preview').style.backgroundSize).toBe('1440px')
+            expect(container.querySelector('.map-poi-edit-preview-background').style.backgroundSize).toBe('1440px')
         })
-        expect(container.querySelector('.map-poi-edit-preview').style.backgroundRepeat).toBe('no-repeat')
+        expect(container.querySelector('.map-poi-edit-preview-background').style.backgroundRepeat).toBe('no-repeat')
 
         expect(drawImage).toHaveBeenCalledWith(
-            globalThis.lgs.canvas,
-            0,
-            0,
-            2880,
-            1800,
+            capturedBitmap,
             0,
             0,
             1024,
             640,
         )
-    })
-
-    it('copies the displayed canvas without changing visibility or requesting Cesium frames', () => {
-        render(<MapPOIEditPreview poi="poi-1"/>)
-
-        expect(drawImage).toHaveBeenCalledOnce()
+        expect(capturedBitmap.close).toHaveBeenCalledOnce()
         expect(entity.show).toBe(true)
         expect(entity.billboard.show).toBe(true)
+    })
+
+    it('restores the POI after the hidden capture and requests Cesium frames', async () => {
+        render(<MapPOIEditPreview poi="poi-1"/>)
+
+        expect(drawImage).not.toHaveBeenCalled()
+        expect(entity.show).toBe(false)
+        expect(entity.billboard.show).toBe(false)
         expect(viewer.render).not.toHaveBeenCalled()
-        expect(globalThis.lgs.scene.requestRender).not.toHaveBeenCalled()
-        expect(globalThis.lgs.scene.postRender.addEventListener).not.toHaveBeenCalled()
+        expect(globalThis.lgs.scene.requestRender).toHaveBeenCalledOnce()
+        expect(globalThis.lgs.scene.postRender.addEventListener).toHaveBeenCalledOnce()
+
+        await act(async () => {
+            for (const listener of Array.from(postRenderListeners)) listener()
+            for (const listener of Array.from(postRenderListeners)) listener()
+        })
+
+        await waitFor(() => {
+            expect(entity.show).toBe(true)
+            expect(entity.billboard.show).toBe(true)
+        })
+        expect(drawImage).toHaveBeenCalledOnce()
+        expect(globalThis.lgs.scene.requestRender).toHaveBeenCalledTimes(3)
     })
 
     it('observes the POI card and stick slot when recalculating preview bounds', () => {
@@ -156,5 +199,35 @@ describe('MapPOIEditPreview', () => {
 
         expect(observedElements).toContain(card)
         expect(observedElements).toContain(leaderSpace)
+    })
+
+    it('includes the open-frame border overhang when fitting a thick border', async () => {
+        const {container} = render(<MapPOIEditPreview poi="poi-1"/>)
+        const area = container.querySelector('.map-poi-edit-preview-open-area')
+        const card = container.querySelector('.poi-card-inner')
+
+        Object.defineProperties(area, {
+            clientWidth: {configurable: true, value: 200},
+            clientHeight: {configurable: true, value: 100},
+        })
+        Object.defineProperties(card, {
+            offsetWidth: {configurable: true, value: 200},
+            offsetHeight: {configurable: true, value: 50},
+        })
+        await act(async () => resizeObserverCallbacks.forEach(callback => callback()))
+
+        const fitButton = await waitFor(() => {
+            const button = container.querySelector('.map-poi-edit-preview-fit')
+            expect(button).toBeTruthy()
+            return button
+        })
+
+        fireEvent.click(fitButton)
+        await waitFor(() => {
+            const scale = Number.parseFloat(
+                container.querySelector('.poi-icon-wrapper').style.transform.match(/scale\(([^)]+)\)/)?.[1],
+            )
+            expect(scale).toBeCloseTo(200 / 212)
+        })
     })
 })

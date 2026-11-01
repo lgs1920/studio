@@ -1070,12 +1070,22 @@
     border: 1px solid var(--wa-color-surface-border);
     border-radius: var(--lgs-border-radius);
     background-color: var(--lgs-bg-color);
+}
+
+.map-poi-edit-preview-background {
+    position: absolute;
+    z-index: 0;
+    inset: -8px;
+    background-repeat: no-repeat;
     background-position: center;
-    background-size: cover;
+    filter: blur(2px);
+    transform: scale(1.02);
+    pointer-events: none;
 }
 
 .map-poi-edit-preview-open-area {
     position: absolute;
+    z-index: 1;
     top: var(--lgs-gutter-s);
     right: var(--lgs-gutter-s);
     bottom: var(--lgs-gutter-s);

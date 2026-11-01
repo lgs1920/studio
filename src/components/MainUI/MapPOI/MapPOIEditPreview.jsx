@@ -29,29 +29,46 @@ const EMPTY_CAMERA_POSITION = proxy({})
  * Copy the current Cesium canvas into a POI editor preview image.
  *
  * @param {HTMLCanvasElement} source - Cesium canvas to copy.
- * @returns {{image: string, width: number}} Captured image and its CSS-pixel width.
+ * @returns {Promise<{canvas: HTMLCanvasElement, width: number}|null>} Copied map canvas and its CSS-pixel width.
  */
-const capturePOIEditPreviewCanvas = source => {
+const capturePOIEditPreviewCanvas = async source => {
     const sourceWidth = source.getBoundingClientRect?.().width || source.width
     const width = Math.min(source.width, PREVIEW_MAX_CANVAS_WIDTH)
+    if (!source.width || !source.height || !width || typeof createImageBitmap !== 'function') {
+        return null
+    }
     const height = Math.max(1, Math.round(width * source.height / source.width))
+    const bitmap = await createImageBitmap(source, {
+        resizeWidth: width,
+        resizeHeight: height,
+        resizeQuality: 'high',
+    })
     const canvas = document.createElement('canvas')
     canvas.width = width
     canvas.height = height
-    canvas.getContext('2d')?.drawImage(source, 0, 0, source.width, source.height, 0, 0, width, height)
-    return {image: canvas.toDataURL('image/webp', 0.8), width: sourceWidth}
-}
-
-/** Copy the currently displayed map without mutating entities or forcing Cesium frames. */
-const buildPOIEditPreviewBackground = () => {
-    try {
-        const source = lgs.canvas ?? lgs.viewer?.canvas
-        return source?.width && source?.height ? capturePOIEditPreviewCanvas(source) : null
-    }
-    catch {
+    const context = canvas.getContext('2d')
+    if (!context) {
+        bitmap.close()
         return null
     }
+    context.drawImage(bitmap, 0, 0, width, height)
+    bitmap.close()
+    return {canvas, width: sourceWidth}
 }
+
+/** Encode a copied map canvas asynchronously so the preview never waits for image encoding. */
+const encodePOIEditPreviewCanvas = canvas => new Promise((resolve, reject) => {
+    try {
+        if (typeof canvas.toBlob !== 'function') {
+            resolve(null)
+            return
+        }
+        canvas.toBlob(blob => resolve(blob), 'image/webp', 0.8)
+    }
+    catch (error) {
+        reject(error)
+    }
+})
 
 /**
  * Render the live POI over a copy of the current map canvas.
@@ -289,15 +306,118 @@ export const MapPOIEditPreview = ({poi}) => {
 
     useEffect(() => {
         let cancelled = false
-        const frame = requestAnimationFrame(() => {
-            const snapshot = buildPOIEditPreviewBackground()
-            if (!cancelled) {
-                setBackground(snapshot)
+        let removePostRender
+        let timeout
+        let objectUrl
+        let restored = false
+        let captureExpired = false
+        let hiddenRenderCount = 0
+        const scene = lgs.viewer?.scene ?? lgs.scene
+        const source = lgs.canvas ?? lgs.viewer?.canvas
+        const currentPoint = lgs.stores.main.components.pois.list.get(poi)
+        const entity = currentPoint ? POIUtils.getEntityContainer(currentPoint)?.getById(poi) : null
+        const previousVisibility = entity ? {
+            show: entity.show,
+            billboardShow: entity.billboard?.show,
+        } : null
+
+        /** Restore the source entity exactly, including terrain-driven billboard visibility. */
+        const restoreEntity = () => {
+            if (restored || !entity || !previousVisibility) {
+                return
             }
-        })
+            restored = true
+            entity.show = previousVisibility.show
+            if (entity.billboard) {
+                entity.billboard.show = previousVisibility.billboardShow
+            }
+            scene?.requestRender?.()
+        }
+
+        /** Copy only after Cesium has rendered the temporarily hidden source POI. */
+        const captureAfterRender = async () => {
+            if (cancelled || !source) {
+                restoreEntity()
+                return
+            }
+
+            let snapshot
+            try {
+                snapshot = await capturePOIEditPreviewCanvas(source)
+            }
+            catch {
+                snapshot = null
+            }
+            finally {
+                clearTimeout(timeout)
+                restoreEntity()
+            }
+
+            if (!snapshot || captureExpired || cancelled) {
+                return
+            }
+
+            try {
+                const blob = await encodePOIEditPreviewCanvas(snapshot.canvas)
+                if (!blob || cancelled) {
+                    return
+                }
+                objectUrl = URL.createObjectURL(blob)
+                setBackground({poiId: poi, image: objectUrl, width: snapshot.width})
+            }
+            catch {
+                // Keep the themed preview surface as a non-blocking background fallback.
+            }
+        }
+
+        if (entity) {
+            entity.show = false
+            if (entity.billboard) {
+                entity.billboard.show = false
+            }
+
+            if (scene?.postRender?.addEventListener) {
+                removePostRender = scene.postRender.addEventListener(() => {
+                    hiddenRenderCount++
+                    if (hiddenRenderCount < 2) {
+                        // The first event may belong to a frame that was already rendering when visibility changed.
+                        scene.requestRender?.()
+                        return
+                    }
+                    removePostRender?.()
+                    removePostRender = null
+                    void captureAfterRender()
+                })
+                // Do not leave the map POI hidden if Cesium cannot produce a frame.
+                timeout = setTimeout(() => {
+                    captureExpired = true
+                    removePostRender?.()
+                    removePostRender = null
+                    restoreEntity()
+                }, 2000)
+                scene.requestRender?.()
+            }
+            else {
+                // Without a render-completion signal, use the themed background instead of a stale capture.
+                scene?.requestRender?.()
+                restoreEntity()
+            }
+        }
+        else {
+            const frame = requestAnimationFrame(() => void captureAfterRender())
+            return () => {
+                cancelled = true
+                cancelAnimationFrame(frame)
+                if (objectUrl) URL.revokeObjectURL(objectUrl)
+            }
+        }
+
         return () => {
             cancelled = true
-            cancelAnimationFrame(frame)
+            removePostRender?.()
+            clearTimeout(timeout)
+            restoreEntity()
+            if (objectUrl) URL.revokeObjectURL(objectUrl)
         }
     }, [poi])
 
@@ -321,6 +441,7 @@ export const MapPOIEditPreview = ({poi}) => {
 
     const canIncreaseHeight = typeof window !== 'undefined'
         && (previewHeight ?? MIN_PREVIEW_HEIGHT) < window.innerHeight * 0.5
+    const activeBackground = background?.poiId === poi ? background : null
 
     return (
         <section
@@ -328,15 +449,20 @@ export const MapPOIEditPreview = ({poi}) => {
             className="map-poi-edit-preview"
             aria-label="POI preview"
             style={{
-                ...(background ? {
-                    backgroundImage: `url(${background.image})`,
-                    // Keep the captured map at its original CSS-pixel scale inside the cropped preview.
-                    backgroundSize: `${background.width}px`,
-                    backgroundRepeat: 'no-repeat',
-                } : {}),
                 ...(previewHeight ? {height: `${Number(previewHeight)}px`} : {}),
             }}
         >
+            {activeBackground && (
+                <div
+                    className="map-poi-edit-preview-background"
+                    aria-hidden="true"
+                    style={{
+                        backgroundImage: `url(${activeBackground.image})`,
+                        // Keep the captured map at its original CSS-pixel scale inside the cropped preview.
+                        backgroundSize: `${activeBackground.width}px`,
+                    }}
+                />
+            )}
             <div className="map-poi-edit-preview-open-area" ref={_openArea}>
                 <div className="map-poi-edit-preview-open" ref={_openContent}>
                     <MapPOIContent
