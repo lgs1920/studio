@@ -14,6 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { GLOBAL_PARENT } from '@Core/constants'
 import { POIUtils } from '@Utils/cesium/POIUtils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
@@ -72,6 +73,21 @@ describe('POIUtils replay visibility', () => {
     afterEach(() => {
         globalThis.lgs = undefined
         globalThis.__ = undefined
+    })
+
+    it('draws global POIs with the sentinel parent in the viewer entity collection', async () => {
+        const poi = {
+            id: 'global-poi-sentinel',
+            longitude: 2,
+            latitude: 48,
+            parent: GLOBAL_PARENT,
+            visible: true,
+        }
+
+        const entity = await POIUtils.drawPlaceholder(poi)
+
+        expect(entity).toBe(globalThis.lgs.viewer.entities.getById(poi.id))
+        expect(propertyValue(entity.billboard.image)).toMatch(/^data:image\/svg\+xml,/)
     })
 
     it('keeps a replay-hidden poi hidden while the replay is active', () => {

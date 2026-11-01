@@ -166,7 +166,7 @@ export const MapPOIMonitor = () => {
             return false
         }
         __.ui.contextMenu.hide()
-        void openPOIEditor(poiId).catch(error => {
+        void Promise.resolve(openPOIEditor(poiId)).catch(error => {
             console.error(`[POI] Unable to open the editor for ${poiId}:`, error)
         })
         return true

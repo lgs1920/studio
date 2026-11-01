@@ -30,6 +30,7 @@ vi.mock('@Components/MainUI/MapPOI/MapPOICluster', () => ({MapPOICluster: () => 
 vi.mock('@Components/MainUI/MapPOI/openPOIEditor', () => ({openPOIEditor: vi.fn()}))
 
 import {MapPOIMonitor} from '@Components/MainUI/MapPOI/MapPOIMonitor'
+import {openPOIEditor} from '@Components/MainUI/MapPOI/openPOIEditor'
 import {clearPOIHoverTitlePreview, getPOIHoverTitle} from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
 
 /** Install the map event adapter and one visible POI. */
@@ -47,6 +48,7 @@ const setupMonitor = (pois = [
         onDoubleTap: record('DOUBLE_TAP'),
         onRightClick: record('RIGHT_CLICK'),
         onLongTap: record('LONG_TAP'),
+        offDoubleClick: vi.fn(),
         removeAllListenersByEntity: vi.fn(),
         offKeyUp: vi.fn(),
     }
@@ -102,6 +104,20 @@ describe('Map POI interaction monitor', () => {
         expect(updatePOI).toHaveBeenCalledWith(poi.id, {expanded: false}, {skipLocationUpdate: true})
     })
 
+    it('opens global POIs from the generic Cesium double-click handler', async () => {
+        openPOIEditor.mockResolvedValue(true)
+        const {listeners, poi} = setupMonitor([
+            {id: 'global-poi', parent: '__global__', title: 'Global', visible: true, replay: {visible: true}},
+        ])
+        const doubleClick = listeners.find(listener => listener.name === 'DOUBLE_CLICK')
+
+        expect(doubleClick.options.entity).toEqual([])
+        await act(async () => doubleClick.callback({position: {x: 1, y: 1}}, poi.id))
+
+        expect(openPOIEditor).toHaveBeenCalledWith(poi.id)
+        expect(globalThis.__.ui.contextMenu.hide).toHaveBeenCalledOnce()
+    })
+
     it('shows the POI title and pointer cursor on hover, then clears both on leave', async () => {
         const {canvas, listeners, poi} = setupMonitor()
         const enter = listeners.find(listener => listener.name === 'MOUSE_ENTER')
@@ -117,11 +133,13 @@ describe('Map POI interaction monitor', () => {
     })
 
     it('releases Cesium listeners when the monitor unmounts', () => {
-        const {canvasEvents, poi, rendered} = setupMonitor()
+        const {canvasEvents, listeners, poi, rendered} = setupMonitor()
+        const doubleClick = listeners.find(listener => listener.name === 'DOUBLE_CLICK')
 
         rendered.unmount()
 
         expect(canvasEvents.removeAllListenersByEntity).toHaveBeenCalledWith(poi.id)
+        expect(canvasEvents.offDoubleClick).toHaveBeenCalledWith(doubleClick.callback)
     })
 
     it('mounts only one rich POI capture surface at a time', async () => {
