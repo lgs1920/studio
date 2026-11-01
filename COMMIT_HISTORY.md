@@ -4383,3 +4383,83 @@
 ## 2026-11-01 — [`docs: add local database sync reliability proposal`](https://github.com/lgs1920/studio/commit/19ccfbaf18453b309f03e7a2783a94df2bf876cb)
 
 - Recorded automatically from Git history.
+
+## 2026-10-31 — [`perf(poi): reduce map capture and projection work`](https://github.com/lgs1920/studio/commit/c58cfaae74a6c4aa589105e5dffbda1715c7a83e)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`perf(replay): cache POI entities and skip visibility writes`](https://github.com/lgs1920/studio/commit/034f0e58c2c9e1d106c83fceb38e621a0fb621c6)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`docs(perf): document POI rendering optimization work`](https://github.com/lgs1920/studio/commit/835cf6d433a5abc01599f3c20e802729bba2d44b)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`perf(replay): avoid duplicate POI candidate scans`](https://github.com/lgs1920/studio/commit/4fa611b36821fc38da8317d757e3cc957bc60d45)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`fix(replay): animate POIs at repeated route passages`](https://github.com/lgs1920/studio/commit/57338749cf999fb472dc64615f1d5a24f735a7d0)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`fix(replay): animate POIs at every route passage`](https://github.com/lgs1920/studio/commit/63f15f8595ff3211f19735c278d630e01510cb42)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`feat: add label POI style`](https://github.com/lgs1920/studio/commit/9b30a7626383c963bbd4ba6df6a76ed20f980baa)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`fix: preserve Label POI stick color`](https://github.com/lgs1920/studio/commit/d8771c9634fb1c76d2882b1d289f684e3daf4624)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`perf(replay): index POI passage and presentation lookups`](https://github.com/lgs1920/studio/commit/7a1bb2f8c062f22220af8c665575d8b6da3e998c)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`perf(poi): skip redundant Cesium updates`](https://github.com/lgs1920/studio/commit/f452e639e08112a22d05c2ec82a1a687142bc0d0)
+
+- Recorded automatically from Git history.
+
+## 2026-10-31 — [`docs(perf): update POI rendering optimization plan`](https://github.com/lgs1920/studio/commit/6e3d9a4902a998115507a6385abf1afc495ea268)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`style: adjust POI border and stick widths`](https://github.com/lgs1920/studio/commit/8b60afcaf63956f8af6d8a58c3b36efd3050f316)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`perf(poi): add update diagnostics`](https://github.com/lgs1920/studio/commit/04cf2dadc864441b089965d7d531174f30ffb026)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`perf(poi): scope Replay membership subscriptions`](https://github.com/lgs1920/studio/commit/948cb1aa30aa83fbe75d0b384940e1cdb5e64286)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`perf(replay): cache stop-clip POI visibility candidates`](https://github.com/lgs1920/studio/commit/d9a29bee62927b88c1b5ca390ff8ac02884af046)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`docs(perf): record POI optimization updates`](https://github.com/lgs1920/studio/commit/d04beb3141f996ef6eb06c9a357b3d65cbe0ee28)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`refactor: migrate Replay compression to Quality API`](https://github.com/lgs1920/studio/commit/6d72114178a86a2f3dcc426892eb70365021f324)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`refactor: schedule POI map capture surfaces`](https://github.com/lgs1920/studio/commit/3c6e145a9de10ef4109a1ce178a942396116a3dd)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`style: sort POI styles and thicken Side accent`](https://github.com/lgs1920/studio/commit/85267fabf27e05a19fa8d6b30c6b35e6ea5b3f3a)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/d08d65f68a783021598cefaed7b0ed125a9bb7b5)
+
+- Recorded automatically from Git history.
