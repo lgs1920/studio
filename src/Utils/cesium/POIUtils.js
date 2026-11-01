@@ -199,7 +199,10 @@ export class POIUtils {
                 height: 36,
             },
             pixelOffset: {x: 0, y: 0},
-        }, true, {skipDuplicateCleanup: Boolean(existingEntity)})
+        }, true, {
+            skipDuplicateCleanup: Boolean(existingEntity),
+            verticalOrigin: VerticalOrigin.BOTTOM,
+        })
     }
 
 
@@ -383,11 +386,15 @@ export class POIUtils {
      *     visibility.
      * @param {object} [options={}] - Optional entity drawing behavior.
      * @param {boolean} [options.skipDuplicateCleanup=false] - Skip scanning other entity containers for duplicates.
+     * @param {VerticalOrigin} [options.verticalOrigin=VerticalOrigin.CENTER] - Billboard origin used for this draw.
      *
      * @returns {Promise<Entity|null>} A promise that resolves to the created Cesium Entity, or null if no container is
      *     found.
      */
-    static draw = async (poi, parentVisibility = true, {skipDuplicateCleanup = false} = {}) => {
+    static draw = async (poi, parentVisibility = true, {
+        skipDuplicateCleanup = false,
+        verticalOrigin = VerticalOrigin.CENTER,
+    } = {}) => {
         const drawStartedAt = poiPerformance.start('cesium.draw')
         // Default dimensions if poi.image is undefined
         const width = poi.image?.width ?? 32
@@ -419,7 +426,7 @@ export class POIUtils {
                 : new Cartesian2(0, 0),
             pixelOffsetScaleByDistance: poi.pixelOffset ? scaleByDistance : undefined,
             horizontalOrigin: HorizontalOrigin.CENTER,
-            verticalOrigin:  VerticalOrigin.CENTER,
+            verticalOrigin:  verticalOrigin,
             heightReference: heightReference,
             disableDepthTestDistance: 0,
             show:            visible,
