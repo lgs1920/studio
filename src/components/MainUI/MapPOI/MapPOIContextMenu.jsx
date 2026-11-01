@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -171,16 +171,6 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
     // --- Menu Rendering Logic ---
 
     // Ensure the menu element is initialized in the ContextMenu singleton on first mount/ref set.
-    // This is crucial for the show/hide logic managed by the singleton.
-    useEffect(() => {
-        if (!thePOI) {
-            return
-        }
-        if ($pois.current !== thePOI) {
-            $pois.current = thePOI
-        }
-    }, [thePOI, $pois])
-
     useEffect(() => {
         const menuElement = menuRef?.current
         if (menuElement) {
