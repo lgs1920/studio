@@ -929,7 +929,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                                         <NameValueUnit
                                             className="poi-elevation"
                                             text={'Altitude:'}
-                                            value={point.height.toFixed()}
+                                            value={point.height}
                                             format="%d"
                                             units={ELEVATION_UNITS}
                                         />
