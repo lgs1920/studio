@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -1504,7 +1504,7 @@ export const FixPathEditor = () => {
         const modifier = selectionGestureModifier(event)
         const lasso = isLassoModifier(modifier)
         const replaceSelection = event.altKey === true
-        const sourceSelection = !replaceSelection && (modifier === 'shift' || modifier === 'ctrl')
+        const sourceSelection = !markerPoint && !replaceSelection && (modifier === 'shift' || modifier === 'ctrl')
         const previousLasso = lassoDraftRef.current
         const continuesLasso = lasso && previousLasso?.modifier === modifier
             && previousLasso.replaceSelection === replaceSelection

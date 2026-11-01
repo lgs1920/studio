@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -530,6 +530,11 @@ describe('journey metrics', () => {
             activity:    'trek',
         })
 
+        globalThis.lgs.journeys = new Map([
+            [trekJourney.slug, trekJourney],
+            [trekSecondJourney.slug, trekSecondJourney],
+        ])
+
         trekJourney.tracks.set(trekTrack.slug, trekTrack)
         trekJourney.hasTime = true
         trekJourney.hasAltitude = true
@@ -543,10 +548,6 @@ describe('journey metrics', () => {
         trekJourney.extractMetrics()
         trekSecondJourney.extractMetrics()
 
-        globalThis.lgs.journeys = new Map([
-            [trekJourney.slug, trekJourney],
-            [trekSecondJourney.slug, trekSecondJourney],
-        ])
         globalThis.lgs.theJourney = trekJourney
         globalThis.lgs.theJourneyEditorProxy = {
             journey: trekJourney,

@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -506,7 +506,14 @@ describe('FixPathEditor map input ownership', () => {
         let correctionPoints = screen.getAllByRole('button', {
             name: /Correction point/,
         })
-        expect(correctionPoints).toHaveLength(6)
+        expect(correctionPoints.map(point => point.dataset.controlPointId)).toEqual([
+            'fix-point-0-0',
+            'fix-point-0-1',
+            'fix-point-0-1b',
+            'fix-point-0-3',
+            'fix-point-0-4',
+            'fix-point-0-5',
+        ])
 
         const setViewCallsBeforePointClick = camera.setView.mock.calls.length
         fireEvent.click(correctionPoints[1], {clientX: 15, clientY: 40})
@@ -1020,15 +1027,15 @@ describe('FixPathEditor map input ownership', () => {
         fireEvent.click(helpButton)
         expect(screen.getByRole('dialog', {name: 'Fix Path help'})).not.toBeNull()
         expect(document.querySelector('.fix-path-help-content')?.textContent)
-            .toContain('Shift-drag or Alt-drag draws a lasso; Ctrl+Shift-drag or Ctrl+Alt-drag draws a rectangle')
+            .toContain('Shift-click toggles a correction point. Shift/Alt-drag draws a lasso; Ctrl+Shift/Ctrl+Alt-drag draws a rectangle')
         expect(document.querySelector('.fix-path-help-content')?.textContent)
-            .toContain('Shift and Ctrl+Shift gestures add Journey points when they start over the route')
+            .toContain('Shift selects route points or adds correction points')
         expect(document.querySelector('.fix-path-help-content')?.textContent)
-            .toContain('Press Escape to cancel')
+            .toContain('Escape cancels')
         expect(document.querySelector('.fix-path-help-content')?.textContent)
-            .toContain('Alt and Ctrl+Alt gestures replace the selection of correction points in the current section')
+            .toContain('Alt replaces the selection in the current section')
         expect(document.querySelector('.fix-path-help-content')?.textContent)
-            .toContain('accepted corrections remain stored and continue to apply')
+            .toContain('corrections remain applied')
         expect(screen.getByRole('heading', {name: 'Point selection'})).not.toBeNull()
         expect(screen.getByRole('heading', {name: 'Correcting the path'})).not.toBeNull()
         expect(screen.getByRole('heading', {name: 'Keyboard'})).not.toBeNull()
@@ -1038,10 +1045,10 @@ describe('FixPathEditor map input ownership', () => {
         expect(helpScrollbars.getAttribute('data-auto-height')).toBe('true')
         expect(helpScrollbars.getAttribute('data-auto-height-max'))
             .toBe('max(0px, calc(100vh - 2 * var(--lgs-gutter) - 2 * var(--lgs-gutter-s)))')
-        expect(document.querySelectorAll('.fix-path-help-content kbd.lgs--shortcut-key').length).toBeGreaterThan(0)
-        expect(document.querySelector('.fix-path-help-content kbd[aria-label="Arrow Up"]')?.textContent).toBe('↑')
+        expect(document.querySelector('.fix-path-help-content')?.textContent)
+            .toContain('↑/↓ moves through the list; Page Up/Down jumps to either end')
         expect(document.querySelector('.fix-path-correction-selection-hint')).toBeNull()
-        expect(screen.getByText(/move focus between rows without changing the selected points/)).not.toBeNull()
+        expect(screen.getByText('1 correction point selected.')).not.toBeNull()
         expect(document.querySelectorAll('.fix-path-correction-section')).toHaveLength(1)
         expect(screen.queryByText('Track A')).toBeNull()
         expect(screen.queryByText(/Segment/)).toBeNull()
@@ -1705,12 +1712,7 @@ describe('FixPathEditor map input ownership', () => {
             clientX: removedPointLasso.at(-1).x,
             clientY: removedPointLasso.at(-1).y,
         })
-        await act(async () => {
-            await Promise.resolve()
-            await Promise.resolve()
-        })
-
-        expect(journey.fixPathCorrectionData.revision).toBe(2)
+        await waitFor(() => expect(journey.fixPathCorrectionData.revision).toBe(2))
         expect(journey.fixPathCorrectionData.tracks['track-a'][0].controlPoints.find(point => point.sourceIndex === 9))
             .toMatchObject({fixed: false, removed: true, erased: true})
         expect(document.querySelector('.fix-path-control-point[data-control-point-id="fix-point-0-9"]')).toBeNull()

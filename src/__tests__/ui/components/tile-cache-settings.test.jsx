@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -66,7 +66,7 @@ describe('cartographic cache settings', () => {
         expect(select.label).toBe('Maximum cartographic cache size')
         expect(select.value).toBe(String(512 * 1024 ** 2))
         expect([...container.querySelectorAll('wa-option')].map(option => option.textContent.trim())).toEqual(['256 MiB', '512 MiB (default)', '1 GiB', '2 GiB'])
-        expect(screen.getByRole('status').textContent).toContain('320 MiB used of 512 MiB')
+        expect(screen.getByRole('status').textContent).toContain('320 MiB used across 0 resources of 512 MiB')
         await act(async () => { fireEvent.change(select, {target: {value: String(1024 ** 3)}}) })
         expect(lgs.settings.app.tileCacheMaxBytes).toBe(1024 ** 3)
         expect(screen.getByRole('status').textContent).toContain('1 GiB')
