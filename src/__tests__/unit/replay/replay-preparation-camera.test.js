@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-26
- * Last modified: 2026-10-19
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -51,6 +51,7 @@ describe('replay preparation camera', () => {
             },
             [JOURNEY_REPLAY_INTERNAL_CALL]: {
                 samplerConfigurationKey: vi.fn(() => 'same-sampler'),
+                syncRuntimeNearbyPOIs: vi.fn(),
                 resetCameraController: vi.fn(),
                 bindCesiumCameraBridge: vi.fn(),
             },
@@ -91,6 +92,7 @@ describe('replay preparation camera', () => {
         }
         const call = {
             samplerConfigurationKey: vi.fn(() => 'same-sampler'),
+            syncRuntimeNearbyPOIs: vi.fn(),
             resetCameraController: vi.fn(),
             bindCesiumCameraBridge: vi.fn(),
         }

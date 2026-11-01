@@ -486,7 +486,7 @@ describe('Replay POI animation settings', () => {
         expect(mode[JOURNEY_REPLAY_INTERNAL_STATE].replayPoiTriggered.size).toBe(0)
     })
 
-    it('animates a global POI from the selected journey when the legacy journey alias is absent', async () => {
+    it.each(['basic', 'expert'])('animates a POI added after cached Replay data for %s mode', async userMode => {
         const journey = {slug: 'journey-1'}
         const poi = {
             id: 'global-poi-1',
@@ -494,7 +494,7 @@ describe('Replay POI animation settings', () => {
             parent: null,
             longitude: 0.004493,
             latitude: 0.0001,
-            replay: {visible: true},
+            replay: {visible: true, animated: true},
             expanded: false,
         }
         const stalePoi = {
@@ -505,12 +505,13 @@ describe('Replay POI animation settings', () => {
             replay: {visible: true},
             expanded: true,
         }
-        const entry = {poi, source: 'global-near-journey'}
-        const points = new Map([[poi.id, poi], [stalePoi.id, stalePoi]])
+        const points = new Map([[stalePoi.id, stalePoi]])
         const updatePOIExpandedState = vi.fn(async (poiId, expanded) => {
             points.get(poiId).expanded = expanded
         })
-        const getJourneyReplayPOIsForJourney = vi.fn(() => [entry])
+        const getJourneyReplayPOIsForJourney = vi.fn(() => Array.from(points.values())
+            .filter(candidate => candidate.id === poi.id)
+            .map(candidate => ({poi: candidate, source: 'global-near-journey'})))
         const mode = {
             [JOURNEY_REPLAY_INTERNAL_STATE]: {
                 sortedNearbyPois: [],
@@ -536,19 +537,21 @@ describe('Replay POI animation settings', () => {
         mode[JOURNEY_REPLAY_INTERNAL_CALL].syncRuntimeNearbyPOIs = selectedJourney => syncRuntimeNearbyPOIs(mode, selectedJourney)
 
         vi.stubGlobal('lgs', {
-            settings: {ui: {replay: {
-                userMode: 'basic',
-                poiDistance: 10000,
-                basic: {
-                    poiVisibilityMode: 'yes',
-                    animatePoisDuringJourneyReplay: true,
-                    poiAnimationDurationSeconds: 2,
-                },
-            }}},
+            settings: {ui: {replay: userMode === 'basic'
+                ? {
+                    userMode,
+                    poiDistance: 10000,
+                    basic: {
+                        poiVisibilityMode: 'yes',
+                        animatePoisDuringJourneyReplay: true,
+                        poiAnimationDurationSeconds: 2,
+                    },
+                }
+                : {userMode, poiDistance: 10000, animateAllPoisDuringJourneyReplay: true}}},
             stores: {
                 replay: {
-                    userMode: 'basic',
-                    basicPreparationActive: true,
+                    userMode,
+                    basicPreparationActive: userMode === 'basic',
                     nearbyPois: [{poi: stalePoi, projectedAbscissa: 0, source: 'journey-poi'}],
                 },
                 main: {
@@ -559,10 +562,14 @@ describe('Replay POI animation settings', () => {
         })
         vi.stubGlobal('__', {ui: {poiManager: {getJourneyReplayPOIsForJourney}}})
 
+        // The open Replay drawer still holds an older list when this POI is created.
+        points.set(poi.id, poi)
         await prepareNearbyPOIsForPlayback(mode)
         await syncNearbyPOIsForSample(mode, {progress: 0.5})
 
-        expect(getJourneyReplayPOIsForJourney).toHaveBeenCalledWith(journey, 10000, {includeHidden: true})
+        expect(getJourneyReplayPOIsForJourney).toHaveBeenCalledWith(journey, 10000, {
+            includeHidden: userMode === 'basic',
+        })
         expect(globalThis.lgs.stores.replay.nearbyPois.map(candidate => candidate.poi.id)).toEqual([poi.id])
         expect(updatePOIExpandedState).toHaveBeenCalledWith(poi.id, true)
         expect(updatePOIExpandedState).not.toHaveBeenCalledWith(stalePoi.id, true)

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -110,5 +110,48 @@ describe('POIManager Replay POI selection', () => {
 
         expect(normalResults.map(entry => entry.poi.id)).toEqual(['visible-poi'])
         expect(showAllResults.map(entry => entry.poi.id)).toEqual(['visible-poi', 'hidden-poi'])
+    })
+
+    it('refreshes Replay candidates from live POI additions, edits, and removals', () => {
+        const journey = {
+            slug: 'journey-live-pois',
+            tracks: new Map([['track', {
+                slug: 'track',
+                content: {geometry: {type: 'LineString', coordinates: [[0, 0], [0.01, 0]]}},
+            }]]),
+        }
+        const list = proxyMap()
+        vi.stubGlobal('lgs', {
+            settings: {poi: {association: {maxDistance: 1000}}},
+            stores: {main: {components: {pois: {list}}}},
+        })
+        const manager = new POIManager()
+        const selectIds = () => manager.getJourneyReplayPOIsForJourney(journey, 1000)
+            .map(entry => entry.poi.id)
+
+        expect(selectIds()).toEqual([])
+
+        const poi = {
+            id: 'created-during-session',
+            type: 'poi',
+            parent: journey.slug,
+            longitude: 0.005,
+            latitude: 0.0001,
+            visible: true,
+            title: 'New source',
+        }
+        list.set(poi.id, poi)
+        expect(selectIds()).toEqual([poi.id])
+
+        poi.title = 'Edited source'
+        list.set(poi.id, poi)
+        expect(manager.getJourneyReplayPOIsForJourney(journey, 1000)[0].poi.title).toBe('Edited source')
+
+        poi.parent = 'another-journey'
+        list.set(poi.id, poi)
+        expect(selectIds()).toEqual([])
+
+        list.delete(poi.id)
+        expect(selectIds()).toEqual([])
     })
 })
