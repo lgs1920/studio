@@ -17,15 +17,14 @@
 import { NameValueUnit }                           from '@Components/DataDisplay/NameValueUnit'
 import { DateTimeDisplay }                         from '@Components/DateTimeDisplay'
 import { stylePOIDuotoneIcon }                     from '@Components/MainUI/MapPOI/duotoneIconUtils'
-import { openPOIEditor }                           from '@Components/MainUI/MapPOI/openPOIEditor'
 import {
     calculatePOICanvasCapturePadding, calculatePOIContentPixelOffset, calculatePOIStickEdgeOffset, measurePOICanvasOverflow,
 }                                                   from '@Components/MainUI/MapPOI/poiCanvasGeometry'
 import {
-    clearPOIHoverPreview, clearPOIHoverTitlePreview, completePOIHoverPreviewRender,
-    isPointerNearPOIHoverPreview, isPOIHoverPreviewActive,
-    isPOIHoverPreviewTransitionActive, showPOIHoverPreview, showPOIHoverTitlePreview,
+    clearPOIHoverPreview, completePOIHoverPreviewRender, isPOIHoverPreviewActive,
+    isPOIHoverPreviewTransitionActive,
 } from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
+import {poiCaptureSurfaceStore, usePOICaptureSurface} from '@Components/MainUI/MapPOI/poiCaptureSurfaceStore'
 import { ICONS_PATH, WIDGET_SYSTEM_FONT_STACK }     from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
 import { poiPerformance }                           from '@Core/ui/POIPerformance'
@@ -52,7 +51,7 @@ import { ELEVATION_UNITS, UnitUtils }               from '@Utils/UnitUtils'
 import { WaIcon, WaTooltip }                       from '@awesome.me/webawesome/dist/react'
 import { snapdom }                                 from '@zumer/snapdom'
 import classNames                                  from 'classnames'
-import { useCallback, useEffect, useId, useLayoutEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useId, useLayoutEffect, useRef } from 'react'
 import { proxy, useSnapshot }                      from 'valtio'
 import { createPOICanvasRenderQueue }              from '@Components/MainUI/MapPOI/poiCanvasRenderQueue'
 import './style.css'
@@ -61,8 +60,6 @@ const EMPTY_REPLAY_PROXY = proxy({nearbyPois: []})
 const queuePOICanvasRender = createPOICanvasRenderQueue(2)
 const MAX_POI_CANVAS_SIDE = 4096
 const MAX_POI_CANVAS_PIXELS = 8_388_608
-const DISABLE_POI_SHIFT_HOVER_FOR_DIAGNOSTIC = true
-
 const assertPOICanvasDimensions = (element, scale, ratio) => {
     const bounds = element.getBoundingClientRect()
     const width = Math.max(bounds.width, element.scrollWidth, element.offsetWidth)
@@ -84,6 +81,7 @@ const assertPOICanvasDimensions = (element, scale, ratio) => {
  * @property {boolean} [useInMenu=false] - Render the compact menu version.
  * @property {boolean} [domPreview=false] - Render a transient DOM preview without map event handlers.
  * @property {boolean} [collapsedPreview=false] - Render a transient collapsed DOM preview without map event handlers.
+ * @property {boolean} [managedCaptureSurface=false] - Let the map capture scheduler mount this POI's DOM surface on demand.
  * @property {object} [style] - Additional styles for the POI content wrapper.
  */
 
@@ -93,7 +91,8 @@ const assertPOICanvasDimensions = (element, scale, ratio) => {
  * @param {MapPOIContentProps} props - POI content options.
  * @returns {import('react').ReactNode} The POI content.
  */
-export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, collapsedPreview = false, style}) => {
+export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, collapsedPreview = false,
+    managedCaptureSurface = false, style}) => {
     poiPerformance.record('react.render')
     const rawTooltipId = useId()
     const tooltipIdPrefix = `map-poi-content-${rawTooltipId.replace(/:/g, '')}`
@@ -103,22 +102,18 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
     const _poiCanvasCache = useRef(null)
     const _activeCapture = useRef(null)
     const _appearanceRevision = useRef(0)
+    const _lastScheduledVisualSignature = useRef(null)
     const _renderRequestId = useRef(0)
     const _previousExpanded = useRef(null)
     const _iconLoadRenderTimer = useRef(null)
 
-    const unitSystem = useSnapshot(lgs.settings.unitSystem)
-    const coordinateSystem = useSnapshot(lgs.settings.coordinateSystem)
-
     const $pois = lgs.stores.main.components.pois
-    const poisSnap = useSnapshot($pois)
+    const $point = $pois.list.get(poi) ?? EMPTY_REPLAY_PROXY
+    const point = useSnapshot($point)
     const replay = useSnapshot(lgs.stores?.replay ?? EMPTY_REPLAY_PROXY)
-
-
-    /** * Direct reactive access to the point from the snapshot.
-     */
-    const point = poisSnap.list.get(poi)
     const isEmbedded = useInMenu || domPreview || collapsedPreview
+    const captureSurfaceGranted = usePOICaptureSurface(poi)
+    const captureSurfaceActive = !managedCaptureSurface || isEmbedded || captureSurfaceGranted
     const isExpanded = !useInMenu && !collapsedPreview && (domPreview || point?.expanded === true)
     const pointId = point?.id
     const pointParent = point?.parent
@@ -129,6 +124,8 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
     const pointCountryCode = point?.countryCode
     const replayNearbyPOI = useReplayPOISelector('nearby', pointId)
     const replayAnimatedPOI = useReplayPOISelector('animated', pointId)
+    const unitSystem = useSnapshot(lgs.settings.unitSystem)
+    const coordinateSystem = useSnapshot(lgs.settings.coordinateSystem)
     const presentation = resolveReplayPOIPresentation(point, {replay, animatedPOI: replayAnimatedPOI})
     const replayActive = presentation.active
     // Read optional settings directly so Valtio subscribes when a field is first added.
@@ -155,7 +152,12 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         : Math.cos(leaderAngleRadians) * leaderLength
     const leaderCaptureBleed = horizontalStick ? Math.abs(leaderOffsetY) : Math.abs(leaderOffsetX)
 
-    useEffect(() => poiPerformance.mountContent(), [])
+    useEffect(() => {
+        if (!captureSurfaceActive) {
+            return undefined
+        }
+        return poiPerformance.mountContent()
+    }, [captureSurfaceActive])
 
     const fontFamily = displaySettings.fontFamily ?? POI_DISPLAY_DEFAULT_FONT_FAMILY
     const replaySettings = normalizeJourneyReplayPOISettings(point?.replay)
@@ -237,118 +239,6 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         cardExpanded ? [leaderAngle, leaderLength, leaderCaptureBleed] : null,
     ])
 
-    /** Handles drawer opening for editing */
-    const handleEditor = useCallback(async (event, entity) => {
-        if (isEmbedded || !point) {
-            return
-        }
-        __.ui.contextMenu.hide()
-        await openPOIEditor(entity)
-    }, [isEmbedded, point])
-
-    /** Global POI menu trigger */
-    const openContextMenu = useCallback((event) => {
-        if (isEmbedded || !pointId) {
-            return
-        }
-
-        const position = event.position ?? event.endPosition
-        if (!position) {
-            return
-        }
-
-        const contextMenu = lgs.stores.ui.contextMenu
-        contextMenu.type = 'poi'
-        contextMenu.visible = true
-        contextMenu.position = {x: position.x, y: position.y}
-        contextMenu.targetId = point
-    }, [isEmbedded, point, pointId])
-
-    const handlePOIClick = useCallback(() => {
-        if (isEmbedded || !point?.id) {
-            return
-        }
-
-        void Promise.resolve(__.ui.poiManager.updatePOI(
-            point.id,
-            {expanded: !point.expanded},
-            {skipLocationUpdate: true},
-        )).catch(error => {
-            console.error(`[POI] Unable to toggle expanded state for ${point.id}:`, error)
-        })
-    }, [isEmbedded, point])
-
-    /** Track hover on visible billboards regardless of their expanded state. */
-    const handlePOIHover = useCallback(() => {
-        if (!isEmbedded && presentation.visible && !hiddenBecauseTooClose) {
-            showPOIHoverTitlePreview(point)
-        }
-    }, [hiddenBecauseTooClose, isEmbedded, point, presentation.visible])
-
-    /** Remove the title overlay after the pointer leaves this reduced POI. */
-    const handlePOIHoverEnd = useCallback(() => {
-        clearPOIHoverTitlePreview(pointId)
-    }, [pointId])
-
-    /** Show this collapsed POI while Shift is held over its Cesium billboard. */
-    const handleShiftHover = useCallback(() => {
-        if (!isEmbedded && !point?.expanded) {
-            showPOIHoverPreview(point)
-        }
-    }, [isEmbedded, point])
-
-    /** Hide this POI's preview after the pointer or Shift modifier leaves it. */
-    const handleShiftHoverEnd = useCallback((event) => {
-        const position = event?.endPosition ?? event?.position
-        const canvasRect = lgs.viewer?.canvas?.getBoundingClientRect()
-        if (position && canvasRect) {
-            const stillOverPOI = isPointerNearPOIHoverPreview(
-                pointId,
-                canvasRect.left + position.x,
-                canvasRect.top + position.y,
-            )
-            if (stillOverPOI !== false) {
-                return
-            }
-        }
-
-        clearPOIHoverPreview(pointId)
-    }, [pointId])
-
-    /** Start a preview when Shift is pressed after the pointer is already over this POI. */
-    const handleShiftDown = useCallback(() => {
-        handleShiftHover()
-    }, [handleShiftHover])
-
-    /** Stop the preview when Shift is released while the pointer remains over this POI. */
-    const handleShiftUp = useCallback(() => {
-        clearPOIHoverPreview()
-    }, [])
-
-    const addEventListeners = useCallback((poiId) => {
-        __.canvasEvents.onClick(handlePOIClick, {entity: poiId, preventLowerPriority: true})
-        __.canvasEvents.onTap(handlePOIClick, {entity: poiId, preventLowerPriority: true})
-        __.canvasEvents.onDoubleClick(handleEditor, {entity: poiId, preventLowerPriority: true})
-        __.canvasEvents.onDoubleTap(handleEditor, {entity: poiId, preventLowerPriority: true})
-        __.canvasEvents.onRightClick(openContextMenu, {entity: poiId, preventLowerPriority: true})
-        __.canvasEvents.onLongTap(openContextMenu, {entity: poiId, preventLowerPriority: true})
-        __.canvasEvents.on('MOUSE_ENTER', handlePOIHover, {entity: poiId})
-        __.canvasEvents.on('MOUSE_LEAVE', handlePOIHoverEnd, {entity: poiId})
-        if (!DISABLE_POI_SHIFT_HOVER_FOR_DIAGNOSTIC) {
-            __.canvasEvents.on('SHIFT#MOUSE_ENTER', handleShiftHover, {entity: poiId})
-            __.canvasEvents.on('SHIFT#MOUSE_LEAVE', handleShiftHoverEnd, {entity: poiId})
-            __.canvasEvents.onKeyDown(handleShiftDown, {entity: poiId, keys: ['shift']})
-            __.canvasEvents.onKeyUp(handleShiftUp, {entity: false, keys: ['shift']})
-        }
-    }, [handleEditor, handlePOIClick, handlePOIHover, handlePOIHoverEnd, handleShiftDown, handleShiftHover,
-        handleShiftHoverEnd, handleShiftUp, openContextMenu])
-
-    const removeEventListeners = useCallback((poiId) => {
-        __.canvasEvents.removeAllListenersByEntity(poiId)
-        __.canvasEvents.offKeyUp(handleShiftUp)
-        clearPOIHoverTitlePreview(poiId)
-    }, [handleShiftUp])
-
     useEffect(() => {
         if (isEmbedded || !pointId || !__.ui.poiManager?.ensurePOILocation) {
             return
@@ -371,6 +261,35 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         const element = _poiCanvasCaptureSurface.current
         const card = _poiContent.current
         const captureSurface = _poiCanvasCaptureSurface.current
+        const canCapture = !isEmbedded && !replayMasked && !hiddenBecauseTooClose && Boolean(pointId)
+        if (!canCapture) {
+            if (managedCaptureSurface) {
+                poiCaptureSurfaceStore.cancel(pointId)
+            }
+            if (_activeCapture.current?.requestId === _renderRequestId.current) {
+                poiPerformance.record('capture.invalidated')
+                poiPerformance.record('capture.invalidated.suppressed')
+            }
+            _renderRequestId.current++
+            _activeCapture.current = null
+            poiPerformance.record('capture.request.suppressed')
+            return
+        }
+        const captureInputSignature = JSON.stringify([
+            poiVisualSignature,
+            globalThis.devicePixelRatio ?? 1,
+            globalThis.document?.fonts?.status,
+            _appearanceRevision.current,
+        ])
+        if (managedCaptureSurface && !isEmbedded && (!element || !card || !captureSurfaceActive)) {
+            if (_lastScheduledVisualSignature.current !== captureInputSignature) {
+                _lastScheduledVisualSignature.current = captureInputSignature
+                poiCaptureSurfaceStore.request(pointId, {priority: options?.priority === true})
+            }
+            return
+        }
+        _lastScheduledVisualSignature.current = captureInputSignature
+
         const layoutSignature = [
             card?.offsetWidth,
             card?.offsetHeight,
@@ -382,18 +301,6 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             globalThis.document?.fonts?.status,
         ]
         const visualSignature = `${JSON.stringify([poiVisualSignature, layoutSignature])}:${_appearanceRevision.current}`
-        const canCapture = !isEmbedded && !replayMasked && !hiddenBecauseTooClose && Boolean(pointId)
-        if (!canCapture) {
-            if (_activeCapture.current?.requestId === _renderRequestId.current) {
-                poiPerformance.record('capture.invalidated')
-                poiPerformance.record('capture.invalidated.suppressed')
-            }
-            _renderRequestId.current++
-            _activeCapture.current = null
-            poiPerformance.record('capture.request.suppressed')
-            return
-        }
-
         const reason = options?.reason ?? 'visual-state-effect'
         poiPerformance.record('capture.request')
         poiPerformance.record(`capture.request.${reason}`)
@@ -431,7 +338,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             return current
         }
 
-        const localCanvas = _poiCanvasCache.current?.signature === visualSignature
+        const localCanvas = !managedCaptureSurface && _poiCanvasCache.current?.signature === visualSignature
             && _poiCanvasCache.current.surface === element && _poiCanvasCache.current.card === card
             ? _poiCanvasCache.current
             : null
@@ -441,16 +348,21 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         if (cachedCanvas) {
             if (!isCurrentRender('immediate-cache-hit')) {
                 _activeCapture.current = null
+                if (managedCaptureSurface) {
+                    poiCaptureSurfaceStore.release(pointId)
+                }
                 return
             }
             if (queuePOICanvasRender.cancel(_poiContent)) {
                 poiPerformance.record('capture.queueCancelledByCache')
             }
-            _poiCanvasCache.current = {
-                ...cachedCanvas,
-                signature: visualSignature,
-                surface: element,
-                card,
+            if (!managedCaptureSurface) {
+                _poiCanvasCache.current = {
+                    ...cachedCanvas,
+                    signature: visualSignature,
+                    surface: element,
+                    card,
+                }
             }
             poiPerformance.record('capture.queueBypassedForCache')
             void Promise.resolve()
@@ -476,6 +388,9 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                     }
                     if (_activeCapture.current?.requestId === renderRequestId) {
                         _activeCapture.current = null
+                        if (managedCaptureSurface) {
+                            poiCaptureSurfaceStore.release(pointId)
+                        }
                     }
                 })
             return
@@ -500,7 +415,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             }
 
             const cachedCanvas = _poiCanvasCache.current
-            const localCanvas = cachedCanvas?.signature === visualSignature
+            const localCanvas = !managedCaptureSurface && cachedCanvas?.signature === visualSignature
                 && cachedCanvas.surface === element && cachedCanvas.card === card
                 ? cachedCanvas
                 : null
@@ -510,11 +425,13 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                 if (!currentPoint || !isCurrentRender('cache-hit')) {
                     return
                 }
-                _poiCanvasCache.current = {
-                    ...sharedCanvas,
-                    signature: visualSignature,
-                    surface: element,
-                    card,
+                if (!managedCaptureSurface) {
+                    _poiCanvasCache.current = {
+                        ...sharedCanvas,
+                        signature: visualSignature,
+                        surface: element,
+                        card,
+                    }
                 }
                 const sharedCacheState = poiCanvasImageCache.snapshot()
                 poiPerformance.record('capture.sharedCacheEntries', sharedCacheState.entryCount)
@@ -652,11 +569,13 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                 const sharedCacheState = poiCanvasImageCache.snapshot()
                 poiPerformance.record('capture.sharedCacheEntries', sharedCacheState.entryCount)
                 poiPerformance.record('capture.sharedCacheBytes', sharedCacheState.retainedBytes)
-                _poiCanvasCache.current = {
-                    signature: visualSignature,
-                    surface: element,
-                    card,
-                    ...sharedCanvas,
+                if (!managedCaptureSurface) {
+                    _poiCanvasCache.current = {
+                        signature: visualSignature,
+                        surface: element,
+                        card,
+                        ...sharedCanvas,
+                    }
                 }
                 mapPOI.image = {
                     // Cesium accepts canvases directly; a data URL needlessly copies the pixel buffer.
@@ -678,6 +597,9 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             onSettled: () => {
                 if (_activeCapture.current?.requestId === renderRequestId) {
                     _activeCapture.current = null
+                    if (managedCaptureSurface) {
+                        poiCaptureSurfaceStore.release(pointId)
+                    }
                 }
             },
             onSuperseded: () => {
@@ -688,7 +610,8 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                 poiPerformance.record('capture.queueCancelled')
             },
         })
-    }, [isEmbedded, point?.expanded, replayActive, replayAnimationActive, replayMasked, hiddenBecauseTooClose, pointId, $pois.list, leaderCaptureBleed, poiVisualSignature])
+    }, [captureSurfaceActive, isEmbedded, managedCaptureSurface, point?.expanded, replayActive, replayAnimationActive, replayMasked,
+        hiddenBecauseTooClose, pointId, $pois.list, leaderCaptureBleed, poiVisualSignature])
 
     useEffect(() => {
         if (isEmbedded || !pointId) {
@@ -724,7 +647,10 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
         }
         _poiCanvasCache.current = null
         _activeCapture.current = null
-    }, [])
+        if (managedCaptureSurface) {
+            poiCaptureSurfaceStore.cancel(poi)
+        }
+    }, [managedCaptureSurface, poi])
 
     useLayoutEffect(() => {
         /** Align the stick endpoint with rounded or skewed visible POI outlines. */
@@ -809,7 +735,6 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             return
         }
 
-        addEventListeners(poi)
         const expanded = point?.expanded === true
         const priority = _previousExpanded.current !== null && _previousExpanded.current !== expanded
         const reason = priority ? 'expanded-state' : 'visual-state-effect'
@@ -818,7 +743,6 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
 
         return () => {
             _renderRequestId.current++
-            removeEventListeners(poi)
         }
     }, [
                   isEmbedded,
@@ -869,11 +793,10 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                   replaySettings.hiddenFields.coordinates,
                   displayCoordinates,
                   displayHeightContent,
+                  captureSurfaceActive,
                   unitSystem,
                   coordinateSystem,
                   renderToCanvas,
-                  addEventListeners,
-                  removeEventListeners,
                   poi,
               ])
 
@@ -884,6 +807,10 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             clearPOIHoverPreview(pointId)
         }
     }, [hiddenBecauseTooClose, pointId, replayMasked])
+
+    if (!captureSurfaceActive) {
+        return null
+    }
 
     return (
         <div
@@ -1064,4 +991,4 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
             </div>
         </div>
     )
-}
+})

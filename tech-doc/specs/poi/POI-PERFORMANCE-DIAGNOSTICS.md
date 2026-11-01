@@ -34,10 +34,10 @@ local storage, IndexedDB, or the server.
   `MutationObserver`.
 - Pending capture supersessions, cancellations, identical-request deduplication,
   cache queue bypasses, and cache invalidations by icon load or resize.
-- Same-signature capture requests are coalesced while work is active. Each
-  mounted POI content surface retains at most its latest rendered canvas and
-  reuses it for an unchanged visual signature. The entry is replaced after
-  appearance, icon, or measured layout changes and released on unmount.
+- Same-signature capture requests are coalesced while work is active. Standalone
+  POI content surfaces may retain one local canvas while mounted. Managed map
+  capture surfaces rely on the shared cache, so unmounting their DOM also releases
+  all detached surface and card nodes.
 - Identical visual signatures across POIs can reuse a shared least-recently-used
   canvas entry. The shared cache is capped at 128 entries and 64 MiB estimated
   RGBA storage; oversized individual canvases bypass it. Concurrent captures

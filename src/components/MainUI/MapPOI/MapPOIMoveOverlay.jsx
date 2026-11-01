@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,7 @@ import {
 } from '@Components/MainUI/MapPOI/poiMoveGeometry'
 import { $poiMove, getPOIMoveSession, startPOIMove, subscribeToPOIMove } from '@Components/MainUI/MapPOI/poiMoveStore'
 import { stylePOIDuotoneIcon } from '@Components/MainUI/MapPOI/duotoneIconUtils'
+import {poiCaptureSurfaceStore, usePOICaptureSurface} from '@Components/MainUI/MapPOI/poiCaptureSurfaceStore'
 import { POI_TMP_TYPE } from '@Core/constants'
 import { isCesiumInputBlocked } from '@Core/events/CesiumInputGate'
 import { POIUtils } from '@Utils/cesium/POIUtils'
@@ -137,6 +138,7 @@ const pickTerrainLocation = (viewer, clientX, clientY) => {
  */
 export const MapPOIMoveOverlay = () => {
     const session = useSyncExternalStore(subscribeToPOIMove, getPOIMoveSession, getPOIMoveSession)
+    const captureSurfaceActive = usePOICaptureSurface(session?.poiId)
     const journeyEditor = useOptionalSnapshot(lgs.stores.journeyEditor)
     const $pois = lgs.stores.main.components.pois
     const poiListSnapshot = useSnapshot($pois.list)
@@ -159,6 +161,13 @@ export const MapPOIMoveOverlay = () => {
     const [viewportRevision, setViewportRevision] = useState(0)
 
     const viewer = lgs.viewer
+
+    useEffect(() => {
+        if (!session?.poiId) {
+            return undefined
+        }
+        return poiCaptureSurfaceStore.retain(session.poiId, {priority: true})
+    }, [session?.poiId])
     const container = viewer?.container
     const canvas = viewer?.canvas
     const viewportRect = canvas?.getBoundingClientRect?.()
@@ -329,7 +338,7 @@ export const MapPOIMoveOverlay = () => {
 
     useLayoutEffect(() => {
         const markerContent = _markerContent.current
-        if (!session?.poiId || !hasAnchor || !markerContent) {
+        if (!session?.poiId || !hasAnchor || !markerContent || !captureSurfaceActive) {
             return undefined
         }
 
@@ -399,7 +408,7 @@ export const MapPOIMoveOverlay = () => {
                 markerContent.removeChild(clone)
             }
         }
-    }, [hasAnchor, poi.id, session])
+    }, [captureSurfaceActive, hasAnchor, poi.id, session])
 
     /** Begin dragging the marker with its geographic anchor beneath the pointer. */
     const handlePointerDown = useCallback(event => {

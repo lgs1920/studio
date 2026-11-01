@@ -1,6 +1,6 @@
 # POI Rendering and Replay Performance — Codex Implementation Plan
 
-**Status:** IN PROGRESS — opt-in diagnostics implemented; no performance baseline or optimization is yet validated
+**Status:** IN PROGRESS — Phase 3 implementation is present on the current branch; behavior and matched performance validation remain outstanding
 **Reviewed source:** lgs1920/studio, branch 1.0.0, static GitHub inspection on 2026-10-31
 **Scope:** POI rendering and movement on the interactive Cesium map, interactive Journey Replay, and deterministic Replay MP4 export
 **Implementation language:** JavaScript / JSX only
@@ -56,7 +56,7 @@ The following observations come from a static source inspection, not a browser b
 
 `src/components/MainUI/MainUI.jsx` mounts `MapPOIMonitor`, which mounts `MapPOICluster`; the cluster creates one `MapPOI` instance for every loaded POI. `src/components/cesium/MapPOI.jsx` projects a POI only while its transient hover/title overlay is active. That work now runs once initially and then from Cesium `postRender` events, with camera-change and animation-frame fallbacks; it no longer schedules a perpetual animation-frame loop when `postRender` is available. This reduces idle projection work by construction, but matched browser profiling is still required to quantify the effect.
 
-A Shift-hover preview path exists but is currently guarded by `DISABLE_POI_SHIFT_HOVER_FOR_DIAGNOSTIC = true` in `MapPOIContent.jsx`. Do not reactivate it or delete it incidentally; verify its intended product state.
+A Shift-hover preview path exists but is currently guarded by `DISABLE_POI_SHIFT_HOVER_FOR_DIAGNOSTIC = true` in `MapPOIMonitor.jsx`. Do not reactivate it or delete it incidentally; verify its intended product state.
 
 ### 3.2 Current POI image path
 
@@ -192,7 +192,7 @@ Do not cache data that is actually time-dependent without a time/frame dependenc
 
 ## 8. Phase 3 — Reduce unnecessary mounted DOM and reactive work (P1/P2)
 
-`MapPOIMonitor` currently builds `MapPOIContent` for every loaded POI, even if only a subset requires a new rich capture. Investigate separating lightweight persistent Cesium entity ownership from heavyweight DOM capture/editor ownership.
+`MapPOIMonitor` keeps a lightweight `MapPOIContent` owner for each loaded POI, while rich map capture surfaces are mounted only for scheduled captures or a transient move preview. Keep the Cesium entity and persistent map interactions independent from those surfaces.
 
 Possible staged approach:
 
@@ -203,7 +203,11 @@ Possible staged approach:
 5. Precompute a map/set of nearby and animated POI IDs outside individual component renders; avoid `replay.nearbyPois.find(...)` for every POI on every relevant global update. Map and rich-content POIs now subscribe to ID-scoped nearby/animated booleans through one Valtio listener. Replacing either Replay array rebuilds its index once and notifies only IDs whose membership changed; component snapshots no longer read those shared arrays. Global Replay mode and display settings remain shared subscriptions because they affect all POIs.
 6. Preserve Cesium picking and event bindings even when rich DOM is not mounted.
 
-This is a larger architecture change. Perform it only after the smaller Phase 1/2 optimizations have been measured and explicitly approved. Confirm no hidden dependency on mounted DOM for image lifecycle, location refresh, icon load or canvas events.
+Implementation update (2026-11-01, current branch; validation pending): map content now subscribes to its individual POI snapshot, while `MapPOI` reads the corresponding POI entry instead of the complete POI map snapshot. A per-POI external-store scheduler mounts at most two routine map capture surfaces at a time and allows one temporary overflow surface for an active move preview. Expanded-state captures are prioritized. Managed map surfaces use the bounded shared canvas cache without retaining detached DOM nodes. Cesium click, tap, edit, context-menu, and hover handlers now live in `MapPOIMonitor`, independently of capture DOM lifetime. Existing ID-scoped Replay membership selectors remain in use. Cesium billboard entities continue to own the map image after capture surfaces unmount.
+
+The current branch passes focused Oxlint and a direct Vite production build. No Vitest suite, browser/WebGL check, visual comparison, or matched benchmark has been run for this phase. Surface-lifecycle behavior and its performance effect therefore remain unverified, and no gain is claimed.
+
+This is a larger architecture change. The user requested its implementation on this branch. Confirm no hidden dependency on mounted DOM for image lifecycle, location refresh, icon load or canvas events during the required regression and browser validation.
 
 The `MapPOICluster`/`src/components/cesium/MapPOI.jsx` projection path is reachable in the current application. It now schedules work from Cesium `postRender` for the small subset of active DOM overlays, with camera-change and RAF fallbacks. Avoid awaiting terrain sampling on every animation frame.
 

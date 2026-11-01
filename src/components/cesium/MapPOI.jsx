@@ -35,8 +35,8 @@ const EMPTY_REPLAY_PROXY = proxy({nearbyPois: []})
 export const MapPOI = memo(({point}) => {
 
     const $list = lgs.stores.main.components.pois.list
-    const list = useSnapshot($list)
-    const thePOI = list.get(point) // Récupère les informations du POI
+    const $point = $list.get(point) ?? EMPTY_REPLAY_PROXY
+    const thePOI = useSnapshot($point)
     const viewable = useSnapshot(lgs.stores.main.components.pois.visibleList)
     const replay = useSnapshot(lgs.stores?.replay ?? EMPTY_REPLAY_PROXY)
     const hasPOI = Boolean(thePOI)
@@ -105,7 +105,7 @@ export const MapPOI = memo(({point}) => {
                 return
             }
 
-            const currentPOI = list.get(point)
+            const currentPOI = $list.get(point)
             if (!currentPOI?.id || !Number.isFinite(currentPOI.latitude) || !Number.isFinite(currentPOI.longitude)) {
                 setPixels(null)
                 clearPOIHoverPreview(point)
@@ -173,7 +173,8 @@ export const MapPOI = memo(({point}) => {
                   replayActive,
                   replaySettings.visible,
                   shouldProjectForHover,
-                  list,
+                  $list,
+                  thePOI,
                   point,
               ])
 
