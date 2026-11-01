@@ -4463,3 +4463,7 @@
 ## 2026-11-01 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/d08d65f68a783021598cefaed7b0ed125a9bb7b5)
 
 - Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: render POI side accent at 10px`](https://github.com/lgs1920/studio/commit/87009e28d25ca410447db5f7b0f3a998c0b5085a)
+
+- Recorded automatically from Git history.
