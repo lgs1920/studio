@@ -13,3 +13,7 @@
 - Test the end-of-Replay dialog when the video is lost and clarify the expected user choice.
 - Investigate why a Replay failure at the end restarts playback from the beginning and loses the video.
 - Investigate why a POI added to the current Journey is sometimes omitted from Replay animation until the application is restarted.
+
+- Recent changes prevent editing POIs outside the current Journey's proximity set. Keep the default list limited to Journey-associated POIs, but allow editing any POI and append it to the displayed list. Do not add an edited POI to the Journey's proximity set when it is outside that set.
+- Investigate why a Journey's POIs are sometimes not displayed after focusing the Journey; this may be related to earlier POI changes.
+- Investigate and fix the Fix Path selection issue.
