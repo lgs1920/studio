@@ -65,7 +65,7 @@
 
 .poi-icon-wrapper.poi-shrinked:not(.used-in-menu) {
     /* Reserve the rounded point below the circular head without stretching it. */
-    --poi-pin-tail-length: calc(0.12 * var(--dimension));
+    --poi-pin-tail-length: calc(0.2 * var(--dimension));
     height: calc(var(--dimension) + var(--poi-pin-tail-length));
     transform: none;
 }

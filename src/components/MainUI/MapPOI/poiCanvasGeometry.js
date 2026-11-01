@@ -21,16 +21,39 @@
  * @param {{left: number, right: number}|undefined} cardBounds - POI card bounds, when present.
  * @param {{left: number, top: number}|undefined} anchorBounds - Explicit expanded POI anchor, when present.
  * @param {{bottom: number}|undefined} pinBounds - Collapsed pin bounds, when present.
+ * @param {{x: number, y: number}|null} [reducedPinAnchor] - Visible compact pin tip, when present.
  * @returns {{x: number|null, y: number}} Geographic anchor in viewport pixels.
  */
-export const calculatePOIContentAnchor = (elementBounds, cardBounds, anchorBounds, pinBounds) => ({
+export const calculatePOIContentAnchor = (elementBounds, cardBounds, anchorBounds, pinBounds, reducedPinAnchor) => ({
     x: anchorBounds
         ? anchorBounds.left
-        : cardBounds
+        : reducedPinAnchor?.x ?? (cardBounds
             ? (cardBounds.left + cardBounds.right) / 2
-            : null,
-    y: anchorBounds ? anchorBounds.top : pinBounds ? pinBounds.bottom : elementBounds.bottom,
+            : pinBounds ? (pinBounds.left + pinBounds.right) / 2 : null),
+    y: anchorBounds?.top ?? reducedPinAnchor?.y ?? pinBounds?.bottom ?? elementBounds.bottom,
 })
+
+/** Resolve the compact pin's geographic point from its SVG viewBox metadata. */
+export const calculatePOIReducedPinAnchor = pinShape => {
+    const bounds = pinShape?.getBoundingClientRect?.()
+    if (!bounds?.width || !bounds.height) {
+        return null
+    }
+
+    const viewBox = String(pinShape.getAttribute?.('viewBox') ?? '').trim().split(/[ ,]+/).map(Number)
+    const viewBoxHeight = viewBox.length === 4 ? viewBox[3] : NaN
+    const anchorAttribute = pinShape.getAttribute?.('data-poi-anchor-y')
+    const anchorY = anchorAttribute === null || anchorAttribute === undefined ? NaN : Number(anchorAttribute)
+    const relativeY = Number.isFinite(viewBoxHeight) && viewBoxHeight > 0
+        && Number.isFinite(anchorY) && anchorY >= 0 && anchorY <= viewBoxHeight
+        ? anchorY / viewBoxHeight
+        : 1
+
+    return {
+        x: (bounds.left + bounds.right) / 2,
+        y: bounds.top + bounds.height * relativeY,
+    }
+}
 
 /**
  * Resolve the horizontal offset from a side anchor's layout edge to its visible POI outline.
@@ -150,7 +173,14 @@ export const calculatePOIContentPixelOffset = (element, canvasWidth, canvasHeigh
     const cardBounds = element.querySelector('.poi-card-inner')?.getBoundingClientRect()
     const anchorBounds = element.querySelector('.poi-geographic-anchor')?.getBoundingClientRect()
     const pinBounds = element.querySelector('.poi-reduced-pin-shape')?.getBoundingClientRect()
-    const {x: anchorX, y: anchorY} = calculatePOIContentAnchor(elementBounds, cardBounds, anchorBounds, pinBounds)
+    const reducedPinAnchor = calculatePOIReducedPinAnchor(element.querySelector('.poi-reduced-pin-shape'))
+    const {x: anchorX, y: anchorY} = calculatePOIContentAnchor(
+        elementBounds,
+        cardBounds,
+        anchorBounds,
+        pinBounds,
+        reducedPinAnchor,
+    )
 
     if (anchorX === null
         || !elementBounds.width

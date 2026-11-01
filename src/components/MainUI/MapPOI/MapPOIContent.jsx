@@ -912,10 +912,11 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                     ref={_poiContent}
                 >
                     {!isExpanded && !useInMenu && (
-                        <svg className="poi-reduced-pin-shape" viewBox="0 0 100 112"
+                        <svg className="poi-reduced-pin-shape" viewBox="0 0 100 120" data-poi-anchor-y="111"
                              preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
+                            {/* Leave room below the pointed stroke so SnapDOM cannot clip its antialiased edge. */}
                             <path
-                                d="M 50 4 A 46 46 0 0 0 29 90.927 L 43 105 Q 50 111 57 105 L 71 90.927 A 46 46 0 0 0 50 4 Z"
+                                d="M 50 4 A 46 46 0 0 0 29 90.927 L 43 101 Q 50 107 57 101 L 71 90.927 A 46 46 0 0 0 50 4 Z"
                                 fill="var(--lgs-poi-background-color)"
                                 stroke="var(--lgs-poi-border-color)"
                                 strokeWidth="8"

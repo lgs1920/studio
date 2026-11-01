@@ -20,6 +20,7 @@ import {
     measurePOIMoveMarkerGeometry,
     placePOIMoveOverlay,
 } from '@Components/MainUI/MapPOI/poiMoveGeometry'
+import {calculatePOIReducedPinAnchor} from '@Components/MainUI/MapPOI/poiCanvasGeometry'
 import { $poiMove, getPOIMoveSession, startPOIMove, subscribeToPOIMove } from '@Components/MainUI/MapPOI/poiMoveStore'
 import { stylePOIDuotoneIcon } from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import {poiCaptureSurfaceStore, usePOICaptureSurface} from '@Components/MainUI/MapPOI/poiCaptureSurfaceStore'
@@ -694,10 +695,10 @@ export const MapPOIMoveOverlay = () => {
             let geographicAnchorRect = geographicAnchor?.getBoundingClientRect?.()
             if (isCompact) {
                 if (hasPinShapeBounds) {
-                    geographicAnchorRect = {
-                        left: (pinShapeRect.left + pinShapeRect.right) / 2,
-                        top: pinShapeRect.bottom,
-                    }
+                    const pinAnchor = calculatePOIReducedPinAnchor(pinShape)
+                    geographicAnchorRect = pinAnchor
+                        ? {left: pinAnchor.x, top: pinAnchor.y}
+                        : {left: (pinShapeRect.left + pinShapeRect.right) / 2, top: pinShapeRect.bottom}
                 }
                 else {
                     // Keep supporting cloned legacy POIs while their rounded pin used a rotated card.
