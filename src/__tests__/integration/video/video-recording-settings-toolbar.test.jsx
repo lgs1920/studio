@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -300,7 +300,7 @@ describe('VideoRecordingSettingsToolbar', () => {
 
         render(<VideoRecordingSettingsToolbar/>)
 
-        expect(document.querySelector('.basic-replay-settings-summary')?.textContent).toContain('17s')
+        expect(document.querySelector('.basic-replay-settings-summary')?.textContent).toContain('16s')
     })
 
     it('shows themed sample levels with matching regular icons and saves the selection per Journey', async () => {

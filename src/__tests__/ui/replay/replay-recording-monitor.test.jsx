@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -62,7 +62,9 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
             {children}
         </div>
     ),
-    WaTooltip: ({children, for: _for, ...props}) => <span {...props}>{children}</span>,
+    WaTooltip: ({children, for: _for, ...props}) => (
+        <span aria-hidden="true" title={children} {...props}/>
+    ),
 }))
 
 import {ReplayRecordingMonitorWidget} from '@Components/MainUI/video/ReplayRecordingMonitorWidget'
@@ -245,9 +247,9 @@ describe('ReplayRecordingMonitorWidget', () => {
         expect(pauseButton.hasAttribute('title')).toBe(false)
         expect(stopButton.hasAttribute('title')).toBe(false)
         expect(cancelButton.hasAttribute('title')).toBe(false)
-        expect(document.querySelector('#replay-monitor-pause')?.previousElementSibling?.textContent).toBe('Pause')
-        expect(document.querySelector('#replay-monitor-stop')?.previousElementSibling?.textContent).toBe('Stop')
-        expect(document.querySelector('#replay-monitor-cancel')?.previousElementSibling?.textContent).toBe('Cancel')
+        expect(document.querySelector('#replay-monitor-pause')?.previousElementSibling?.getAttribute('title')).toBe('Pause')
+        expect(document.querySelector('#replay-monitor-stop')?.previousElementSibling?.getAttribute('title')).toBe('Stop')
+        expect(document.querySelector('#replay-monitor-cancel')?.previousElementSibling?.getAttribute('title')).toBe('Cancel')
 
         const dispatchEvent = vi.spyOn(globalThis.window, 'dispatchEvent')
 
@@ -311,10 +313,10 @@ describe('ReplayRecordingMonitorWidget', () => {
         expect(document.querySelector('.video-recorder-indicator')?.getAttribute('data-icon')).toBe('bolt')
         expect(document.querySelector('.video-recorder-indicator')?.getAttribute('data-icon-variant')).toBe('regular')
         expect(document.querySelector('.video-recorder-indicator')?.hasAttribute('data-icon-family')).toBe(false)
-        expect(screen.getByTitle('Frames checked percentage').textContent).toBe('44%')
+        expect(screen.getByTitle('Frames checked percentage').parentElement.textContent).toBe('44%')
         expect(screen.queryByTitle('Dry run elapsed time')).toBeNull()
         expect(screen.queryByText('00:04')).toBeNull()
-        expect(screen.getByTitle('Estimated time remaining').textContent).toContain('00:06')
+        expect(screen.getByTitle('Estimated time remaining').parentElement.textContent).toContain('00:06')
         expect(screen.getByText('4 / 9')).not.toBeNull()
         expect(screen.getByRole('progressbar', {name: 'Dry run progress: 44%'})).not.toBeNull()
         expect(screen.getByRole('button', {name: 'Pause Dry run'})).not.toBeNull()
@@ -372,7 +374,7 @@ describe('ReplayRecordingMonitorWidget', () => {
         expect(globalThis.documentPictureInPicture.requestWindow).toHaveBeenCalledWith({width: 480, height: 160})
         expect(externalDocument.body.querySelector('canvas')).toBeNull()
         expect(externalDocument.body.querySelector('.replay-recording-monitor-metric-duration')?.textContent)
-            .toContain('Frames checked percentage44%')
+            .toContain('44%')
         expect(externalDocument.body.textContent).toContain('4 / 9')
     })
 

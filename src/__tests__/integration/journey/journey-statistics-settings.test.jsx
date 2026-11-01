@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-12
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -51,6 +51,7 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
             <select aria-label={label} value={value} onChange={onChange} {...props}>{children}</select>
         </label>
     ),
+    WaTooltip: ({children}) => <span>{children}</span>,
 }))
 
 import { JourneyStatisticsSettings } from '@Components/Settings/application/general/JourneyStatisticsSettings'

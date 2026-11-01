@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-11
- * Last modified: 2026-10-23
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -83,7 +83,7 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
             {children}
         </label>
     ),
-    WaOption: ({children, value, disabled, title}) => <option value={value} disabled={disabled} title={title}>{children}</option>,
+    WaOption: ({children, value, disabled, id}) => <option id={id} value={value} disabled={disabled}>{children}</option>,
     WaSelect: ({children, label, value = '', onChange, placeholder, appearance, size, ...props}) => (
         <label>
             {label}
@@ -98,7 +98,9 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
             <textarea aria-label={label} value={value} readOnly {...props}/>
         </label>
     ),
-    WaTooltip: ({children}) => <span>{children}</span>,
+    WaTooltip: ({children, for: tooltipTargetId, ...props}) => (
+        <span data-tooltip-for={tooltipTargetId} {...props}>{children}</span>
+    ),
 }))
 
 const slugify = value => String(value ?? '')
@@ -231,10 +233,12 @@ describe('journey sample catalog', () => {
         const loadedOption = within(select).getByRole('option', {name: 'Sample one'})
         const availableOption = within(select).getByRole('option', {name: 'Sample two'})
         expect(loadedOption.disabled).toBe(true)
-        expect(loadedOption.getAttribute('title')).toBe('Already loaded sample.')
+        expect(document.querySelector(`[data-tooltip-for="${loadedOption.id}"]`)?.textContent)
+            .toBe('Already loaded sample.')
         expect(loadedOption.querySelector('[data-icon="xmark"]')).not.toBeNull()
         expect(availableOption.disabled).toBe(false)
-        expect(availableOption.getAttribute('title')).toBe('Loadable sample.')
+        expect(document.querySelector(`[data-tooltip-for="${availableOption.id}"]`)?.textContent)
+            .toBe('Loadable sample.')
         expect(availableOption.querySelector('[data-icon="check"]')).not.toBeNull()
 
         fireEvent.change(select, {target: {value: 'sample-two#gpx'}})
