@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-11
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,7 +27,17 @@ export const createPOICanvasRenderQueue = (maxConcurrent = 2) => {
     const activeKeys = new Set()
     let activeRenders = 0
     let activeOverflowRenders = 0
+    let backgroundYieldPending = false
+    let scheduledDrain = null
     const concurrencyLimit = Number.isSafeInteger(maxConcurrent) && maxConcurrent > 0 ? maxConcurrent : 1
+
+    const cancelScheduledDrain = () => {
+        if (!scheduledDrain) {
+            return
+        }
+        scheduledDrain.cancel()
+        scheduledDrain = null
+    }
 
     const runPendingRenders = () => {
         while (pendingRenders.size > 0 || priorityRenders.size > 0) {
@@ -73,6 +83,7 @@ export const createPOICanvasRenderQueue = (maxConcurrent = 2) => {
                 .then(nextQueuedRender.render)
                 .catch(error => console.error('Queued POI canvas render failed:', error))
                 .finally(() => {
+                    backgroundYieldPending = true
                     try {
                         nextQueuedRender.onSettled?.()
                     }
@@ -84,9 +95,42 @@ export const createPOICanvasRenderQueue = (maxConcurrent = 2) => {
                     if (isOverflowRender) {
                         activeOverflowRenders--
                     }
-                    runPendingRenders()
+                    if (priorityRenders.size > 0) {
+                        cancelScheduledDrain()
+                        backgroundYieldPending = false
+                        runPendingRenders()
+                    }
+                    else if (pendingRenders.size > 0) {
+                        schedulePendingRenders()
+                    }
+                    else {
+                        backgroundYieldPending = false
+                    }
                 })
         }
+    }
+
+    const schedulePendingRenders = () => {
+        if (scheduledDrain || (pendingRenders.size === 0 && priorityRenders.size === 0)) {
+            return
+        }
+
+        const drain = () => {
+            scheduledDrain = null
+            backgroundYieldPending = false
+            runPendingRenders()
+        }
+
+        if (typeof globalThis.requestIdleCallback === 'function') {
+            const idleCallbackId = globalThis.requestIdleCallback(drain, {timeout: 160})
+            scheduledDrain = {
+                cancel: () => globalThis.cancelIdleCallback?.(idleCallbackId),
+            }
+            return
+        }
+
+        const timeoutId = globalThis.setTimeout(drain, 16)
+        scheduledDrain = {cancel: () => globalThis.clearTimeout(timeoutId)}
     }
 
     const enqueue = (key, render, {
@@ -116,11 +160,16 @@ export const createPOICanvasRenderQueue = (maxConcurrent = 2) => {
         const queuedRender = {render, priority: isPriority, allowOverflow: canOverflow, onSettled, onSuperseded, onCancelled}
         if (isPriority) {
             priorityRenders.set(key, queuedRender)
+            cancelScheduledDrain()
+            backgroundYieldPending = false
+            runPendingRenders()
         }
         else {
             pendingRenders.set(key, queuedRender)
+            if (!scheduledDrain && !backgroundYieldPending) {
+                runPendingRenders()
+            }
         }
-        runPendingRenders()
     }
 
     enqueue.cancel = key => {
@@ -136,7 +185,14 @@ export const createPOICanvasRenderQueue = (maxConcurrent = 2) => {
         catch (error) {
             console.error('Queued POI canvas cancellation callback failed:', error)
         }
-        runPendingRenders()
+        if (queuedRender.priority) {
+            cancelScheduledDrain()
+            backgroundYieldPending = false
+            runPendingRenders()
+        }
+        else {
+            schedulePendingRenders()
+        }
         return true
     }
 
