@@ -104,7 +104,7 @@ export const RotationElement = ({
                         {isRotated && (
                             <WaButton
                                 className="square-button small"
-                                size="s"
+                                size="xs"
                                 appearance="plain"
                                 aria-label="Reset rotation"
                                 onClick={() => applyRotation(0)}
