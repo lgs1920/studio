@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-31
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-const MAX_METRICS = 64
+const MAX_METRICS = 96
 const MAX_SAMPLES_PER_METRIC = 256
 const now = () => globalThis.performance?.now?.() ?? Date.now()
 

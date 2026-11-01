@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-13
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,7 @@ import { MapPOI }                                  from '@Core/MapPOI'
 import { normalizePOIDisplaySettings }              from '@Core/POIDisplaySettings'
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
 import { Export }                                  from '@Core/ui/Export'
+import {poiPerformance}                            from '@Core/ui/POIPerformance'
 import { POIUtils }                                from '@Utils/cesium/POIUtils'
 import { KM }                                      from '@Utils/UnitUtils'
 import { Cartesian3, HeightReference }              from 'cesium'
@@ -468,6 +469,7 @@ export class POIManager {
     }
 
     async updatePOI(id, updates, options = {}) {
+        poiPerformance.record('poi.updateCalls')
         const {skipPersist = false, immediate = false, skipLocationUpdate = false, markAsEdited = false} = options
         const poi = this.list.get(id)
         if (!poi) {
@@ -493,6 +495,7 @@ export class POIManager {
         if (Object.keys(safeUpdates).length === 0) {
             return poi
         }
+        poiPerformance.record('poi.updateFields', Object.keys(safeUpdates).length)
 
         const markedAsEdited = markAsEdited
             && poi.newBadgeExpiresAt !== null
@@ -511,7 +514,14 @@ export class POIManager {
 
         const hasVisibilityUpdate = Object.prototype.hasOwnProperty.call(safeUpdates, 'visible')
         const previousVisible = poi.visible
+        const previousExpanded = poi.expanded === true
         Object.assign(poi, safeUpdates)
+
+        if (Object.prototype.hasOwnProperty.call(safeUpdates, 'expanded')
+            && previousExpanded !== (poi.expanded === true)) {
+            poiPerformance.record('poi.expandedTransitions')
+            poiPerformance.record(poi.expanded === true ? 'poi.expandedTransitions.expand' : 'poi.expandedTransitions.collapse')
+        }
 
         if (hasVisibilityUpdate && previousVisible !== poi.visible) {
             poi.toggleVisibility()
@@ -540,7 +550,9 @@ export class POIManager {
         this.#structureSubscription = subscribe(
             this.list,
             (ops) => {
+                poiPerformance.record('poi.valtioMapOperations', ops.length)
                 ops.forEach(([op, , value, prevValue]) => {
+                    poiPerformance.record(`poi.valtioMapOperation.${op}`)
                     // Si on ajoute un POI (op 'set' et pas de valeur précédente)
                     if (op === 'set' && prevValue === undefined) {
                         this.#handlePOIAdded(value.id, value)
