@@ -2385,3 +2385,7 @@
 ## 2026-10-23 — [`Merge pull request #551 from lgs1920/codex/revert-388-main`](https://github.com/lgs1920/studio/commit/282ee2a65edd89d32bcbdaaf6725bb6715ec8504)
 
 - revert: remove FIT and TCX import from main
+
+## 2026-11-01 — [`docs: add Replay export dependency and quality API addendum`](https://github.com/lgs1920/studio/commit/6cadb8cf861f1cec84d6cdf98398a0f94e5c646c)
+
+- Recorded automatically from Git history.

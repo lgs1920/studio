@@ -29,6 +29,7 @@ below by engineering domain rather than storage directory.
 
 ### Planned
 
+- [Replay export dependency and encoder addendum](todo/CORE-REPLAY-EXPORT-DEPENDENCIES-AND-ENCODER-ADDENDUM.md) — reviewed against `1.0.0`
 - [Replay Timeline performance audit and improvement proposals](todo/CORE-REPLAY-TIMELINE-PERFORMANCE-AUDIT.md)
 - [Replay start camera editor and clip synchronization](specs/replay-video/CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md)
 - [Replay Timeline preview](todo/CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md) — TODO, 1.0.0
