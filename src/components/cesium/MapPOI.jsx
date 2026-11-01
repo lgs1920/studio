@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-23
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ import {
     isPOIHoverPreviewTransitionActive, setPOIHoverPreviewPosition, subscribeToPOIHoverPreview,
 } from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
 import { POIUtils }                                       from '@Utils/cesium/POIUtils'
+import {useReplayPOISelector} from '@Components/MainUI/MapPOI/replayPOISelectorStore'
 import {subscribeToPOIProjectionUpdates} from './poiProjectionScheduler'
 import { memo, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { useSnapshot }                                    from 'valtio'
@@ -58,7 +59,8 @@ export const MapPOI = memo(({point}) => {
         [thePOI?.id],
     )
     const hoverTitleActive = useSyncExternalStore(subscribeHoverPreview, getHoverTitleSnapshot, () => false)
-    const presentation = resolveReplayPOIPresentation(thePOI, {replay})
+    const replayAnimatedPOI = useReplayPOISelector('animated', thePOI?.id)
+    const presentation = resolveReplayPOIPresentation(thePOI, {replay, animatedPOI: replayAnimatedPOI})
     const replayActive = presentation.active
     const replaySettings = normalizeJourneyReplayPOISettings(thePOI?.replay)
     const shouldProjectForHover = presentation.visible

@@ -8,14 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    getJourneyReplayPOIEntry,
     isReplayPOIAnimationActiveAtProgress,
     isReplayPOIEndpoint,
     normalizeReplayPOIBehavior,
@@ -34,37 +33,6 @@ import {applyJourneyReplayPOIVisibility} from '@Core/ui/replay/JourneyReplayVisi
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Replay POI animation settings', () => {
-    it('indexes nearby entries once per immutable snapshot and retains first-match semantics', () => {
-        const store = proxy({nearbyPois: [
-            {poi: {id: 'poi-1'}, source: 'first'},
-            {poi: {id: 'poi-1'}, source: 'duplicate'},
-            {poi: {id: 'poi-2'}},
-        ]})
-        const nearbyPois = snapshot(store).nearbyPois
-        const firstEntry = nearbyPois[0]
-        let indexIterations = 0
-        const indexedNearbyPois = new Proxy(nearbyPois, {
-            get: (target, property, receiver) => {
-                if (property === Symbol.iterator) {
-                    indexIterations += 1
-                }
-                return Reflect.get(target, property, receiver)
-            },
-        })
-
-        expect(getJourneyReplayPOIEntry(indexedNearbyPois, 'poi-1')).toBe(firstEntry)
-        expect(getJourneyReplayPOIEntry(indexedNearbyPois, 'poi-2')).toBe(nearbyPois[2])
-        expect(getJourneyReplayPOIEntry(indexedNearbyPois, 'missing')).toBeNull()
-        expect(getJourneyReplayPOIEntry(indexedNearbyPois, null)).toBeNull()
-        expect(indexIterations).toBe(1)
-
-        store.nearbyPois = [{poi: {id: 'poi-1'}, source: 'replacement'}]
-        const nextSnapshot = snapshot(store).nearbyPois
-        const replacement = nextSnapshot[0]
-        expect(nextSnapshot).not.toBe(nearbyPois)
-        expect(getJourneyReplayPOIEntry(nextSnapshot, 'poi-1')).toBe(replacement)
-    })
-
     it('resolves animated membership from the immutable per-POI snapshot index', () => {
         const replayStore = proxy({active: true, userMode: 'expert', animatedPOIIds: ['poi-1']})
         const firstSnapshot = snapshot(replayStore)

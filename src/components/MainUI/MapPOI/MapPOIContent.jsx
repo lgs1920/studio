@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,8 +45,9 @@ import {
     shouldDisplayPOIField,
 }                                                   from '@Core/POIDisplaySettings'
 import {
-    getJourneyReplayPOIEntry, normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
+    normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
+import {useReplayPOISelector} from '@Components/MainUI/MapPOI/replayPOISelectorStore'
 import { ELEVATION_UNITS, UnitUtils }               from '@Utils/UnitUtils'
 import { WaIcon, WaTooltip }                       from '@awesome.me/webawesome/dist/react'
 import { snapdom }                                 from '@zumer/snapdom'
@@ -126,8 +127,9 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
     const pointLatitude = point?.latitude
     const pointLocation = point?.location
     const pointCountryCode = point?.countryCode
-    const replayEntry = getJourneyReplayPOIEntry(replay.nearbyPois, point?.id)
-    const presentation = resolveReplayPOIPresentation(point, {replay})
+    const replayNearbyPOI = useReplayPOISelector('nearby', pointId)
+    const replayAnimatedPOI = useReplayPOISelector('animated', pointId)
+    const presentation = resolveReplayPOIPresentation(point, {replay, animatedPOI: replayAnimatedPOI})
     const replayActive = presentation.active
     // Read optional settings directly so Valtio subscribes when a field is first added.
     const selectedStyle = point?.display?.style
@@ -161,7 +163,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
     const replayAnimationActive = presentation.animationActive
     const iconVisible = isEmbedded ? point?.visible : presentation.visible
     const hiddenBecauseTooClose = point?.tooClose === true
-    const hideJourneyReplayField = key => replayActive && replayEntry && replaySettings.hiddenFields[key] === true
+    const hideJourneyReplayField = key => replayActive && replayNearbyPOI && replaySettings.hiddenFields[key] === true
     const displayCategory = shouldDisplayPOIField('category', displaySettings, replayActive)
         && !hideJourneyReplayField('category')
     const displayTitleCategoryIcon = shouldDisplayPOIField('titleCategoryIcon', displaySettings, replayActive)
@@ -761,12 +763,19 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
 
         const previousCardSize = {width: card.offsetWidth, height: card.offsetHeight}
         const observer = new ResizeObserver(() => {
+            poiPerformance.record('capture.resizeObserverCallbacks')
             const width = card.offsetWidth
             const height = card.offsetHeight
             const cardSizeChanged = width !== previousCardSize.width || height !== previousCardSize.height
             previousCardSize.width = width
             previousCardSize.height = height
             const edgeOffsetChanged = updatePOIStickEdgeOffset()
+            if (cardSizeChanged) {
+                poiPerformance.record('capture.resizeObserverSizeChanges')
+            }
+            if (edgeOffsetChanged) {
+                poiPerformance.record('capture.resizeObserverEdgeOffsetChanges')
+            }
             if ((cardSizeChanged || edgeOffsetChanged) && !isEmbedded) {
                 _appearanceRevision.current += 1
                 _poiCanvasCache.current = null
@@ -851,7 +860,7 @@ export const MapPOIContent = ({poi, useInMenu = false, domPreview = false, colla
                   point?.visible,
                   point?.tooClose,
                   replayActive,
-                  replayEntry?.poi?.id,
+                  replayNearbyPOI,
                   replaySettings.visible,
                   replaySettings.animated,
                   replaySettings.hiddenFields.location,
