@@ -159,14 +159,17 @@ export const MapPOIMonitor = () => {
         })
     }, [getPOI])
 
-    /** Open the POI editor for a double-click or double-tap. */
-    const handleEditor = useCallback(async (event, entity) => {
+    /** Open the POI editor when a picked Cesium entity belongs to a POI. */
+    const handleEditor = useCallback((event, entity) => {
         const poiId = entity ?? event?.entityId
         if (!getPOI(poiId)) {
-            return
+            return false
         }
         __.ui.contextMenu.hide()
-        await openPOIEditor(poiId)
+        void openPOIEditor(poiId).catch(error => {
+            console.error(`[POI] Unable to open the editor for ${poiId}:`, error)
+        })
+        return true
     }, [getPOI])
 
     /** Show the POI context menu at the current Cesium pointer position. */
@@ -239,7 +242,6 @@ export const MapPOIMonitor = () => {
         const addPOIEventListeners = poiId => {
             __.canvasEvents.onClick(handlePOIClick, {entity: poiId, preventLowerPriority: true})
             __.canvasEvents.onTap(handlePOIClick, {entity: poiId, preventLowerPriority: true})
-            __.canvasEvents.onDoubleClick(handleEditor, {entity: poiId, preventLowerPriority: true})
             __.canvasEvents.onDoubleTap(handleEditor, {entity: poiId, preventLowerPriority: true})
             __.canvasEvents.onRightClick(openContextMenu, {entity: poiId, preventLowerPriority: true})
             __.canvasEvents.onLongTap(openContextMenu, {entity: poiId, preventLowerPriority: true})
@@ -345,6 +347,13 @@ export const MapPOIMonitor = () => {
             })
         })
 
+        // Resolve double-clicks against the current POI store so global POIs remain editable across list updates.
+        __.canvasEvents.onDoubleClick(handleEditor, {
+            entity: [],
+            priority: 1,
+            preventLowerPriority: 'handled',
+        })
+
         /** Rebuild only POIs whose Replay-dependent image content changed. */
         const replayStore = lgs.stores.replay
         let previousReplayActive = isReplayPOIPresentationActive(replayStore)
@@ -443,6 +452,7 @@ export const MapPOIMonitor = () => {
         return () => {
             poiTerrainOcclusionController.dispose()
             removeSubscription()
+            __.canvasEvents.offDoubleClick?.(handleEditor)
             replaySubscriptions.forEach(remove => remove())
             removeReplayRuntimeSubscription?.()
             removeDeferredExportSubscription()
