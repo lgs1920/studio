@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -188,7 +188,7 @@ describe('Replay recording media handoff', () => {
         expect(__.ui.widgetManager.disposeByGroup).toHaveBeenCalled()
         expect(lgs.stores.ui.video.exporting).toBe(false)
         expect(readyListener.mock.calls[0][0].detail.mediaHandoffRevision).toBe(lgs.stores.ui.video.mediaHandoffRevision)
-        expect(queryByTestId('completed-video-dialog')).toBeNull()
+        expect(queryByTestId('completed-video-dialog')).not.toBeNull()
         await act(async () => restoration.resolve())
 
         expect(queryByTestId('completed-video-dialog')).not.toBeNull()

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-17
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -373,7 +373,7 @@ describe('VideoDownloadAndShareDialog', () => {
         await expectDialogCleanup()
     })
 
-    it('waits for replay scene focus restoration before opening the preview dialog', async () => {
+    it('opens the preview immediately while restoring replay scene focus', async () => {
         let resolveRestore
         globalThis.__.ui.replay.restorePlaybackScene.mockImplementationOnce(() => new Promise(resolve => {
             resolveRestore = resolve
@@ -391,7 +391,7 @@ describe('VideoDownloadAndShareDialog', () => {
             await Promise.resolve()
         })
 
-        expect(screen.queryByTestId('video-preview-dialog')).toBeNull()
+        expect(screen.queryByTestId('video-preview-dialog')).not.toBeNull()
         expect(globalThis.__.ui.replay.restorePlaybackScene).toHaveBeenCalledWith({force: true})
 
         await act(async () => {
