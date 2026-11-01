@@ -4511,3 +4511,7 @@
 ## 2026-11-01 — [`docs(fix-path): add Codex performance and reliability improvement plan`](https://github.com/lgs1920/studio/commit/516c025e5f83a81e8405fc9ee6791df3ff708474)
 
 - Recorded automatically from Git history.
+
+## 2026-11-01 — [`docs(fix-path): correct Codex plan reference paths`](https://github.com/lgs1920/studio/commit/f92420b50109a0ccc688d5f5f48a222d0e3b4c63)
+
+- Recorded automatically from Git history.
