@@ -24,9 +24,14 @@ local storage, IndexedDB, or the server.
 
 - Rich POI content renders and mounted `MapPOIContent` surfaces (map, menu, or
   transient preview).
+- POI manager update calls and changed-field totals, expanded/collapsed
+  transitions, and top-level Valtio POI-map operations.
 - Capture requests, queue wait, starts, stale discards and commits.
 - Capture request source and stale-discard phase, including a stale check after
   SnapDOM and before the subsequent `toCanvas()` work.
+- `ResizeObserver` callbacks, card-size changes, leader-edge offset changes,
+  and the resulting resize invalidations. The map capture path does not use a
+  `MutationObserver`.
 - Pending capture supersessions, cancellations, identical-request deduplication,
   cache queue bypasses, and cache invalidations by icon load or resize.
 - Same-signature capture requests are coalesced while work is active. Each
@@ -48,9 +53,11 @@ local storage, IndexedDB, or the server.
   billboard visibility actually changes.
 - Replay POI visibility and candidate counts, nearby POI synchronization duration
   and candidate counts, nearby entries and POI-list entries scanned, crop checks,
-  unique-candidate cache hits, nearby-entry index lookups/builds, and stop-clip
-  mask ticks. It also counts animated-POI membership lookups and snapshot-index
-  builds used by the presentation resolver.
+  unique-candidate cache hits, ID-scoped nearby/animated selector reads, index
+  rebuilds and subscriber notifications, stop-clip mask ticks, cached candidates
+  checked by the stop-clip guard, candidate-cache invalidations, and its duration.
+  It also counts animated-POI membership lookups and snapshot-index builds used
+  by non-React presentation calls.
 - Replay entity-container lookups and scans, effective visibility writes, and
   repeated writes skipped when entity and billboard visibility already match.
 - Replay entity lookup reuses POI entity references for the lifetime of a Replay

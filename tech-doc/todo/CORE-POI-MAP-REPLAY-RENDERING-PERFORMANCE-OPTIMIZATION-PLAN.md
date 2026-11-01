@@ -114,7 +114,7 @@ Instrument a small, opt-in POI performance collector, reusing the existing recor
 - `syncNearbyPOIsForSample()` duration/candidate count, crop projection checks and state transitions.
 - Main-thread long tasks, visible FPS, frame-time p50/p95, memory where available, Cesium render cost and MP4 frames-per-second/wall-clock export duration.
 
-Implementation update (2026-10-31): a bounded, disabled-by-default collector is available through `?poiPerf=1` and `window.__lgsPoiPerformance.snapshot()`. It currently measures React POI render invocations, mounted content surfaces, capture request/queue/capture phases and canvas estimates, Cesium draw/entity/image updates, Replay visibility and nearby-POI sync costs, crop checks, and stop-clip mask ticks. It does not measure FPS, long tasks, heap/GPU memory, or export timing; use browser profiling and the existing Replay recording report for those. See [POI performance diagnostics](../specs/poi/POI-PERFORMANCE-DIAGNOSTICS.md). The browser instance checked during implementation had no loaded Studio scene because the backend was unreachable, so a matched baseline remains outstanding.
+Implementation update (2026-11-01): a bounded, disabled-by-default collector is available through `?poiPerf=1` and `window.__lgsPoiPerformance.snapshot()`. It measures React POI render invocations, mounted content surfaces, capture request/queue/capture phases and canvas estimates, ResizeObserver callbacks and invalidation reasons, POI manager update and expansion rates, Valtio POI-map operations, Cesium draw/entity/image updates, Replay visibility and nearby-POI sync costs, crop checks, and stop-clip mask ticks. The map capture path has no MutationObserver. It does not measure React commits, FPS, long tasks, heap/GPU memory, or export timing; use browser profiling and the existing Replay recording report for those. See [POI performance diagnostics](../specs/poi/POI-PERFORMANCE-DIAGNOSTICS.md). The browser instance checked during implementation had no loaded Studio scene because the backend was unreachable, so a matched baseline remains outstanding.
 
 Follow-up from the first user profile: `mapPOI.projectionTick` included asynchronous terrain sampling and ran for every mounted POI while idle. The projection loop now runs only while that POI owns a hover title or DOM preview. This reduces idle projection and terrain work by construction; the user-provided profile is pre-change, and an after-profile plus hover/Replay validation is still required before claiming a measured gain.
 
@@ -200,7 +200,7 @@ Possible staged approach:
 2. Mount a POI's capture surface when its appearance is first needed or invalidated; mount rich interactive DOM when expanded/edited/previewed.
 3. Reuse a previously captured surface when no visual revision changed; do not remount unnecessarily.
 4. Scope Valtio subscriptions to the particular POI and minimal Replay-derived state. Avoid having all POI components rerender because the global Replay sample advanced.
-5. Precompute a map/set of nearby and animated POI IDs outside individual component renders; avoid `replay.nearbyPois.find(...)` for every POI on every relevant global update. The rich content path now builds a weakly held POI-ID index once per nearby-POI snapshot, and Replay presentation builds an animated-ID set once per animated-ID array. The map-overlay path no longer performs an unused nearby-POI search. This avoids repeated linear membership searches but does not yet narrow every Valtio subscription.
+5. Precompute a map/set of nearby and animated POI IDs outside individual component renders; avoid `replay.nearbyPois.find(...)` for every POI on every relevant global update. Map and rich-content POIs now subscribe to ID-scoped nearby/animated booleans through one Valtio listener. Replacing either Replay array rebuilds its index once and notifies only IDs whose membership changed; component snapshots no longer read those shared arrays. Global Replay mode and display settings remain shared subscriptions because they affect all POIs.
 6. Preserve Cesium picking and event bindings even when rich DOM is not mounted.
 
 This is a larger architecture change. Perform it only after the smaller Phase 1/2 optimizations have been measured and explicitly approved. Confirm no hidden dependency on mounted DOM for image lifecycle, location refresh, icon load or canvas events.
@@ -228,6 +228,20 @@ Keep an ephemeral `poiId -> last effective visibility` map scoped to the active 
 Do not change stored `poi.visible`. Preserve visibility before playback and correct cleanup for normal stop, cancel, errors, clip transitions and exported final frame. For isolated HQ output, confirm visibility updates target the owned scene rather than only the main viewer.
 
 **Acceptance:** unchanged Replay frames produce no redundant entity show writes; all masks and restores remain identical under unit and browser tests.
+
+Implementation update (2026-11-01): the Start/Stop clip guard retains its
+existing visibility-policy pass, but caches the candidate array and nearby-ID
+set after a full pass. Each animation frame reapplies current POI and Replay
+visibility policy through the existing idempotent setter without rebuilding
+the candidate list or rescanning entity containers. A changed nearby array or
+POI-list mutation invalidates the cache and triggers a fresh candidate pass.
+The guard still reconciles the known competing
+writers: POI drawing and `POIUtils.setPOIVisibility`, `TrackUtils` journey/flag
+visibility updates, hover-preview hide/restore, drag-overlay hide/restore, and
+current-Journey preparation/restoration. Stop and cancellation clear the cached
+state; an already queued callback cannot restart the loop. This is a structural
+optimization only; matched performance and browser parity measurements remain
+outstanding.
 
 ## 10. Phase 5 — Replay candidate and animation-window efficiency (P2)
 
