@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,18 +17,19 @@
 /**
  * Resolve the POI geographic anchor from the same DOM bounds used by the Cesium billboard.
  *
- * @param {{left: number, top: number, right: number, bottom: number}} elementBounds - POI wrapper bounds.
+ * @param {{left: number, top: number, right: number, bottom: number}} elementBounds - POI capture surface bounds.
  * @param {{left: number, right: number}|undefined} cardBounds - POI card bounds, when present.
  * @param {{left: number, top: number}|undefined} anchorBounds - Explicit expanded POI anchor, when present.
+ * @param {{bottom: number}|undefined} pinBounds - Collapsed pin bounds, when present.
  * @returns {{x: number|null, y: number}} Geographic anchor in viewport pixels.
  */
-export const calculatePOIContentAnchor = (elementBounds, cardBounds, anchorBounds) => ({
+export const calculatePOIContentAnchor = (elementBounds, cardBounds, anchorBounds, pinBounds) => ({
     x: anchorBounds
         ? anchorBounds.left
         : cardBounds
             ? (cardBounds.left + cardBounds.right) / 2
             : null,
-    y: anchorBounds ? anchorBounds.top : elementBounds.bottom,
+    y: anchorBounds ? anchorBounds.top : pinBounds ? pinBounds.bottom : elementBounds.bottom,
 })
 
 /**
@@ -148,7 +149,8 @@ export const calculatePOIContentPixelOffset = (element, canvasWidth, canvasHeigh
     const elementBounds = element.getBoundingClientRect()
     const cardBounds = element.querySelector('.poi-card-inner')?.getBoundingClientRect()
     const anchorBounds = element.querySelector('.poi-geographic-anchor')?.getBoundingClientRect()
-    const {x: anchorX, y: anchorY} = calculatePOIContentAnchor(elementBounds, cardBounds, anchorBounds)
+    const pinBounds = element.querySelector('.poi-reduced-pin-shape')?.getBoundingClientRect()
+    const {x: anchorX, y: anchorY} = calculatePOIContentAnchor(elementBounds, cardBounds, anchorBounds, pinBounds)
 
     if (anchorX === null
         || !elementBounds.width

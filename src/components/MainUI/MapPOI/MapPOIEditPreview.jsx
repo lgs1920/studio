@@ -8,19 +8,22 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-27
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { MapPOIContent } from '@Components/MainUI/MapPOI/MapPOIContent'
+import { getPOIBillboardDistanceScale } from '@Utils/cesium/POIBillboardScale'
+import { POIUtils } from '@Utils/cesium/POIUtils'
 import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import { useSnapshot } from 'valtio'
+import { proxy, useSnapshot } from 'valtio'
 
 const PREVIEW_MAX_CANVAS_WIDTH = 1024
 const MIN_PREVIEW_HEIGHT = 125
+const EMPTY_CAMERA_POSITION = proxy({})
 
 /**
  * Copy the current Cesium canvas into a POI editor preview image.
@@ -61,6 +64,11 @@ export const MapPOIEditPreview = ({poi}) => {
     const tooltipIdPrefix = `map-poi-preview-${rawTooltipId.replace(/:/g, '')}`
     const poiList = useSnapshot(lgs.stores.main.components.pois.list)
     const point = poiList.get(poi)
+    const $cameraPosition = lgs.stores.main.components.camera?.position ?? EMPTY_CAMERA_POSITION
+    const cameraPosition = useSnapshot($cameraPosition)
+    const cameraLongitude = cameraPosition.longitude
+    const cameraLatitude = cameraPosition.latitude
+    const cameraHeight = cameraPosition.height
     const _openArea = useRef(null)
     const _openContent = useRef(null)
     const _preview = useRef(null)
@@ -71,6 +79,15 @@ export const MapPOIEditPreview = ({poi}) => {
     const [isResizing, setIsResizing] = useState(false)
     const [previewScale, setPreviewScale] = useState(1)
     const [previewHeight, setPreviewHeight] = useState(null)
+    const cameraHasPosition = Number.isFinite(cameraLongitude)
+        && Number.isFinite(cameraLatitude)
+        && Number.isFinite(cameraHeight)
+    const poiHasCoordinates = Number.isFinite(point?.longitude) && Number.isFinite(point?.latitude)
+    const configuredScale = Number(point?.scale)
+    const poiScale = Number.isFinite(configuredScale) ? configuredScale : 1
+    const mapScale = cameraHasPosition && poiHasCoordinates
+        ? poiScale * getPOIBillboardDistanceScale(POIUtils.distanceFromCamera(point))
+        : 1
 
     /** Measure the POI overflow and keep the fit scale and resize affordance current. */
     const updatePreviewSizing = useCallback(() => {
@@ -133,13 +150,19 @@ export const MapPOIEditPreview = ({poi}) => {
         const absoluteSine = Math.abs(Math.sin(radians))
         const contentWidth = absoluteCosine * unrotatedContentWidth + absoluteSine * unrotatedContentHeight
         const contentHeight = absoluteSine * unrotatedContentWidth + absoluteCosine * unrotatedContentHeight
-        const overflows = contentWidth > availableWidth || contentHeight > availableHeight
+        const scaledContentWidth = contentWidth * mapScale
+        const scaledContentHeight = contentHeight * mapScale
+        const overflows = scaledContentWidth > availableWidth || scaledContentHeight > availableHeight
         setRequiresFit(previous => previous === overflows ? previous : overflows)
         const nextScale = fitRequested
-            ? Math.min(1, availableWidth / contentWidth, availableHeight > 0 ? availableHeight / contentHeight : 1)
+            ? Math.min(
+                1,
+                availableWidth / Math.max(scaledContentWidth, 1),
+                availableHeight > 0 ? availableHeight / Math.max(scaledContentHeight, 1) : 1,
+            )
             : 1
         setPreviewScale(previous => Math.abs(previous - nextScale) < 0.001 ? previous : nextScale)
-    }, [fitRequested])
+    }, [fitRequested, mapScale])
 
     /** Toggle between the natural POI size and a scale that fits the preview frame. */
     const handleFitToggle = useCallback(() => {
@@ -303,7 +326,7 @@ export const MapPOIEditPreview = ({poi}) => {
                             position: 'relative',
                             top: 0,
                             left: 0,
-                            transform: `scale(${previewScale})`,
+                            transform: `scale(${previewScale * mapScale})`,
                             transformOrigin: 'center center',
                             pointerEvents: 'none',
                             '--poi-expanded-dimension': `${point.display?.maxWidth ?? 200}px`,

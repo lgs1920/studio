@@ -779,7 +779,7 @@
     font-size: inherit;
     font-style: inherit;
     font-weight: var(--poi-font-weight, 600);
-    line-height: normal;
+    line-height: 1.4;
     display: block;
     overflow: hidden;
     width: 100%;

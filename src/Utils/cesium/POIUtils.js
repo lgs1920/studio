@@ -22,6 +22,9 @@ import {
     resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
 import {poiPerformance} from '@Core/ui/POIPerformance'
+import {
+    POI_BILLBOARD_FAR_DISTANCE, POI_BILLBOARD_NEAR_DISTANCE,
+} from '@Utils/cesium/POIBillboardScale'
 
 import { Canvg, Property } from 'canvg'
 import {
@@ -404,7 +407,7 @@ export class POIUtils {
                                    ? HeightReference.NONE
                                    : HeightReference.CLAMP_TO_GROUND
         const scale = finiteNumber(poi.scale) ?? 1
-        const scaleByDistance = new NearFarScalar(10000.0, 1.0, 50000.0, 0)
+        const scaleByDistance = new NearFarScalar(POI_BILLBOARD_NEAR_DISTANCE, 1.0, POI_BILLBOARD_FAR_DISTANCE, 0)
 
         // Base entity options
         const options = {
@@ -656,11 +659,14 @@ export class POIUtils {
         const cartesian = Cartesian3.fromDegrees(point.longitude, point.latitude,
                                                  __.ui.sceneManager.noRelief() ? 0 : point.simulatedHeight ?? point.height)
 
-        if (lgs.stores.main.components.camera.position.longitude && lgs.stores.main.components.camera.position.latitude && lgs.stores.main.components.camera.position.height) {
+        const cameraCoordinates = lgs.stores.main.components.camera.position
+        if (Number.isFinite(cameraCoordinates.longitude)
+            && Number.isFinite(cameraCoordinates.latitude)
+            && Number.isFinite(cameraCoordinates.height)) {
             const cameraPosition = Cartesian3.fromDegrees(
-                lgs.stores.main.components.camera.position.longitude,
-                lgs.stores.main.components.camera.position.latitude,
-                lgs.stores.main.components.camera.position.height,
+                cameraCoordinates.longitude,
+                cameraCoordinates.latitude,
+                cameraCoordinates.height,
             )
             return Cartesian3.distance(cartesian, cameraPosition)
         }

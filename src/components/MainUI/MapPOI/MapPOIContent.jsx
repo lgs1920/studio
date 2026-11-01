@@ -506,6 +506,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                 const leaderEndpointBleed = Number.isFinite(borderWidth)
                     ? Math.max(0, borderWidth * 1.5)
                     : 4.5
+                const reducedPin = element.querySelector('.poi-reduced-pin-shape')
                 const capturePadding = expanded ? calculatePOICanvasCapturePadding({
                     borderWidth: Number.isFinite(borderWidth) ? borderWidth : 3,
                     openFrameLineWidth: Number.isFinite(openFrameLineWidth) ? openFrameLineWidth : 0,
@@ -513,7 +514,12 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                     leaderBleed: leaderCaptureBleed,
                     rotationBleed,
                     leaderEndpointBleed,
-                }) + measurePOICanvasOverflow(element) : 0
+                }) + measurePOICanvasOverflow(element)
+                    : reducedPin
+                        ? calculatePOICanvasCapturePadding({
+                            borderWidth: Number.isFinite(borderWidth) ? borderWidth : 2,
+                        }) + measurePOICanvasOverflow(element)
+                        : 0
 
                 // Expand only the rasterization root so SnapDOM includes transformed and external strokes.
                 element.style.padding = `${capturePadding}px`
