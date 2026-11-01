@@ -726,11 +726,13 @@
 }
 
 .poi-card-inner .poi-title h3 {
+    box-sizing: border-box;
     flex: 1 1 auto;
     width: auto;
     max-width: 100%;
     min-width: 0;
     margin: 0;
+    padding-inline-end: var(--lgs-gutter-xxs);
     white-space: normal;
     overflow-wrap: anywhere;
     text-overflow: clip;
