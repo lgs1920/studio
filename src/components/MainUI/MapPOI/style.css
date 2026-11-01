@@ -435,7 +435,19 @@
 
 .poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-side-accent {
     border: var(--poi-border-width) solid var(--lgs-poi-border-color);
-    border-left-width: 10px;
+    padding-left: calc(var(--poi-padding) + 8px);
+
+    &::before {
+        position: absolute;
+        z-index: 1;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 8px;
+        content: '';
+        pointer-events: none;
+        background-color: var(--lgs-poi-border-color);
+    }
 }
 
 .poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-round-badge {
