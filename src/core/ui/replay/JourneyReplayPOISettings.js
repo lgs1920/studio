@@ -15,7 +15,6 @@
  ******************************************************************************/
 
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
-import {poiPerformance} from '@Core/ui/POIPerformance'
 
 export const DEFAULT_REPLAY_POI_DISPLAY_DURATION_SECONDS = 3
 export const DEFAULT_REPLAY_POI_ANIMATION_DURATION_SECONDS = 2
@@ -31,10 +30,8 @@ const isReplayPOIInAnimatedSnapshot = (animatedPOIIds, poiId) => {
     if (!Array.isArray(animatedPOIIds) || !poiId) {
         return false
     }
-    poiPerformance.record('replay.animatedPOILookups')
     let animatedPOIIdSet = replayAnimatedPOIIndexes.get(animatedPOIIds)
     if (!animatedPOIIdSet) {
-        poiPerformance.record('replay.animatedPOIIndexBuilds')
         animatedPOIIdSet = new Set(animatedPOIIds)
         replayAnimatedPOIIndexes.set(animatedPOIIds, animatedPOIIdSet)
     }

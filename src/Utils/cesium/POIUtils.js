@@ -17,11 +17,11 @@
 import { icon, library } from '@fortawesome/fontawesome-svg-core'
 import { faLocationDot } from '@fortawesome/pro-regular-svg-icons'
 import { faLocationPin } from '@fortawesome/pro-solid-svg-icons'
+import { GLOBAL_PARENT } from '@Core/constants'
 import {
     isReplayPOIPresentationActive,
     resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
-import {poiPerformance} from '@Core/ui/POIPerformance'
 import {
     POI_BILLBOARD_FAR_DISTANCE, POI_BILLBOARD_NEAR_DISTANCE,
 } from '@Utils/cesium/POIBillboardScale'
@@ -85,15 +85,10 @@ const cesiumPropertyMatches = (property, value, time) => {
 /** Assign a billboard constant only when its resolved Cesium value changes. */
 const assignBillboardPropertyIfChanged = (billboard, name, value, time) => {
     if (cesiumPropertyMatches(billboard[name], value, time)) {
-        poiPerformance.record('cesium.billboardPropertyWriteSkipped')
         return false
     }
 
     billboard[name] = value
-    poiPerformance.record('cesium.billboardPropertyWrite')
-    if (name === 'image') {
-        poiPerformance.record('cesium.billboardImageReplaced')
-    }
     return true
 }
 
@@ -181,12 +176,10 @@ export class POIUtils {
         )
         const currentPosition = cesiumPropertyValue(entity.position, JulianDate.now())
         if (Cartesian3.equals(currentPosition, position)) {
-            poiPerformance.record('cesium.positionOnlyUpdateSkipped')
             return true
         }
 
         entity.position = position
-        poiPerformance.record('cesium.positionOnlyUpdate')
         POIUtils.requestRender()
         return true
     }
@@ -251,7 +244,7 @@ export class POIUtils {
      * For MapPOI objects attached to a journey, parent contains the track id,
      *          but we need to get the associated DataSource because
      *          a GeoJsonDataSource is not an EntityCollection (bug or feature?)
-     * For globals MapPOI, parent is null, the container is viewer.entities.
+     * Global POIs use a null parent or the GLOBAL_PARENT sentinel and belong to viewer.entities.
      *
      *  parent is :
      *    - for a POI bound to a track
@@ -262,7 +255,7 @@ export class POIUtils {
      * @returns Entity container (DataSource or EntityCollection)
      */
     static getEntityContainer = (poi) => {
-        if (poi.parent) {
+        if (poi.parent && poi.parent !== GLOBAL_PARENT) {
             let file
             switch ((poi.parent.match(/#/g) || []).length) {
                 case 1: { // Journey
@@ -292,11 +285,8 @@ export class POIUtils {
             return false
         }
 
-        const scanStartedAt = poiPerformance.start('cesium.containerCleanup')
         const dataSources = lgs.viewer.dataSources
         const dataSourceCount = Number(dataSources?.length) || 0
-        poiPerformance.record('cesium.containerScanCalls')
-        poiPerformance.record('cesium.entityContainersScanned', dataSourceCount + 1)
         let removed = false
         const removeFrom = entities => {
             if (!entities || entities === targetContainer || !entities.getById(poi.id)) {
@@ -311,7 +301,6 @@ export class POIUtils {
         for (let index = 0; index < dataSourceCount; index += 1) {
             removeFrom(dataSources.get(index)?.entities)
         }
-        poiPerformance.end('cesium.containerCleanup', scanStartedAt)
         return removed
     }
 
@@ -445,7 +434,6 @@ export class POIUtils {
         verticalOrigin = VerticalOrigin.CENTER,
     } = {}) => {
         const hasImageUpdate = (poi.image !== undefined && poi.image !== null) || clearImage
-        const drawStartedAt = poiPerformance.start('cesium.draw')
         // Default dimensions if poi.image is undefined
         const width = clearImage ? 32 : poi.image?.width ?? 32
         const height = clearImage ? 32 : poi.image?.height ?? 32
@@ -485,7 +473,6 @@ export class POIUtils {
         // Get entity container
         const container = POIUtils.getEntityContainer(poi)
         if (!container) {
-            poiPerformance.end('cesium.draw', drawStartedAt)
             return null
         }
 
@@ -550,12 +537,10 @@ export class POIUtils {
         }
         else {
             // Create new entity
-            poiPerformance.record('cesium.entityCreated')
             container.add({...options, billboard: new BillboardGraphics(billboard)})
             POIUtils.requestRender()
         }
 
-        poiPerformance.end('cesium.draw', drawStartedAt)
         return entity || container.getById(poi.id)
     }
 

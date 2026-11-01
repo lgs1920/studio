@@ -61,12 +61,6 @@ below by engineering domain rather than storage directory.
 
 ## POI Rendering
 
-### Current
-
-- [POI performance diagnostics](specs/poi/POI-PERFORMANCE-DIAGNOSTICS.md)
-
-### Planned
-
 - [POI map and Replay rendering performance optimization plan](todo/CORE-POI-MAP-REPLAY-RENDERING-PERFORMANCE-OPTIMIZATION-PLAN.md)
 
 ## Journeys, Tracks, and Data

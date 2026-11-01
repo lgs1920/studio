@@ -14,7 +14,6 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {poiPerformance} from '@Core/ui/POIPerformance'
 import {useCallback, useSyncExternalStore} from 'react'
 import {subscribe} from 'valtio'
 
@@ -48,7 +47,6 @@ const notifyMembershipChanges = (field, previousIds, nextIds) => {
         if (previousIds.has(poiId) === nextIds.has(poiId)) {
             continue
         }
-        poiPerformance.record(`replay.selector.${field}.notifications`)
         listenersByPOIId.get(poiId)?.forEach(listener => listener())
     }
 }
@@ -81,7 +79,6 @@ const synchronizeReplaySelectors = (notifyChanges = true) => {
         const nextIds = indexPOIIds(field, sourceArray)
         idsByField[field] = nextIds
         sourceArrayByField[field] = sourceArray
-        poiPerformance.record(`replay.selector.${field}.indexBuilds`)
         if (notifyChanges) {
             notifyMembershipChanges(field, previousIds, nextIds)
         }
@@ -94,7 +91,6 @@ export const getReplayPOISelectorSnapshot = (field, poiId) => {
         return false
     }
     synchronizeReplaySelectors(false)
-    poiPerformance.record(`replay.selector.${field}.reads`)
     return idsByField[field].has(poiId)
 }
 

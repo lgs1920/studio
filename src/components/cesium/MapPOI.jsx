@@ -18,7 +18,6 @@ import { MapPOIContent }                   from '@Components/MainUI/MapPOI/MapPO
 import {
     normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
-import {poiPerformance} from '@Core/ui/POIPerformance'
 import {
     clearPOIHoverPreview, clearPOIHoverTitlePreview, getPOIHoverPreview, getPOIHoverTitle,
     isPOIHoverPreviewTransitionActive, setPOIHoverPreviewPosition, subscribeToPOIHoverPreview,
@@ -94,13 +93,10 @@ export const MapPOI = memo(({point}) => {
             }
 
             projectionPending = true
-            const tickStartedAt = poiPerformance.start('mapPOI.projectionTick')
-            poiPerformance.record('mapPOI.projectionTickCount')
             if (cancelled || !hasPOI || !hasCoordinates) {
                 setPixels(null)
                 clearPOIHoverPreview(point)
                 clearPOIHoverTitlePreview(point)
-                poiPerformance.end('mapPOI.projectionTick', tickStartedAt)
                 projectionPending = false
                 return
             }
@@ -110,14 +106,12 @@ export const MapPOI = memo(({point}) => {
                 setPixels(null)
                 clearPOIHoverPreview(point)
                 clearPOIHoverTitlePreview(point)
-                poiPerformance.end('mapPOI.projectionTick', tickStartedAt)
                 projectionPending = false
                 return
             }
 
             const coords = await __.ui.sceneManager.degreesToPixelsCoordinates(currentPOI, true)
             if (cancelled) {
-                poiPerformance.end('mapPOI.projectionTick', tickStartedAt)
                 projectionPending = false
                 return
             }
@@ -135,7 +129,6 @@ export const MapPOI = memo(({point}) => {
             const scaleInfo = POIUtils.adaptScaleToDistance(currentPOI)
             setScale(previous => previous === scaleInfo.scale ? previous : scaleInfo.scale)
             setTooFar(previous => previous === scaleInfo.tooFar ? previous : scaleInfo.tooFar)
-            poiPerformance.end('mapPOI.projectionTick', tickStartedAt)
             projectionPending = false
 
             if (projectionQueued && !cancelled) {

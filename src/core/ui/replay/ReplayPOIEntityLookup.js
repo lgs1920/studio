@@ -8,14 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-31
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {POIUtils} from '@Utils/cesium/POIUtils'
-import {poiPerformance} from '@Core/ui/POIPerformance'
 
 const MAX_LOOKUP_ENTRIES = 2048
 
@@ -29,8 +28,8 @@ export const createReplayPOIEntityLookup = viewer => {
 
     /** Remove one lookup result after an entity collection mutation. */
     const invalidateEntity = entity => {
-        if (entity?.id && entries.delete(entity.id)) {
-            poiPerformance.record('replay.entityLookupInvalidated')
+        if (entity?.id) {
+            entries.delete(entity.id)
         }
     }
 
@@ -38,7 +37,6 @@ export const createReplayPOIEntityLookup = viewer => {
     const onCollectionChanged = (collection, added = [], removed = []) => {
         const affected = [...added, ...removed]
         if (affected.length === 0) {
-            poiPerformance.record('replay.entityLookupInvalidated', entries.size)
             entries.clear()
             return
         }
@@ -76,7 +74,6 @@ export const createReplayPOIEntityLookup = viewer => {
 
     /** Clear cached entity lists when the viewer's data source set changes. */
     const onDataSourcesChanged = () => {
-        poiPerformance.record('replay.entityLookupInvalidated', entries.size)
         entries.clear()
         syncEntityCollections()
     }
@@ -105,15 +102,12 @@ export const createReplayPOIEntityLookup = viewer => {
         if (cached && cached.parent === poi.parent && cached.owningContainer === owningContainer) {
             entries.delete(poi.id)
             entries.set(poi.id, cached)
-            poiPerformance.record('replay.entityLookupCacheHit')
             return cached.entities
         }
         if (cached) {
             entries.delete(poi.id)
-            poiPerformance.record('replay.entityLookupInvalidated')
         }
 
-        poiPerformance.record('replay.entityLookup')
         const entities = []
         const seen = new Set()
         const collections = [owningContainer, viewer.entities]
@@ -121,7 +115,6 @@ export const createReplayPOIEntityLookup = viewer => {
         for (let index = 0; index < sourceCount; index += 1) {
             collections.push(dataSources.get(index)?.entities)
         }
-        poiPerformance.record('replay.entityContainersScanned', collections.length)
 
         collections.forEach(collection => {
             observeEntityCollection(collection)
@@ -131,7 +124,6 @@ export const createReplayPOIEntityLookup = viewer => {
                 entities.push(entity)
             }
         })
-        poiPerformance.record('replay.entitiesLocated', entities.length)
 
         entries.set(poi.id, {parent: poi.parent, owningContainer, entities})
         while (entries.size > MAX_LOOKUP_ENTRIES) {

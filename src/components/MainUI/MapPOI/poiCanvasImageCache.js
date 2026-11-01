@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-31
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -109,20 +109,8 @@ export const createPOICanvasImageCache = ({maxEntries = DEFAULT_MAX_ENTRIES, max
         retainedBytes = 0
     }
 
-    /** Expose bounded cache accounting for diagnostics and deterministic checks. */
-    const snapshot = () => ({
-        entryCount: entries.size,
-        retainedBytes,
-        maxEntries: entryLimit,
-        maxBytes: byteLimit,
-    })
-
-    return {get, set, getOrCreate, clear, snapshot}
+    return {get, set, getOrCreate, clear}
 }
 
 /** Shared POI bitmap cache; Cesium entities continue to own their displayed image. */
 export const poiCanvasImageCache = createPOICanvasImageCache()
-
-if (globalThis.__lgsPoiPerformance) {
-    globalThis.__lgsPoiPerformance.canvasCache = poiCanvasImageCache.snapshot
-}

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,7 +68,6 @@ import {
     shouldAnimateReplayPOI,
 }                                                                                          from './JourneyReplayPOISettings'
 import {projectReplayPOIsOnSampler} from './JourneyReplayPOIProjection'
-import {poiPerformance} from '@Core/ui/POIPerformance'
 
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
@@ -221,7 +220,6 @@ const replayPOICandidatesForProgress = (state, progress, replayDurationSeconds, 
  * @returns {boolean|null} Crop visibility, or null when no render target is available.
  */
 export const isPOIInsideVideoCrop = (mode, poi) => {
-    poiPerformance.record('replay.cropChecks')
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     const viewer = call.cesiumViewer?.()
     const scene = call.cesiumScene?.() ?? viewer?.scene
@@ -541,13 +539,11 @@ export const openNearbyPOIForPlayback = async (mode, poiId) => {
  * @returns {Promise<void>} Completion of POI presentation updates.
  */
 export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStart = false, phase = null} = {}) => {
-    const performanceStartedAt = poiPerformance.start('replay.syncNearbyPOIs')
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         state.replayPOIAppearanceState ??= new Map()
         const progress = finiteNumber(sample?.progress)
         if (progress === null) {
-            poiPerformance.end('replay.syncNearbyPOIs', performanceStartedAt)
             return
         }
 
@@ -555,7 +551,6 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
             ? state.sortedNearbyPois
             : replayStore()?.nearbyPois ?? []
         const replayNearbyPois = Array.isArray(nearbyPois) ? nearbyPois : []
-        poiPerformance.record('replay.syncCandidates', replayNearbyPois.length)
         const {
             basicMode,
             poiVisibilityMode,
@@ -593,9 +588,6 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
 
         if (shouldAnimatePOIs) {
             let uniqueNearbyPois = state.replayUniqueNearbyPOIs
-            if (hasPreparedUniqueNearbyPOIs) {
-                poiPerformance.record('replay.uniqueCandidateCacheHit')
-            }
             if (!hasPreparedUniqueNearbyPOIs) {
                 const fallbackUniqueNearbyPOIs = new Map(replayNearbyPois
                     .map(entry => [entry?.poi?.id, entry])
@@ -611,7 +603,6 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                 replayDurationSeconds,
                 uniqueNearbyPois,
             )
-            poiPerformance.record('replay.syncActiveCandidates', uniqueNearbyPois.length)
             for (const entry of uniqueNearbyPois) {
                 const poiId = entry?.poi?.id
                 const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId) ?? entry?.poi
@@ -768,7 +759,6 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
         if (collapsedIds.length > 0 || newlyExpandedIds.length > 0) {
             call.applyJourneyReplayPOIVisibility?.()
         }
-        poiPerformance.end('replay.syncNearbyPOIs', performanceStartedAt)
     }
 
     /**

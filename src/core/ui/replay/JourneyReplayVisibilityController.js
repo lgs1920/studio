@@ -32,7 +32,6 @@ import {
 } from './JourneyReplayRuntime'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {currentReplayJourney} from './ReplayUserModeConstants'
-import {poiPerformance} from '@Core/ui/POIPerformance'
 import {createReplayPOIEntityLookup} from './ReplayPOIEntityLookup'
 import {subscribe} from 'valtio'
 
@@ -62,7 +61,6 @@ const observeStopClipPOIListChanges = state => {
         poiList,
         () => {
             state.stopClipPOIVisibilityCandidates = null
-            poiPerformance.record('replay.stopClipMaskCandidateInvalidations')
         },
         true,
     ))
@@ -234,17 +232,14 @@ export const setPOIEntityVisibility = (mode, poi, visible, {allowReplayAnimation
             const billboardVisibilityMatches = !entity.billboard
                 || isVisibleProperty(mode, entity.billboard.show) === effectiveVisibility
             if (entityVisibilityMatches && billboardVisibilityMatches) {
-                poiPerformance.record('replay.visibilityWriteSkipped')
                 return
             }
 
             if (!entityVisibilityMatches) {
                 entity.show = effectiveVisibility
-                poiPerformance.record('replay.entityShowWrites')
             }
             if (entity.billboard && !billboardVisibilityMatches) {
                 entity.billboard.show = effectiveVisibility
-                poiPerformance.record('replay.billboardShowWrites')
             }
         })
     }
@@ -302,9 +297,6 @@ export const replayPOICandidates = (mode, nearbyPois = null, nearbyPOIIds = null
         if (managerPOIList !== storePOIList) {
             addList(managerPOIList)
         }
-        poiPerformance.record('replay.candidateListEntries',
-            (Number(storePOIList?.size) || 0) + (managerPOIList !== storePOIList ? Number(managerPOIList?.size) || 0 : 0),
-        )
         return Array.from(candidates.values())
     }
 
@@ -342,7 +334,6 @@ export const applyJourneyReplayPOIVisibility = (
     cachedCandidates = null,
     cachedNearbyPOIIds = null,
 ) => {
-    const performanceStartedAt = poiPerformance.start('replay.visibility')
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
@@ -362,8 +353,6 @@ export const applyJourneyReplayPOIVisibility = (
             state.stopClipPOIVisibilityCandidates = candidates
             state.stopClipNearbyPOIIds = nearbyPOIIds
         }
-        poiPerformance.record('replay.nearbyCandidateEntries', runtimeNearbyPois.length)
-        poiPerformance.record('replay.visibilityCandidates', candidates.length)
         for (const candidatePOI of candidates) {
             const poi = call.resolveJourneyReplayPOI({poi: candidatePOI})
             if (!poi?.id) {
@@ -407,18 +396,15 @@ export const applyJourneyReplayPOIVisibility = (
                 {allowReplayAnimation: animationActive},
             )
         }
-        poiPerformance.end('replay.visibility', performanceStartedAt)
     }
 
 /** Reapply current policy to cached candidates after another POI writer changes visibility. */
 export const enforceStopClipPOIVisibility = mode => {
-    const performanceStartedAt = poiPerformance.start('replay.stopClipMaskEnforce')
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     const candidates = state.stopClipPOIVisibilityCandidates
     const nearbyPOIIds = state.stopClipNearbyPOIIds
     if (state.stopClipPOIMaskActive !== true || !(nearbyPOIIds instanceof Set)) {
-        poiPerformance.end('replay.stopClipMaskEnforce', performanceStartedAt)
         return
     }
 
@@ -432,8 +418,6 @@ export const enforceStopClipPOIVisibility = mode => {
         needsFullCandidatePass ? null : candidates,
         needsFullCandidatePass ? null : nearbyPOIIds,
     )
-    poiPerformance.record('replay.stopClipMaskCandidates', state.stopClipPOIVisibilityCandidates?.length ?? 0)
-    poiPerformance.end('replay.stopClipMaskEnforce', performanceStartedAt)
 }
 
 /**
@@ -539,7 +523,6 @@ export const startStopClipPOIMaskLoop = (mode) => {
                 return
             }
 
-            poiPerformance.record('replay.stopClipMaskTick')
             call.enforceStopClipPOIVisibility()
             state.stopClipPOIMaskFrame = requestStopClipPOIMaskFrame(tick)
         }

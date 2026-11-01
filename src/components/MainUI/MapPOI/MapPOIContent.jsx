@@ -18,7 +18,8 @@ import { NameValueUnit }                           from '@Components/DataDisplay
 import { DateTimeDisplay }                         from '@Components/DateTimeDisplay'
 import { stylePOIDuotoneIcon }                     from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import {
-    calculatePOICanvasCapturePadding, calculatePOIContentPixelOffset, calculatePOIStickEdgeOffset, measurePOICanvasOverflow,
+    calculatePOICanvasCapturePadding, calculatePOIContentPixelOffset, calculatePOIStickEdgeOffset,
+    measurePOICanvasOverflow,
 }                                                   from '@Components/MainUI/MapPOI/poiCanvasGeometry'
 import {
     clearPOIHoverPreview, completePOIHoverPreviewRender, isPOIHoverPreviewActive,
@@ -27,7 +28,6 @@ import {
 import {poiCaptureSurfaceStore, usePOICaptureSurface} from '@Components/MainUI/MapPOI/poiCaptureSurfaceStore'
 import { ICONS_PATH, WIDGET_SYSTEM_FONT_STACK }     from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
-import { poiPerformance }                           from '@Core/ui/POIPerformance'
 import { POIUtils }                                from '@Utils/cesium/POIUtils'
 import { poiCanvasImageCache }                      from '@Components/MainUI/MapPOI/poiCanvasImageCache'
 import {getPOICanvasRenderPriority} from '@Components/MainUI/MapPOI/poiCanvasRenderPriority'
@@ -126,7 +126,6 @@ const serializeCompactPOIIcon = wrapper => {
  */
 export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, collapsedPreview = false,
     managedCaptureSurface = false, style}) => {
-    poiPerformance.record('react.render')
     const rawTooltipId = useId()
     const tooltipIdPrefix = `map-poi-content-${rawTooltipId.replace(/:/g, '')}`
     const _poiIconWrapper = useRef(null)
@@ -186,13 +185,6 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
         ? Math.sin(leaderAngleRadians) * leaderLength
         : Math.cos(leaderAngleRadians) * leaderLength
     const leaderCaptureBleed = horizontalStick ? Math.abs(leaderOffsetY) : Math.abs(leaderOffsetX)
-
-    useEffect(() => {
-        if (!captureSurfaceActive) {
-            return undefined
-        }
-        return poiPerformance.mountContent()
-    }, [captureSurfaceActive])
 
     const fontFamily = displaySettings.fontFamily ?? POI_DISPLAY_DEFAULT_FONT_FAMILY
     const replaySettings = normalizeJourneyReplayPOISettings(point?.replay)
@@ -293,7 +285,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
               ])
 
     /** Synchronizes DOM content to map canvas */
-    const renderToCanvas = useCallback((options = {}) => {
+    const renderToCanvas = useCallback(({priority = false} = {}) => {
         const element = _poiCanvasCaptureSurface.current
         const card = _poiContent.current
         const captureSurface = _poiCanvasCaptureSurface.current
@@ -303,13 +295,8 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             if (managedCaptureSurface) {
                 poiCaptureSurfaceStore.cancel(pointId)
             }
-            if (_activeCapture.current?.requestId === _renderRequestId.current) {
-                poiPerformance.record('capture.invalidated')
-                poiPerformance.record('capture.invalidated.suppressed')
-            }
             _renderRequestId.current++
             _activeCapture.current = null
-            poiPerformance.record('capture.request.suppressed')
             return
         }
         const captureInputSignature = JSON.stringify([
@@ -322,8 +309,8 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             if (_lastScheduledVisualSignature.current !== captureInputSignature) {
                 _lastScheduledVisualSignature.current = captureInputSignature
                 poiCaptureSurfaceStore.request(pointId, {
-                    priority: options?.priority === true,
-                    allowOverflow: options?.priority === true,
+                    priority,
+                    allowOverflow: priority,
                     getPriority: () => getPOICanvasRenderPriority(pointId),
                 })
             }
@@ -342,24 +329,14 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             globalThis.document?.fonts?.status,
         ]
         const visualSignature = `${JSON.stringify([poiVisualSignature, layoutSignature])}:${_appearanceRevision.current}`
-        const reason = options?.reason ?? 'visual-state-effect'
-        poiPerformance.record('capture.request')
-        poiPerformance.record(`capture.request.${reason}`)
         if (_activeCapture.current?.signature === visualSignature
             && _activeCapture.current.requestId === _renderRequestId.current) {
-            poiPerformance.record('capture.deduplicated')
             return
         }
-        if (_activeCapture.current?.requestId === _renderRequestId.current) {
-            poiPerformance.record('capture.invalidated')
-            poiPerformance.record(`capture.invalidated.${reason}`)
-        }
-
         // Invalidate pending captures even when this update masks the POI.
         const renderRequestId = ++_renderRequestId.current
         _activeCapture.current = {signature: visualSignature, requestId: renderRequestId}
         const expanded = point?.expanded === true
-        let discardRecorded = false
         const isCaptureCurrent = () => {
             const currentPoint = $pois.list.get(pointId)
             const currentPresentation = resolveReplayPOIPresentation(currentPoint)
@@ -369,15 +346,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                 && currentPresentation.animationActive === replayAnimationActive
                 && (!isPOIHoverPreviewActive(pointId) || isPOIHoverPreviewTransitionActive(pointId))
         }
-        const isCurrentRender = phase => {
-            const current = isCaptureCurrent()
-            if (!current && !discardRecorded) {
-                discardRecorded = true
-                poiPerformance.record('capture.discarded')
-                poiPerformance.record(`capture.discarded.${phase}`)
-            }
-            return current
-        }
+        const isCurrentRender = () => isCaptureCurrent()
 
         const localCanvas = !managedCaptureSurface && _poiCanvasCache.current?.signature === visualSignature
             && _poiCanvasCache.current.surface === element && _poiCanvasCache.current.card === card
@@ -387,16 +356,14 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             ? localCanvas ?? poiCanvasImageCache.get(visualSignature)
             : null
         if (cachedCanvas) {
-            if (!isCurrentRender('immediate-cache-hit')) {
+            if (!isCurrentRender()) {
                 _activeCapture.current = null
                 if (managedCaptureSurface) {
                     poiCaptureSurfaceStore.release(pointId)
                 }
                 return
             }
-            if (queuePOICanvasRender.cancel(_poiContent)) {
-                poiPerformance.record('capture.queueCancelledByCache')
-            }
+            queuePOICanvasRender.cancel(_poiContent)
             if (!managedCaptureSurface) {
                 _poiCanvasCache.current = {
                     ...cachedCanvas,
@@ -405,10 +372,9 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                     card,
                 }
             }
-            poiPerformance.record('capture.queueBypassedForCache')
             void Promise.resolve()
                 .then(async () => {
-                    if (!isCurrentRender('before-cache-draw')) {
+                    if (!isCurrentRender()) {
                         return
                     }
                     const currentPoint = $pois.list.get(pointId)
@@ -420,7 +386,6 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                     }
                     mapPOI.pixelOffset = cachedCanvas.pixelOffset
                     await mapPOI.utils.draw(mapPOI)
-                    poiPerformance.record(localCanvas ? 'capture.cacheHit' : 'capture.sharedCacheHit')
                 })
                 .catch(error => console.error(`Error reusing POI ${pointId} canvas:`, error))
                 .finally(() => {
@@ -444,12 +409,9 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             }
         }
 
-        const queuedAt = poiPerformance.start('capture.queueWait')
-        const priorityCapture = options?.priority === true
+        const priorityCapture = priority
         queuePOICanvasRender(_poiContent, async () => {
-            poiPerformance.end('capture.queueWait', queuedAt)
-            poiPerformance.record('capture.started')
-            if (!isCurrentRender('before-snapdom')) {
+            if (!isCurrentRender()) {
                 return
             }
 
@@ -471,7 +433,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             const sharedCanvas = localCanvas ?? poiCanvasImageCache.get(visualSignature)
             if (sharedCanvas) {
                 const currentPoint = $pois.list.get(pointId)
-                if (!currentPoint || !isCurrentRender('cache-hit')) {
+                if (!currentPoint || !isCurrentRender()) {
                     return
                 }
                 if (!managedCaptureSurface) {
@@ -482,9 +444,6 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                         card,
                     }
                 }
-                const sharedCacheState = poiCanvasImageCache.snapshot()
-                poiPerformance.record('capture.sharedCacheEntries', sharedCacheState.entryCount)
-                poiPerformance.record('capture.sharedCacheBytes', sharedCacheState.retainedBytes)
                 try {
                     const mapPOI = new MapPOI(currentPoint)
                     mapPOI.image = {
@@ -494,7 +453,6 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                     }
                     mapPOI.pixelOffset = sharedCanvas.pixelOffset
                     await mapPOI.utils.draw(mapPOI)
-                    poiPerformance.record(localCanvas ? 'capture.cacheHit' : 'capture.sharedCacheHit')
                 }
                 catch (error) {
                     console.error(`Error reusing POI ${pointId} canvas:`, error)
@@ -502,9 +460,6 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                 completePOIHoverPreviewRender(pointId)
                 return
             }
-            poiPerformance.record('capture.cacheMiss')
-            poiPerformance.record('capture.sharedCacheMiss')
-
             const originalDisplay = element.style.display
             const originalWidth = element.style.width
             const originalBoxSizing = element.style.boxSizing
@@ -515,7 +470,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                 for (const icon of element.querySelectorAll('wa-icon')) {
                     await stylePOIDuotoneIcon(icon)
                 }
-                if (!isCurrentRender('after-icon-styling')) {
+                if (!isCurrentRender()) {
                     return
                 }
 
@@ -560,18 +515,12 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                 element.style.padding = `${capturePadding}px`
                 assertPOICanvasDimensions(element, scale, ratio)
                 const sharedCapture = await poiCanvasImageCache.getOrCreate(visualSignature, async () => {
-                    const snapStartedAt = poiPerformance.start('capture.snapdom')
                     const snap = await snapdom(element, {scale, dpr: ratio, outerShadows: 'subtree'})
-                    poiPerformance.end('capture.snapdom', snapStartedAt)
-                    if (!isCurrentRender('after-snapdom')) {
+                    if (!isCurrentRender()) {
                         return null
                     }
-                    const canvasStartedAt = poiPerformance.start('capture.toCanvas')
                     const renderedCanvas = await snap.toCanvas()
-                    poiPerformance.end('capture.toCanvas', canvasStartedAt)
-                    poiPerformance.record('capture.canvasPixels', renderedCanvas.width * renderedCanvas.height)
-                    poiPerformance.record('capture.canvasBytesEstimate', renderedCanvas.width * renderedCanvas.height * 4)
-                    if (!isCurrentRender('after-to-canvas')) {
+                    if (!isCurrentRender()) {
                         return null
                     }
 
@@ -584,15 +533,12 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                         pixelOffset: calculatePOIContentPixelOffset(element, width, height, snap.meta),
                     }
                 })
-                if (!sharedCapture.entry || !isCurrentRender('after-shared-capture')
+                if (!sharedCapture.entry || !isCurrentRender()
                     || _poiCanvasCaptureSurface.current !== element || _poiContent.current !== card) {
                     return
                 }
                 canvas = sharedCapture.entry.canvas
                 pixelOffset = sharedCapture.entry.pixelOffset
-                if (sharedCapture.source === 'inflight') {
-                    poiPerformance.record('capture.sharedInflightHit')
-                }
             }
             catch (error) {
                 console.error(`Error rendering POI ${pointId} to canvas:`, error)
@@ -607,7 +553,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             }
 
             const currentPoint = $pois.list.get(pointId)
-            if (!canvas || !isCurrentRender('before-commit') || _poiCanvasCaptureSurface.current !== element
+            if (!canvas || !isCurrentRender() || _poiCanvasCaptureSurface.current !== element
                 || _poiContent.current !== card) {
                 return
             }
@@ -615,15 +561,9 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             try {
                 const mapPOI = new MapPOI(currentPoint)
                 const cachedCanvas = poiCanvasImageCache.get(visualSignature)
-                if (!cachedCanvas) {
-                    poiPerformance.record('capture.sharedCacheRejected')
-                }
                 const width = cachedCanvas?.width ?? canvas.width / scale / ratio
                 const height = cachedCanvas?.height ?? canvas.height / scale / ratio
                 const sharedCanvas = cachedCanvas ?? {canvas, width, height, pixelOffset}
-                const sharedCacheState = poiCanvasImageCache.snapshot()
-                poiPerformance.record('capture.sharedCacheEntries', sharedCacheState.entryCount)
-                poiPerformance.record('capture.sharedCacheBytes', sharedCacheState.retainedBytes)
                 if (!managedCaptureSurface) {
                     _poiCanvasCache.current = {
                         signature: visualSignature,
@@ -640,7 +580,6 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                 }
                 mapPOI.pixelOffset = pixelOffset
                 await mapPOI.utils.draw(mapPOI)
-                poiPerformance.record('capture.committed')
             }
             catch (error) {
                 console.error(`Error rendering POI ${pointId} to canvas:`, error)
@@ -657,13 +596,6 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                         poiCaptureSurfaceStore.release(pointId)
                     }
                 }
-            },
-            onSuperseded: () => {
-                poiPerformance.record('capture.queueSuperseded')
-                poiPerformance.record(`capture.queueSuperseded.${reason}`)
-            },
-            onCancelled: () => {
-                poiPerformance.record('capture.queueCancelled')
             },
         })
     }, [captureSurfaceActive, isEmbedded, managedCaptureSurface, point?.expanded, replayActive, replayAnimationActive, replayMasked,
@@ -691,8 +623,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                     _iconLoadRenderTimer.current = null
                     _appearanceRevision.current += 1
                     _poiCanvasCache.current = null
-                    poiPerformance.record('capture.cacheInvalidated.iconLoad')
-                    renderToCanvas({reason: 'icon-load'})
+                    renderToCanvas()
                 }, 32)
             })
     }, [renderToCanvas])
@@ -746,24 +677,16 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
 
         const previousCardSize = {width: card.offsetWidth, height: card.offsetHeight}
         const observer = new ResizeObserver(() => {
-            poiPerformance.record('capture.resizeObserverCallbacks')
             const width = card.offsetWidth
             const height = card.offsetHeight
             const cardSizeChanged = width !== previousCardSize.width || height !== previousCardSize.height
             previousCardSize.width = width
             previousCardSize.height = height
             const edgeOffsetChanged = updatePOIStickEdgeOffset()
-            if (cardSizeChanged) {
-                poiPerformance.record('capture.resizeObserverSizeChanges')
-            }
-            if (edgeOffsetChanged) {
-                poiPerformance.record('capture.resizeObserverEdgeOffsetChanges')
-            }
             if ((cardSizeChanged || edgeOffsetChanged) && !isEmbedded) {
                 _appearanceRevision.current += 1
                 _poiCanvasCache.current = null
-                poiPerformance.record('capture.cacheInvalidated.resize')
-                renderToCanvas({reason: 'resize'})
+                renderToCanvas()
             }
         })
         observer.observe(card)
@@ -791,9 +714,8 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
 
         const expanded = point?.expanded === true
         const priority = _previousExpanded.current !== null && _previousExpanded.current !== expanded
-        const reason = priority ? 'expanded-state' : 'visual-state-effect'
         _previousExpanded.current = expanded
-        renderToCanvas({priority, reason})
+        renderToCanvas({priority})
 
         return () => {
             _renderRequestId.current++
