@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-29
- * Last modified: 2026-10-29
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,7 +27,7 @@ describe('Replay camera joystick surface', () => {
         try {
             cavity.computeBoundingBox()
             crown.computeBoundingBox()
-            expect(cavity.boundingBox.min.z).toBeLessThan(-0.08)
+            expect(cavity.boundingBox.min.z).toBeCloseTo(-0.08, 5)
             expect(cavity.boundingBox.max.z).toBeCloseTo(0, 5)
             expect(crown.boundingBox.max.x).toBeGreaterThan(0.58)
             expect(crown.boundingBox.min.x).toBeLessThan(-0.58)

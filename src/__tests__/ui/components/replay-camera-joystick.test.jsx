@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-29
- * Last modified: 2026-10-29
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -72,7 +72,7 @@ describe('Replay camera joystick', () => {
     it('lets the hemisphere surface reach widget dragging while the recessed thumb remains a camera control', () => {
         const {frames, updatePreparationCamera} = install()
         const view = render(<ReplayCameraJoystick/>)
-        const pad = view.getByLabelText('Drag to adjust zoom and pitch')
+        const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         const sphere = view.container.querySelector('.replay-camera-joystick')
         const hostDrag = vi.fn()
         sphere.addEventListener('pointerdown', hostDrag)
@@ -90,51 +90,51 @@ describe('Replay camera joystick', () => {
     it.each(['horizontal', 'vertical'])('locks Ctrl dragging to its initial %s axis and unlocks without a jump', async axis => {
         const {frame, replay} = install()
         const view = render(<ReplayCameraJoystick/>)
-        const pad = view.getByLabelText('Drag to adjust zoom and pitch')
+        const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
         pointer(pad, 'pointerdown', 50, 50, 1, true)
         const horizontal = axis === 'horizontal'
         pointer(pad, 'pointermove', horizontal ? 70 : 53, horizontal ? 53 : 70, 1, true)
         await frame(40)
         if (horizontal) {
-            expect(replay.camera.altitude).toBe(1200)
-            expect(replay.camera.pitch).toBeLessThan(-40)
+            expect(replay.camera.altitude).toBeLessThan(1200)
+            expect(replay.camera.pitch).toBe(-40)
         }
         else {
-            expect(replay.camera.pitch).toBe(-40)
-            expect(replay.camera.altitude).toBeGreaterThan(1200)
+            expect(replay.camera.pitch).toBeLessThan(-40)
+            expect(replay.camera.altitude).toBe(1200)
         }
         pointer(pad, 'pointermove', 130, 130, 1, true)
         await frame(80)
         const thumb = pad.querySelector('.replay-camera-joystick-thumb')
         expect(horizontal ? thumb.style.top : thumb.style.left).toBe('50%')
-        expect(horizontal ? replay.camera.altitude : replay.camera.pitch).toBe(horizontal ? 1200 : -40)
+        expect(horizontal ? replay.camera.pitch : replay.camera.altitude).toBe(horizontal ? -40 : 1200)
         const pose = {...replay.camera}
         pointer(pad, 'pointermove', 130, 130, 1, false)
         expect(replay.camera).toEqual(pose)
         pointer(pad, 'pointermove', horizontal ? 130 : 125, horizontal ? 125 : 130, 1, false)
         await frame(160)
-        expect(horizontal ? replay.camera.altitude : replay.camera.pitch).not.toBe(horizontal ? pose.altitude : pose.pitch)
+        expect(horizontal ? replay.camera.pitch : replay.camera.altitude).not.toBe(horizontal ? pose.pitch : pose.altitude)
     })
 
     it('projects the recessed thumb onto the sphere and shows feedback during movement', () => {
         install()
         const view = render(<ReplayCameraJoystick/>)
-        const pad = view.getByLabelText('Drag to adjust zoom and pitch')
+        const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
         const thumb = view.container.querySelector('.replay-camera-joystick-thumb')
         expect(thumb.style.left).toBe('50%')
         expect(view.container.querySelector('[data-icon]')).toBeNull()
         pointer(pad, 'pointerdown', 50, 50)
         pointer(pad, 'pointermove', 90, 50)
-        expect(thumb.style.left).toBe('90%')
+        expect(thumb.style.left).toBe('70%')
         const matrix = thumb.style.transform.match(/matrix\(([^)]+)\)/)[1].split(',').map(Number)
         expect(matrix[0]).toBeCloseTo(0.6, 8)
         expect(matrix[3]).toBe(1)
-        expect(view.container.querySelector('[data-icon="arrow-rotate-right"]')).not.toBeNull()
-        expect(view.container.querySelector('[data-icon="magnifying-glass-plus"]')).toBeNull()
-        pointer(pad, 'pointermove', 90, 10)
         expect(view.container.querySelector('[data-icon="magnifying-glass-plus"]')).not.toBeNull()
+        expect(view.container.querySelector('[data-icon="arrow-rotate-right"]')).toBeNull()
+        pointer(pad, 'pointermove', 90, 10)
+        expect(view.container.querySelector('[data-icon="arrow-up"]')).not.toBeNull()
         pointer(pad, 'pointerup', 90, 10)
         expect(thumb.style.left).toBe('50%')
         expect(thumb.style.top).toBe('50%')
@@ -144,7 +144,7 @@ describe('Replay camera joystick', () => {
     it('changes zoom and pitch together, consumes pointer input, and stops on release', async () => {
         const {frame, frames, replay, updatePreparationCamera} = install()
         const view = render(<ReplayCameraJoystick/>)
-        const pad = view.getByLabelText('Drag to adjust zoom and pitch')
+        const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 116, height: 116})
         const bubbled = vi.fn()
         document.addEventListener('pointerdown', bubbled)
@@ -157,17 +157,17 @@ describe('Replay camera joystick', () => {
             await frame(40)
             expect(updatePreparationCamera).toHaveBeenCalledOnce()
             expect(replay.camera.altitude).toBeLessThan(1200)
-            expect(replay.camera.pitch).toBeLessThan(-40)
+            expect(replay.camera.pitch).toBeGreaterThan(-40)
             expect(replay.camera.cameraAngle).toBe(65)
             const pose = {...replay.camera}
             await frame(80)
             expect(replay.camera.altitude).toBeLessThan(pose.altitude)
-            expect(replay.camera.pitch).toBeLessThan(pose.pitch)
+            expect(replay.camera.pitch).toBeGreaterThan(pose.pitch)
             const heldPose = {...replay.camera}
             pointer(pad, 'pointermove', 90, 25)
             await frame(120)
             expect(replay.camera.altitude).toBeLessThan(heldPose.altitude)
-            expect(replay.camera.pitch).toBeLessThan(heldPose.pitch)
+            expect(replay.camera.pitch).toBeGreaterThan(heldPose.pitch)
             pointer(pad, 'pointerup', 85, 30)
             expect(frames.size).toBe(0)
             const releasedPose = {...replay.camera}
@@ -183,7 +183,7 @@ describe('Replay camera joystick', () => {
     it('stops a held adjustment when the thumb returns to center before release', async () => {
         const {frames, frame, replay} = install()
         const view = render(<ReplayCameraJoystick/>)
-        const pad = view.getByLabelText('Drag to adjust zoom and pitch')
+        const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
         pointer(pad, 'pointerdown', 50, 50)
         pointer(pad, 'pointermove', 70, 30)
@@ -202,7 +202,7 @@ describe('Replay camera joystick', () => {
         for (const fps of [30, 60]) {
             const {frame, replay} = install()
             const view = render(<ReplayCameraJoystick/>)
-            const pad = view.getByLabelText('Drag to adjust zoom and pitch')
+            const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
             pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
             pointer(pad, 'pointerdown', 50, 50)
             pointer(pad, 'pointermove', 70, 30)
@@ -220,31 +220,33 @@ describe('Replay camera joystick', () => {
     it('offers focus-scoped keyboard axes with bounded values and no visible buttons or text', async () => {
         const {replay} = install()
         const view = render(<ReplayCameraJoystick/>)
-        const pad = view.getByLabelText('Drag to adjust zoom and pitch')
+        const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         expect(view.container.textContent).toBe('')
         expect(view.container.querySelector('button, wa-button, small, strong')).toBeNull()
         await act(async () => fireEvent.keyDown(pad, {key: 'ArrowDown'}))
-        expect(replay.camera.altitude).toBeGreaterThan(1200)
-        expect(replay.camera.pitch).toBe(-40)
-        const altitude = replay.camera.altitude
+        expect(replay.camera.altitude).toBe(1200)
+        expect(replay.camera.pitch).toBeLessThan(-40)
+        const pitch = replay.camera.pitch
         await act(async () => fireEvent.keyDown(pad, {key: 'ArrowLeft'}))
-        expect(replay.camera.altitude).toBe(altitude)
-        expect(replay.camera.pitch).toBe(-37)
+        expect(replay.camera.altitude).toBeGreaterThan(1200)
+        expect(replay.camera.pitch).toBe(pitch)
         await act(async () => { replay.camera.altitude = 100000
             replay.camera.pitch = -89 })
         await act(async () => fireEvent.keyDown(pad, {key: 'ArrowDown'}))
-        await act(async () => fireEvent.keyDown(pad, {key: 'ArrowRight'}))
+        await act(async () => fireEvent.keyDown(pad, {key: 'ArrowLeft'}))
         expect(replay.camera.altitude).toBe(100000)
         expect(replay.camera.pitch).toBe(-89)
         await act(async () => { replay.camera.altitude = 10 })
+        await act(async () => { replay.camera.pitch = -5 })
         await act(async () => fireEvent.keyDown(pad, {key: 'ArrowUp'}))
         expect(replay.camera.altitude).toBe(10)
+        expect(replay.camera.pitch).toBe(-5)
     })
 
     it('flushes a short drag on release without leaving a queued camera update', async () => {
         const {frames, frame, replay, updatePreparationCamera} = install()
         const view = render(<ReplayCameraJoystick/>)
-        const pad = view.getByLabelText('Drag to adjust zoom and pitch')
+        const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
         pointer(pad, 'pointerdown', 50, 50)
         pointer(pad, 'pointermove', 70, 30)
@@ -261,13 +263,13 @@ describe('Replay camera joystick', () => {
     it.each(['preRecording', 'exporting', 'snapshot', 'finalizing'])('hides and cancels queued input when %s starts', async field => {
         const {video, frames, frame, updatePreparationCamera} = install()
         const view = render(<ReplayCameraJoystick/>)
-        const pad = view.getByLabelText('Drag to adjust zoom and pitch')
+        const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 116, height: 116})
         pointer(pad, 'pointerdown', 85, 30)
         pointer(pad, 'pointermove', 90, 25)
         await act(async () => { video[field] = true })
         await frame(100)
-        expect(view.queryByLabelText('Drag to adjust zoom and pitch')).toBeNull()
+        expect(view.queryByLabelText('Drag up or down to adjust pitch, and left or right to zoom')).toBeNull()
         expect(frames.size).toBe(0)
         expect(updatePreparationCamera).not.toHaveBeenCalled()
     })
@@ -275,7 +277,7 @@ describe('Replay camera joystick', () => {
     it('stops on pointer cancellation, blur, journey replacement, and unmount', async () => {
         const {frames, main} = install()
         const view = render(<ReplayCameraJoystick/>)
-        const pad = view.getByLabelText('Drag to adjust zoom and pitch')
+        const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 116, height: 116})
         pointer(pad, 'pointerdown', 85, 30)
         pointer(pad, 'pointermove', 90, 25)
@@ -299,7 +301,7 @@ describe('Replay camera joystick', () => {
         const {replay, frames, updatePreparationCamera} = install()
         const view = render(<ReplayCameraJoystick/>)
         await act(async () => { replay[field] = true })
-        expect(view.queryByLabelText('Drag to adjust zoom and pitch')).toBeNull()
+        expect(view.queryByLabelText('Drag up or down to adjust pitch, and left or right to zoom')).toBeNull()
         expect(frames.size).toBe(0)
         expect(updatePreparationCamera).not.toHaveBeenCalled()
     })

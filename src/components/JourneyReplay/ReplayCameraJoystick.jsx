@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-29
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -158,44 +158,42 @@ export const ReplayCameraJoystick = () => {
         if (!gesture || gesture.pointerId !== event.pointerId) return
         consumeInput(event)
         const radius = Math.max(1, Math.min(gesture.rect.width, gesture.rect.height) * 0.2)
-        let deltaClientX = event.clientX - gesture.clientX
-        let deltaClientY = event.clientY - gesture.clientY
+        let deltaClientX = event.clientX - gesture.originClientX
+        let deltaClientY = event.clientY - gesture.originClientY
+        let nextX
+        let nextY
         if (event.ctrlKey) {
-            gesture.constraintOrigin ??= {x: gesture.clientX, y: gesture.clientY}
             if (!gesture.axis) {
-                const travelX = event.clientX - gesture.constraintOrigin.x
-                const travelY = event.clientY - gesture.constraintOrigin.y
                 // Wait for a deliberate movement, then retain that axis until Ctrl is released.
-                if (Math.max(Math.abs(travelX), Math.abs(travelY)) >= 3) {
-                    gesture.axis = Math.abs(travelX) >= Math.abs(travelY) ? 'horizontal' : 'vertical'
-                    deltaClientX = travelX
-                    deltaClientY = travelY
+                if (Math.max(Math.abs(deltaClientX), Math.abs(deltaClientY)) >= 3) {
+                    gesture.axis = Math.abs(deltaClientX) >= Math.abs(deltaClientY) ? 'horizontal' : 'vertical'
                 }
                 else {
-                    deltaClientX = 0
-                    deltaClientY = 0
+                    nextX = gesture.x
+                    nextY = gesture.y
                 }
+            }
+            if (gesture.axis === 'horizontal') {
+                nextX = Math.max(-1, Math.min(1, gesture.originStickX + deltaClientX / radius))
+                nextY = 0
+            }
+            else if (gesture.axis === 'vertical') {
+                nextX = 0
+                nextY = Math.max(-1, Math.min(1, gesture.originStickY + deltaClientY / radius))
             }
         }
         else {
-            gesture.axis = null
-            gesture.constraintOrigin = null
-        }
-        gesture.clientX = event.clientX
-        gesture.clientY = event.clientY
-        if (gesture.axis === 'horizontal') deltaClientY = 0
-        if (gesture.axis === 'vertical') deltaClientX = 0
-        let nextX = gesture.x + deltaClientX / radius
-        let nextY = gesture.y + deltaClientY / radius
-        if (gesture.axis === 'horizontal') {
-            const limit = Math.sqrt(Math.max(0, 1 - gesture.y ** 2))
-            nextX = Math.max(-limit, Math.min(limit, nextX))
-        }
-        else if (gesture.axis === 'vertical') {
-            const limit = Math.sqrt(Math.max(0, 1 - gesture.x ** 2))
-            nextY = Math.max(-limit, Math.min(limit, nextY))
-        }
-        else {
+            if (gesture.axis) {
+                gesture.originClientX = event.clientX
+                gesture.originClientY = event.clientY
+                gesture.originStickX = gesture.x
+                gesture.originStickY = gesture.y
+                gesture.axis = null
+                deltaClientX = 0
+                deltaClientY = 0
+            }
+            nextX = gesture.originStickX + deltaClientX / radius
+            nextY = gesture.originStickY + deltaClientY / radius
             const scale = Math.max(1, Math.hypot(nextX, nextY))
             nextX /= scale
             nextY /= scale
@@ -226,7 +224,8 @@ export const ReplayCameraJoystick = () => {
         _gesture.current = {
             target, pointerId: event.pointerId, rect: target.getBoundingClientRect(),
             x: stick.x, y: stick.y, lastFrameTime: null, applyHeld,
-            clientX: event.clientX, clientY: event.clientY, axis: null, constraintOrigin: null,
+            originClientX: event.clientX, originClientY: event.clientY,
+            originStickX: stick.x, originStickY: stick.y, axis: null,
         }
         target.setPointerCapture?.(event.pointerId)
     }, [applyHeld, stick.x, stick.y])
