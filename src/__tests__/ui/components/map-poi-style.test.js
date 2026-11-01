@@ -30,9 +30,9 @@ describe('Map POI style', () => {
         expect(css).toContain('transform: rotate(-45deg);')
         expect(css).toContain('.poi-shrinked .poi-card-inner {')
         expect(css).toContain('box-sizing: border-box;')
-        expect(css).toContain('border: var(--poi-border-width) solid var(--lgs-poi-color);')
+        expect(css).toContain('border: var(--poi-border-width) solid var(--lgs-poi-border-color);')
         expect(css).toContain('box-shadow: none;')
-        expect(css).not.toContain('box-shadow: inset 0 0 0 var(--poi-border-width) var(--lgs-poi-color);')
+        expect(css).not.toContain('box-shadow: inset 0 0 0 var(--poi-border-width) var(--lgs-poi-border-color);')
     })
 
     it('renders reduced map POIs at 80% of their previous diameter', () => {
@@ -50,7 +50,7 @@ describe('Map POI style', () => {
         const leaderStyle = css.slice(css.indexOf('.poi-expanded-leader-space {'), css.indexOf('.poi-shrinked .poi-card-inner {'))
 
         expect(cardStyle).toContain('--poi-expanded-leader-gap: 0px;')
-        expect(cardStyle).toContain('--poi-open-frame-line-width: 5px;')
+        expect(cardStyle).toContain('--poi-open-frame-line-width: var(--poi-custom-border-width, 5px);')
         expect(cardStyle).toContain('--poi-expanded-leader-gap: var(--poi-open-frame-line-width);')
         expect(leaderStyle).toContain('width: 0;')
         expect(leaderStyle).toContain('height: 0;')
@@ -176,7 +176,7 @@ describe('Map POI style', () => {
             css.indexOf('.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-slanted-banner'),
         )
         expect(openFrameStyle).toContain('border: 0;')
-        expect(openFrameStyle).toContain('height: 30%;')
+        expect(openFrameStyle).toContain('height: 50%;')
         expect(openFrameStyle).toContain('left: calc(-1 * var(--poi-open-frame-line-width));')
         expect(openFrameStyle).toContain('border-width: 0 0 var(--poi-open-frame-line-width) var(--poi-open-frame-line-width);')
         expect(openFrameStyle).toContain('width: calc(var(--poi-expanded-leader-position, 50%) + var(--poi-open-frame-line-width));')
@@ -226,5 +226,29 @@ describe('Map POI style', () => {
         expect(singleLineStyle).toContain('min-height: 1.4em;')
         expect(singleLineStyle).toContain('line-height: 1.4;')
         expect(singleLineStyle).not.toContain('var(--lgs-font-size) * 1.4')
+    })
+
+    it('uses configurable non-pill radii on multi-edge POI frames and preserves special default widths', () => {
+        const css = loadMapPOIStyle()
+
+        expect(css).toContain('--poi-open-frame-line-width: var(--poi-custom-border-width, 5px);')
+        expect(css).toContain('--poi-underline-line-width: var(--poi-custom-border-width, 4px);')
+        expect(css).toContain('.poi-card-inner--style-pill {\n    border-radius: 9999px;')
+        expect(css).toContain('.poi-card-inner--style-rounded {\n    border-radius: var(--poi-border-radius, var(--lgs-border-radius-s));')
+        expect(css).toContain('border-radius: var(--poi-border-radius, var(--lgs-border-radius-s));')
+        expect(css).toContain('background-color: var(--lgs-poi-border-color);\n        border-radius: var(--poi-side-accent-inner-radius) 0 0')
+    })
+
+    it('fits label-at-start POI slider columns inside their available width', () => {
+        const css = loadMapPOIStyle()
+        const sliderStyleStart = css.indexOf('.map-poi-display-settings wa-slider[label-at-start] {')
+        const sliderStyleEnd = css.indexOf('.map-poi-display-border-radius::part(marker)', sliderStyleStart)
+        const sliderStyle = css.slice(sliderStyleStart, sliderStyleEnd)
+
+        expect(sliderStyle).toContain('grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);')
+        expect(sliderStyle).not.toContain('margin-inline-end')
+        expect(sliderStyle).not.toContain('width: calc')
+        expect(css).toContain('.map-poi-display-border-radius::part(marker)')
+        expect(css).toContain('display: block !important;')
     })
 })

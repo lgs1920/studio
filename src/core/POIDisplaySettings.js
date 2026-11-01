@@ -34,9 +34,31 @@ export const POI_DISPLAY_DEFAULT_STICK_HORIZONTAL_POSITION = 50
 export const POI_DISPLAY_STICK_ANCHOR_POSITIONS = Object.freeze([20, 50, 80])
 export const POI_DISPLAY_DEFAULT_STYLE = 'pill'
 export const POI_DISPLAY_STICK_LENGTH_MAX = 200
+export const POI_DISPLAY_DEFAULT_BORDER_WIDTH = 2
+/** Minimum selectable width for a POI border. */
+export const POI_DISPLAY_BORDER_WIDTH_MIN = 2
+/** Maximum selectable width for a POI border. */
+export const POI_DISPLAY_BORDER_WIDTH_MAX = 6
+/** Width increment used by POI border sliders. */
+export const POI_DISPLAY_BORDER_WIDTH_STEP = 1
+export const POI_DISPLAY_BORDER_WIDTHS = Object.freeze([2, 3, 4, 5, 6])
+export const POI_DISPLAY_DEFAULT_BORDER_RADIUS = 'small'
+export const POI_DISPLAY_BORDER_RADII = Object.freeze(['none', 'small', 'medium', 'large'])
+const POI_DISPLAY_STYLE_BORDER_WIDTH_DEFAULTS = Object.freeze({
+    'open-frame': 5,
+    underline:     4,
+})
 export const POI_DISPLAY_STYLES = [
     'icon-frame', 'label', 'open-frame', 'pill', 'round-badge', 'rounded', 'side-accent', 'slanted-banner', 'underline',
 ]
+/** Styles with a visible border whose thickness can be customized. */
+export const POI_DISPLAY_BORDER_STYLES = Object.freeze([
+    'icon-frame', 'open-frame', 'pill', 'round-badge', 'rounded', 'side-accent', 'slanted-banner', 'underline',
+])
+/** Multi-edge border styles that support a non-pill corner radius. */
+export const POI_DISPLAY_BORDER_RADIUS_STYLES = Object.freeze([
+    'icon-frame', 'open-frame', 'round-badge', 'rounded', 'side-accent', 'slanted-banner',
+])
 export const POI_DISPLAY_STYLE_LABELS = Object.freeze({
     pill: 'Pill',
     'side-accent': 'Side accent',
@@ -48,6 +70,16 @@ export const POI_DISPLAY_STYLE_LABELS = Object.freeze({
     'icon-frame': 'Icon frame',
     label: 'Label',
 })
+
+/**
+ * Resolve the default border width for a POI display style.
+ * @param {string} style - Selected POI display style.
+ * @returns {number} Default border width in CSS pixels.
+ */
+export const getPOIDefaultBorderWidth = style => (
+    POI_DISPLAY_STYLE_BORDER_WIDTH_DEFAULTS[style] ?? POI_DISPLAY_DEFAULT_BORDER_WIDTH
+)
+
 /** Version of the persisted per-POI display settings shape. */
 export const POI_DISPLAY_SETTINGS_SCHEMA_VERSION = 5
 
@@ -175,6 +207,20 @@ const normalizeOptionalPOIDisplaySettings = source => {
             : POI_DISPLAY_DEFAULT_STICK_LENGTH
     }
 
+    if (hasOwn('borderWidth')) {
+        const borderWidth = Number(source.borderWidth)
+        settings.borderWidth = POI_DISPLAY_BORDER_WIDTHS.includes(borderWidth)
+            ? borderWidth
+            : getPOIDefaultBorderWidth(settings.style ?? source.style ?? POI_DISPLAY_DEFAULT_STYLE)
+    }
+
+    if (hasOwn('borderRadius')) {
+        const borderRadius = `${source.borderRadius}`
+        settings.borderRadius = POI_DISPLAY_BORDER_RADII.includes(borderRadius)
+            ? borderRadius
+            : POI_DISPLAY_DEFAULT_BORDER_RADIUS
+    }
+
     return settings
 }
 
@@ -202,7 +248,7 @@ export const resolvePOIStickAngle = (angle, poiId) => {
  * Normalize persisted POI display choices and migrate untouched legacy defaults.
  *
  * @param {Object|null|undefined} settings - Persisted display settings.
- * @returns {{category: boolean, titleCategoryIcon: boolean, titleAltitude: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number, fontFamily?: string, fontSize?: number, widgetRotation?: number, bold?: boolean, italic?: boolean, stickAngle?: string, stickPosition?: 'above'|'below'|'left'|'right', stickHorizontalPosition?: number, stickLength?: number, schemaVersion: number}}
+ * @returns {{category: boolean, titleCategoryIcon: boolean, titleAltitude: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number, fontFamily?: string, fontSize?: number, widgetRotation?: number, bold?: boolean, italic?: boolean, stickAngle?: string, stickPosition?: 'above'|'below'|'left'|'right', stickHorizontalPosition?: number, stickLength?: number, borderWidth?: number, borderRadius?: 'none'|'small'|'medium'|'large', schemaVersion: number}}
  */
 export const normalizePOIDisplaySettings = (settings = null) => {
     const source = settings && typeof settings === 'object' ? settings : {}

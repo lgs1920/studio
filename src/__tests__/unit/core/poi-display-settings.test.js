@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-29
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -102,6 +102,21 @@ describe('POI display settings', () => {
         expect(normalizePOIDisplaySettings({style: '19'}).style).toBe(POI_DISPLAY_DEFAULT_STYLE)
     })
 
+    it('normalizes border widths and restricts frame radii to non-pill choices', () => {
+        expect(normalizePOIDisplaySettings({borderWidth: '4', borderRadius: 'large'})).toMatchObject({
+            borderWidth: 4,
+            borderRadius: 'large',
+        })
+        expect(normalizePOIDisplaySettings({borderWidth: 6, borderRadius: 'none'})).toMatchObject({
+            borderWidth: 6,
+            borderRadius: 'none',
+        })
+        expect(normalizePOIDisplaySettings({borderWidth: 7, borderRadius: 'pill'})).toMatchObject({
+            borderWidth: 2,
+            borderRadius: 'small',
+        })
+    })
+
     it('does not retain the removed pill POI property', () => {
         const poi = new MapPOI({id: 'style-poi', pill: false})
 
@@ -171,7 +186,15 @@ describe('POI display settings', () => {
         vi.stubGlobal('__', {app: {deepClone: value => value}, ui: {}})
 
         const manager = new POIManager()
-        await manager.updatePOI(poi.id, {display: {location: true, titleAltitude: true, maxWidth: 340}}, {
+        await manager.updatePOI(poi.id, {
+            display: {
+                location: true,
+                titleAltitude: true,
+                maxWidth: 340,
+                borderWidth: 4,
+                borderRadius: 'large',
+            },
+        }, {
             immediate: true,
             skipLocationUpdate: true,
         })
@@ -185,6 +208,8 @@ describe('POI display settings', () => {
             coordinates: false,
             dateTime:    false,
             maxWidth:    340,
+            borderWidth: 4,
+            borderRadius: 'large',
             schemaVersion: POI_DISPLAY_SETTINGS_SCHEMA_VERSION,
         })
         expect(databasePut).toHaveBeenCalledOnce()

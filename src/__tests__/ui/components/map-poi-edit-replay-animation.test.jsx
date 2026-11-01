@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,7 +36,17 @@ vi.mock('@Components/MainUI/MapPOI/usePOIJourneyAssociation', () => ({
 vi.mock('@Editor/journey/JourneySelector', () => ({JourneySelector: () => null}))
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
-    WaColorPicker: () => null,
+    WaColorPicker: ({label, value, className, onClickCapture, onChange, disabled}) => (
+        <input
+            type="text"
+            aria-label={label}
+            value={value ?? ''}
+            className={className}
+            onClickCapture={onClickCapture}
+            onChange={onChange}
+            disabled={disabled}
+        />
+    ),
     WaCopyButton: () => null,
     WaDivider: () => null,
     WaIcon: () => null,
@@ -61,7 +71,7 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
 
 import {MapPOIEditContent} from '@Components/MainUI/MapPOI/MapPOIEditContent'
 
-describe('MapPOIEditContent Replay animation setting', () => {
+describe('MapPOIEditContent settings', () => {
     let poi
     let poiList
     let updatePOI
@@ -77,6 +87,9 @@ describe('MapPOIEditContent Replay animation setting', () => {
             height: 125,
             simulatedHeight: 0,
             visible: true,
+            background: true,
+            color: '#112233',
+            bgColor: '#445566',
             replay: {
                 visible: true,
                 animated: false,
@@ -85,7 +98,10 @@ describe('MapPOIEditContent Replay animation setting', () => {
             display: {},
         })
         poiList = proxyMap([[poi.id, poi]])
-        updatePOI = vi.fn(async () => poi)
+        updatePOI = vi.fn(async (_poiId, updates) => {
+            Object.assign(poi, updates)
+            return poi
+        })
 
         globalThis.lgs = {
             colors: {poiDefault: '#000000', poiDefaultBackground: '#ffffff'},
@@ -149,5 +165,99 @@ describe('MapPOIEditContent Replay animation setting', () => {
                 },
             }, {immediate: true, markAsEdited: true})
         })
+    })
+
+    it('shows Text, Colour, and Border swatches in that order with the legacy text color preserved', () => {
+        render(<MapPOIEditContent poi="poi-1"/>)
+
+        const swatches = [...document.querySelector('.map-poi-edit-swatches').querySelectorAll('input[aria-label]')]
+        expect(swatches.map(swatch => swatch.getAttribute('aria-label'))).toEqual(['Text', 'Colour', 'Border'])
+        expect(swatches.map(swatch => swatch.value)).toEqual(['#112233', '#445566', '#112233'])
+        expect(swatches.every(swatch => swatch.classList.contains('wa-visually-hidden-label'))).toBe(true)
+    })
+
+    it('changes Text independently and preserves the legacy Border color', async () => {
+        render(<MapPOIEditContent poi="poi-1"/>)
+        const textPicker = screen.getByLabelText('Text')
+
+        fireEvent.click(textPicker)
+        fireEvent.change(textPicker, {target: {value: '#abcdef'}})
+
+        await waitFor(() => expect(updatePOI).toHaveBeenCalledWith('poi-1', {
+            color: '#abcdef',
+            borderColor: '#112233',
+        }, {markAsEdited: true}))
+        expect(poi.bgColor).toBe('#445566')
+        expect(poi.borderColor).toBe('#112233')
+    })
+
+    it('keeps Border at its initial Text color when Colour changes normally', async () => {
+        render(<MapPOIEditContent poi="poi-1"/>)
+        const colourPicker = screen.getByLabelText('Colour')
+
+        fireEvent.click(colourPicker)
+        fireEvent.change(colourPicker, {target: {value: '#aabbcc'}})
+
+        await waitFor(() => expect(updatePOI).toHaveBeenCalledWith('poi-1', {
+            bgColor: '#aabbcc',
+            borderColor: '#112233',
+        }, {markAsEdited: true}))
+        expect(poi.color).toBe('#112233')
+        expect(poi.borderColor).toBe('#112233')
+    })
+
+    it('changes only Border when its picker changes normally', async () => {
+        render(<MapPOIEditContent poi="poi-1"/>)
+        const borderPicker = screen.getByLabelText('Border')
+
+        fireEvent.click(borderPicker)
+        fireEvent.change(borderPicker, {target: {value: '#123456'}})
+
+        await waitFor(() => expect(updatePOI).toHaveBeenCalledWith('poi-1', {
+            borderColor: '#123456',
+        }, {markAsEdited: true}))
+        expect(poi.bgColor).toBe('#445566')
+        expect(poi.color).toBe('#112233')
+    })
+
+    it('applies Shift captured on the Colour picker open to both frame colors after Shift is released', async () => {
+        render(<MapPOIEditContent poi="poi-1"/>)
+        const picker = screen.getByLabelText('Colour')
+
+        fireEvent.click(picker, {shiftKey: true})
+        fireEvent.change(picker, {target: {value: '#123456'}})
+
+        await waitFor(() => expect(updatePOI).toHaveBeenCalledWith('poi-1', {
+            bgColor: '#123456',
+            borderColor: '#123456',
+        }, {markAsEdited: true}))
+        expect(poi.color).toBe('#112233')
+    })
+
+    it.each(['Text', 'Border'])('applies Shift captured on the %s picker open to Text and Border after Shift is released', async label => {
+        render(<MapPOIEditContent poi="poi-1"/>)
+        const picker = screen.getByLabelText(label)
+
+        fireEvent.click(picker, {shiftKey: true})
+        fireEvent.change(picker, {target: {value: '#123456'}})
+
+        await waitFor(() => expect(updatePOI).toHaveBeenCalledWith('poi-1', {
+            color: '#123456',
+            borderColor: '#123456',
+        }, {markAsEdited: true}))
+        expect(poi.bgColor).toBe('#445566')
+    })
+
+    it('reverses only Colour and Border', async () => {
+        poi.borderColor = '#778899'
+        render(<MapPOIEditContent poi="poi-1"/>)
+
+        fireEvent.click(screen.getByRole('button', {name: 'Reverse color'}))
+
+        await waitFor(() => expect(updatePOI).toHaveBeenCalledWith('poi-1', {
+            bgColor: '#778899',
+            borderColor: '#445566',
+        }, {markAsEdited: true}))
+        expect(poi.color).toBe('#112233')
     })
 })

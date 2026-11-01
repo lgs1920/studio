@@ -77,6 +77,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                           const updateEditedPOI = useCallback((updates, options = {}) => (
                                               __.ui.poiManager.updatePOI(poi, updates, {...options, markAsEdited: true})
                                           ), [poi])
+                                          const _colorPickerShift = useRef({})
 
                                           /**
                                            * Persist a changed display flag while retaining the other POI choices.
@@ -193,13 +194,15 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                     simulatedHeight,
                                                     color,
                                                     bgColor,
+                                                    borderColor,
                                                     background = true,
                                                     time,
                                                     visible     = true,
                                                 } = point
+                                          const currentBorderColor = borderColor ?? color ?? lgs.colors.poiDefault
                                           const canSwapColors = background
                                               && hasVisibleColorAlpha(bgColor ?? lgs.colors.poiDefaultBackground)
-                                              && hasVisibleColorAlpha(color ?? lgs.colors.poiDefault)
+                                              && hasVisibleColorAlpha(currentBorderColor)
 
                                           const [coordinateDraft, setCoordinateDraft] = useState({
                                                                                                      latitude:  UnitUtils.formatCoordinate(latitude, coordinateSystem),
@@ -215,8 +218,6 @@ export const MapPOIEditContent = memo(({poi}) => {
                                           /** @type {[boolean, function]} Tracks if the altitude is currently simulated */
                                           const [simulated, setSimulated] = useState(height == null || height === simulatedHeight)
 
-                                          const _poiColor = useRef(null)
-                                          const _poiBgColor = useRef(null)
                                           const normalizeTimeouts = useRef({
                                                                                latitude:  null,
                                                                                longitude: null,
@@ -274,9 +275,24 @@ export const MapPOIEditContent = memo(({poi}) => {
                                           }, [poi, elevationUnit, point.simulatedHeight, updateEditedPOI])
 
                                           /**
-                                           * Handles color updates while preventing event bubbling
+                                           * Capture Shift only when a color picker's popup opens.
+                                           * @param {string} field - The swatch being opened.
+                                           * @param {Event} event - The color picker trigger event.
+                                           * @returns {void}
                                            */
-                                          const handleChangeColor = useCallback(async (event) => {
+                                          const captureColorPickerShift = useCallback((field, event) => {
+                                              if (event.currentTarget?.open !== true) {
+                                                  _colorPickerShift.current[field] = event.shiftKey === true
+                                              }
+                                          }, [])
+
+                                          /**
+                                           * Apply a selected color while preventing event bubbling.
+                                           * @param {'text'|'colour'|'border'} field - The swatch being changed.
+                                           * @param {Event} event - The Web Awesome color change event.
+                                           * @returns {Promise<void>}
+                                           */
+                                          const handleChangeColor = useCallback(async (field, event) => {
                                               if (!window.isOK) {
                                                   return
                                               }
@@ -285,38 +301,64 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               event.preventDefault()
 
                                               const update = {}
-                                              if (event.target === _poiColor.current) {
-                                                  update.color = event.target.value
+                                              const selectedColor = event.target.value
+                                              const currentPoint = lgs.stores.main.components.pois.list.get(poi)
+                                              if (field === 'text') {
+                                                  update.color = selectedColor
+                                                  if (_colorPickerShift.current[field] === true) {
+                                                      update.borderColor = selectedColor
+                                                  }
+                                                  else if (currentPoint?.borderColor == null) {
+                                                      update.borderColor = currentBorderColor
+                                                  }
                                               }
-                                              if (event.target === _poiBgColor.current) {
-                                                  update.bgColor = event.target.value
+                                              else if (_colorPickerShift.current[field] === true) {
+                                                  if (field === 'colour') {
+                                                      update.bgColor = selectedColor
+                                                      update.borderColor = selectedColor
+                                                  }
+                                                  else {
+                                                      update.color = selectedColor
+                                                      update.borderColor = selectedColor
+                                                  }
+                                              }
+                                              else if (field === 'colour') {
+                                                  update.bgColor = selectedColor
+                                                  if (currentPoint?.borderColor == null) {
+                                                      update.borderColor = currentBorderColor
+                                                  }
+                                              }
+                                              else if (field === 'border') {
+                                                  update.borderColor = selectedColor
                                               }
 
                                               if (Object.keys(update).length > 0) {
                                                   await updateEditedPOI(update)
                                               }
-                                          }, [poi, updateEditedPOI])
+                                          }, [poi, currentBorderColor, updateEditedPOI])
 
-                                          /** Swap the POI background and foreground colors when both remain visible. */
+                                          /** Swap the POI background and border colors when both remain visible. */
                                           const handleSwapColors = async () => {
                                               if (!window.isOK) {
                                                   return
                                               }
 
                                               const currentPoint = lgs.stores.main.components.pois.list.get(poi)
-                                              if (!currentPoint || !currentPoint.background) {
+                                              if (!currentPoint || currentPoint.background === false) {
                                                   return
                                               }
 
                                               const backgroundColor = currentPoint.bgColor ?? lgs.colors.poiDefaultBackground
-                                              const foregroundColor = currentPoint.color ?? lgs.colors.poiDefault
-                                              if (!hasVisibleColorAlpha(backgroundColor) || !hasVisibleColorAlpha(foregroundColor)) {
+                                              const borderColor = currentPoint.borderColor
+                                                  ?? currentPoint.color
+                                                  ?? lgs.colors.poiDefault
+                                              if (!hasVisibleColorAlpha(backgroundColor) || !hasVisibleColorAlpha(borderColor)) {
                                                   return
                                               }
 
                                               await updateEditedPOI({
-                                                  bgColor: foregroundColor,
-                                                  color:   backgroundColor,
+                                                  bgColor:     borderColor,
+                                                  borderColor: backgroundColor,
                                               })
                                           }
 
@@ -557,27 +599,41 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                   <div className="map-poi-edit-wrapper" id={`edit-map-poi-content-${id}`}>
                                                       <div className="map-poi-edit-toolbar">
                                                           <div className="map-poi-edit-swatches">
-                                                              <WaTooltip for={`map-poi-bg-${id}`}>{'Background Color'}</WaTooltip>
                                                               <WaColorPicker
-                                                                  id={`map-poi-bg-${id}`}
-                                                                  size="s"
-                                                                  value={bgColor ?? lgs.colors.poiDefaultBackground}
-                                                                  swatches={swatches}
-                                                                  onChange={handleChangeColor}
-                                                                  disabled={!visible || !background}
-                                                                  noFormatToggle
-                                                                  ref={_poiBgColor}
-                                                              />
-                                                              <WaTooltip for={`map-poi-fg-${id}`}>{'Foreground Color'}</WaTooltip>
-                                                              <WaColorPicker
-                                                                  id={`map-poi-fg-${id}`}
+                                                                  id={`map-poi-text-${id}`}
+                                                                  className="wa-visually-hidden-label"
+                                                                  label="Text"
                                                                   size="s"
                                                                   value={color ?? lgs.colors.poiDefault}
                                                                   swatches={swatches}
-                                                                  onChange={handleChangeColor}
+                                                                  onClickCapture={event => captureColorPickerShift('text', event)}
+                                                                  onChange={event => handleChangeColor('text', event)}
                                                                   disabled={!visible}
                                                                   noFormatToggle
-                                                                  ref={_poiColor}
+                                                              />
+                                                              <WaColorPicker
+                                                                  id={`map-poi-bg-${id}`}
+                                                                  className="wa-visually-hidden-label"
+                                                                  label="Colour"
+                                                                  size="s"
+                                                                  value={bgColor ?? lgs.colors.poiDefaultBackground}
+                                                                  swatches={swatches}
+                                                                  onClickCapture={event => captureColorPickerShift('colour', event)}
+                                                                  onChange={event => handleChangeColor('colour', event)}
+                                                                  disabled={!visible || !background}
+                                                                  noFormatToggle
+                                                              />
+                                                              <WaColorPicker
+                                                                  id={`map-poi-border-${id}`}
+                                                                  className="wa-visually-hidden-label"
+                                                                  label="Border"
+                                                                  size="s"
+                                                                  value={currentBorderColor}
+                                                                  swatches={swatches}
+                                                                  onClickCapture={event => captureColorPickerShift('border', event)}
+                                                                  onChange={event => handleChangeColor('border', event)}
+                                                                  disabled={!visible}
+                                                                  noFormatToggle
                                                               />
                                                               {canSwapColors && (
                                                                   <WaButton
@@ -585,7 +641,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                       className="square-button small map-poi-edit-color-swap"
                                                                       size="s"
                                                                       appearance="plain"
-                                                                      aria-label="Swap POI background and foreground colors"
+                                                                      aria-label="Reverse color"
                                                                       disabled={!visible}
                                                                       onClick={handleSwapColors}
                                                                   >
@@ -594,7 +650,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                               )}
                                                               {canSwapColors && (
                                                                   <WaTooltip for={`${tooltipIdPrefix}-swap-colors`} placement="top">
-                                                                      {'Swap POI background and foreground colors'}
+                                                                      {'Reverse color'}
                                                                   </WaTooltip>
                                                               )}
                                                           </div>

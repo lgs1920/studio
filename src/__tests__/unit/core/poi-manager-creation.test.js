@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-28
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -78,6 +78,7 @@ describe('POIManager interactive creation defaults', () => {
         expect(poi).toMatchObject({
             background: true,
             bgColor:    POI_DEFAULT_BACKGROUND,
+            borderColor: POI_DEFAULT,
             category:   POI_STANDARD_TYPE,
             color:      POI_DEFAULT,
             description: '',
@@ -86,6 +87,31 @@ describe('POIManager interactive creation defaults', () => {
             title:      'Paris',
             type:       POI_TMP_TYPE,
         })
+    })
+
+    it('initializes Border from Text while preserving an explicit border override', () => {
+        const manager = new POIManager()
+        const poi = manager.createPOI({bgColor: '#445566'})
+        const customPoi = manager.createPOI({bgColor: '#445566', borderColor: '#778899'})
+
+        expect(poi.borderColor).toBe(POI_DEFAULT)
+        expect(MapPOI.clone(poi).borderColor).toBe(POI_DEFAULT)
+        expect(customPoi.borderColor).toBe('#778899')
+    })
+
+    it('persists a later Border color through the standard POI update path', async () => {
+        const manager = new POIManager()
+        const poi = manager.createPOI({id: 'border-color-poi'})
+        manager.list.set(poi.id, poi)
+        manager.persistToDatabase = vi.fn(async () => {})
+
+        await manager.updatePOI(poi.id, {borderColor: '#778899'}, {
+            immediate: true,
+            skipLocationUpdate: true,
+        })
+
+        expect(poi.borderColor).toBe('#778899')
+        expect(manager.persistToDatabase).toHaveBeenCalledWith(poi)
     })
 
     it('preserves search metadata and terrain height while using the shared defaults', async () => {

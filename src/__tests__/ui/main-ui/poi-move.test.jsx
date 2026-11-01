@@ -109,6 +109,7 @@ const createPOI = overrides => proxy({
     visible: true,
     color: 'var(--wa-color-brand-fill-normal)',
     bgColor: 'var(--wa-color-brand-fill-quiet)',
+    borderColor: 'var(--wa-color-brand-fill-normal)',
     background: true,
     ...overrides,
 })

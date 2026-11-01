@@ -39,6 +39,8 @@ import {
     POI_DISPLAY_DEFAULT_STICK_HORIZONTAL_POSITION,
     POI_DISPLAY_DEFAULT_STICK_LENGTH,
     POI_DISPLAY_DEFAULT_STICK_POSITION,
+    POI_DISPLAY_DEFAULT_BORDER_RADIUS,
+    getPOIDefaultBorderWidth,
     POI_DISPLAY_STICK_ANCHOR_POSITIONS,
     POI_DISPLAY_DEFAULT_STYLE,
     resolvePOIStickAngle,
@@ -61,6 +63,12 @@ const EMPTY_REPLAY_PROXY = proxy({nearbyPois: []})
 const queuePOICanvasRender = createPOICanvasRenderQueue(2)
 const MAX_POI_CANVAS_SIDE = 4096
 const MAX_POI_CANVAS_PIXELS = 8_388_608
+const POI_BORDER_RADIUS_CSS_VALUES = Object.freeze({
+    none:   '0px',
+    small: 'var(--lgs-border-radius-s)',
+    medium: 'var(--lgs-border-radius)',
+    large: 'var(--lgs-border-radius-l)',
+})
 const assertPOICanvasDimensions = (element, scale, ratio) => {
     const bounds = element.getBoundingClientRect()
     const width = Math.max(bounds.width, element.scrollWidth, element.offsetWidth)
@@ -142,6 +150,8 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
         ? selectedAnchorPosition
         : displaySettings.stickHorizontalPosition ?? POI_DISPLAY_DEFAULT_STICK_HORIZONTAL_POSITION
     const poiStyle = selectedStyle ?? displaySettings.style ?? POI_DISPLAY_DEFAULT_STYLE
+    const poiBorderWidth = displaySettings.borderWidth ?? getPOIDefaultBorderWidth(poiStyle)
+    const poiBorderRadius = displaySettings.borderRadius ?? POI_DISPLAY_DEFAULT_BORDER_RADIUS
     const leaderAngle = resolvePOIStickAngle(configuredStickAngle, pointId)
     const leaderLength = displaySettings.stickLength ?? POI_DISPLAY_DEFAULT_STICK_LENGTH
     const leaderAngleRadians = leaderAngle * Math.PI / 180
@@ -216,6 +226,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
         point?.visible,
         point?.color ?? lgs.colors.poiDefault,
         point?.bgColor ?? lgs.colors.poiDefaultBackground,
+        point?.borderColor ?? point?.color ?? lgs.colors.poiDefault,
         point?.background,
         cardExpanded ? poiStyle : null,
         [fontFamily, displaySettings.fontSize, displaySettings.bold, displaySettings.italic, widgetRotation],
@@ -733,7 +744,8 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
         })
         observer.observe(card)
         return () => observer.disconnect()
-    }, [horizontalStick, isEmbedded, isExpanded, poiStyle, renderToCanvas, stickHorizontalPosition, stickPosition])
+    }, [horizontalStick, isEmbedded, isExpanded, poiBorderRadius, poiBorderWidth, poiStyle, renderToCanvas,
+        stickHorizontalPosition, stickPosition])
 
     useEffect(() => {
         if (isEmbedded || !pointId || (!replayMasked && !hiddenBecauseTooClose)) {
@@ -774,8 +786,11 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                   point?.expanded,
                   point?.color,
                   point?.bgColor,
+                  point?.borderColor,
                   point?.background,
                   point?.display?.style,
+                  point?.display?.borderWidth,
+                  point?.display?.borderRadius,
                   displayHeightContent ? point?.height : null,
                   displayHeightContent ? point?.simulatedHeight : null,
                   point?.location,
@@ -849,8 +864,17 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                 '--lgs-poi-background-color': point?.background === false
                     ? 'transparent'
                     : point?.bgColor ?? lgs.colors.poiDefaultBackground,
-                '--lgs-poi-border-color':     point?.color ?? lgs.colors.poiDefault,
+                '--lgs-poi-border-color':     point?.borderColor ?? point?.color ?? lgs.colors.poiDefault,
                 '--lgs-poi-color':            point?.color ?? lgs.colors.poiDefault,
+                ...(isExpanded && !useInMenu
+                    ? {
+                        '--poi-border-width': `${poiBorderWidth}px`,
+                        '--poi-border-radius': POI_BORDER_RADIUS_CSS_VALUES[poiBorderRadius],
+                        ...(typeof displaySettings.borderWidth === 'number'
+                            ? {'--poi-custom-border-width': `${displaySettings.borderWidth}px`}
+                            : {}),
+                    }
+                    : {}),
                 '--poi-font-family':          fontFamily === 'System' ? WIDGET_SYSTEM_FONT_STACK : fontFamily,
                 '--poi-font-size':            displaySettings.fontSize === undefined
                     ? 'var(--lgs-font-size)'

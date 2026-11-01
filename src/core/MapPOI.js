@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,6 +29,11 @@ export class MapPOI extends MapElement {
      * @type {string}
      */
     bgColor
+
+    /**
+     * @type {string}
+     */
+    borderColor
 
     /** @type {boolean} */
     background = true
@@ -64,7 +69,7 @@ export class MapPOI extends MapElement {
     description
 
     /**
-     * @type {{category: boolean, titleCategoryIcon: boolean, titleAltitude: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number, fontFamily?: string, fontSize?: number, widgetRotation?: number, bold?: boolean, italic?: boolean, style?: string, stickAngle?: string, stickPosition?: 'above'|'below'|'left'|'right', stickHorizontalPosition?: number, stickLength?: number, schemaVersion: number}}
+     * @type {{category: boolean, titleCategoryIcon: boolean, titleAltitude: boolean, location: boolean, altitude: boolean, coordinates: boolean, dateTime: boolean, maxWidth: number, fontFamily?: string, fontSize?: number, widgetRotation?: number, bold?: boolean, italic?: boolean, style?: string, stickAngle?: string, stickPosition?: 'above'|'below'|'left'|'right', stickHorizontalPosition?: number, stickLength?: number, borderWidth?: number, borderRadius?: 'none'|'small'|'medium'|'large', schemaVersion: number}}
      */
     display = normalizePOIDisplaySettings()
 
@@ -177,6 +182,7 @@ export class MapPOI extends MapElement {
             ...poiOptions,
             id: options.id,
             slug: options.slug,
+            borderColor: poiOptions.borderColor ?? poiOptions.color,
             background: options.background ?? true,
             display: normalizePOIDisplaySettings(options.display),
         })

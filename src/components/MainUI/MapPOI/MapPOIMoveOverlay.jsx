@@ -836,7 +836,7 @@ export const MapPOIMoveOverlay = () => {
                         left: `${displayedPoint.x - markerGeometry.anchorOffset.x}px`,
                         top: `${displayedPoint.y - markerGeometry.anchorOffset.y}px`,
                         '--lgs-poi-background-color': poi.background === false ? 'transparent' : poi.bgColor ?? lgs.colors.poiDefaultBackground,
-                        '--lgs-poi-border-color': poi.color ?? lgs.colors.poiDefault,
+                        '--lgs-poi-border-color': poi.borderColor ?? poi.color ?? lgs.colors.poiDefault,
                         '--lgs-poi-color': poi.color ?? lgs.colors.poiDefault,
                     }}
                     onPointerDown={handlePointerDown}

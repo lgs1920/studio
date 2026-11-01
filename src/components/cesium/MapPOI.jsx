@@ -194,7 +194,7 @@ export const MapPOI = memo(({point}) => {
                         transform: `translate( -50%,calc(-4 * var(--poi-border-width))) scale(${scale ?? 1})`,
                         transformOrigin:              'center bottom',
                         '--lgs-poi-background-color': thePOI.background === false ? 'transparent' : thePOI.bgColor ?? lgs.colors.poiDefaultBackground,
-                        '--lgs-poi-border-color':     thePOI.color ?? lgs.colors.poiDefault,
+                        '--lgs-poi-border-color':     thePOI.borderColor ?? thePOI.color ?? lgs.colors.poiDefault,
                         '--lgs-poi-color':            thePOI.color ?? lgs.colors.poiDefault,
                         zIndex:                       viewable.get(thePOI.id),
                     }}

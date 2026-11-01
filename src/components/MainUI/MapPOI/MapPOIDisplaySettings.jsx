@@ -28,6 +28,14 @@ import {
     POI_DISPLAY_DEFAULT_STICK_POSITION,
     POI_DISPLAY_STICK_ANCHOR_POSITIONS,
     POI_DISPLAY_DEFAULT_STYLE,
+    POI_DISPLAY_BORDER_STYLES,
+    POI_DISPLAY_BORDER_RADIUS_STYLES,
+    POI_DISPLAY_BORDER_RADII,
+    POI_DISPLAY_BORDER_WIDTH_MAX,
+    POI_DISPLAY_BORDER_WIDTH_MIN,
+    POI_DISPLAY_BORDER_WIDTH_STEP,
+    POI_DISPLAY_DEFAULT_BORDER_RADIUS,
+    getPOIDefaultBorderWidth,
     POI_DISPLAY_STYLES,
     POI_DISPLAY_STYLE_LABELS,
     POI_DISPLAY_MAX_WIDTH,
@@ -99,6 +107,11 @@ export const MapPOIDisplaySettings = memo(({
     const stickPosition = displaySettings.stickPosition ?? POI_DISPLAY_DEFAULT_STICK_POSITION
     const stickHorizontalPosition = displaySettings.stickHorizontalPosition ?? POI_DISPLAY_DEFAULT_STICK_HORIZONTAL_POSITION
     const style = selectedStyle ?? displaySettings.style ?? POI_DISPLAY_DEFAULT_STYLE
+    const borderWidth = displaySettings.borderWidth ?? getPOIDefaultBorderWidth(style)
+    const borderRadius = displaySettings.borderRadius ?? POI_DISPLAY_DEFAULT_BORDER_RADIUS
+    const borderRadiusPosition = Math.max(0, POI_DISPLAY_BORDER_RADII.indexOf(borderRadius))
+    const hasBorder = POI_DISPLAY_BORDER_STYLES.includes(style)
+    const hasBorderRadius = POI_DISPLAY_BORDER_RADIUS_STYLES.includes(style)
     const horizontalStick = stickPosition === 'left' || stickPosition === 'right'
 
     /** Store font family values in display form while keeping select option values URL-safe. */
@@ -258,8 +271,10 @@ export const MapPOIDisplaySettings = memo(({
                         </div>
                         <WaSlider
                             className="map-poi-display-width-slider"
+                            size="s"
                             label="Width"
                             label-at-start
+                            placement="top"
                             min={POI_DISPLAY_MIN_WIDTH}
                             max={POI_DISPLAY_MAX_WIDTH}
                             step={POI_DISPLAY_WIDTH_STEP}
@@ -281,6 +296,61 @@ export const MapPOIDisplaySettings = memo(({
                                 labelClassName="map-poi-display-rotation-label"
                             />
                         </div>
+                        {hasBorder && (
+                            <>
+                                <WaDivider className="map-poi-display-decoration-divider"/>
+                                <WaSlider
+                                    className="map-poi-display-border-width"
+                                    size="s"
+                                    label="Border"
+                                    label-at-start
+                                    placement="top"
+                                    min={POI_DISPLAY_BORDER_WIDTH_MIN}
+                                    max={POI_DISPLAY_BORDER_WIDTH_MAX}
+                                    step={POI_DISPLAY_BORDER_WIDTH_STEP}
+                                    value={borderWidth}
+                                    valueFormatter={value => `${value} px`}
+                                    withMarkers
+                                    withTooltip
+                                    onInput={event => onDisplayValueChange('borderWidth', Number(event.target.value))}
+                                >
+                                    <span slot="reference">{`${POI_DISPLAY_BORDER_WIDTH_MIN} px`}</span>
+                                    <span slot="reference">{`${POI_DISPLAY_BORDER_WIDTH_MAX} px`}</span>
+                                </WaSlider>
+                                {hasBorderRadius && (
+                                    <WaSlider
+                                        className="map-poi-display-border-radius"
+                                        size="s"
+                                        label="Radius"
+                                        label-at-start
+                                        placement="top"
+                                        min={0}
+                                        max={POI_DISPLAY_BORDER_RADII.length - 1}
+                                        step={1}
+                                        value={borderRadiusPosition}
+                                        valueFormatter={value => {
+                                            const radius = POI_DISPLAY_BORDER_RADII[Math.round(value)]
+                                            return radius ? `${radius[0].toUpperCase()}${radius.slice(1)}` : 'Small'
+                                        }}
+                                        withMarkers
+                                        withTooltip
+                                        onInput={event => onDisplayValueChange(
+                                            'borderRadius',
+                                            POI_DISPLAY_BORDER_RADII[Number(event.target.value)] ?? POI_DISPLAY_DEFAULT_BORDER_RADIUS,
+                                        )}
+                                    >
+                                        <span slot="reference">
+                                            <WaIcon name="eye-slash" variant="regular" size="s" aria-hidden="true"/>
+                                        </span>
+                                        {POI_DISPLAY_BORDER_RADII.slice(1).map(radius => (
+                                            <span key={radius} slot="reference">
+                                                {radius[0].toUpperCase()}
+                                            </span>
+                                        ))}
+                                    </WaSlider>
+                                )}
+                            </>
+                        )}
                     </section>
                     <WaDivider className="map-poi-display-decoration-divider"/>
                     <section className="map-poi-display-group" aria-label="Stick">
@@ -324,6 +394,7 @@ export const MapPOIDisplaySettings = memo(({
                             </div>
                         </div>
                         <WaSelect
+                            key={horizontalStick ? 'horizontal-stick-angle' : 'vertical-stick-angle'}
                             className="map-poi-display-stick-angle"
                             appearance="filled"
                             size="s"
@@ -341,8 +412,10 @@ export const MapPOIDisplaySettings = memo(({
                         </WaSelect>
                         <WaSlider
                             className="map-poi-display-stick-length"
+                            size="s"
                             label="Length"
                             label-at-start
+                            placement="top"
                             min="0"
                             max={POI_DISPLAY_STICK_LENGTH_MAX}
                             step="1"

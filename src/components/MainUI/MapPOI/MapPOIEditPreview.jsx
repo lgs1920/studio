@@ -133,17 +133,37 @@ export const MapPOIEditPreview = ({poi}) => {
         const angle = Number.parseFloat(poiWrapper?.style.getPropertyValue('--poi-expanded-leader-angle')) || 0
         const length = Number.parseFloat(poiWrapper?.style.getPropertyValue('--poi-expanded-leader-length')) || 0
         const horizontalStick = Boolean(_openContent.current?.querySelector('.poi-card--stick-left, .poi-card--stick-right'))
+        const configuredBorderWidth = Number.parseFloat(poiWrapper?.style.getPropertyValue('--poi-border-width'))
+        const customBorderWidth = Number.parseFloat(poiWrapper?.style.getPropertyValue('--poi-custom-border-width'))
+        const borderWidth = Number.isFinite(customBorderWidth)
+            ? customBorderWidth
+            : Number.isFinite(configuredBorderWidth) ? configuredBorderWidth : 2
+        let decorativeOverflowX = 0
+        let decorativeOverflowY = 0
+        if (widgetCard?.classList.contains('poi-card--style-open-frame')) {
+            // Open-frame corners extend beyond the card by their line width on every side.
+            decorativeOverflowX = borderWidth
+            decorativeOverflowY = borderWidth
+        }
+        else if (widgetCard?.classList.contains('poi-card--style-underline')) {
+            // The underline extends outside the card on one side; reserve matching space around it.
+            decorativeOverflowY = borderWidth
+        }
+        else if (widgetCard?.classList.contains('poi-card--style-slanted-banner')) {
+            // The skewed background extends horizontally beyond the card's untransformed box.
+            decorativeOverflowX = Math.tan(Math.PI / 12) * height / 2
+        }
         const horizontalExtension = Math.abs(Math.sin(angle * Math.PI / 180) * length)
         const unrotatedContentWidth = horizontalStick
-            ? width + (leaderSpace?.offsetWidth ?? 0)
-            : width + Math.max(0, horizontalExtension - width / 2)
+            ? width + (leaderSpace?.offsetWidth ?? 0) + (2 * decorativeOverflowX)
+            : width + Math.max(0, horizontalExtension - width / 2) + (2 * decorativeOverflowX)
         const leaderPosition = Number.parseFloat(poiWrapper?.style.getPropertyValue('--poi-expanded-leader-position')) || 50
         const leaderOffsetY = Number.parseFloat(poiWrapper?.style.getPropertyValue('--poi-expanded-leader-y')) || 0
         const anchorY = (height * leaderPosition / 100) + leaderOffsetY
         const sideLeaderOverflow = Math.max(0, -anchorY) + Math.max(0, anchorY - height)
         const unrotatedContentHeight = horizontalStick
-            ? height + sideLeaderOverflow
-            : height + (leaderSpace?.offsetHeight ?? 0)
+            ? height + sideLeaderOverflow + (2 * decorativeOverflowY)
+            : height + (leaderSpace?.offsetHeight ?? 0) + (2 * decorativeOverflowY)
         const rotation = Number.parseFloat(poiWrapper?.style.getPropertyValue('--poi-widget-rotation')) || 0
         const radians = rotation * Math.PI / 180
         const absoluteCosine = Math.abs(Math.cos(radians))

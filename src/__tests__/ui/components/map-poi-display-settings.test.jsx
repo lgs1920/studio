@@ -21,22 +21,27 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaButtonGroup: ({children}) => <div>{children}</div>,
     WaDivider:  () => <hr/>,
-    WaIcon: () => <span/>,
+    WaIcon: ({name, ...props}) => <span data-icon={name} {...props}/>,
     WaNumberInput: ({label, value}) => <input aria-label={label} value={value} readOnly/>,
     WaOption: ({children, value}) => <option value={value}>{children}</option>,
     WaSelect: ({label, value, children, onChange}) => (
         <label>{label}<select aria-label={label} value={value} onChange={event => onChange({target: {value: event.currentTarget.value}})}>{children}</select></label>
     ),
-    WaSlider:  ({label, value, min, max, step, onInput}) => (
-        <input
-            type="range"
-            aria-label={label}
-            value={value}
-            min={min}
-            max={max}
-            step={step}
-            onInput={event => onInput({target: {value: event.currentTarget.value}})}
-        />
+    WaSlider:  ({label, value, min, max, step, size, withMarkers, onInput, children}) => (
+        <div>
+            <input
+                type="range"
+                aria-label={label}
+                data-with-markers={withMarkers}
+                value={value}
+                min={min}
+                max={max}
+                step={step}
+                data-size={size}
+                onInput={event => onInput({target: {value: event.currentTarget.value}})}
+            />
+            {children}
+        </div>
     ),
     WaSwitch:  ({checked, children, onChange}) => (
         <label>
@@ -133,6 +138,7 @@ describe('MapPOIDisplaySettings', () => {
         const stickGroup = screen.getByRole('region', {name: 'Stick'})
 
         expect(within(typographyGroup).getByRole('combobox', {name: 'Typeface'})).toBeTruthy()
+        expect(within(typographyGroup).getByText('Text style')).toBeTruthy()
         expect(within(appearanceGroup).getByRole('combobox', {name: 'Style'}).value).toBe('pill')
         expect(within(appearanceGroup).getByRole('combobox', {name: 'Style'}).textContent).not.toMatch(/\b(?:01|02|05|08|16|19|24|34)\b/)
         expect([...within(appearanceGroup).getByRole('combobox', {name: 'Style'}).querySelectorAll('option')]
@@ -143,7 +149,9 @@ describe('MapPOIDisplaySettings', () => {
         expect(within(stickGroup).getByRole('group', {name: 'Anchor'})).toBeTruthy()
         expect(within(stickGroup).getByRole('button', {name: 'Bottom 50%'}).getAttribute('aria-pressed')).toBe('true')
         expect(within(appearanceGroup).getByRole('slider', {name: 'Width'}).value).toBe('200')
-        expect(screen.getAllByRole('separator')).toHaveLength(2)
+        expect(screen.getAllByRole('slider').every(slider => slider.dataset.size === 's')).toBe(true)
+        expect(within(appearanceGroup).getByRole('slider', {name: 'Border'})).toBeTruthy()
+        expect(screen.getAllByRole('separator')).toHaveLength(3)
     })
 
     it('persists selected POI styles and horizontal stick anchors', () => {
@@ -213,6 +221,30 @@ describe('MapPOIDisplaySettings', () => {
         expect(bottomAnchor.style.top).toBe('88%')
     })
 
+    it('remounts the angle selector when the selected anchor changes its orientation', () => {
+        const props = {
+            panel: 'decoration',
+            poi: 'poi-1',
+            onDisplayValueChange: vi.fn(),
+        }
+        const {rerender} = render(<MapPOIDisplaySettings
+            {...props}
+            display={{stickPosition: 'right', stickAngle: 'straight'}}
+        />)
+        const horizontalSelector = screen.getByRole('combobox', {name: 'Angle'})
+
+        expect(horizontalSelector.selectedOptions[0].textContent).toBe('Horizontal')
+
+        rerender(<MapPOIDisplaySettings
+            {...props}
+            display={{stickPosition: 'above', stickAngle: 'straight'}}
+        />)
+
+        const verticalSelector = screen.getByRole('combobox', {name: 'Angle'})
+        expect(verticalSelector).not.toBe(horizontalSelector)
+        expect(verticalSelector.selectedOptions[0].textContent).toBe('Vertical')
+    })
+
     it('notifies the editor when the category icon choice changes', () => {
         const onDisplayChange = vi.fn()
 
@@ -244,5 +276,58 @@ describe('MapPOIDisplaySettings', () => {
         expect(onDisplayChange).toHaveBeenCalledOnce()
         expect(onDisplayChange.mock.calls[0][0]).toBe('maxWidth')
         expect(onDisplayChange.mock.calls[0][1].target.value).toBe('340')
+    })
+
+    it('offers border widths and non-pill radii for rounded POIs', () => {
+        const onDisplayValueChange = vi.fn()
+        render(<MapPOIDisplaySettings
+            panel="decoration"
+            poi="poi-1"
+            display={{style: 'rounded'}}
+            onDisplayValueChange={onDisplayValueChange}
+        />)
+
+        const appearance = screen.getByRole('region', {name: 'Appearance'})
+        const width = within(appearance).getByRole('slider', {name: 'Border'})
+        const radius = within(appearance).getByRole('slider', {name: 'Radius'})
+        expect([width.min, width.max, width.step]).toEqual(['2', '6', '1'])
+        expect([radius.min, radius.max, radius.step]).toEqual(['0', '3', '1'])
+        expect(width.dataset.withMarkers).toBe('true')
+        expect(radius.dataset.withMarkers).toBe('true')
+        expect(within(appearance).getByText('S')).toBeTruthy()
+        expect(within(appearance).getByText('M')).toBeTruthy()
+        expect(within(appearance).getByText('L')).toBeTruthy()
+        expect(within(appearance).queryByText('None')).toBeNull()
+        expect(appearance.querySelector('[data-icon="eye-slash"]')).toBeTruthy()
+
+        fireEvent.input(width, {target: {value: '5'}})
+        fireEvent.input(radius, {target: {value: '2'}})
+        expect(onDisplayValueChange).toHaveBeenNthCalledWith(1, 'borderWidth', 5)
+        expect(onDisplayValueChange).toHaveBeenNthCalledWith(2, 'borderRadius', 'medium')
+    })
+
+    it.each(['pill', 'underline'])('hides radius choices for the %s style', style => {
+        render(<MapPOIDisplaySettings
+            panel="decoration"
+            poi="poi-1"
+            display={{style}}
+            onDisplayValueChange={vi.fn()}
+        />)
+
+        const appearance = screen.getByRole('region', {name: 'Appearance'})
+        expect(within(appearance).getByRole('slider', {name: 'Border'})).toBeTruthy()
+        expect(within(appearance).queryByRole('slider', {name: 'Radius'})).toBeNull()
+    })
+
+    it('hides border controls for the borderless label style', () => {
+        render(<MapPOIDisplaySettings
+            panel="decoration"
+            poi="poi-1"
+            display={{style: 'label'}}
+            onDisplayValueChange={vi.fn()}
+        />)
+
+        expect(screen.queryByRole('slider', {name: 'Border'})).toBeNull()
+        expect(screen.queryByRole('slider', {name: 'Radius'})).toBeNull()
     })
 })
