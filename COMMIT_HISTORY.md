@@ -4531,3 +4531,95 @@
 ## 2026-11-01 — [`docs: record POI and Fix Path follow-ups`](https://github.com/lgs1920/studio/commit/594fd2034d33cde515d238ef0905f095de11ccbb)
 
 - Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: resolve UI CI test failures`](https://github.com/lgs1920/studio/commit/5cf59f1be344a6fb00654df286dc9be18e11da3a)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: hide POIs occluded by terrain`](https://github.com/lgs1920/studio/commit/6ba853817c063933aa14502490a2f62532cde702)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: anchor temporary POI placeholders by tip`](https://github.com/lgs1920/studio/commit/e082f0a017ec4b4cee15ed4f6e517778354ace8b)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: share POI editor tabs across panels`](https://github.com/lgs1920/studio/commit/8222a54b511f8fc6f5fa8297175a3563e9d9a1ae)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: set POI rotation increments to five degrees`](https://github.com/lgs1920/studio/commit/a4beb851be759812c0bffaf527c357abe968d550)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: improve POI decoration controls`](https://github.com/lgs1920/studio/commit/6425bcadd0a2c5b45776165fd7cb60baae70181c)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: align POI preview and billboard rendering`](https://github.com/lgs1920/studio/commit/57d42fd5c9eb63d9f7887234e62d942bf9cc8323)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: size POI rotation reset control`](https://github.com/lgs1920/studio/commit/6122a61f07da001b2d524e43a1955f04ef7a3774)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: keep POI editor tabs synchronized`](https://github.com/lgs1920/studio/commit/ddc3d86b7c60043076c6b67d56b2133cd5aa6d00)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`feat: customize POI colors and borders`](https://github.com/lgs1920/studio/commit/1e88b8760023207aa821ec9b94e9b3c49a5ac2c2)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: align compact POI pin anchors`](https://github.com/lgs1920/studio/commit/578b3fdf3843b8dd9cf15571458db52bb800d283)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: preserve POI markers during updates`](https://github.com/lgs1920/studio/commit/3e3cfeab554483a7ca18b853ba371badf229ad53)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: capture POI preview without its marker`](https://github.com/lgs1920/studio/commit/71ab0e3ef7644be4175682a3d551d5a3dc0d0937)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: resolve POI double-clicks from current state`](https://github.com/lgs1920/studio/commit/1c09ea252a84f878a544a9e10f27b8e7e5bb67b4)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`chore: remove POI performance diagnostics`](https://github.com/lgs1920/studio/commit/a60a9bd247505bb841d21b71f9dee32805d030c5)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: handle global POI interactions safely`](https://github.com/lgs1920/studio/commit/7d27b9167ebd9b547760581ccc13115fae1426d2)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`test: assert captured POI preview background`](https://github.com/lgs1920/studio/commit/fa1a24f25c40c798af9c774b8db7bd7467b53d2a)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/094ce6323562577117e38913be10f778cc03ab09)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: respect units for POI altitude`](https://github.com/lgs1920/studio/commit/7f81d8ea6f0fea8c77d8b48369fbae50ff36795e)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: preserve POI selection on context menu`](https://github.com/lgs1920/studio/commit/a5e67eaaae367926376904888a5586757378da46)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: keep POI marker visible during move`](https://github.com/lgs1920/studio/commit/56821dcc0346850a5cb07329c4c2e1989359ce72)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: focus newly created POI from map menu`](https://github.com/lgs1920/studio/commit/b8ac4a5021a6ea6948133eac0f35dbb534d6c30e)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: prevent POI title text clipping`](https://github.com/lgs1920/studio/commit/ca8e350a6edf87509f673db10db83fc03931569a)
+
+- Recorded automatically from Git history.
