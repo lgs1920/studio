@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-17
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defaultJourneyReplaySettings } from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import { REPLAY_BASIC_CAMERA_MIN_EASING } from '@Core/ui/replay/JourneyReplayCameraMotionSmoothing'
 import { JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE } from '@Core/ui/replay/JourneyReplayInternal'
 import { updateToleranceZoneOverlay } from '@Core/ui/replay/JourneyReplayCameraOverlay'
 import { isReplayVideoLinked } from '@Core/ui/replay/JourneyReplayClipController'
@@ -150,6 +151,9 @@ describe('replay camera diagnostics overlay', () => {
         }
         globalThis.lgs = {
             settings: {ui: {replay: settings}},
+            theJourney: userMode === 'basic'
+                ? {replay: {basic: {camera: {...settings.basic.camera}}}}
+                : null,
             stores:   {
                 replay: {
                     recordingSync:     true,
@@ -264,7 +268,8 @@ describe('replay camera diagnostics overlay', () => {
             hideOtherJourneysVisibility: vi.fn(),
             prepareNearbyPOIsForPlayback: vi.fn(),
             hideMainUI: vi.fn(),
-            isReplayVideoLinked: vi.fn(() => userMode === 'expert'),
+            isReplayVideoLinked: vi.fn(() => true),
+            startReplayCameraAltitudeTracking: vi.fn(),
             setToleranceZoneOverlayVisible: setVisible,
             updateToleranceZoneOverlay: updateOverlay,
         }
@@ -290,6 +295,9 @@ describe('replay camera diagnostics overlay', () => {
             expect(call.hideOtherJourneysVisibility).not.toHaveBeenCalled()
         }
         expect(setVisible).toHaveBeenCalledWith(true)
-        expect(updateOverlay).toHaveBeenCalledWith(settings.camera.hysteresis)
+        expect(updateOverlay).toHaveBeenCalledWith(expect.objectContaining({
+            ...settings.camera.hysteresis,
+            easing: userMode === 'basic' ? REPLAY_BASIC_CAMERA_MIN_EASING : settings.camera.hysteresis.easing,
+        }))
     })
 })

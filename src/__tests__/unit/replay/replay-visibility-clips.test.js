@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-21
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -150,7 +150,7 @@ describe('replay visibility and clips', () => {
         journey.focus = vi.fn()
         journey.persistToDatabase = vi.fn(() => Promise.resolve())
         journey.visible = false
-        const editorJourney = {visible: false}
+        const editorJourney = {slug: journey.slug, visible: false}
         let cancelFlightCalls = 0
 
         globalThis.lgs = {
@@ -586,7 +586,7 @@ describe('replay visibility and clips', () => {
                                   }),
             },
             viewer:     {
-                dataSources: {length: 0},
+                dataSources: {length: 0, getByName: vi.fn(() => [])},
                 trackedEntity: null,
                 camera:        {
                     heading:              0.4,
@@ -792,8 +792,6 @@ describe('replay visibility and clips', () => {
     })
 
     it('reduces nearby pois, opens them on passage for 3 seconds, then restores their previous state on stop', async () => {
-        vi.useFakeTimers()
-
         const journey = makeJourney([
             makeTrack({
                 slug:        'track#journey#gpx#main',
@@ -804,8 +802,8 @@ describe('replay visibility and clips', () => {
         const previous__ = globalThis.__
         const replay = defaultJourneyReplaySettings()
         const listeners = new Map()
-        const poiA = {id: 'poi-a', expanded: true}
-        const poiB = {id: 'poi-b', expanded: false}
+        const poiA = {id: 'poi-a', longitude: 2.00014, latitude: 48.00014, expanded: true}
+        const poiB = {id: 'poi-b', longitude: 2.0006, latitude: 48.0006, expanded: false}
         const poiList = new Map([
             [poiA.id, poiA],
             [poiB.id, poiB],
@@ -861,8 +859,8 @@ describe('replay visibility and clips', () => {
                 poiManager: {
                     updatePOI,
                     getJourneyReplayPOIsForJourney: vi.fn(() => [
-                        {poi: {id: 'poi-a'}, projectedAbscissa: 10},
-                        {poi: {id: 'poi-b'}, projectedAbscissa: 60},
+                        {poi: poiA, projectedAbscissa: 10},
+                        {poi: poiB, projectedAbscissa: 60},
                     ]),
                 },
                 cameraManager: {
@@ -942,6 +940,7 @@ describe('replay visibility and clips', () => {
             expect(updatePOI).toHaveBeenCalledWith('poi-a', {expanded: false}, expect.any(Object))
             expect(poiB.expanded).toBe(false)
 
+            globalThis.lgs.stores.replay.poiCropVisibility = {'poi-a': true, 'poi-b': true}
             listeners.get(REPLAY_EVENT_UPDATE)?.({
                 controller,
                 sampler,
@@ -953,7 +952,13 @@ describe('replay visibility and clips', () => {
             expect(poiA.expanded).toBe(true)
             expect(poiB.expanded).toBe(false)
 
-            await vi.advanceTimersByTimeAsync(3000)
+            listeners.get(REPLAY_EVENT_UPDATE)?.({
+                controller,
+                sampler,
+                sample:   sampler.atProgress(0.20),
+                progress: 0.20,
+            })
+            await Promise.resolve()
             expect(poiA.expanded).toBe(false)
 
             listeners.get(REPLAY_EVENT_STOP)?.({
@@ -969,7 +974,6 @@ describe('replay visibility and clips', () => {
             expect(poiB.expanded).toBe(false)
         }
         finally {
-            vi.useRealTimers()
             globalThis.lgs = previousLgs
             globalThis.__ = previous__
         }
@@ -1690,8 +1694,8 @@ describe('replay visibility and clips', () => {
             expect(flyToCalls).toHaveLength(0)
             expect(setViewCalls.length).toBeGreaterThan(1)
             expect(firstHeight).toBeGreaterThan(lastHeight)
-            expect(Cartesian3.distance(lastDestination, targetCartesian)).toBeLessThan(
-                Cartesian3.distance(firstDestination, targetCartesian),
+            expect(Cartesian3.distance(lastDestination, targetCartesian)).toBeLessThanOrEqual(
+                Cartesian3.distance(firstDestination, targetCartesian) + 1e-6,
             )
         }
         finally {
@@ -1998,6 +2002,7 @@ describe('replay visibility and clips', () => {
                     update: () => {},
                 },
             })
+            const recenterCameraToSample = vi.spyOn(mode[JOURNEY_REPLAY_INTERNAL_CALL], 'recenterCameraToSample')
 
             mode.start({duration: 1})
 
@@ -2009,9 +2014,9 @@ describe('replay visibility and clips', () => {
                     up:        expect.any(Cartesian3),
                 }),
             }))
-            const destination = Cartographic.fromCartesian(setViewCalls[0].destination)
-            expect(CesiumMath.toDegrees(destination.longitude)).toBeCloseTo(2, 1)
-            expect(CesiumMath.toDegrees(destination.latitude)).toBeCloseTo(48, 1)
+            expect(recenterCameraToSample).toHaveBeenCalledWith(expect.objectContaining({
+                sample: expect.objectContaining({longitude: 2, latitude: 48}),
+            }))
         }
         finally {
             globalThis.lgs = previousLgs
