@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -86,7 +86,9 @@ import {
 }                              from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import {createReplayRecordingPerformance} from '@Core/ui/replay/ReplayRecordingPerformance'
 import {acquireReplayExportRenderLoop} from '@Core/ui/replay/ReplayExportRenderLoop'
-import {REPLAY_VIDEO_FPS} from '@Core/ui/replay/ReplayVideoSettings'
+import {
+    REPLAY_VIDEO_FPS, resolveReplayVideoQualityLevel,
+}                              from '@Core/ui/replay/ReplayVideoSettings'
 import {currentReplayJourney, isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
 import {createBasicReplayTraceFocusClips} from '@Core/ui/replay/JourneyReplayBasicFocus'
 import {currentBasicReplaySettingsForJourney} from '@Core/ui/replay/ReplayUserModes'
@@ -99,8 +101,7 @@ import {
     UIToast,
 }                              from '@Utils/UIToast'
 import {
-    BufferTarget, canEncodeVideo, CanvasSource, getEncodableVideoCodecs, Mp4OutputFormat, Output, QUALITY_HIGH,
-    QUALITY_MEDIUM, QUALITY_VERY_HIGH,
+    BufferTarget, canEncodeVideo, CanvasSource, getEncodableVideoCodecs, Mp4OutputFormat, Output, Quality,
 }                              from 'mediabunny'
 import {ref}                  from 'valtio'
 
@@ -823,9 +824,14 @@ export const captureReplayDeferredExportContext = ({
     }
 }
 
-const getReplayExportQuality = () => {
-    const qualityIndex = globalThis.lgs?.stores?.ui?.video?.quality ?? 0
-    return [QUALITY_MEDIUM, QUALITY_HIGH, QUALITY_VERY_HIGH][qualityIndex] ?? QUALITY_MEDIUM
+/**
+ * Create the session-owned MediaBunny quality from the persisted preset index.
+ *
+ * @returns {{quality: Quality, qualityLevel: string}} Encoder quality and its stable identifier.
+ */
+const createReplayExportQuality = () => {
+    const qualityLevel = resolveReplayVideoQualityLevel(globalThis.lgs?.stores?.ui?.video?.quality)
+    return {quality: new Quality(qualityLevel), qualityLevel}
 }
 
 // Keep the browser's fastest supported encoder as the default for Replay exports.
@@ -861,7 +867,7 @@ const getAvcCandidates = ({width, height}) => {
 const resolveReplayExportVideoOutput = async ({width, height, browser = globalThis.__?.device?.browser ?? 'chromium'} = {}) => {
     const safe = normalizeDimensions({width, height})
     const hardwareAcceleration = getReplayExportHardwareAcceleration()
-    const bitrate = getReplayExportQuality()
+    const {quality, qualityLevel} = createReplayExportQuality()
 
     if (`${browser}`.toLowerCase() !== 'firefox') {
         for (const candidate of getAvcCandidates(safe)) {
@@ -870,7 +876,7 @@ const resolveReplayExportVideoOutput = async ({width, height, browser = globalTh
                 browser: `${browser}`.toLowerCase(),
                 width: safe.width,
                 height: safe.height,
-                bitrate,
+                requestedQuality: qualityLevel,
                 hardwareAcceleration,
                 codec: candidate.codec,
                 candidate: candidate.label,
@@ -880,7 +886,7 @@ const resolveReplayExportVideoOutput = async ({width, height, browser = globalTh
                 canEncodeVideo(candidate.codec, {
                     width:              safe.width,
                     height:             safe.height,
-                    bitrate,
+                    quality,
                     alpha:              'discard',
                     latencyMode:        'realtime',
                     hardwareAcceleration,
@@ -893,7 +899,7 @@ const resolveReplayExportVideoOutput = async ({width, height, browser = globalTh
                 browser: `${browser}`.toLowerCase(),
                 width: safe.width,
                 height: safe.height,
-                bitrate,
+                requestedQuality: qualityLevel,
                 hardwareAcceleration,
                 codec: candidate.codec,
                 candidate: candidate.label,
@@ -910,7 +916,8 @@ const resolveReplayExportVideoOutput = async ({width, height, browser = globalTh
                     mimeType:        'video/mp4',
                     extension:       'mp4',
                     hardwareAcceleration,
-                    bitrate,
+                    quality,
+                    qualityLevel,
                 }
             }
         }
@@ -921,7 +928,7 @@ const resolveReplayExportVideoOutput = async ({width, height, browser = globalTh
         browser: `${browser}`.toLowerCase(),
         width: safe.width,
         height: safe.height,
-        bitrate,
+        requestedQuality: qualityLevel,
         hardwareAcceleration,
         codec: 'vp9',
         candidate: 'vp9',
@@ -931,13 +938,7 @@ const resolveReplayExportVideoOutput = async ({width, height, browser = globalTh
         getEncodableVideoCodecs(['vp9'], {
             width:                safe.width,
             height:               safe.height,
-            bitrate,
-            alpha:                'discard',
-            // The export runs offline. Realtime mode may drop frames when the
-            // encoder is temporarily overloaded, which makes camera motion
-            // appear stepped even though the rendered timeline is smooth.
-            latencyMode:          'quality',
-            hardwareAcceleration,
+            quality,
         }),
         VIDEO_CODEC_PROBE_TIMEOUT_MS,
         'Video codec probe timed out for vp9.',
@@ -946,7 +947,7 @@ const resolveReplayExportVideoOutput = async ({width, height, browser = globalTh
         browser: `${browser}`.toLowerCase(),
         width: safe.width,
         height: safe.height,
-        bitrate,
+        requestedQuality: qualityLevel,
         hardwareAcceleration,
         codec: 'vp9',
         candidate: 'vp9',
@@ -967,7 +968,8 @@ const resolveReplayExportVideoOutput = async ({width, height, browser = globalTh
         mimeType:        'video/mp4',
         extension:       'mp4',
         hardwareAcceleration,
-        bitrate,
+        quality,
+        qualityLevel,
     }
 }
 
@@ -1813,7 +1815,7 @@ export class ReplayDeferredExporter {
         recordingPerformance.configure({
             codec: outputConfig.codec,
             fullCodecString: outputConfig.fullCodecString,
-            bitrate: outputConfig.bitrate,
+            requestedQuality: outputConfig.qualityLevel,
             hardwareAcceleration: outputConfig.hardwareAcceleration,
             latencyMode: 'quality',
             reusedCodecConfiguration: Boolean(this.#preparedOutputConfig),
@@ -1869,7 +1871,7 @@ export class ReplayDeferredExporter {
         // add(), so it is safe to reuse this canvas without an intermediate copy.
         const source = new CanvasSource(canvas, {
             codec:                outputConfig.codec,
-            bitrate:              outputConfig.bitrate,
+            quality:              outputConfig.quality,
             alpha:                'discard',
             // The export uses fixed timestamps. Realtime mode may drop
             // frames while the encoder is slower than the requested FPS.

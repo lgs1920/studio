@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { JSDOM } from 'jsdom'
-import { Output } from 'mediabunny'
+import {canEncodeVideo, getEncodableVideoCodecs, Output} from 'mediabunny'
 import {PerspectiveFrustum} from 'cesium'
 import {
     ReplayDeferredExporter,
@@ -49,6 +49,7 @@ const mediabunnyMocks = vi.hoisted(() => ({
     failNextCanvasAdd: false,
     canvasAddCount:     0,
     codecProbeCount:    0,
+    qualityInstances:   [],
 }))
 
 describe('isReplayExportFrameSettled', () => {
@@ -120,6 +121,13 @@ vi.mock('mediabunny', () => {
         }
     }
 
+    class FakeQuality {
+        constructor(level) {
+            this.level = level
+            mediabunnyMocks.qualityInstances.push(this)
+        }
+    }
+
     class FakeOutput {
         static instances = []
 
@@ -149,9 +157,7 @@ vi.mock('mediabunny', () => {
             }
         },
         Output: FakeOutput,
-        QUALITY_HIGH: 1,
-        QUALITY_MEDIUM: 1,
-        QUALITY_VERY_HIGH: 1,
+        Quality: FakeQuality,
         canEncodeVideo: vi.fn(() => {
             mediabunnyMocks.codecProbeCount += 1
             return Promise.resolve(true)
@@ -202,6 +208,15 @@ afterEach(() => {
     mediabunnyMocks.failNextCanvasAdd = false
     mediabunnyMocks.canvasAddCount = 0
     mediabunnyMocks.codecProbeCount = 0
+    mediabunnyMocks.qualityInstances.length = 0
+    canEncodeVideo.mockReset().mockImplementation(() => {
+        mediabunnyMocks.codecProbeCount += 1
+        return Promise.resolve(true)
+    })
+    getEncodableVideoCodecs.mockReset().mockImplementation(() => {
+        mediabunnyMocks.codecProbeCount += 1
+        return Promise.resolve(['vp9'])
+    })
 })
 
 describe('ReplayDeferredExporter', () => {
@@ -805,6 +820,52 @@ describe('ReplayDeferredExporter', () => {
         expect(frames[0]).toBe(0)
         expect(frames).toContain('on:0')
         expect(Output.instances.at(-1).setMetadataTags).toHaveBeenCalledWith(mediaMetadata)
+    })
+
+    it('uses the same abstract quality for codec probes and the actual encoder', async () => {
+        Output.instances.length = 0
+        globalThis.lgs = {stores: {ui: {video: {quality: 2}}}}
+        canEncodeVideo.mockResolvedValue(false)
+        getEncodableVideoCodecs.mockResolvedValue(['vp9'])
+
+        const exporter = new ReplayDeferredExporter({timeline: {durationMillis: 100, fps: 10}})
+        const result = await exporter.exportMp4({
+            dimensions: {width: 640, height: 360},
+            browser: 'chromium',
+            buildCanvas: () => ({
+                width: 0,
+                height: 0,
+                getContext: () => ({}),
+            }),
+            renderFrame: async () => null,
+        })
+
+        const [quality] = mediabunnyMocks.qualityInstances
+        const videoProbeOptions = canEncodeVideo.mock.calls.map(([, options]) => options)
+        const codecProbeOptions = getEncodableVideoCodecs.mock.calls[0][1]
+        const source = Output.instances.at(-1).addVideoTrack.mock.calls[0][0]
+
+        expect(quality).toMatchObject({level: 'very-high'})
+        expect(mediabunnyMocks.qualityInstances).toHaveLength(1)
+        expect(videoProbeOptions.length).toBeGreaterThan(0)
+        videoProbeOptions.forEach(options => {
+            expect(options.quality).toBe(quality)
+            expect(options).not.toHaveProperty('bitrate')
+            expect(options.latencyMode).toBe('realtime')
+        })
+        expect(codecProbeOptions).toEqual({width: 640, height: 360, quality})
+        expect(codecProbeOptions).not.toHaveProperty('bitrate')
+        expect(source.config.quality).toBe(quality)
+        expect(source.config).not.toHaveProperty('bitrate')
+        expect(source.config).toMatchObject({
+            latencyMode: 'quality',
+            hardwareAcceleration: 'no-preference',
+        })
+        expect(result.recordingPerformance.context).toMatchObject({
+            requestedQuality: 'very-high',
+            latencyMode: 'quality',
+        })
+        expect(result.recordingPerformance.context).not.toHaveProperty('bitrate')
     })
 
     it('traverses a dry run without allocating capture canvases or encoder output', async () => {

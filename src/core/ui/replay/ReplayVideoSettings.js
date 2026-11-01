@@ -7,20 +7,18 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-30
- * Last modified: 2026-09-30
+ * Created on: 2026-09-27
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {QUALITY_HIGH, QUALITY_MEDIUM, QUALITY_VERY_HIGH} from 'mediabunny'
-
-/** Replay export bitrate choices, in bits per second. */
+/** Replay export quality choices, stored by stable settings index. */
 export const REPLAY_VIDEO_QUALITY = [
-    {value: QUALITY_MEDIUM, name: 'Medium Quality', short: 'M'},
-    {value: QUALITY_HIGH, name: 'High Quality', short: 'H'},
-    {value: QUALITY_VERY_HIGH, name: 'Ultra High Quality', short: 'U'},
+    {value: 'medium', name: 'Medium Quality', short: 'M'},
+    {value: 'high', name: 'High Quality', short: 'H'},
+    {value: 'very-high', name: 'Ultra High Quality', short: 'U'},
 ]
 
 /** Supported Replay export frame rates. */
@@ -37,3 +35,14 @@ export const REPLAY_VIDEO_PRESETS = new Map([
 
 export const DEFAULT_REPLAY_VIDEO_FPS_INDEX = 0
 export const DEFAULT_REPLAY_VIDEO_QUALITY_INDEX = 0
+
+/**
+ * Resolve a persisted Replay quality index to its MediaBunny quality identifier.
+ *
+ * @param {number|string|null|undefined} qualityIndex - Saved quality choice index.
+ * @returns {string} MediaBunny quality level identifier.
+ */
+export const resolveReplayVideoQualityLevel = (qualityIndex = DEFAULT_REPLAY_VIDEO_QUALITY_INDEX) => (
+    REPLAY_VIDEO_QUALITY[qualityIndex]?.value
+    ?? REPLAY_VIDEO_QUALITY[DEFAULT_REPLAY_VIDEO_QUALITY_INDEX].value
+)
