@@ -4467,3 +4467,11 @@
 ## 2026-11-01 — [`fix: render POI side accent at 10px`](https://github.com/lgs1920/studio/commit/87009e28d25ca410447db5f7b0f3a998c0b5085a)
 
 - Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: yield POI captures between background renders`](https://github.com/lgs1920/studio/commit/01331ba60b7f9e9d68820eb608378034e06bf58b)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/df26f218c6deca8ebdf33698f5d57ee0f977ed90)
+
+- Recorded automatically from Git history.
