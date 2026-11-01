@@ -621,16 +621,16 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                           active={activeTab}
                                                           onWaTabShow={handleTabShow}
                                                       >
-                                                          <WaTab slot="nav" panel={`poi-edit-${id}`}>
+                                                          <WaTab slot="nav" panel={`poi-edit-${id}`} active={sharedActiveTab === 'details'}>
                                                               <WaIcon size="s" name="pen-to-square" variant="regular"/>{'Details'}
                                                           </WaTab>
-                                                          <WaTab slot="nav" panel={`poi-content-${id}`}>
+                                                          <WaTab slot="nav" panel={`poi-content-${id}`} active={sharedActiveTab === 'content'}>
                                                               <WaIcon size="s" name="rectangle-list" variant="regular"/>{'Content'}
                                                           </WaTab>
-                                                          <WaTab slot="nav" panel={`poi-style-${id}`}>
+                                                          <WaTab slot="nav" panel={`poi-style-${id}`} active={sharedActiveTab === 'decoration'}>
                                                               <WaIcon size="s" name="paintbrush-pencil" variant="regular"/>{'Decoration'}
                                                           </WaTab>
-                                                          <WaTabPanel name={`poi-edit-${id}`}>
+                                                          <WaTabPanel name={`poi-edit-${id}`} active={sharedActiveTab === 'details'}>
                                                               <div className="map-poi-edit-tab-scroll-area">
                                                                   <LGSScrollbars>
                                                                       <div className="edit-map-poi-wrapper map-poi-edit-tab-scroll-content">
@@ -727,7 +727,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                   </LGSScrollbars>
                                                               </div>
                                                           </WaTabPanel>
-                                                          <WaTabPanel name={`poi-content-${id}`} onClick={event => event.stopPropagation()}>
+                                                          <WaTabPanel name={`poi-content-${id}`} active={sharedActiveTab === 'content'} onClick={event => event.stopPropagation()}>
                                                               <div className="map-poi-edit-tab-scroll-area">
                                                                   <LGSScrollbars>
                                                                       <div className="map-poi-edit-tab-scroll-content">
@@ -745,7 +745,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                   </LGSScrollbars>
                                                               </div>
                                                           </WaTabPanel>
-                                                          <WaTabPanel name={`poi-style-${id}`} onClick={event => event.stopPropagation()}>
+                                                          <WaTabPanel name={`poi-style-${id}`} active={sharedActiveTab === 'decoration'} onClick={event => event.stopPropagation()}>
                                                               <div className="map-poi-edit-tab-scroll-area">
                                                                   <LGSScrollbars>
                                                                       <div className="map-poi-edit-tab-scroll-content">
