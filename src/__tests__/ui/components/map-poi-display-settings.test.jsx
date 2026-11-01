@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -135,6 +135,10 @@ describe('MapPOIDisplaySettings', () => {
         expect(within(typographyGroup).getByRole('combobox', {name: 'Typeface'})).toBeTruthy()
         expect(within(appearanceGroup).getByRole('combobox', {name: 'Style'}).value).toBe('pill')
         expect(within(appearanceGroup).getByRole('combobox', {name: 'Style'}).textContent).not.toMatch(/\b(?:01|02|05|08|16|19|24|34)\b/)
+        expect([...within(appearanceGroup).getByRole('combobox', {name: 'Style'}).querySelectorAll('option')]
+            .map(option => option.textContent)).toEqual([
+            'Icon frame', 'Label', 'Open frame', 'Pill', 'Round badge', 'Rounded', 'Side accent', 'Slanted banner', 'Underline',
+        ])
         expect(within(appearanceGroup).getByRole('checkbox', {name: 'Background'}).checked).toBe(true)
         expect(within(stickGroup).getByRole('group', {name: 'Anchor'})).toBeTruthy()
         expect(within(stickGroup).getByRole('button', {name: 'Bottom 50%'}).getAttribute('aria-pressed')).toBe('true')

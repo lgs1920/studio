@@ -137,9 +137,9 @@ describe('Map POI style', () => {
         )
         expect(underlineStyle).toContain('background-color: var(--lgs-poi-background-color);')
         expect(underlineStyle).toContain('background-color: rgba(0, 0, 0, 0.01);')
-        expect(underlineStyle).toContain('bottom: calc(-1 * var(--poi-border-width));')
-        expect(underlineStyle).toContain('top: calc(-1 * var(--poi-border-width));')
-        expect(underlineStyle).toContain('height: var(--poi-border-width);')
+        expect(underlineStyle).toContain('bottom: calc(-1 * var(--poi-underline-line-width));')
+        expect(underlineStyle).toContain('top: calc(-1 * var(--poi-underline-line-width));')
+        expect(underlineStyle).toContain('height: var(--poi-underline-line-width);')
         expect(underlineStyle).not.toContain('box-shadow: inset')
         expect(css).toContain('width: calc(var(--poi-expanded-leader-position, 50%) + var(--poi-open-frame-line-width));')
         expect(css).toContain('.poi-card-inner--style-icon-frame')
@@ -148,7 +148,7 @@ describe('Map POI style', () => {
             css.indexOf('\n}', css.indexOf('.poi-card-inner--style-side-accent {')),
         )
         expect(sideAccentStyle).toContain('border: var(--poi-border-width) solid var(--lgs-poi-border-color);')
-        expect(sideAccentStyle).not.toContain('border-left-width:')
+        expect(sideAccentStyle).toContain('border-left-width: 10px;')
         expect(sideAccentStyle).not.toContain('border-right')
         const roundBadgeStyle = css.slice(
             css.indexOf('.poi-card-inner--style-round-badge {'),

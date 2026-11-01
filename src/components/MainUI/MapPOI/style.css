@@ -435,6 +435,7 @@
 
 .poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-side-accent {
     border: var(--poi-border-width) solid var(--lgs-poi-border-color);
+    border-left-width: 10px;
 }
 
 .poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-round-badge {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,7 +35,7 @@ export const POI_DISPLAY_STICK_ANCHOR_POSITIONS = Object.freeze([20, 50, 80])
 export const POI_DISPLAY_DEFAULT_STYLE = 'pill'
 export const POI_DISPLAY_STICK_LENGTH_MAX = 200
 export const POI_DISPLAY_STYLES = [
-    'pill', 'side-accent', 'round-badge', 'underline', 'open-frame', 'slanted-banner', 'rounded', 'icon-frame', 'label',
+    'icon-frame', 'label', 'open-frame', 'pill', 'round-badge', 'rounded', 'side-accent', 'slanted-banner', 'underline',
 ]
 export const POI_DISPLAY_STYLE_LABELS = Object.freeze({
     pill: 'Pill',
