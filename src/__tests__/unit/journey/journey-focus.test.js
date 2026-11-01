@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-24
- * Last modified: 2026-10-21
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -91,7 +91,7 @@ describe('Journey focus lifecycle', () => {
         }
     })
 
-    it('finishes replay restoration when the journey focus callback and return value are both absent', async () => {
+    it('restores journey visibility without starting a camera focus flight', async () => {
         const journey = {
             focus: vi.fn(() => undefined),
             updateVisibility: vi.fn(),
@@ -105,20 +105,21 @@ describe('Journey focus lifecycle', () => {
                 },
             },
         }
-        const restoreCurrentJourneyVisibility = vi.fn()
+        const hideGloballyHiddenPOIs = vi.fn()
         const mode = {
             [JOURNEY_REPLAY_INTERNAL_STATE]: {
                 cameraFlightActive: true,
             },
             [JOURNEY_REPLAY_INTERNAL_CALL]: {
-                hideGloballyHiddenPOIs: vi.fn(),
-                restoreCurrentJourneyVisibility,
+                hideGloballyHiddenPOIs,
             },
         }
 
         await expect(focusJourneyAfterPlayback(mode)).resolves.toBeUndefined()
 
-        expect(journey.focus).toHaveBeenCalledTimes(1)
-        expect(restoreCurrentJourneyVisibility).toHaveBeenCalledTimes(1)
+        expect(journey.visible).toBe(true)
+        expect(journey.updateVisibility).toHaveBeenCalledWith(true)
+        expect(journey.focus).not.toHaveBeenCalled()
+        expect(hideGloballyHiddenPOIs).toHaveBeenCalledTimes(1)
     })
 })
