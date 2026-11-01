@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -278,6 +278,11 @@ export class JourneyReplaySessionController {
     #replayPOIAnimationOccurred = false
     #replayPOIVisibilityState = new Map()
     #stopClipPOIMaskFrame = null
+    #stopClipPOIMaskActive = false
+    #stopClipPOINearbyPois = null
+    #stopClipPOIVisibilityCandidates = null
+    #stopClipNearbyPOIIds = null
+    #stopClipPOIListSubscriptions = null
     #lastPlaybackUpdateProgressKey = null
     #sortedNearbyPois = []
 
@@ -937,6 +942,41 @@ export class JourneyReplaySessionController {
                 this.#stopClipPOIMaskFrame = value
             },
         })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'stopClipPOIMaskActive', {
+            configurable: true,
+            get: () => this.#stopClipPOIMaskActive,
+            set: value => {
+                this.#stopClipPOIMaskActive = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'stopClipPOINearbyPois', {
+            configurable: true,
+            get: () => this.#stopClipPOINearbyPois,
+            set: value => {
+                this.#stopClipPOINearbyPois = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'stopClipPOIVisibilityCandidates', {
+            configurable: true,
+            get: () => this.#stopClipPOIVisibilityCandidates,
+            set: value => {
+                this.#stopClipPOIVisibilityCandidates = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'stopClipNearbyPOIIds', {
+            configurable: true,
+            get: () => this.#stopClipNearbyPOIIds,
+            set: value => {
+                this.#stopClipNearbyPOIIds = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'stopClipPOIListSubscriptions', {
+            configurable: true,
+            get: () => this.#stopClipPOIListSubscriptions,
+            set: value => {
+                this.#stopClipPOIListSubscriptions = value
+            },
+        })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'lastPlaybackUpdateProgressKey', {
             configurable: true,
             get: () => this.#lastPlaybackUpdateProgressKey,
@@ -1133,6 +1173,7 @@ export class JourneyReplaySessionController {
             restoreCurrentJourneyVisibility: (...args) => JourneyReplayVisibilityController.restoreCurrentJourneyVisibility(this, ...args),
             poiEntities: (...args) => JourneyReplayVisibilityController.poiEntities(this, ...args),
             setPOIEntityVisibility: (...args) => JourneyReplayVisibilityController.setPOIEntityVisibility(this, ...args),
+            enforceStopClipPOIVisibility: (...args) => JourneyReplayVisibilityController.enforceStopClipPOIVisibility(this, ...args),
             resolveJourneyReplayPOI: (...args) => JourneyReplayVisibilityController.resolveJourneyReplayPOI(this, ...args),
             replayPOICandidates: (...args) => JourneyReplayVisibilityController.replayPOICandidates(this, ...args),
             isVisibleProperty: (...args) => JourneyReplayVisibilityController.isVisibleProperty(this, ...args),

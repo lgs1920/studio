@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,6 +34,39 @@ import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './Jou
 import {currentReplayJourney} from './ReplayUserModeConstants'
 import {poiPerformance} from '@Core/ui/POIPerformance'
 import {createReplayPOIEntityLookup} from './ReplayPOIEntityLookup'
+import {subscribe} from 'valtio'
+
+const requestStopClipPOIMaskFrame = callback => {
+    if (typeof globalThis.__?.requestAnimationFrame === 'function') {
+        return globalThis.__.requestAnimationFrame(callback)
+    }
+
+    return globalThis.requestAnimationFrame?.(callback) ?? null
+}
+
+const cancelStopClipPOIMaskFrame = frame => {
+    if (typeof globalThis.__?.cancelAnimationFrame === 'function') {
+        globalThis.__.cancelAnimationFrame(frame)
+        return
+    }
+
+    globalThis.cancelAnimationFrame?.(frame)
+}
+
+const observeStopClipPOIListChanges = state => {
+    const poiLists = new Set([
+        globalThis.lgs?.stores?.main?.components?.pois?.list,
+        globalThis.__?.ui?.poiManager?.list,
+    ].filter(Boolean))
+    state.stopClipPOIListSubscriptions = Array.from(poiLists, poiList => subscribe(
+        poiList,
+        () => {
+            state.stopClipPOIVisibilityCandidates = null
+            poiPerformance.record('replay.stopClipMaskCandidateInvalidations')
+        },
+        true,
+    ))
+}
 
 /** Return the lookup cache owned by the current Replay session and viewer. */
 const replayPOIEntityLookup = mode => {
@@ -303,7 +336,12 @@ export const isPOIVisibleBeforePlayback =  (mode, poi) => {
             && (!entity?.billboard || call.isVisibleProperty(entity.billboard.show)))
     }
 
-export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
+export const applyJourneyReplayPOIVisibility = (
+    mode,
+    nearbyPois = null,
+    cachedCandidates = null,
+    cachedNearbyPOIIds = null,
+) => {
     const performanceStartedAt = poiPerformance.start('replay.visibility')
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -315,11 +353,19 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
             : Array.isArray(store?.nearbyPois)
             ? store.nearbyPois
             : []
-        const nearbyPOIIds = new Set()
-        const candidates = call.replayPOICandidates(runtimeNearbyPois, nearbyPOIIds)
+        const nearbyPOIIds = cachedNearbyPOIIds ?? new Set()
+        const candidates = Array.isArray(cachedCandidates)
+            ? cachedCandidates
+            : call.replayPOICandidates(runtimeNearbyPois, nearbyPOIIds)
+        if (state.stopClipPOIMaskActive === true) {
+            state.stopClipPOINearbyPois = runtimeNearbyPois
+            state.stopClipPOIVisibilityCandidates = candidates
+            state.stopClipNearbyPOIIds = nearbyPOIIds
+        }
         poiPerformance.record('replay.nearbyCandidateEntries', runtimeNearbyPois.length)
         poiPerformance.record('replay.visibilityCandidates', candidates.length)
-        for (const poi of candidates) {
+        for (const candidatePOI of candidates) {
+            const poi = call.resolveJourneyReplayPOI({poi: candidatePOI})
             if (!poi?.id) {
                 continue
             }
@@ -355,10 +401,40 @@ export const applyJourneyReplayPOIVisibility = (mode, nearbyPois = null) => {
                 })
             }
 
-            call.setPOIEntityVisibility(poi, visibleDuringPlayback, {allowReplayAnimation: animationActive})
+            call.setPOIEntityVisibility(
+                poi,
+                visibleDuringPlayback,
+                {allowReplayAnimation: animationActive},
+            )
         }
         poiPerformance.end('replay.visibility', performanceStartedAt)
     }
+
+/** Reapply current policy to cached candidates after another POI writer changes visibility. */
+export const enforceStopClipPOIVisibility = mode => {
+    const performanceStartedAt = poiPerformance.start('replay.stopClipMaskEnforce')
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const candidates = state.stopClipPOIVisibilityCandidates
+    const nearbyPOIIds = state.stopClipNearbyPOIIds
+    if (state.stopClipPOIMaskActive !== true || !(nearbyPOIIds instanceof Set)) {
+        poiPerformance.end('replay.stopClipMaskEnforce', performanceStartedAt)
+        return
+    }
+
+    const currentNearbyPois = replayStore()?.nearbyPois
+    const nearbyPois = Array.isArray(currentNearbyPois)
+        ? currentNearbyPois
+        : state.stopClipPOINearbyPois
+    const needsFullCandidatePass = nearbyPois !== state.stopClipPOINearbyPois || !Array.isArray(candidates)
+    call.applyJourneyReplayPOIVisibility(
+        nearbyPois,
+        needsFullCandidatePass ? null : candidates,
+        needsFullCandidatePass ? null : nearbyPOIIds,
+    )
+    poiPerformance.record('replay.stopClipMaskCandidates', state.stopClipPOIVisibilityCandidates?.length ?? 0)
+    poiPerformance.end('replay.stopClipMaskEnforce', performanceStartedAt)
+}
 
 /**
  * Reapply the Replay hide-all filter after animated POI state has been restored.
@@ -450,36 +526,41 @@ export const startStopClipPOIMaskLoop = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        if (state.stopClipPOIMaskFrame !== null) {
+        if (state.stopClipPOIMaskActive === true) {
             return
         }
 
+        state.stopClipPOIMaskActive = true
+        observeStopClipPOIListChanges(state)
         call.applyJourneyReplayPOIVisibility()
         const tick = () => {
             state.stopClipPOIMaskFrame = null
+            if (state.stopClipPOIMaskActive !== true) {
+                return
+            }
+
             poiPerformance.record('replay.stopClipMaskTick')
-            call.applyJourneyReplayPOIVisibility()
-            state.stopClipPOIMaskFrame = globalThis.__?.requestAnimationFrame?.(tick)
-                ?? globalThis.requestAnimationFrame?.(tick)
-                ?? null
+            call.enforceStopClipPOIVisibility()
+            state.stopClipPOIMaskFrame = requestStopClipPOIMaskFrame(tick)
         }
 
-        state.stopClipPOIMaskFrame = globalThis.__?.requestAnimationFrame?.(tick)
-            ?? globalThis.requestAnimationFrame?.(tick)
-            ?? null
+        state.stopClipPOIMaskFrame = requestStopClipPOIMaskFrame(tick)
     }
 
 export const stopStopClipPOIMaskLoop = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const frame = state.stopClipPOIMaskFrame
+    if (frame !== null && frame !== undefined) {
+        cancelStopClipPOIMaskFrame(frame)
+    }
 
-        if (state.stopClipPOIMaskFrame === null) {
-            return
-        }
-
-        globalThis.__?.cancelAnimationFrame?.(state.stopClipPOIMaskFrame)
-        globalThis.cancelAnimationFrame?.(state.stopClipPOIMaskFrame)
-        state.stopClipPOIMaskFrame = null
+    state.stopClipPOIMaskFrame = null
+    state.stopClipPOIMaskActive = false
+    state.stopClipPOINearbyPois = null
+    state.stopClipPOIVisibilityCandidates = null
+    state.stopClipNearbyPOIIds = null
+    state.stopClipPOIListSubscriptions?.forEach(unsubscribe => unsubscribe())
+    state.stopClipPOIListSubscriptions = null
     }
 
 export const preserveCurrentJourneyPOIVisibility =  (mode, journey) => {
