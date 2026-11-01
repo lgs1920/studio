@@ -392,7 +392,7 @@ describe('ReplayDeferredExporter', () => {
         })
 
         expect(plan.poiSpeedProfile.playbackDurationMillis).toBeGreaterThan(12500)
-        expect(plan.poiSpeedProfile.segments.filter(segment => segment.poiHold)).toHaveLength(2)
+        expect(plan.poiSpeedProfile.segments.filter(segment => segment.poiCrawl)).toHaveLength(64)
         expect(plan.videoTimeline.replayDurationMillis).toBe(plan.poiSpeedProfile.playbackDurationMillis)
         expect(plan.outputDurationMillis).toBe(plan.poiSpeedProfile.playbackDurationMillis)
         expect(resolveReplayVideoFramePhase({timeline: plan.videoTimeline, frameTimeMs: 6500}).progress)

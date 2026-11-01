@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -587,6 +587,7 @@ export const markPlaybackCameraUserAdjusted = (mode, ) => {
 export const restorePlaybackCameraSettings = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
         const store = replayStore()
+        const cameraUserAdjusted = store?.cameraUserAdjusted === true
         const initialCamera = state.playbackStartCameraSettings
         state.playbackStartCameraSettings = null
 
@@ -606,10 +607,17 @@ export const restorePlaybackCameraSettings = (mode) => {
             return null
         }
 
-        // Explicit preparation edits already own Journey persistence. Terminal
-        // cleanup may run after a Journey or mode change and must never save
-        // the previous session's height/pitch into that new configuration.
         const configuredCamera = currentJourneyReplayCameraSettings()
+        const configuredCameraChanged = JSON.stringify(configuredCamera) !== JSON.stringify(initialCamera)
+        // Keep runtime-only camera gestures, unless the active Replay settings
+        // changed while playback ran. In that case, cleanup must honor the
+        // latest configured Journey rather than restoring the captured session.
+        if (cameraUserAdjusted && !configuredCameraChanged && store?.camera) {
+            return store.camera
+        }
+
+        // Terminal cleanup may run after the active Journey changed. Restore
+        // its current settings without saving the previous session's camera.
         if (store) {
             store.camera = configuredCamera
         }

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-17
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -1209,8 +1209,8 @@ describe('replay camera tracking', () => {
             const target = Cartesian3.fromDegrees(2, 48, 120)
             expect(flyToCalls).toHaveLength(0)
             expect(setViewCalls).toHaveLength(1)
-            // An off-crop departure moves to the safe margin, preserving its
-            // prepared orientation rather than forcing it to the crop center.
+            // An off-crop departure moves to the edge of the central 60% safe
+            // area, preserving its prepared orientation rather than centering it.
             const projectedTarget = projectReplayTargetInCameraFrame({
                 frame: {
                     destination: setViewCalls[0].destination,
@@ -1220,7 +1220,7 @@ describe('replay camera tracking', () => {
                 target,
                 viewport: {width: 1000, height: 1000},
             })
-            expect(projectedTarget.x).toBeCloseTo(120, 3)
+            expect(projectedTarget.x).toBeCloseTo(200, 3)
             expect(projectedTarget.y).toBeCloseTo(500, 3)
         }
         finally {

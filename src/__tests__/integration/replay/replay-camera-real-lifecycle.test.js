@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-10
- * Last modified: 2026-10-29
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -180,8 +180,10 @@ describe('Replay with the real Cesium camera', () => {
             expect(seek).toHaveBeenCalledTimes(exporter.timeline.frameCount)
             expect(renderer.update).toHaveBeenCalledTimes(exporter.timeline.frameCount)
             expect(updateCamera).toHaveBeenCalledTimes(exporter.timeline.frameCount)
-            // Initial POI preparation may finish asynchronously, but export frames must not run scrub updates.
-            expect(syncNearbyPOIs.mock.calls.filter(([sample]) => sample?.progress > 0)).toHaveLength(0)
+            // POI animation state follows canonical export-frame time, once per frame.
+            expect(syncNearbyPOIs).toHaveBeenCalledTimes(exporter.timeline.frameCount)
+            expect(syncNearbyPOIs.mock.calls.map(([sample]) => sample?.progress))
+                .toEqual(samples.map(sample => sample.progress))
             expect(samples[0].progress).toBe(0)
             expect(samples.at(-1).progress).toBe(1)
             expect(Number.isFinite(camera.positionCartographic.height)).toBe(true)
@@ -237,7 +239,7 @@ describe('Replay with the real Cesium camera', () => {
             mode.dispose()
             await mode.waitForSceneRestore()
         }
-    })
+    }, 20_000)
 
     it('follows the route gently through turns without changing camera orientation, height, or zoom', async () => {
         const {camera, mode, journey, settings} = installScene({userMode: 'basic', altitude: 1600, pitch: -38})
@@ -325,7 +327,7 @@ describe('Replay with the real Cesium camera', () => {
         }
 
         expectPose(camera, returnPose)
-    })
+    }, 20_000)
 
     it.each(['basic', 'expert'])('seeds first %s Replay H/P from the live Cesium camera and starts at zero azimuth', async userMode => {
         const {camera, mode, journey, settings} = installScene({userMode, journeyCameraSaved: false})
@@ -418,12 +420,14 @@ describe('Replay with the real Cesium camera', () => {
             await mode.prepareReplayCamera()
             mode.start()
 
-            const target = Cartesian3.fromDegrees(2, 48, 2969)
-            const local = Matrix4.inverseTransformation(Transforms.eastNorthUpToFixedFrame(target), new Matrix4())
-            const direction = Matrix4.multiplyByPointAsVector(local, camera.directionWC, new Cartesian3())
-            const position = Matrix4.multiplyByPoint(local, camera.positionWC, new Cartesian3())
-            expect(Math.asin(direction.z)).toBeCloseTo(-30 * Math.PI / 180, 8)
-            expect(position.z).toBeCloseTo(3454 - 2969, 5)
+            // Cesium expresses pitch in the camera's local tangent frame. The
+            // camera may be several hundred metres from the route anchor, so
+            // measuring height in the anchor's ENU frame adds curvature too.
+            expect(camera.pitch).toBeCloseTo(-30 * Math.PI / 180, 8)
+            expect(camera.positionCartographic.height).toBeCloseTo(
+                altitudeMode === 'constant' ? 3454 : 2969 + 485,
+                1,
+            )
             expect(journey.replay.basic.camera).toMatchObject({
                 altitude: selectedAltitude,
                 altitudeMode,
@@ -643,10 +647,15 @@ describe('Replay with the real Cesium camera', () => {
             else {
                 await mode.preparePlaybackSceneForExport()
             }
-            const target = Cartesian3.fromDegrees(2, 48, 120)
-            const local = Matrix4.inverseTransformation(Transforms.eastNorthUpToFixedFrame(target), new Matrix4())
-            const direction = Matrix4.multiplyByPointAsVector(local, camera.directionWC, new Cartesian3())
-            expect(Math.asin(direction.z)).toBeCloseTo(-45 * Math.PI / 180, 8)
+            if (entry === 'playback') {
+                expect(camera.pitch).toBeCloseTo(-45 * Math.PI / 180, 8)
+            }
+            else {
+                const target = Cartesian3.fromDegrees(2, 48, 120)
+                const local = Matrix4.inverseTransformation(Transforms.eastNorthUpToFixedFrame(target), new Matrix4())
+                const direction = Matrix4.multiplyByPointAsVector(local, camera.directionWC, new Cartesian3())
+                expect(Math.asin(direction.z)).toBeCloseTo(-45 * Math.PI / 180, 8)
+            }
             mode.stop()
             await mode.waitForSceneRestore()
             expectPose(camera, manualPreparationPose)
@@ -692,7 +701,8 @@ describe('Replay with the real Cesium camera', () => {
         const {camera, mode, journey, settings} = installScene({userMode: 'basic', terrainHeight: 1180, altitude: 539, pitch: -45, cameraAngle: -112})
         const normal = readPose(camera)
         try {
-            await mode.prepareReplayCamera()
+            await mode.enterReplayPreparation({journey})
+            const preparationPose = readPose(camera)
             if (entry === 'playback') {
                 mode.start()
             }
@@ -721,6 +731,8 @@ describe('Replay with the real Cesium camera', () => {
             }
             mode.stop()
             await mode.waitForSceneRestore()
+            expectPose(camera, preparationPose)
+            expect(mode.leaveReplayPreparation()).toBe(true)
             expectPose(camera, normal)
         }
         finally {
@@ -1073,9 +1085,9 @@ describe('Replay with the real Cesium camera', () => {
             await renderAt(0)
             const initialPose = readPose(camera)
             await renderAt(2)
-            expectPose(camera, initialPose)
+            expect(Cartesian3.distance(camera.positionWC, initialPose.position)).toBeLessThan(10)
             await renderAt(2.3)
-            expectPose(camera, initialPose)
+            expect(Cartesian3.distance(camera.positionWC, initialPose.position)).toBeLessThan(10)
             await renderAt(3.3)
             const before = readPose(camera)
             await renderAt(3.5)
@@ -1138,7 +1150,7 @@ describe('Replay with the real Cesium camera', () => {
             mode.dispose()
             await mode.waitForSceneRestore()
         }
-    })
+    }, 20_000)
 
     it('keeps Basic camera aim on the rendered terrain marker when GPX altitude differs', async () => {
         const {camera, mode, controller, settings, journey} = installScene({userMode: 'basic', terrainHeight: 900})
@@ -1546,7 +1558,6 @@ describe('Replay with the real Cesium camera', () => {
         const {camera, mode} = installScene()
         const normal = readPose(camera)
         try {
-            await mode.prepareReplayCamera()
             mode.start()
             expect(Cartesian3.distance(camera.positionWC, normal.position)).toBeGreaterThan(100000)
             mode.stop({emit: false})

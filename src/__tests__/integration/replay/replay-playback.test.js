@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-10
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -441,8 +441,8 @@ describe('replay phase 1 playback controller', () => {
             expect(() => controller.configure({sampler, duration: 10})).not.toThrow()
             expect(() => controller.start()).not.toThrow()
             expect(() => controller.seek(0.5)).not.toThrow()
-            expect(globalThis.lgs.stores.replay.elapsedMillis).toBe(10 * 60 * 1000)
-            expect(globalThis.lgs.stores.replay.durationMillis).toBe(20 * 60 * 1000)
+            expect(globalThis.lgs.stores.replay.elapsedMillis).toBe(5 * 1000)
+            expect(globalThis.lgs.stores.replay.durationMillis).toBe(10 * 1000)
             expect(() => JSON.stringify(globalThis.lgs.stores.replay.sample)).not.toThrow()
         }
         finally {
@@ -841,7 +841,7 @@ describe('replay phase 1 playback controller', () => {
         globalThis.lgs = {
             theJourney: journey,
             theTrack:   null,
-            settings:   {ui: {replay, journeyToolbar: {show: true}}},
+            settings:   {ui: {replay: {...replay, camera: toGlobalReplayCameraSettings(replay.camera)}, journeyToolbar: {show: true}}},
             stores:     {
                 replay: proxy({
                                       progress: 0,
@@ -1215,7 +1215,7 @@ describe('replay phase 1 playback controller', () => {
         globalThis.lgs = {
             theJourney: journey,
             theTrack:   null,
-            settings:   {ui: {replay, journeyToolbar: {show: true}}},
+            settings:   {ui: {replay: {...replay, camera: toGlobalReplayCameraSettings(replay.camera)}, journeyToolbar: {show: true}}},
             stores:     {
                 replay: proxy({
                                       progress: 0,
@@ -1332,7 +1332,7 @@ describe('replay phase 1 playback controller', () => {
         globalThis.lgs = {
             theJourney: journey,
             theTrack:   null,
-            settings:   {ui: {replay, journeyToolbar: {show: true}}},
+            settings:   {ui: {replay: {...replay, camera: toGlobalReplayCameraSettings(replay.camera)}, journeyToolbar: {show: true}}},
             stores:     {
                 replay: proxy({
                                       progress: 0,
@@ -1440,7 +1440,7 @@ describe('replay phase 1 playback controller', () => {
         globalThis.lgs = {
             theJourney: journey,
             theTrack:   null,
-            settings:   {ui: {replay, journeyToolbar: {show: true}}},
+            settings:   {ui: {replay: {...replay, camera: toGlobalReplayCameraSettings(replay.camera)}, journeyToolbar: {show: true}}},
             stores:     {
                 replay: proxy({
                                       progress: 0,
