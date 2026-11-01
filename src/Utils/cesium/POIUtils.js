@@ -98,6 +98,21 @@ const assignBillboardPropertyIfChanged = (billboard, name, value, time) => {
 }
 
 /**
+ * Keep an existing terrain mask when an unrelated POI update requests visibility.
+ * @param {Entity} entity - Existing Cesium POI entity.
+ * @param {boolean} visible - Requested model visibility.
+ * @param {JulianDate} time - Time used to resolve the current billboard property.
+ * @returns {boolean} Whether the billboard is currently hidden by the terrain mask.
+ */
+const shouldPreserveTerrainOcclusion = (entity, visible, time) => Boolean(
+    visible
+    && !isReplayPOIPresentationActive()
+    && entity?.show === true
+    && entity.billboard
+    && cesiumPropertyValue(entity.billboard.show, time) === false,
+)
+
+/**
  * Resolve the active hide-other-journeys policy, including Replay overrides.
  *
  * @returns {{enabled: boolean, currentJourneySlug: string|null}} Active POI visibility filter.
@@ -176,15 +191,16 @@ export class POIUtils {
         return true
     }
 
-    /** Draw a small identity-preserving marker before the rich POI canvas is ready. */
-    static drawPlaceholder = async poi => {
+    /** Draw a compact-style identity-preserving marker before the rich POI canvas is ready. */
+    static drawPlaceholder = async (poi, iconSvg = null) => {
         if (!poi?.id || !Number.isFinite(poi.longitude) || !Number.isFinite(poi.latitude)) {
             return null
         }
 
         const container = POIUtils.getEntityContainer(poi)
         const existingEntity = container?.getById(poi.id)
-        const existingImage = cesiumPropertyValue(existingEntity?.billboard?.image, JulianDate.now())
+        const currentTime = JulianDate.now()
+        const existingImage = cesiumPropertyValue(existingEntity?.billboard?.image, currentTime)
         if (existingImage) {
             return existingEntity
         }
@@ -192,16 +208,34 @@ export class POIUtils {
         const fill = poi.background === false
             ? 'none'
             : escapeXMLAttribute(poi.bgColor ?? globalThis.lgs?.colors?.poiDefaultBackground ?? '#ffffff')
-        const stroke = escapeXMLAttribute(poi.color ?? globalThis.lgs?.colors?.poiDefault ?? '#000000')
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="36" viewBox="0 0 100 112"><path d="M 50 4 A 46 46 0 0 0 29 90.927 L 43 105 Q 50 111 57 105 L 71 90.927 A 46 46 0 0 0 50 4 Z" fill="${fill}" stroke="${stroke}" stroke-width="8" stroke-linejoin="round"/><circle cx="50" cy="43" r="12" fill="${stroke}"/></svg>`
+        const stroke = escapeXMLAttribute(poi.borderColor ?? poi.color ?? globalThis.lgs?.colors?.poiDefault ?? '#000000')
+        const iconColor = escapeXMLAttribute(poi.color ?? globalThis.lgs?.colors?.poiDefault ?? '#000000')
+        let glyph = `<circle cx="50" cy="50" r="16" fill="${iconColor}"/>`
+        if (iconSvg) {
+            try {
+                const iconDocument = new DOMParser().parseFromString(iconSvg, 'image/svg+xml')
+                const iconElement = iconDocument.querySelector('svg')
+                const viewBox = iconElement?.getAttribute('viewBox')
+                if (iconElement && viewBox) {
+                    glyph = `<svg x="27.5" y="27.5" width="45" height="45" viewBox="${escapeXMLAttribute(viewBox)}" preserveAspectRatio="xMidYMid meet">${iconElement.innerHTML}</svg>`
+                }
+            }
+            catch {
+                // Keep the compact marker visible if the current Web Awesome icon cannot be serialized.
+            }
+        }
+        const placeholderWidth = 32
+        const placeholderHeight = 38.4
+        const pinTipOffset = placeholderHeight * (1 - 111 / 120)
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${placeholderWidth}" height="${placeholderHeight}" viewBox="0 0 100 120"><path d="M 50 4 A 46 46 0 0 0 29 90.927 L 43 101 Q 50 107 57 101 L 71 90.927 A 46 46 0 0 0 50 4 Z" fill="${fill}" stroke="${stroke}" stroke-width="8" stroke-linejoin="round"/>${glyph}</svg>`
         return POIUtils.draw({
             ...poi,
             image: {
                 src: `data:image/svg+xml,${encodeURIComponent(svg)}`,
-                width: 32,
-                height: 36,
+                width: placeholderWidth,
+                height: placeholderHeight,
             },
-            pixelOffset: {x: 0, y: 0},
+            pixelOffset: {x: 0, y: pinTipOffset},
         }, true, {
             skipDuplicateCleanup: Boolean(existingEntity),
             verticalOrigin: VerticalOrigin.BOTTOM,
@@ -302,50 +336,60 @@ export class POIUtils {
     }
 
     /**
-     * Toggles the visibility of a Point of Interest (POI) entity.
-     * Finds the entity in its container and updates its visibility state
-     * based on the POI's visible property.
-     *
-     * @param {Object} poi - The Point of Interest object containing id and visible properties
-     * @returns {boolean} - True if visibility was successfully changed, false otherwise
+     * Update only an existing POI entity's effective visibility.
+     * @param {Object} poi - POI model used to resolve Replay and journey filters.
+     * @param {boolean} [visibility=poi.visible] - Requested presentation visibility.
+     * @returns {boolean} Whether the POI entity exists and was processed.
      */
-    static toggleVisibility = (poi) => {
-        // Check if POI is valid
+    static updateVisibility = (poi, visibility = poi?.visible) => {
         if (!poi || !poi.id) {
-            console.warn('Cannot toggle visibility: Invalid POI object')
+            console.warn('Cannot update POI visibility: Invalid POI object')
+            return false
+        }
+        if (!globalThis.lgs?.viewer) {
             return false
         }
 
-        // Get the entity container for the POI
         const entities = POIUtils.getEntityContainer(poi)
         if (!entities) {
             console.warn(`No entity container found for POI: ${poi.id}`)
             return false
         }
 
-        // Find and update the entity
         const entity = entities.getById(poi.id)
         if (!entity) {
             console.warn(`Entity not found for POI: ${poi.id}`)
             return false
         }
 
-        // Update visibility state
-        const visible = POIUtils.setPOIVisibility(poi, poi.visible)
+        const visible = POIUtils.setPOIVisibility(poi, visibility)
         const currentTime = JulianDate.now()
+        const preserveTerrainOcclusion = shouldPreserveTerrainOcclusion(entity, visible, currentTime)
         let changed = false
         if (entity.show !== visible) {
             entity.show = visible
             changed = true
         }
         if (entity.billboard) {
-            changed = assignBillboardPropertyIfChanged(entity.billboard, 'show', visible, currentTime) || changed
+            changed = assignBillboardPropertyIfChanged(
+                entity.billboard,
+                'show',
+                preserveTerrainOcclusion ? false : visible,
+                currentTime,
+            ) || changed
         }
         if (changed) {
             POIUtils.requestRender()
         }
         return true
     }
+
+    /**
+     * Update an existing POI entity to match its model visibility.
+     * @param {Object} poi - POI model containing the persisted visibility value.
+     * @returns {boolean} Whether the POI entity exists and was processed.
+     */
+    static toggleVisibility = poi => POIUtils.updateVisibility(poi, poi?.visible)
 
     /**
      * Checks whether a given entity is within the current visible area of the camera.
@@ -390,18 +434,21 @@ export class POIUtils {
      * @param {object} [options={}] - Optional entity drawing behavior.
      * @param {boolean} [options.skipDuplicateCleanup=false] - Skip scanning other entity containers for duplicates.
      * @param {VerticalOrigin} [options.verticalOrigin=VerticalOrigin.CENTER] - Billboard origin used for this draw.
+     * @param {boolean} [options.clearImage=false] - Explicitly clear an existing billboard image and reset its geometry.
      *
      * @returns {Promise<Entity|null>} A promise that resolves to the created Cesium Entity, or null if no container is
      *     found.
      */
     static draw = async (poi, parentVisibility = true, {
         skipDuplicateCleanup = false,
+        clearImage = false,
         verticalOrigin = VerticalOrigin.CENTER,
     } = {}) => {
+        const hasImageUpdate = (poi.image !== undefined && poi.image !== null) || clearImage
         const drawStartedAt = poiPerformance.start('cesium.draw')
         // Default dimensions if poi.image is undefined
-        const width = poi.image?.width ?? 32
-        const height = poi.image?.height ?? 32
+        const width = clearImage ? 32 : poi.image?.width ?? 32
+        const height = clearImage ? 32 : poi.image?.height ?? 32
         const visible = POIUtils.setPOIVisibility(poi, parentVisibility)
         const heightReference = __.ui.sceneManager.noRelief()
                                    ? HeightReference.NONE
@@ -419,15 +466,15 @@ export class POIUtils {
 
         // Billboard configuration
         const billboard = {
-            image:           poi.image?.src ?? '',
+            image:           clearImage ? '' : poi.image?.src ?? '',
             width:           width,
             height:          height,
             scale:           scale,
             scaleByDistance: scaleByDistance,
-            pixelOffset:     poi.pixelOffset
+            pixelOffset:     !clearImage && poi.pixelOffset
                 ? new Cartesian2(poi.pixelOffset.x * scale, poi.pixelOffset.y * scale)
                 : new Cartesian2(0, 0),
-            pixelOffsetScaleByDistance: poi.pixelOffset ? scaleByDistance : undefined,
+            pixelOffsetScaleByDistance: !clearImage && poi.pixelOffset ? scaleByDistance : undefined,
             horizontalOrigin: HorizontalOrigin.CENTER,
             verticalOrigin:  verticalOrigin,
             heightReference: heightReference,
@@ -449,8 +496,8 @@ export class POIUtils {
         // Check for existing entity
         const entity = container.getById(poi.id)
         if (entity) {
-            poiPerformance.record('cesium.entityUpdated')
             const currentTime = JulianDate.now()
+            const preserveTerrainOcclusion = shouldPreserveTerrainOcclusion(entity, visible, currentTime)
             let changed = removedFromOtherContainers
             if (entity.name !== options.name) {
                 entity.name = options.name
@@ -467,18 +514,30 @@ export class POIUtils {
             }
 
             if (entity.billboard) {
-                changed = assignBillboardPropertyIfChanged(entity.billboard, 'image', billboard.image, currentTime) || changed
-                changed = assignBillboardPropertyIfChanged(entity.billboard, 'width', billboard.width, currentTime) || changed
-                changed = assignBillboardPropertyIfChanged(entity.billboard, 'height', billboard.height, currentTime) || changed
+                if (hasImageUpdate) {
+                    changed = assignBillboardPropertyIfChanged(entity.billboard, 'image', billboard.image, currentTime) || changed
+                    changed = assignBillboardPropertyIfChanged(entity.billboard, 'width', billboard.width, currentTime) || changed
+                    changed = assignBillboardPropertyIfChanged(entity.billboard, 'height', billboard.height, currentTime) || changed
+                    changed = assignBillboardPropertyIfChanged(entity.billboard, 'pixelOffset', billboard.pixelOffset, currentTime) || changed
+                    changed = assignBillboardPropertyIfChanged(
+                        entity.billboard,
+                        'pixelOffsetScaleByDistance',
+                        billboard.pixelOffsetScaleByDistance,
+                        currentTime,
+                    ) || changed
+                }
                 changed = assignBillboardPropertyIfChanged(entity.billboard, 'scale', billboard.scale, currentTime) || changed
                 changed = assignBillboardPropertyIfChanged(entity.billboard, 'scaleByDistance', billboard.scaleByDistance, currentTime) || changed
-                changed = assignBillboardPropertyIfChanged(entity.billboard, 'pixelOffset', billboard.pixelOffset, currentTime) || changed
-                changed = assignBillboardPropertyIfChanged(entity.billboard, 'pixelOffsetScaleByDistance', billboard.pixelOffsetScaleByDistance, currentTime) || changed
                 changed = assignBillboardPropertyIfChanged(entity.billboard, 'horizontalOrigin', billboard.horizontalOrigin, currentTime) || changed
                 changed = assignBillboardPropertyIfChanged(entity.billboard, 'verticalOrigin', billboard.verticalOrigin, currentTime) || changed
                 changed = assignBillboardPropertyIfChanged(entity.billboard, 'heightReference', billboard.heightReference, currentTime) || changed
                 changed = assignBillboardPropertyIfChanged(entity.billboard, 'disableDepthTestDistance', billboard.disableDepthTestDistance, currentTime) || changed
-                changed = assignBillboardPropertyIfChanged(entity.billboard, 'show', billboard.show, currentTime) || changed
+                changed = assignBillboardPropertyIfChanged(
+                    entity.billboard,
+                    'show',
+                    preserveTerrainOcclusion ? false : billboard.show,
+                    currentTime,
+                ) || changed
             }
             else {
                 entity.billboard = new BillboardGraphics(billboard)

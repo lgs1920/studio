@@ -133,6 +133,32 @@ describe('POI canvas render queue', () => {
         expect(captureSuperseded).not.toHaveBeenCalled()
     })
 
+    it('does not let a superseded active capture commit after the latest request is queued', async () => {
+        const {enqueue, idleCallbacks} = createScheduledQueue()
+        let resolveOldCapture
+        let renderGeneration = 1
+        const committed = []
+        const oldCapture = new Promise(resolve => {
+            resolveOldCapture = resolve
+        })
+
+        enqueue('poi', async () => {
+            const canvas = await oldCapture
+            if (renderGeneration === 1) {
+                committed.push(canvas)
+            }
+        })
+        await runIdle(idleCallbacks)
+        renderGeneration = 2
+        enqueue('poi', () => committed.push('latest'))
+        resolveOldCapture('stale')
+
+        await vi.waitFor(() => expect(idleCallbacks.size).toBe(1))
+        await runIdle(idleCallbacks)
+
+        expect(committed).toEqual(['latest'])
+    })
+
     it('runs an interactive expansion before older queued POI captures', async () => {
         const {enqueue, idleCallbacks} = createScheduledQueue()
         let releaseActive

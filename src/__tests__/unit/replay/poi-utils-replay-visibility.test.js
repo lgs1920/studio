@@ -131,6 +131,108 @@ describe('POIUtils replay visibility', () => {
         expect(propertyValue(upgraded.billboard.image)).toBe('final-poi-canvas')
     })
 
+    it('preserves a rendered billboard image and geometry during visibility-only updates', async () => {
+        const poi = {
+            id: 'poi-visibility-image',
+            name: 'Visibility image',
+            longitude: 2,
+            latitude: 48,
+            height: 100,
+            visible: true,
+            scale: 2,
+            image: {src: 'rendered-canvas', width: 120, height: 48},
+            pixelOffset: {x: 6, y: -4},
+        }
+        const entity = await POIUtils.draw(poi)
+        const originalImage = propertyValue(entity.billboard.image)
+        const originalWidth = propertyValue(entity.billboard.width)
+        const originalHeight = propertyValue(entity.billboard.height)
+        const originalOffset = propertyValue(entity.billboard.pixelOffset)
+
+        expect(POIUtils.updateVisibility(poi, false)).toBe(true)
+        expect(entity.show).toBe(false)
+        expect(propertyValue(entity.billboard.show)).toBe(false)
+        expect(POIUtils.updateVisibility(poi, true)).toBe(true)
+        expect(entity.show).toBe(true)
+        expect(propertyValue(entity.billboard.show)).toBe(true)
+        expect(propertyValue(entity.billboard.image)).toBe(originalImage)
+        expect(propertyValue(entity.billboard.width)).toBe(originalWidth)
+        expect(propertyValue(entity.billboard.height)).toBe(originalHeight)
+        expect(propertyValue(entity.billboard.pixelOffset)).toEqual(originalOffset)
+    })
+
+    it('does not interpret an omitted image as a billboard image update', async () => {
+        const poi = {
+            id: 'poi-partial-image',
+            name: 'Partial image update',
+            longitude: 2,
+            latitude: 48,
+            height: 100,
+            visible: true,
+            scale: 2,
+            image: {src: 'rendered-canvas', width: 120, height: 48},
+            pixelOffset: {x: 6, y: -4},
+        }
+        const entity = await POIUtils.draw(poi)
+        const originalImage = propertyValue(entity.billboard.image)
+        const originalWidth = propertyValue(entity.billboard.width)
+        const originalHeight = propertyValue(entity.billboard.height)
+        const originalOffset = propertyValue(entity.billboard.pixelOffset)
+        const partialPOI = {...poi}
+        delete partialPOI.image
+        delete partialPOI.pixelOffset
+
+        await POIUtils.draw({...partialPOI, visible: false})
+
+        expect(propertyValue(entity.billboard.image)).toBe(originalImage)
+        expect(propertyValue(entity.billboard.width)).toBe(originalWidth)
+        expect(propertyValue(entity.billboard.height)).toBe(originalHeight)
+        expect(propertyValue(entity.billboard.pixelOffset)).toEqual(originalOffset)
+        expect(entity.show).toBe(false)
+    })
+
+    it('clears an existing billboard image only when explicitly requested', async () => {
+        const poi = {
+            id: 'poi-clear-image',
+            name: 'Clear image',
+            longitude: 2,
+            latitude: 48,
+            height: 100,
+            visible: true,
+            scale: 2,
+            image: {src: 'rendered-canvas', width: 120, height: 48},
+            pixelOffset: {x: 6, y: -4},
+        }
+        const entity = await POIUtils.draw(poi)
+
+        await POIUtils.draw(poi, true, {clearImage: true})
+
+        expect(propertyValue(entity.billboard.image)).toBe('')
+        expect(propertyValue(entity.billboard.width)).toBe(32)
+        expect(propertyValue(entity.billboard.height)).toBe(32)
+        expect(propertyValue(entity.billboard.pixelOffset)).toEqual({x: 0, y: 0})
+    })
+
+    it('preserves terrain masking while replacing a POI image', async () => {
+        const poi = {
+            id: 'poi-terrain-mask',
+            name: 'Terrain masked POI',
+            longitude: 2,
+            latitude: 48,
+            height: 100,
+            visible: true,
+            image: {src: 'old-canvas', width: 80, height: 40},
+        }
+        const entity = await POIUtils.draw(poi)
+        entity.billboard.show = false
+
+        await POIUtils.draw({...poi, image: {src: 'new-canvas', width: 100, height: 50}})
+
+        expect(entity.show).toBe(true)
+        expect(propertyValue(entity.billboard.show)).toBe(false)
+        expect(propertyValue(entity.billboard.image)).toBe('new-canvas')
+    })
+
     it('forces all pois hidden when hide-all replay mode is enabled', () => {
         globalThis.lgs.stores.replay.active = true
         globalThis.lgs.stores.replay.hideAllPoisDuringJourneyReplay = true

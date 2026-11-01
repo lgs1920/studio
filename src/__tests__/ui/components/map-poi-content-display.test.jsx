@@ -55,6 +55,8 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
 
 import { MapPOIContent } from '@Components/MainUI/MapPOI/MapPOIContent'
 import {poiCanvasImageCache} from '@Components/MainUI/MapPOI/poiCanvasImageCache'
+import {poiCaptureSurfaceStore} from '@Components/MainUI/MapPOI/poiCaptureSurfaceStore'
+import {POIUtils} from '@Utils/cesium/POIUtils'
 import {snapdom} from '@zumer/snapdom'
 
 /**
@@ -80,6 +82,28 @@ const createPOI = display => ({
     visible:        true,
     replay:         {visible: true, hiddenFields: {}},
 })
+
+/** Create a promise that the test can settle at a chosen render generation. */
+const createDeferred = () => {
+    let resolve
+    let reject
+    const promise = new Promise((resolvePromise, rejectPromise) => {
+        resolve = resolvePromise
+        reject = rejectPromise
+    })
+    return {promise, resolve, reject}
+}
+
+/** Provide nonzero layout bounds when a managed surface mounts after the initial render. */
+const mockPOICaptureBounds = () => {
+    const getBoundingClientRect = HTMLElement.prototype.getBoundingClientRect
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
+        if (this.classList?.contains('poi-canvas-capture-surface')) {
+            return {left: 0, top: 0, right: 100, bottom: 40, width: 100, height: 40}
+        }
+        return getBoundingClientRect.call(this)
+    })
+}
 
 describe('MapPOIContent display settings', () => {
     let poiList
@@ -149,6 +173,7 @@ describe('MapPOIContent display settings', () => {
 
     afterEach(() => {
         cleanup()
+        poiCaptureSurfaceStore.cancel('poi-1')
         vi.restoreAllMocks()
         if (originalResizeObserver === undefined) {
             delete globalThis.ResizeObserver
@@ -537,6 +562,87 @@ describe('MapPOIContent display settings', () => {
         }
     })
 
+    it('changes POI visibility without drawing a replacement image', async () => {
+        const updateVisibility = vi.spyOn(POIUtils, 'updateVisibility').mockReturnValue(true)
+        const {rerender} = renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
+        const poi = poiList.get('poi-1')
+
+        await waitFor(() => expect(drawPOI).toHaveBeenCalledOnce())
+        const renderedImage = drawPOI.mock.calls[0][0].image
+
+        await act(async () => {
+            poi.visible = false
+        })
+        rerender(<MapPOIContent poi="poi-1"/>)
+
+        expect(updateVisibility).toHaveBeenLastCalledWith(poi, false)
+        expect(drawPOI).toHaveBeenCalledOnce()
+        expect(drawPOI.mock.calls[0][0].image).toBe(renderedImage)
+    })
+
+    it('keeps the last committed image when a replacement SnapDOM capture fails', async () => {
+        const logError = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const {rerender} = renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
+        const poi = poiList.get('poi-1')
+
+        await waitFor(() => expect(drawPOI).toHaveBeenCalledOnce())
+        const originalImage = drawPOI.mock.calls[0][0].image
+        vi.mocked(snapdom).mockRejectedValueOnce(new Error('capture failed'))
+
+        await act(async () => {
+            poi.title = 'Changed title'
+        })
+        rerender(<MapPOIContent poi="poi-1"/>)
+
+        await waitFor(() => expect(logError).toHaveBeenCalledWith(
+            'Error rendering POI poi-1 to canvas:', expect.any(Error),
+        ))
+        expect(drawPOI).toHaveBeenCalledOnce()
+        expect(drawPOI.mock.calls[0][0].image).toBe(originalImage)
+    })
+
+    it('discards a cancelled capture when its component unmounts', async () => {
+        const pendingCapture = createDeferred()
+        const pendingCanvas = document.createElement('canvas')
+        pendingCanvas.width = 160
+        pendingCanvas.height = 80
+        vi.mocked(snapdom).mockImplementationOnce(async () => ({toCanvas: () => pendingCapture.promise}))
+        const rendered = renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
+
+        try {
+            await waitFor(() => expect(snapdom).toHaveBeenCalledOnce())
+            rendered.unmount()
+            await act(async () => pendingCapture.resolve(pendingCanvas))
+            expect(drawPOI).not.toHaveBeenCalledWith(expect.objectContaining({
+                image: expect.objectContaining({src: pendingCanvas}),
+            }))
+        }
+        finally {
+            pendingCapture.resolve(pendingCanvas)
+        }
+    })
+
+    it('keeps a committed canvas after its managed capture surface unmounts', async () => {
+        vi.spyOn(POIUtils, 'drawPlaceholder').mockResolvedValue(null)
+        mockPOICaptureBounds()
+        const {container} = render(<MapPOIContent poi="poi-1" managedCaptureSurface/>)
+        const committedCanvas = document.createElement('canvas')
+        committedCanvas.width = 200
+        committedCanvas.height = 80
+        vi.mocked(snapdom).mockResolvedValue({toCanvas: async () => committedCanvas})
+
+        try {
+            await waitFor(() => expect(drawPOI).toHaveBeenCalledWith(expect.objectContaining({
+                id: 'poi-1', image: {src: committedCanvas, width: 100, height: 40},
+            })))
+            await waitFor(() => expect(container.querySelector('.poi-canvas-capture-surface')).toBeNull())
+            expect(drawPOI.mock.calls.at(-1)[0].image.src).toBe(committedCanvas)
+        }
+        finally {
+            poiCaptureSurfaceStore.cancel('poi-1')
+        }
+    })
+
     it('pads SnapDOM capture for a slanted style and restores the preview layout', async () => {
         poiList.get('poi-1').display.style = 'slanted-banner'
         const canvas = document.createElement('canvas')
@@ -559,7 +665,7 @@ describe('MapPOIContent display settings', () => {
             .mockReturnValue({left: 0, top: 0, right: 300, bottom: 120, width: 300, height: 120})
 
         await waitFor(() => expect(capturedElement).toBe(captureSurface))
-        expect(capturedPadding).toBe('21px')
+        expect(capturedPadding).toBe('20px')
         expect(captureSurface.style.display).toBe('')
         expect(captureSurface.style.width).toBe('')
         expect(captureSurface.style.boxSizing).toBe('')

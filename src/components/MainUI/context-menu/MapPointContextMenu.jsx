@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-27
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,6 +28,7 @@ import {
 }                                                                                  from '@Components/MainUI/widgets/openWidgetManagementDrawer'
 import { getOrbitSettings, setOrbitStoreSettings }                                 from '@Core/OrbitSettings'
 import { ELEVATION_UNITS, UnitUtils }                                              from '@Utils/UnitUtils'
+import { POIUtils }                                                                from '@Utils/cesium/POIUtils'
 import { UIToast }                                                                 from '@Utils/UIToast'
 import { useProxyValue }                                                            from '@Utils/ValtioUtils'
 import { WaDivider, WaIcon }                                                       from '@awesome.me/webawesome/dist/react'
@@ -93,6 +94,13 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
                                 text:    'This location is too close to an existing POI!',
                             })
             return
+        }
+
+        if (lgs.viewer?.entities) {
+            // Put an identity-preserving marker on the map while the rich canvas capture is queued.
+            void POIUtils.drawPlaceholder(createdPoi).catch(error => {
+                console.error(`[MapPointContextMenu] Unable to draw the new POI placeholder ${createdPoi.id}:`, error)
+            })
         }
 
         focusPOIInOpenList(createdPoi.id)

@@ -84,6 +84,30 @@ const assertPOICanvasDimensions = (element, scale, ratio) => {
     }
 }
 
+/** Serialize the currently rendered compact POI icon with its resolved theme colors. */
+const serializeCompactPOIIcon = wrapper => {
+    const icon = wrapper?.querySelector('.poi-as-flag, .poi-category-title-icon')
+    const svg = icon?.shadowRoot?.querySelector('[part="svg"]')
+    if (!svg || typeof globalThis.getComputedStyle !== 'function') {
+        return null
+    }
+
+    const serializedSVG = svg.cloneNode(true)
+    serializedSVG.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    const sourceShapes = [...svg.querySelectorAll('path, circle, rect, ellipse, polygon, polyline, line')]
+    const serializedShapes = [...serializedSVG.querySelectorAll('path, circle, rect, ellipse, polygon, polyline, line')]
+    sourceShapes.forEach((shape, index) => {
+        const computedStyle = globalThis.getComputedStyle(shape)
+        const serializedShape = serializedShapes[index]
+        serializedShape.setAttribute('fill', computedStyle.fill)
+        serializedShape.setAttribute('stroke', computedStyle.stroke)
+        serializedShape.setAttribute('opacity', computedStyle.opacity)
+        serializedShape.removeAttribute('style')
+    })
+
+    return serializedSVG.outerHTML
+}
+
 /**
  * @typedef {Object} MapPOIContentProps
  * @property {string} poi - ID of the POI to display.
@@ -416,7 +440,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
         if (managedCaptureSurface && !replayActive) {
             const currentPoint = $pois.list.get(pointId)
             if (currentPoint) {
-                void POIUtils.drawPlaceholder(currentPoint)
+                void POIUtils.drawPlaceholder(currentPoint, serializeCompactPOIIcon(_poiIconWrapper.current))
             }
         }
 
@@ -748,7 +772,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
         stickHorizontalPosition, stickPosition])
 
     useEffect(() => {
-        if (isEmbedded || !pointId || (!replayMasked && !hiddenBecauseTooClose)) {
+        if (isEmbedded || !pointId) {
             return
         }
 
@@ -757,11 +781,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             return
         }
 
-        const mapPOI = new MapPOI({
-            ...currentPoint,
-            visible: false,
-        })
-        void mapPOI.utils.draw(mapPOI)
+        POIUtils.updateVisibility(currentPoint, !replayMasked && !hiddenBecauseTooClose)
     }, [isEmbedded, pointId, replayMasked, hiddenBecauseTooClose, $pois.list])
 
     useEffect(() => {
