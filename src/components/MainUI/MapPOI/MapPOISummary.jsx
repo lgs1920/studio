@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-03-25
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,7 @@
  ******************************************************************************/
 
 import { ICONS_PATH }                from '@Core/constants'
+import { MapPOI }                    from '@Core/MapPOI'
 import { applyPOIDuotoneIconStyles } from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import { WaIcon, WaTooltip }          from '@awesome.me/webawesome/dist/react'
 import { useEffect, useId, useMemo, useState } from 'react'
@@ -49,7 +50,7 @@ export const MapPOISummary = ({poi}) => {
         return () => window.clearTimeout(timeout)
     }, [badgeExpiresAt])
 
-    const iconName = point?.categoryIcon?.(point.category)
+    const iconName = MapPOI.categoryIcon(point?.category)
     const isSvg = iconName?.endsWith('.svg')
 
     return (

@@ -30,7 +30,10 @@ import {getReplayPOISelectorSnapshot} from '@Components/MainUI/MapPOI/replayPOIS
 import {
     isReplayPOIPresentationActive, resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
-import {normalizePOIDisplaySettings, shouldDisplayPOIField} from '@Core/POIDisplaySettings'
+import {MapPOI} from '@Core/MapPOI'
+import {
+    normalizePOIDisplaySettings, POI_DISPLAY_DEFAULT_BORDER_RADIUS, shouldDisplayPOIField,
+} from '@Core/POIDisplaySettings'
 import {POIUtils} from '@Utils/cesium/POIUtils'
 import {useCallback, useEffect} from 'react'
 import {subscribe, useSnapshot} from 'valtio'
@@ -65,7 +68,11 @@ const getPOIVisualSignature = poi => {
     const displayCategory = expanded && shouldDisplayPOIField('category', display, replayActive)
     const displayLocation = expanded && shouldDisplayPOIField('location', display, replayActive)
     const displayDateTime = expanded && shouldDisplayPOIField('dateTime', display, replayActive)
-    const iconName = poi?.categoryIcon?.(poi?.category)
+    const iconName = MapPOI.categoryIcon(poi?.category)
+    const visualDisplay = expanded ? {
+        ...display,
+        borderRadius: display.borderRadius ?? POI_DISPLAY_DEFAULT_BORDER_RADIUS,
+    } : null
 
     return JSON.stringify([
         poi?.type,
@@ -77,8 +84,9 @@ const getPOIVisualSignature = poi => {
         poi?.tooClose,
         poi?.color,
         poi?.bgColor,
+        poi?.borderColor ?? poi?.color ?? lgs.colors.poiDefault,
         poi?.background,
-        expanded ? poi?.display : null,
+        visualDisplay,
         displayLocation ? poi?.location : null,
         displayAltitude ? poi?.height : null,
         displayTitleAltitude ? [poi?.height, poi?.simulatedHeight] : null,
@@ -125,15 +133,20 @@ export const MapPOIMonitor = () => {
         const presentation = resolveReplayPOIPresentation(poi, {
             animatedPOI: getReplayPOISelectorSnapshot('animated', poiId),
         })
-        if (!presentation.visible) {
+        if (!POIUtils.isPOIVisibleOnMap(poi, presentation.visible)) {
             poiCaptureSurfaceStore.cancel(poiId)
             return
         }
 
+        const editorPriority = $pois.current === poiId
+            || globalThis.lgs?.theJourneyEditorProxy?.poi === poiId
+        const capturePriority = priority || editorPriority
         poiCaptureSurfaceStore.request(poiId, {
-            priority,
-            allowOverflow: priority,
+            priority: capturePriority,
+            allowOverflow: capturePriority,
             getPriority: () => getPOICanvasRenderPriority(poiId),
+            isEligible: () => !isReplayPOIPresentationActive(lgs.stores.replay)
+                && POIUtils.isPOIVisibleOnMap($pois.list.get(poiId)),
         })
     }, [$pois])
 

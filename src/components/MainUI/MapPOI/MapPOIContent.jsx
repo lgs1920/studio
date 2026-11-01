@@ -47,7 +47,7 @@ import {
     shouldDisplayPOIField,
 }                                                   from '@Core/POIDisplaySettings'
 import {
-    normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
+    isReplayPOIPresentationActive, normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
 import {useReplayPOISelector} from '@Components/MainUI/MapPOI/replayPOISelectorStore'
 import { ELEVATION_UNITS, UnitUtils }               from '@Utils/UnitUtils'
@@ -226,7 +226,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
     )
     const isTitleOnly = !hasVisibleDetailsBelowTitle
 
-    const iconName = point?.categoryIcon(point?.category)
+    const iconName = MapPOI.categoryIcon(point?.category)
     const isSvgIcon = iconName?.endsWith('.svg')
 
     const cardExpanded = point?.expanded === true
@@ -289,7 +289,16 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
         const element = _poiCanvasCaptureSurface.current
         const card = _poiContent.current
         const captureSurface = _poiCanvasCaptureSurface.current
+        const editorPriority = $pois.current === pointId
+            || globalThis.lgs?.theJourneyEditorProxy?.poi === pointId
+        const capturePriority = priority || editorPriority
+        const currentPOI = $pois.list.get(pointId)
+        const currentPresentation = resolveReplayPOIPresentation(currentPOI)
+        const currentPOIVisible = currentPresentation.active
+            ? currentPresentation.visible
+            : POIUtils.isPOIVisibleOnMap(currentPOI, currentPresentation.visible)
         const canCapture = !isEmbedded && !replayMasked && !hiddenBecauseTooClose && Boolean(pointId)
+            && currentPOIVisible
         if (!canCapture) {
             queuePOICanvasRender.cancel(_poiContent)
             if (managedCaptureSurface) {
@@ -309,9 +318,11 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             if (_lastScheduledVisualSignature.current !== captureInputSignature) {
                 _lastScheduledVisualSignature.current = captureInputSignature
                 poiCaptureSurfaceStore.request(pointId, {
-                    priority,
-                    allowOverflow: priority,
+                    priority: capturePriority,
+                    allowOverflow: capturePriority,
                     getPriority: () => getPOICanvasRenderPriority(pointId),
+                    isEligible: () => !isReplayPOIPresentationActive(lgs.stores.replay)
+                        && POIUtils.isPOIVisibleOnMap($pois.list.get(pointId)),
                 })
             }
             return
@@ -341,7 +352,10 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             const currentPoint = $pois.list.get(pointId)
             const currentPresentation = resolveReplayPOIPresentation(currentPoint)
             return renderRequestId === _renderRequestId.current && Boolean(currentPoint)
-                && (currentPoint.expanded === true) === expanded && currentPresentation.visible
+                && (currentPoint.expanded === true) === expanded
+                && (currentPresentation.active
+                    ? currentPresentation.visible
+                    : POIUtils.isPOIVisibleOnMap(currentPoint, currentPresentation.visible))
                 && currentPresentation.active === replayActive
                 && currentPresentation.animationActive === replayAnimationActive
                 && (!isPOIHoverPreviewActive(pointId) || isPOIHoverPreviewTransitionActive(pointId))
@@ -409,7 +423,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             }
         }
 
-        const priorityCapture = priority
+        const priorityCapture = capturePriority
         queuePOICanvasRender(_poiContent, async () => {
             if (!isCurrentRender()) {
                 return
@@ -515,7 +529,11 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                 element.style.padding = `${capturePadding}px`
                 assertPOICanvasDimensions(element, scale, ratio)
                 const sharedCapture = await poiCanvasImageCache.getOrCreate(visualSignature, async () => {
-                    const snap = await snapdom(element, {scale, dpr: ratio, outerShadows: 'subtree'})
+                    if (!isCurrentRender()) {
+                        return null
+                    }
+                    // Yield between SnapDOM capture steps so long POI clones keep the page interactive.
+                    const snap = await snapdom(element, {scale, dpr: ratio, outerShadows: 'subtree', fast: false})
                     if (!isCurrentRender()) {
                         return null
                     }
@@ -599,7 +617,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             },
         })
     }, [captureSurfaceActive, isEmbedded, managedCaptureSurface, point?.expanded, replayActive, replayAnimationActive, replayMasked,
-        hiddenBecauseTooClose, pointId, $pois.list, leaderCaptureBleed, poiVisualSignature])
+        hiddenBecauseTooClose, pointId, $pois, leaderCaptureBleed, poiVisualSignature])
 
     useEffect(() => {
         if (isEmbedded || !pointId) {

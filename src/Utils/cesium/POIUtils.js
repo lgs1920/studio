@@ -654,6 +654,21 @@ export class POIUtils {
         return Boolean(visibility) && resolveReplayPOIPresentation(poi, {allowReplayAnimation}).visible
     }
 
+    /** Return whether a POI can contribute pixels to the normal map view. */
+    static isPOIVisibleOnMap = (poi, visibility = poi?.visible !== false) => {
+        if (!poi?.id || !POIUtils.setPOIVisibility(poi, visibility)) {
+            return false
+        }
+
+        const owningJourney = journeyForPOI(poi)
+        if (owningJourney?.visible === false || owningJourney?.POIsVisible === false) {
+            return false
+        }
+
+        const parentTrack = owningJourney?.tracks?.get?.(poi.parent)
+        return parentTrack?.visible !== false
+    }
+
     /**
      * Adjusts the scale of a point in 3D space based on its distance from the camera.
      * The function calculates the scale value such that it decreases with the distance,

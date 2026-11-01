@@ -31,6 +31,19 @@ export const createPOICaptureSurfaceStore = (maxConcurrent = 2) => {
     let consecutivePrioritizedSurfaces = 0
     let priorityRefreshCursor = 0
 
+    /** Reject stale hidden requests before they can occupy a mounted capture surface. */
+    const isRequestEligible = request => {
+        if (typeof request?.isEligible !== 'function') {
+            return true
+        }
+        try {
+            return request.isEligible() === true
+        }
+        catch {
+            return false
+        }
+    }
+
     /** Publish one stable snapshot after active surface ownership changes. */
     const notifyActiveSurfaces = () => {
         activeSnapshot = Array.from(activePOIs)
@@ -42,6 +55,12 @@ export const createPOICaptureSurfaceStore = (maxConcurrent = 2) => {
 
     /** Choose the best current-view candidate while aging old requests fairly. */
     const selectNextPOI = () => {
+        for (const [poiId, request] of pendingPOIs) {
+            if (!isRequestEligible(request)) {
+                pendingPOIs.delete(poiId)
+            }
+        }
+
         const pendingEntries = Array.from(pendingPOIs)
         if (pendingEntries.length > 0) {
             const refreshCount = Math.min(32, pendingEntries.length)
@@ -117,6 +136,10 @@ export const createPOICaptureSurfaceStore = (maxConcurrent = 2) => {
 
         if (activePOIs.size - overflowPOIs.size >= limit && overflowPOIs.size === 0 && pendingPOIs.size > 0) {
             for (const [poiId, request] of pendingPOIs) {
+                if (!isRequestEligible(request)) {
+                    pendingPOIs.delete(poiId)
+                    continue
+                }
                 if (request.allowOverflow) {
                     pendingPOIs.delete(poiId)
                     activePOIs.add(poiId)
@@ -170,7 +193,7 @@ export const createPOICaptureSurfaceStore = (maxConcurrent = 2) => {
     }
 
     /** Request a capture surface, optionally moving the POI ahead of background requests. */
-    const request = (poiId, {priority = false, allowOverflow = false, getPriority = null} = {}) => {
+    const request = (poiId, {priority = false, allowOverflow = false, getPriority = null, isEligible = null} = {}) => {
         if (!poiId || activePOIs.has(poiId)) {
             return
         }
@@ -179,6 +202,7 @@ export const createPOICaptureSurfaceStore = (maxConcurrent = 2) => {
             priority: priority || previousRequest?.priority === true,
             allowOverflow: allowOverflow || previousRequest?.allowOverflow === true,
             getPriority: getPriority ?? previousRequest?.getPriority ?? null,
+            isEligible: isEligible ?? previousRequest?.isEligible ?? null,
             score: previousRequest?.score ?? 0,
             sequence: previousRequest?.sequence ?? nextSequence++,
         })

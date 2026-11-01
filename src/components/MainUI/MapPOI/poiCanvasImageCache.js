@@ -70,22 +70,8 @@ export const createPOICanvasImageCache = ({maxEntries = DEFAULT_MAX_ENTRIES, max
         return true
     }
 
-    /** Reuse a cached or in-flight canvas before starting another raster capture. */
-    const getOrCreate = async (key, create) => {
-        const cached = get(key)
-        if (cached) {
-            return {entry: cached, source: 'cache'}
-        }
-
-        const pending = pendingCaptures.get(key)
-        if (pending) {
-            const entry = await pending
-            if (entry) {
-                return {entry, source: 'inflight'}
-            }
-            return getOrCreate(key, create)
-        }
-
+    /** Start one capture and publish it to callers that request the same visual key. */
+    const createCapture = (key, create) => {
         const capture = Promise.resolve()
             .then(create)
             .then(entry => {
@@ -100,7 +86,43 @@ export const createPOICanvasImageCache = ({maxEntries = DEFAULT_MAX_ENTRIES, max
                 }
             })
         pendingCaptures.set(key, capture)
-        return {entry: await capture, source: 'capture'}
+        return capture.then(entry => ({entry, source: 'capture'}))
+    }
+
+    /** Reuse a cached or in-flight canvas, retrying a cancelled capture at most once. */
+    const getOrCreate = async (key, create) => {
+        const cached = get(key)
+        if (cached) {
+            return {entry: cached, source: 'cache'}
+        }
+
+        const pending = pendingCaptures.get(key)
+        if (pending) {
+            const entry = await pending
+            if (entry) {
+                return {entry, source: 'inflight'}
+            }
+
+            const cachedAfterPending = get(key)
+            if (cachedAfterPending) {
+                return {entry: cachedAfterPending, source: 'cache'}
+            }
+
+            // Another caller may have started a replacement while this caller was waiting.
+            const replacement = pendingCaptures.get(key)
+            if (replacement) {
+                const replacementEntry = await replacement
+                return replacementEntry
+                    ? {entry: replacementEntry, source: 'inflight'}
+                    : {entry: null, source: 'cancelled'}
+            }
+
+            // A cancelled creator must not recursively retry itself forever. One replacement
+            // capture lets a still-current waiter recover without unbounded stale SnapDOM work.
+            return createCapture(key, create)
+        }
+
+        return createCapture(key, create)
     }
 
     /** Clear all shared canvas references. */
