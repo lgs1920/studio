@@ -15,8 +15,8 @@
  ******************************************************************************/
 
 import {
-    CURRENT_MAP_POINT, POI_NEW_BADGE_DURATION, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER, ROTATION_ICON, SCENE_MODE_2D,
-    SCENE_WIDGETS_BOARD,
+    CURRENT_MAP_POINT, JOURNEY_EDITOR_DRAWER, POI_NEW_BADGE_DURATION, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER,
+    ROTATION_ICON, SCENE_MODE_2D, SCENE_WIDGETS_BOARD,
     VIDEO_CROP_ZONE,
 } from '@Core/constants'
 import { openPOIEditor } from '@Components/MainUI/MapPOI/openPOIEditor'
@@ -103,7 +103,12 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
             })
         }
 
-        focusPOIInOpenList(createdPoi.id)
+        if (lgs.stores.ui.drawers.open === JOURNEY_EDITOR_DRAWER) {
+            await openPOIEditor(createdPoi.id)
+        }
+        else {
+            focusPOIInOpenList(createdPoi.id)
+        }
 
         /** Fill the default title and empty description when reverse geocoding returns a place. */
         const enrichPOIPresentation = async () => {
