@@ -8,30 +8,28 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { useSnapshot } from 'valtio'
-import { MapPOI }      from '../../cesium/MapPOI'
+import {getActivePOIOverlayId, subscribeToActivePOIOverlay} from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
+import {MapPOI} from '../../cesium/MapPOI'
+import {useSyncExternalStore} from 'react'
 import './style.css'
-import { memo, useRef, useState, useEffect } from 'react'
-/**
- * Functional React component that handles displaying a cluster of Points of Interest (POI) on the scene.
- *
- * @param {Object} props - The properties passed to the component (not used here, but left for future extensions).
- * @returns {JSX.Element} A list of MapPOI components rendered inside a div container with the ID "poi-list".
- */
+
+/** Render only the POI that currently needs a projected hover overlay. */
 export const MapPOICluster = () => {
-    // Utiliser useSnapshot uniquement sur les keys pour la réactivité de la structure
-    const list = useSnapshot(lgs.stores.main.components.pois.list)
+    const activePOIId = useSyncExternalStore(
+        subscribeToActivePOIOverlay,
+        getActivePOIOverlayId,
+        () => null,
+    )
+
     return (
         <div id="poi-list">
-            {Array.from(list.keys()).map((id) => (
-                <MapPOI key={id} point={id}/>
-            ))}
+            {activePOIId && <MapPOI key={activePOIId} point={activePOIId}/>}
         </div>
     )
 }

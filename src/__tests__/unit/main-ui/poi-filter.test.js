@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-28
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,7 +30,7 @@ describe('filterAndSortPOIs', () => {
     it('filters on the POI category and limits journey entries to the active journey', () => {
         const ids = filterAndSortPOIs({
             onlyJourney: false,
-            filterSettings: {global: true, journey: true, byCategories: ['summit']},
+            filterSettings: {global: true, journey: true, allPOIs: true, byCategories: ['summit']},
             list,
             journeySlug: 'journey-a',
             getJourneyByTrackSlug,

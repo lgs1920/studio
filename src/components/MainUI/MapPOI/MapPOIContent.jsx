@@ -30,6 +30,7 @@ import { MapPOI }                                  from '@Core/MapPOI'
 import { poiPerformance }                           from '@Core/ui/POIPerformance'
 import { POIUtils }                                from '@Utils/cesium/POIUtils'
 import { poiCanvasImageCache }                      from '@Components/MainUI/MapPOI/poiCanvasImageCache'
+import {getPOICanvasRenderPriority} from '@Components/MainUI/MapPOI/poiCanvasRenderPriority'
 import {
     normalizePOIDisplaySettings,
     POI_DISPLAY_DEFAULT_FONT_FAMILY,
@@ -112,7 +113,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
     const point = useSnapshot($point)
     const replay = useSnapshot(lgs.stores?.replay ?? EMPTY_REPLAY_PROXY)
     const isEmbedded = useInMenu || domPreview || collapsedPreview
-    const captureSurfaceGranted = usePOICaptureSurface(poi)
+    const captureSurfaceGranted = usePOICaptureSurface(managedCaptureSurface ? poi : null)
     const captureSurfaceActive = !managedCaptureSurface || isEmbedded || captureSurfaceGranted
     const isExpanded = !useInMenu && !collapsedPreview && (domPreview || point?.expanded === true)
     const pointId = point?.id
@@ -263,6 +264,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
         const captureSurface = _poiCanvasCaptureSurface.current
         const canCapture = !isEmbedded && !replayMasked && !hiddenBecauseTooClose && Boolean(pointId)
         if (!canCapture) {
+            queuePOICanvasRender.cancel(_poiContent)
             if (managedCaptureSurface) {
                 poiCaptureSurfaceStore.cancel(pointId)
             }
@@ -284,7 +286,11 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
         if (managedCaptureSurface && !isEmbedded && (!element || !card || !captureSurfaceActive)) {
             if (_lastScheduledVisualSignature.current !== captureInputSignature) {
                 _lastScheduledVisualSignature.current = captureInputSignature
-                poiCaptureSurfaceStore.request(pointId, {priority: options?.priority === true})
+                poiCaptureSurfaceStore.request(pointId, {
+                    priority: options?.priority === true,
+                    allowOverflow: options?.priority === true,
+                    getPriority: () => getPOICanvasRenderPriority(pointId),
+                })
             }
             return
         }
@@ -396,7 +402,15 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             return
         }
 
+        if (managedCaptureSurface && !replayActive) {
+            const currentPoint = $pois.list.get(pointId)
+            if (currentPoint) {
+                void POIUtils.drawPlaceholder(currentPoint)
+            }
+        }
+
         const queuedAt = poiPerformance.start('capture.queueWait')
+        const priorityCapture = options?.priority === true
         queuePOICanvasRender(_poiContent, async () => {
             poiPerformance.end('capture.queueWait', queuedAt)
             poiPerformance.record('capture.started')
@@ -592,8 +606,9 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             }
             completePOIHoverPreviewRender(pointId)
         }, {
-            priority: options?.priority === true,
-            allowOverflow: options?.priority === true,
+            priority: priorityCapture,
+            allowOverflow: priorityCapture,
+            getPriority: managedCaptureSurface ? () => getPOICanvasRenderPriority(pointId) : null,
             onSettled: () => {
                 if (_activeCapture.current?.requestId === renderRequestId) {
                     _activeCapture.current = null
@@ -645,6 +660,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
         if (_iconLoadRenderTimer.current) {
             clearTimeout(_iconLoadRenderTimer.current)
         }
+        queuePOICanvasRender.cancel(_poiContent)
         _poiCanvasCache.current = null
         _activeCapture.current = null
         if (managedCaptureSurface) {

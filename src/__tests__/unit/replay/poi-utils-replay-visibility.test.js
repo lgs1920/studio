@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-12
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -94,6 +94,41 @@ describe('POIUtils replay visibility', () => {
                 visible: true,
             },
         }, true)).toBe(true)
+    })
+
+    it('draws a lightweight POI placeholder and upgrades the same pickable entity', async () => {
+        const poi = {
+            id: 'poi-startup-placeholder',
+            name: 'Startup placeholder',
+            longitude: 2,
+            latitude: 48,
+            height: 100,
+            visible: true,
+            color: '#245c45',
+            bgColor: '#d7e5dc',
+        }
+
+        const blankEntity = await POIUtils.draw({
+            ...poi,
+            image: {src: '', width: 32, height: 36},
+        })
+        const duplicateCleanup = vi.spyOn(POIUtils, 'removeEntityFromOtherContainers')
+        const placeholder = await POIUtils.drawPlaceholder(poi)
+        const placeholderImage = propertyValue(placeholder.billboard.image)
+
+        expect(placeholder).toBe(blankEntity)
+        expect(duplicateCleanup).not.toHaveBeenCalled()
+        expect(globalThis.lgs.viewer.entities.getById(poi.id)).toBe(placeholder)
+        expect(placeholderImage).toMatch(/^data:image\/svg\+xml,/)
+        expect(decodeURIComponent(placeholderImage.split(',')[1])).toContain('circle')
+
+        const upgraded = await POIUtils.draw({
+            ...poi,
+            image: {src: 'final-poi-canvas', width: 120, height: 48},
+        })
+
+        expect(upgraded).toBe(placeholder)
+        expect(propertyValue(upgraded.billboard.image)).toBe('final-poi-canvas')
     })
 
     it('forces all pois hidden when hide-all replay mode is enabled', () => {

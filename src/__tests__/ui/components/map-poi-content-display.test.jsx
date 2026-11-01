@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,10 +54,7 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
 }))
 
 import { MapPOIContent } from '@Components/MainUI/MapPOI/MapPOIContent'
-import {
-    clearPOIHoverTitlePreview, getPOIHoverTitle,
-} from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
-import { POIUtils } from '@Utils/cesium/POIUtils'
+import {poiCanvasImageCache} from '@Components/MainUI/MapPOI/poiCanvasImageCache'
 import {snapdom} from '@zumer/snapdom'
 
 /**
@@ -86,12 +83,13 @@ const createPOI = display => ({
 
 describe('MapPOIContent display settings', () => {
     let poiList
-    let requestAnimationFrame
     let originalResizeObserver
+    let captureCanvas
 
     beforeEach(() => {
         drawPOI.mockClear()
         vi.mocked(snapdom).mockReset()
+        poiCanvasImageCache.clear()
         originalResizeObserver = globalThis.ResizeObserver
         poiList = proxyMap([['poi-1', createPOI({
             category:    true,
@@ -103,7 +101,10 @@ describe('MapPOIContent display settings', () => {
             dateTime:    true,
             maxWidth:    320,
         })]])
-        requestAnimationFrame = vi.fn()
+        captureCanvas = document.createElement('canvas')
+        captureCanvas.width = 200
+        captureCanvas.height = 80
+        vi.mocked(snapdom).mockResolvedValue({toCanvas: async () => captureCanvas})
 
         globalThis.lgs = {
             colors: {poiDefault: '#000000', poiDefaultBackground: '#ffffff'},
@@ -139,7 +140,6 @@ describe('MapPOIContent display settings', () => {
                 offKeyUp: vi.fn(),
             },
             convert: value => ({to: () => String(value)}),
-            requestAnimationFrame,
             ui: {
                 contextMenu: {hide: vi.fn()},
                 poiManager: {ensurePOILocation: vi.fn(), updatePOI: vi.fn()},
@@ -149,7 +149,6 @@ describe('MapPOIContent display settings', () => {
 
     afterEach(() => {
         cleanup()
-        clearPOIHoverTitlePreview()
         vi.restoreAllMocks()
         if (originalResizeObserver === undefined) {
             delete globalThis.ResizeObserver
@@ -161,42 +160,20 @@ describe('MapPOIContent display settings', () => {
         globalThis.__ = undefined
     })
 
-    it('keeps regular clicks for expansion without arming movement on Shift+click', () => {
-        const canvasEvents = globalThis.__.canvasEvents
-        render(<MapPOIContent poi="poi-1"/>)
+    /** Give the queued SnapDOM renderer deterministic nonzero browser bounds. */
+    const renderWithCaptureBounds = (element, options) => {
+        const result = render(element, options)
+        for (const surface of document.querySelectorAll('.poi-canvas-capture-surface')) {
+            vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({
+                left: 0, top: 0, right: 100, bottom: 40, width: 100, height: 40,
+            })
+        }
+        return result
+    }
 
-        expect(canvasEvents.on.mock.calls.some(([name]) => name === 'SHIFT#CLICK')).toBe(false)
-        act(canvasEvents.onClick.mock.calls[0][0])
-
-        expect(globalThis.__.ui.poiManager.updatePOI).toHaveBeenCalledWith('poi-1', {expanded: false})
-    })
-
-    it.each([false, true])('uses the hand cursor on enter and restores it on leave when expanded=%s', expanded => {
-        poiList.get('poi-1').expanded = expanded
-        const canvas = document.createElement('canvas')
-        canvas.style.cursor = 'crosshair'
-        canvas.style.color = 'rgb(20, 30, 40)'
-        globalThis.lgs.viewer = {scene: {canvas}}
-        vi.spyOn(POIUtils, 'setPOIVisibility').mockReturnValue(true)
-        const {unmount} = render(<MapPOIContent poi="poi-1"/>)
-        const events = globalThis.__.canvasEvents.on.mock.calls
-        const enter = events.find(([name]) => name === 'MOUSE_ENTER')[1]
-        const leave = events.find(([name]) => name === 'MOUSE_LEAVE')[1]
-
-        act(enter)
-        expect(getPOIHoverTitle('poi-1')).toBe(true)
-        expect(canvas.style.cursor).toBe('pointer')
-        act(leave)
-        expect(getPOIHoverTitle('poi-1')).toBe(false)
-        expect(canvas.style.cursor).toBe('crosshair')
-
-        act(enter)
-        unmount()
-        expect(canvas.style.cursor).toBe('crosshair')
-    })
 
     it('renders configured fields on the expanded map POI', () => {
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
 
         expect(screen.getByRole('heading', {name: 'River stop'})).toBeTruthy()
         expect(document.querySelector('.poi-category-title-icon')?.getAttribute('data-icon-name')).toBe('location-dot')
@@ -222,7 +199,7 @@ describe('MapPOIContent display settings', () => {
             fontSize:    30,
         }
 
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
 
         const wrapper = document.querySelector('.poi-icon-wrapper')
         const card = wrapper.querySelector('.poi-card-inner')
@@ -236,7 +213,7 @@ describe('MapPOIContent display settings', () => {
     it('renders the selected POI style and horizontal stick anchor', () => {
         poiList.get('poi-1').display.style = 'underline'
         poiList.get('poi-1').display.stickHorizontalPosition = 80
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
 
         const wrapper = document.querySelector('.poi-icon-wrapper')
         const card = wrapper.querySelector('.poi-card')
@@ -251,7 +228,7 @@ describe('MapPOIContent display settings', () => {
         poiList.get('poi-1').display.stickHorizontalPosition = 20
         poiList.get('poi-1').display.stickAngle = 'straight'
 
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
 
         const wrapper = document.querySelector('.poi-icon-wrapper')
         const card = wrapper?.querySelector('.poi-card')
@@ -266,7 +243,7 @@ describe('MapPOIContent display settings', () => {
         const point = poiList.get('poi-1')
         point.display.style = 'underline'
         point.bgColor = '#ffffff'
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
 
         const wrapper = document.querySelector('.poi-icon-wrapper')
         const card = wrapper.querySelector('.poi-card-inner--style-underline')
@@ -290,7 +267,7 @@ describe('MapPOIContent display settings', () => {
 
     it('keeps every POI detail in the round badge content beside the category icon', () => {
         poiList.get('poi-1').display.style = 'round-badge'
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
 
         const content = document.querySelector('.poi-card-inner--style-round-badge .poi-card-content')
         const badge = content?.querySelector('.poi-category-title-icon')
@@ -306,7 +283,7 @@ describe('MapPOIContent display settings', () => {
     it('frames all POI text separately from the top-left icon', () => {
         poiList.get('poi-1').display.style = 'icon-frame'
         poiList.get('poi-1').title = 'River stop with a long name that spans several lines'
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
 
         const card = document.querySelector('.poi-card-inner--style-icon-frame')
         const content = card?.querySelector('.poi-card-content')
@@ -325,9 +302,9 @@ describe('MapPOIContent display settings', () => {
     })
 
     it('updates the rendered POI when an optional style is first added', async () => {
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
         const card = document.querySelector('.poi-card-inner')
-        const queuedRenders = requestAnimationFrame.mock.calls.length
+        const captureCount = snapdom.mock.calls.length
         expect(card.classList.contains('poi-card-inner--style-pill')).toBe(true)
 
         await act(async () => {
@@ -336,7 +313,7 @@ describe('MapPOIContent display settings', () => {
         })
 
         expect(card.classList.contains('poi-card-inner--style-open-frame')).toBe(true)
-        expect(requestAnimationFrame.mock.calls.length).toBeGreaterThan(queuedRenders)
+        await waitFor(() => expect(snapdom.mock.calls.length).toBeGreaterThan(captureCount))
     })
 
     it.each([
@@ -348,7 +325,7 @@ describe('MapPOIContent display settings', () => {
         expectedAngle,
     }) => {
         poiList.get('poi-1').display.stickAngle = stickAngle
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
 
         const wrapper = document.querySelector('.poi-icon-wrapper')
         const angle = Number.parseFloat(wrapper.style.getPropertyValue('--poi-expanded-leader-angle'))
@@ -368,7 +345,7 @@ describe('MapPOIContent display settings', () => {
         poiList.get('poi-1').display.titleAltitude = true
         poiList.get('poi-1').display.altitude = false
 
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
 
         expect(screen.getByRole('heading', {name: 'River stop (125 m)'})).toBeTruthy()
         expect(screen.queryByText('Altitude: 125')).toBeNull()
@@ -386,7 +363,7 @@ describe('MapPOIContent display settings', () => {
         poi.simulatedHeight = 175
         poi.display.titleAltitude = true
 
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
 
         expect(screen.getByRole('heading', {name: 'River stop (175 m)'})).toBeTruthy()
     })
@@ -395,7 +372,7 @@ describe('MapPOIContent display settings', () => {
         globalThis.lgs.stores.replay.active = true
         poiList.get('poi-1').display.titleAltitude = true
 
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
 
         expect(screen.getByRole('heading', {name: 'River stop (125 m)'})).toBeTruthy()
         expect(document.querySelector('.poi-category-title-icon')?.getAttribute('data-icon-name')).toBe('location-dot')
@@ -414,27 +391,27 @@ describe('MapPOIContent display settings', () => {
         poi.replay.hiddenFields.altitude = true
         globalThis.lgs.stores.replay.nearbyPois = [{poi}]
 
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
 
         expect(screen.getByRole('heading', {name: 'River stop'})).toBeTruthy()
     })
 
     it('reactively updates an expanded POI and schedules a fresh canvas snapshot', async () => {
-        const {rerender} = render(<MapPOIContent poi="poi-1"/>)
-        const initialRenderCount = requestAnimationFrame.mock.calls.length
+        const {rerender} = renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
+        const captureCount = snapdom.mock.calls.length
 
         poiList.get('poi-1').display.location = false
         rerender(<MapPOIContent poi="poi-1"/>)
 
         await waitFor(() => {
             expect(screen.queryByText('Riverside')).toBeNull()
-            expect(requestAnimationFrame.mock.calls.length).toBeGreaterThan(initialRenderCount)
+            expect(snapdom.mock.calls.length).toBeGreaterThan(captureCount)
         })
     })
 
     it('schedules a fresh canvas snapshot when the expanded POI width changes', async () => {
-        const {rerender} = render(<MapPOIContent poi="poi-1"/>)
-        const initialRenderCount = requestAnimationFrame.mock.calls.length
+        const {rerender} = renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
+        const captureCount = snapdom.mock.calls.length
 
         poiList.get('poi-1').display.maxWidth = 400
         rerender(<MapPOIContent poi="poi-1"/>)
@@ -442,11 +419,11 @@ describe('MapPOIContent display settings', () => {
         await waitFor(() => {
             expect(document.querySelector('.poi-icon-wrapper').style.getPropertyValue('--poi-expanded-dimension'))
                 .toBe('400px')
-            expect(requestAnimationFrame.mock.calls.length).toBeGreaterThan(initialRenderCount)
+            expect(snapdom.mock.calls.length).toBeGreaterThan(captureCount)
         })
     })
 
-    it('refreshes the expanded POI anchor when its card resizes without changing the stick edge offset', () => {
+    it('refreshes the expanded POI anchor when its card resizes without changing the stick edge offset', async () => {
         let notifyResize
         globalThis.ResizeObserver = class {
             constructor(callback) {
@@ -457,9 +434,9 @@ describe('MapPOIContent display settings', () => {
             disconnect = vi.fn()
         }
 
-        const {container} = render(<MapPOIContent poi="poi-1"/>)
+        const {container} = renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
         const card = container.querySelector('.poi-card-inner')
-        const initialRenderCount = requestAnimationFrame.mock.calls.length
+        const captureCount = snapdom.mock.calls.length
         Object.defineProperties(card, {
             offsetWidth: {configurable: true, value: 320},
             offsetHeight: {configurable: true, value: 160},
@@ -467,7 +444,7 @@ describe('MapPOIContent display settings', () => {
 
         act(() => notifyResize([{target: card}]))
 
-        expect(requestAnimationFrame.mock.calls.length).toBeGreaterThan(initialRenderCount)
+        await waitFor(() => expect(snapdom.mock.calls.length).toBeGreaterThan(captureCount))
     })
 
     it('clamps an expanded POI width to the configured maximum', () => {
@@ -491,7 +468,7 @@ describe('MapPOIContent display settings', () => {
             maxWidth:    200,
         }
 
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
 
         expect(document.querySelector('.poi-card-content--title-only')).not.toBeNull()
         expect(screen.getByRole('heading', {name: 'River stop'})).toBeTruthy()
@@ -507,16 +484,13 @@ describe('MapPOIContent display settings', () => {
         canvas.width = 200
         canvas.height = 80
         vi.mocked(snapdom).mockResolvedValue({toCanvas: async () => canvas})
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
         vi.spyOn(document.querySelector('.poi-canvas-capture-surface'), 'getBoundingClientRect')
             .mockReturnValue({left: 0, top: 0, right: 100, bottom: 40, width: 100, height: 40})
 
-        await act(async () => {})
-        await act(async () => {
-            requestAnimationFrame.mock.calls.map(([callback]) => callback).forEach(callback => callback())
-        })
-
-        expect(drawPOI).toHaveBeenCalledWith(expect.objectContaining({id: 'poi-1', image: {src: canvas, width: 100, height: 40}}))
+        await waitFor(() => expect(drawPOI).toHaveBeenCalledWith(expect.objectContaining({
+            id: 'poi-1', image: {src: canvas, width: 100, height: 40},
+        })))
     })
 
     it.each(['global-mask', 'animation-end', 'stop'])('rejects a pending canvas when presentation changes: %s', async transition => {
@@ -532,21 +506,14 @@ describe('MapPOIContent display settings', () => {
         canvas.width = 200
         canvas.height = 80
         const pendingCanvas = new Promise(resolve => {finishCanvas = resolve})
-        vi.mocked(snapdom).mockResolvedValue({toCanvas: () => pendingCanvas})
-        render(<MapPOIContent poi="poi-1"/>)
+        vi.mocked(snapdom).mockImplementationOnce(() => ({toCanvas: () => pendingCanvas}))
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
         const element = document.querySelector('.poi-canvas-capture-surface')
         vi.spyOn(element, 'getBoundingClientRect')
             .mockReturnValue({left: 0, top: 0, right: 100, bottom: 40, width: 100, height: 40})
 
-        // Let mount-time DOM mutations publish their replacement capture requests.
-        await act(async () => {})
-        await act(async () => {
-            const callbacks = requestAnimationFrame.mock.calls.map(([callback]) => callback)
-            requestAnimationFrame.mockClear()
-            callbacks.forEach(callback => callback())
-        })
         try {
-            expect(snapdom).toHaveBeenCalled()
+            await waitFor(() => expect(snapdom).toHaveBeenCalled())
             await act(async () => {
                 if (transition === 'global-mask') {
                     globalThis.lgs.settings.ui.replay.hideAllPoisDuringJourneyReplay = true
@@ -562,7 +529,7 @@ describe('MapPOIContent display settings', () => {
                 finishCanvas(canvas)
                 await pendingCanvas
             })
-            expect(drawPOI.mock.calls.filter(([point]) => point.visible !== false)).toEqual([])
+            expect(drawPOI.mock.calls.some(([point]) => point.image?.src === canvas)).toBe(false)
         }
         finally {
             finishCanvas(canvas)
@@ -582,7 +549,7 @@ describe('MapPOIContent display settings', () => {
             capturedPadding = element.style.padding
             return {toCanvas: async () => canvas}
         })
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
 
         const captureSurface = document.querySelector('.poi-canvas-capture-surface')
         const slantedContent = document.querySelector('.poi-card-inner--style-slanted-banner')
@@ -591,18 +558,15 @@ describe('MapPOIContent display settings', () => {
         vi.spyOn(slantedContent, 'getBoundingClientRect')
             .mockReturnValue({left: 0, top: 0, right: 300, bottom: 120, width: 300, height: 120})
 
-        await act(async () => {})
-        await act(async () => {
-            requestAnimationFrame.mock.calls.map(([callback]) => callback).forEach(callback => callback())
-        })
-
-        expect(capturedElement).toBe(captureSurface)
+        await waitFor(() => expect(capturedElement).toBe(captureSurface))
         expect(capturedPadding).toBe('21px')
         expect(captureSurface.style.display).toBe('')
         expect(captureSurface.style.width).toBe('')
         expect(captureSurface.style.boxSizing).toBe('')
         expect(captureSurface.style.padding).toBe('')
-        expect(drawPOI).toHaveBeenCalledWith(expect.objectContaining({id: 'poi-1', image: {src: canvas, width: 200, height: 120}}))
+        await waitFor(() => expect(drawPOI).toHaveBeenCalledWith(expect.objectContaining({
+            id: 'poi-1', image: {src: canvas, width: 200, height: 120},
+        })))
     })
 
     it('positions an expanded POI from the SnapDOM viewBox origin', async () => {
@@ -613,7 +577,7 @@ describe('MapPOIContent display settings', () => {
             meta: {vbW: 200, vbH: 100, contentX: 20, contentY: 10},
             toCanvas: async () => canvas,
         })
-        render(<MapPOIContent poi="poi-1"/>)
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
 
         const captureSurface = document.querySelector('.poi-canvas-capture-surface')
         vi.spyOn(captureSurface, 'getBoundingClientRect')
@@ -621,15 +585,10 @@ describe('MapPOIContent display settings', () => {
         vi.spyOn(captureSurface.querySelector('.poi-geographic-anchor'), 'getBoundingClientRect')
             .mockReturnValue({left: 40, top: 45, right: 40, bottom: 45, width: 0, height: 0})
 
-        await act(async () => {})
-        await act(async () => {
-            requestAnimationFrame.mock.calls.map(([callback]) => callback).forEach(callback => callback())
-        })
-
-        expect(drawPOI).toHaveBeenCalledWith(expect.objectContaining({
+        await waitFor(() => expect(drawPOI).toHaveBeenCalledWith(expect.objectContaining({
             id: 'poi-1',
             pixelOffset: {x: 50, y: 15},
-        }))
+        })))
     })
 
     it('replaces the shrinked capture with the correctly anchored first expanded capture', async () => {

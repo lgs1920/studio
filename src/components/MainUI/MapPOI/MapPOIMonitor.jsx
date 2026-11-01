@@ -21,19 +21,113 @@ import {
     clearPOIHoverPreview, clearPOIHoverTitlePreview, getActivePOIHoverPreviewId,
     isPointerNearPOIHoverPreview, showPOIHoverPreview, showPOIHoverTitlePreview,
 } from '@Components/MainUI/MapPOI/poiHoverPreviewStore'
-import {poiCaptureSurfaceStore} from '@Components/MainUI/MapPOI/poiCaptureSurfaceStore'
+import {
+    poiCaptureSurfaceStore, useActivePOICaptureSurfaces,
+} from '@Components/MainUI/MapPOI/poiCaptureSurfaceStore'
+import {getPOICanvasRenderPriority} from '@Components/MainUI/MapPOI/poiCanvasRenderPriority'
 import {getReplayPOISelectorSnapshot} from '@Components/MainUI/MapPOI/replayPOISelectorStore'
-import {resolveReplayPOIPresentation} from '@Core/ui/replay/JourneyReplayPOISettings'
-import { useCallback, useEffect } from 'react'
-import { subscribe, useSnapshot } from 'valtio'
+import {
+    isReplayPOIPresentationActive, resolveReplayPOIPresentation,
+} from '@Core/ui/replay/JourneyReplayPOISettings'
+import {normalizePOIDisplaySettings, shouldDisplayPOIField} from '@Core/POIDisplaySettings'
+import {POIUtils} from '@Utils/cesium/POIUtils'
+import {useCallback, useEffect} from 'react'
+import {subscribe, useSnapshot} from 'valtio'
+import {subscribeKey} from 'valtio/utils'
 
 const DISABLE_POI_SHIFT_HOVER_FOR_DIAGNOSTIC = true
+
+/** Create a stable key for the fields that determine a POI's geographic position. */
+const getPOIPositionSignature = poi => JSON.stringify([
+    poi?.parent,
+    poi?.longitude,
+    poi?.latitude,
+    poi?.height,
+    poi?.simulatedHeight,
+])
+
+/** Return the model fields that affect a POI's captured image. */
+const getPOIVisualSignature = poi => {
+    const expanded = poi?.expanded === true
+    const display = normalizePOIDisplaySettings(poi?.display)
+    const replayActive = isReplayPOIPresentationActive()
+    const displayCoordinates = expanded && shouldDisplayPOIField('coordinates', display, replayActive)
+    const displayAltitude = expanded && shouldDisplayPOIField('altitude', display, replayActive)
+    const displayTitleAltitude = expanded && shouldDisplayPOIField('titleAltitude', display, replayActive)
+    const displayCategory = expanded && shouldDisplayPOIField('category', display, replayActive)
+    const displayLocation = expanded && shouldDisplayPOIField('location', display, replayActive)
+    const displayDateTime = expanded && shouldDisplayPOIField('dateTime', display, replayActive)
+    const iconName = poi?.categoryIcon?.(poi?.category)
+
+    return JSON.stringify([
+        poi?.type,
+        expanded,
+        poi?.title,
+        displayCategory ? poi?.category : null,
+        iconName,
+        poi?.visible,
+        poi?.tooClose,
+        poi?.color,
+        poi?.bgColor,
+        poi?.background,
+        expanded ? poi?.display : null,
+        displayLocation ? poi?.location : null,
+        displayAltitude ? poi?.height : null,
+        displayTitleAltitude ? [poi?.height, poi?.simulatedHeight] : null,
+        displayCoordinates ? [poi?.longitude, poi?.latitude] : null,
+        displayDateTime ? [poi?.time, poi?.timeZone, poi?.longitude, poi?.latitude] : null,
+        poi?.replay?.visible,
+        expanded && replayActive ? poi?.replay : null,
+    ])
+}
+
+/** Return a deduplicated POI ID set from Replay's nearby or animated collection. */
+const getReplayPOIIds = (values, field) => new Set((Array.isArray(values) ? values : [])
+    .map(value => field === 'nearby' ? value?.poi?.id : value)
+    .filter(Boolean))
+
+/** Compare two POI ID sets without allocating another collection. */
+const arePOIIdSetsEqual = (first, second) => first.size === second.size
+    && Array.from(first).every(poiId => second.has(poiId))
+
+/** Keep Replay's established full POI capture tree while map startup uses bounded surfaces. */
+const ReplayPOIContentList = ({poiList}) => {
+    const poiListSnapshot = useSnapshot(poiList)
+
+    return Array.from(poiListSnapshot.keys()).map(poiId => (
+        <MapPOIContent key={poiId} poi={poiId}/>
+    ))
+}
 
 /** Monitor POI interaction, capture lifecycle, and the map POI collection. */
 export const MapPOIMonitor = () => {
     const $pois = lgs.stores.main.components.pois
-    const poiList = useSnapshot($pois.list)
-    const poiIds = Array.from(poiList.keys())
+    const replay = useSnapshot(lgs.stores.replay)
+    const replayPresentationActive = isReplayPOIPresentationActive(replay)
+    const activeCapturePOIs = useActivePOICaptureSurfaces()
+
+    /** Queue one rich capture with a camera-aware score evaluated at promotion time. */
+    const requestPOICapture = useCallback((poiId, {priority = false} = {}) => {
+        if (isReplayPOIPresentationActive(lgs.stores.replay)) {
+            poiCaptureSurfaceStore.cancel(poiId)
+            return
+        }
+
+        const poi = $pois.list.get(poiId)
+        const presentation = resolveReplayPOIPresentation(poi, {
+            animatedPOI: getReplayPOISelectorSnapshot('animated', poiId),
+        })
+        if (!presentation.visible) {
+            poiCaptureSurfaceStore.cancel(poiId)
+            return
+        }
+
+        poiCaptureSurfaceStore.request(poiId, {
+            priority,
+            allowOverflow: priority,
+            getPriority: () => getPOICanvasRenderPriority(poiId),
+        })
+    }, [$pois])
 
     /** Read and select one current POI from the canonical store. */
     const getPOI = useCallback(poiId => {
@@ -157,16 +251,67 @@ export const MapPOIMonitor = () => {
             __.canvasEvents.removeAllListenersByEntity(poiId)
             __.canvasEvents.offKeyUp(handlePOIShiftUp)
             clearPOIHoverTitlePreview(poiId)
+            poiSubscriptions.get(poiId)?.()
+            poiSubscriptions.delete(poiId)
             poiCaptureSurfaceStore.cancel(poiId)
         }
 
+        /** Observe POI model changes without mounting a React content tree for every item. */
+        const observePOI = poiId => {
+            const poi = $pois.list.get(poiId)
+            if (!poi || poiSubscriptions.has(poiId)
+                || isReplayPOIPresentationActive(lgs.stores.replay)) {
+                return
+            }
+
+            const state = {
+                positionSignature: getPOIPositionSignature(poi),
+                visualSignature: getPOIVisualSignature(poi),
+                expanded: poi.expanded === true,
+            }
+            requestPOICapture(poiId)
+            const unsubscribe = subscribe(poi, () => {
+                const currentPOI = $pois.list.get(poiId)
+                if (!currentPOI) {
+                    return
+                }
+
+                const nextPositionSignature = getPOIPositionSignature(currentPOI)
+                if (state.positionSignature !== nextPositionSignature) {
+                    state.positionSignature = nextPositionSignature
+                    POIUtils.updatePosition(currentPOI)
+                }
+
+                const visualSignature = getPOIVisualSignature(currentPOI)
+                const visualChanged = state.visualSignature !== visualSignature
+                state.visualSignature = visualSignature
+                if (!visualChanged) {
+                    return
+                }
+
+                const expanded = currentPOI.expanded === true
+                const expandedChanged = state.expanded !== expanded
+                state.expanded = expanded
+                const replayActive = isReplayPOIPresentationActive(lgs.stores.replay)
+                requestPOICapture(poiId, {
+                    priority: expandedChanged || (replayActive
+                        && getReplayPOISelectorSnapshot('animated', poiId)),
+                })
+            }, true)
+            poiSubscriptions.set(poiId, unsubscribe)
+        }
+
+        const poiSubscriptions = new Map()
+
         for (const poiId of $pois.list.keys()) {
             addPOIEventListeners(poiId)
+            observePOI(poiId)
         }
         const removeSubscription = subscribe($pois.list, operations => {
             operations.forEach(([operation, , value, previousValue]) => {
                 if (operation === 'set' && previousValue === undefined) {
                     addPOIEventListeners(value.id)
+                    observePOI(value.id)
                 }
                 else if (operation === 'delete') {
                     removePOIEventListeners(previousValue.id)
@@ -174,14 +319,116 @@ export const MapPOIMonitor = () => {
             })
         })
 
+        /** Rebuild only POIs whose Replay-dependent image content changed. */
+        const replayStore = lgs.stores.replay
+        let previousReplayActive = isReplayPOIPresentationActive(replayStore)
+        let previousAnimatedIds = getReplayPOIIds(replayStore?.animatedPOIIds, 'animated')
+        let previousNearbyIds = getReplayPOIIds(replayStore?.nearbyPois, 'nearby')
+        let previousAnimatedSource = replayStore?.animatedPOIIds
+        let previousNearbySource = replayStore?.nearbyPois
+        const updateReplayPresentation = () => {
+            const replayActive = isReplayPOIPresentationActive(replayStore)
+            const nextAnimatedSource = replayStore?.animatedPOIIds
+            const nextNearbySource = replayStore?.nearbyPois
+            const nextAnimatedIds = nextAnimatedSource === previousAnimatedSource
+                ? previousAnimatedIds
+                : getReplayPOIIds(nextAnimatedSource, 'animated')
+            const nextNearbyIds = nextNearbySource === previousNearbySource
+                ? previousNearbyIds
+                : getReplayPOIIds(nextNearbySource, 'nearby')
+            const replayModeChanged = replayActive !== previousReplayActive
+            const animatedMembershipChanged = !arePOIIdSetsEqual(previousAnimatedIds, nextAnimatedIds)
+            const nearbyMembershipChanged = !arePOIIdSetsEqual(previousNearbyIds, nextNearbyIds)
+
+            if (replayModeChanged) {
+                if (replayActive) {
+                    poiSubscriptions.forEach(unsubscribe => unsubscribe())
+                    poiSubscriptions.clear()
+                }
+                else {
+                    for (const poiId of $pois.list.keys()) {
+                        observePOI(poiId)
+                    }
+                }
+            }
+            if (animatedMembershipChanged) {
+                for (const poiId of new Set([...previousAnimatedIds, ...nextAnimatedIds])) {
+                    if (previousAnimatedIds.has(poiId) !== nextAnimatedIds.has(poiId)) {
+                        requestPOICapture(poiId, {priority: replayActive})
+                    }
+                }
+            }
+            if (nearbyMembershipChanged) {
+                for (const poiId of new Set([...previousNearbyIds, ...nextNearbyIds])) {
+                    if (previousNearbyIds.has(poiId) !== nextNearbyIds.has(poiId)) {
+                        requestPOICapture(poiId, {priority: replayActive})
+                    }
+                }
+            }
+
+            previousReplayActive = replayActive
+            previousAnimatedIds = nextAnimatedIds
+            previousNearbyIds = nextNearbyIds
+            previousAnimatedSource = nextAnimatedSource
+            previousNearbySource = nextNearbySource
+        }
+        const replaySubscriptions = replayStore
+            ? ['active', 'playing', 'paused', 'clipSequenceActive', 'animatedPOIIds', 'nearbyPois']
+                .map(field => subscribeKey(replayStore, field, updateReplayPresentation, true))
+            : []
+        let replayRuntime = replayStore?.deferredExportPlan?.runtime
+        let removeReplayRuntimeSubscription = replayRuntime
+            ? subscribeKey(replayRuntime, 'status', updateReplayPresentation, true)
+            : null
+        const removeDeferredExportSubscription = replayStore
+            ? subscribeKey(replayStore, 'deferredExportPlan', () => {
+                removeReplayRuntimeSubscription?.()
+                replayRuntime = replayStore?.deferredExportPlan?.runtime
+                removeReplayRuntimeSubscription = replayRuntime
+                    ? subscribeKey(replayRuntime, 'status', updateReplayPresentation, true)
+                    : null
+                updateReplayPresentation()
+            }, true)
+            : () => {}
+
+        /** Refresh captures when shared display inputs change outside a POI model. */
+        const requestAllCaptures = () => {
+            for (const poiId of $pois.list.keys()) {
+                requestPOICapture(poiId)
+            }
+        }
+        const removeUnitSubscription = subscribe(lgs.settings.unitSystem, requestAllCaptures, true)
+        const removeCoordinateSubscription = subscribe(lgs.settings.coordinateSystem, requestAllCaptures, true)
+        const themeObserver = typeof MutationObserver === 'function'
+            ? new MutationObserver(requestAllCaptures)
+            : null
+        themeObserver?.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class', 'data-season-theme', 'data-on-map-theme'],
+        })
+        themeObserver?.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['class', 'data-season-theme', 'data-on-map-theme'],
+        })
+        window.addEventListener('resize', requestAllCaptures)
+        document.fonts?.addEventListener?.('loadingdone', requestAllCaptures)
+
         return () => {
             removeSubscription()
+            replaySubscriptions.forEach(remove => remove())
+            removeReplayRuntimeSubscription?.()
+            removeDeferredExportSubscription()
+            removeUnitSubscription()
+            removeCoordinateSubscription()
+            themeObserver?.disconnect()
+            window.removeEventListener('resize', requestAllCaptures)
+            document.fonts?.removeEventListener?.('loadingdone', requestAllCaptures)
             for (const poiId of $pois.list.keys()) {
                 removePOIEventListeners(poiId)
             }
         }
     }, [$pois, handleEditor, handlePOIClick, handlePOIHover, handlePOIHoverEnd, handlePOIShiftHover,
-        handlePOIShiftHoverEnd, handlePOIShiftUp, openContextMenu])
+        handlePOIShiftHoverEnd, handlePOIShiftUp, openContextMenu, requestPOICapture])
 
     useEffect(() => {
         const canvas = lgs.viewer?.canvas
@@ -230,9 +477,11 @@ export const MapPOIMonitor = () => {
     return (
         <>
             <div id="map-poi-list">
-                {poiIds.map(poiId => (
-                    <MapPOIContent key={poiId} poi={poiId} managedCaptureSurface/>
-                ))}
+                {replayPresentationActive
+                    ? <ReplayPOIContentList poiList={$pois.list}/>
+                    : activeCapturePOIs.map(poiId => (
+                        <MapPOIContent key={poiId} poi={poiId} managedCaptureSurface/>
+                    ))}
             </div>
             <MapPOICluster/>
         </>

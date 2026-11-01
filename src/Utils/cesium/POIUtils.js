@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-03-01
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -48,6 +48,13 @@ const finiteNumber = value => {
     const number = Number(value)
     return Number.isFinite(number) ? number : null
 }
+
+/** Escape color strings before embedding them in a fallback SVG attribute. */
+const escapeXMLAttribute = value => String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
 
 /** Resolve a Cesium property while allowing plain values from lightweight entity fixtures. */
 const cesiumPropertyValue = (property, time) => typeof property?.getValue === 'function'
@@ -164,6 +171,35 @@ export class POIUtils {
         poiPerformance.record('cesium.positionOnlyUpdate')
         POIUtils.requestRender()
         return true
+    }
+
+    /** Draw a small identity-preserving marker before the rich POI canvas is ready. */
+    static drawPlaceholder = async poi => {
+        if (!poi?.id || !Number.isFinite(poi.longitude) || !Number.isFinite(poi.latitude)) {
+            return null
+        }
+
+        const container = POIUtils.getEntityContainer(poi)
+        const existingEntity = container?.getById(poi.id)
+        const existingImage = cesiumPropertyValue(existingEntity?.billboard?.image, JulianDate.now())
+        if (existingImage) {
+            return existingEntity
+        }
+
+        const fill = poi.background === false
+            ? 'none'
+            : escapeXMLAttribute(poi.bgColor ?? globalThis.lgs?.colors?.poiDefaultBackground ?? '#ffffff')
+        const stroke = escapeXMLAttribute(poi.color ?? globalThis.lgs?.colors?.poiDefault ?? '#000000')
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="36" viewBox="0 0 100 112"><path d="M 50 4 A 46 46 0 0 0 29 90.927 L 43 105 Q 50 111 57 105 L 71 90.927 A 46 46 0 0 0 50 4 Z" fill="${fill}" stroke="${stroke}" stroke-width="8" stroke-linejoin="round"/><circle cx="50" cy="43" r="12" fill="${stroke}"/></svg>`
+        return POIUtils.draw({
+            ...poi,
+            image: {
+                src: `data:image/svg+xml,${encodeURIComponent(svg)}`,
+                width: 32,
+                height: 36,
+            },
+            pixelOffset: {x: 0, y: 0},
+        }, true, {skipDuplicateCleanup: Boolean(existingEntity)})
     }
 
 
@@ -345,11 +381,13 @@ export class POIUtils {
      * @param {Object} poi - The Point of Interest object containing necessary data to render.
      * @param {boolean} [parentVisibility=true] - Determines if the POI should be displayed based on its parent
      *     visibility.
+     * @param {object} [options={}] - Optional entity drawing behavior.
+     * @param {boolean} [options.skipDuplicateCleanup=false] - Skip scanning other entity containers for duplicates.
      *
      * @returns {Promise<Entity|null>} A promise that resolves to the created Cesium Entity, or null if no container is
      *     found.
      */
-    static draw = async (poi, parentVisibility = true) => {
+    static draw = async (poi, parentVisibility = true, {skipDuplicateCleanup = false} = {}) => {
         const drawStartedAt = poiPerformance.start('cesium.draw')
         // Default dimensions if poi.image is undefined
         const width = poi.image?.width ?? 32
@@ -394,7 +432,9 @@ export class POIUtils {
             return null
         }
 
-        const removedFromOtherContainers = POIUtils.removeEntityFromOtherContainers(poi, container)
+        const removedFromOtherContainers = skipDuplicateCleanup
+            ? false
+            : POIUtils.removeEntityFromOtherContainers(poi, container)
 
         // Check for existing entity
         const entity = container.getById(poi.id)

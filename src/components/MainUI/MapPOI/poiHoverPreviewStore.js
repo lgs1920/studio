@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,12 +22,14 @@ let activePOIReleaseAfterRender = false
 let activePOITitleId = null
 let previousPOITitleCursor = null
 const listenersByPOI = new Map()
+const activeOverlayListeners = new Set()
 
 /** Notify only the POI components whose preview state changed. */
 const notify = (...poiIds) => {
     new Set(poiIds.filter(Boolean)).forEach(poiId => {
         listenersByPOI.get(poiId)?.forEach(listener => listener())
     })
+    activeOverlayListeners.forEach(listener => listener())
 }
 
 /** Get the ID of the POI currently shown as an expanded DOM preview. */
@@ -38,6 +40,18 @@ export const getPOIHoverTitle = poiId => activePOITitleId === poiId
 
 /** Get the owner of the single active hover preview, if any. */
 export const getActivePOIHoverPreviewId = () => activePOIId
+
+/** Get the POI that currently owns either map hover overlay. */
+export const getActivePOIOverlayId = () => activePOIId ?? activePOITitleId
+
+/** Subscribe one map overlay host to changes in the active hover owner. */
+export const subscribeToActivePOIOverlay = listener => {
+    if (typeof listener !== 'function') {
+        return () => {}
+    }
+    activeOverlayListeners.add(listener)
+    return () => activeOverlayListeners.delete(listener)
+}
 
 /** Subscribe to changes in the active expanded POI preview. */
 export const subscribeToPOIHoverPreview = (poiId, listener) => {
