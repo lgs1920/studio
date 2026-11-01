@@ -250,12 +250,12 @@ Provide:
 
 ## Reference links
 
-- [Fix Path functional specification](../../specs/cesium/CORE-GPX-FIX-PATH.md)
-- [Fix Path editor](../../../src/components/MainUI/FixPathEditor.jsx)
-- [Fix Path geometry](../../../src/components/MainUI/FixPathEditorGeometry.js)
-- [Fix Path editor panel](../../../src/components/MainUI/FixPathEditorPanel.jsx)
-- [Fix Path widget configuration](../../../src/components/MainUI/FixPathEditorConfig.js)
-- [Fix Path correction engine](../../../src/Utils/cesium/fixPathCorrections.js)
-- [Fix Path correction editing](../../../src/Utils/cesium/fixPathCorrectionEditing.js)
-- [Fix Path screen selection](../../../src/Utils/cesium/fixPathScreenSelection.js)
-- [Repository project rules](../../../PROJECT_RULES.md)
+- [Fix Path functional specification](../specs/cesium/CORE-GPX-FIX-PATH.md)
+- [Fix Path editor](../../src/components/MainUI/FixPathEditor.jsx)
+- [Fix Path geometry](../../src/components/MainUI/FixPathEditorGeometry.js)
+- [Fix Path editor panel](../../src/components/MainUI/FixPathEditorPanel.jsx)
+- [Fix Path widget configuration](../../src/components/MainUI/FixPathEditorConfig.js)
+- [Fix Path correction engine](../../src/Utils/cesium/fixPathCorrections.js)
+- [Fix Path correction editing](../../src/Utils/cesium/fixPathCorrectionEditing.js)
+- [Fix Path screen selection](../../src/Utils/cesium/fixPathScreenSelection.js)
+- [Repository project rules](../../PROJECT_RULES.md)
