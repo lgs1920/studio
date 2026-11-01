@@ -4475,3 +4475,35 @@
 ## 2026-11-01 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/df26f218c6deca8ebdf33698f5d57ee0f977ed90)
 
 - Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: persist Replay timeline clip changes`](https://github.com/lgs1920/studio/commit/1de059aa7c26bf9422a6a377f7db70ca481f7d95)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: stabilize Replay camera joystick drag`](https://github.com/lgs1920/studio/commit/cb5eea236e3ec336d8ea49586a59c602595dc75f)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`test: cover live Replay POI updates`](https://github.com/lgs1920/studio/commit/4b46a0a54f76a3b8a3c071c45cfff8c2d967ab3d)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`test: open Replay preview during scene restore`](https://github.com/lgs1920/studio/commit/f61e8f01668cddf03a821e750859c40b4c4fe922)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`test: match POI side accent styling`](https://github.com/lgs1920/studio/commit/5962e7198c89c55c163b9b0a906318a33e46152e)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`test: assert journey visibility handback`](https://github.com/lgs1920/studio/commit/e54b1fd2fa78a954312f1bf112edebbfe08f9cfb)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`test: align Replay visibility coverage`](https://github.com/lgs1920/studio/commit/c7427296404bbb3238ec34cbd13c6c01676f1083)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/e5c84afc6cad3cf0cbbb89526a6ddb60c6349873)
+
+- Recorded automatically from Git history.
