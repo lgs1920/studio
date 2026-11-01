@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,7 +68,7 @@ const REPLAY_TIMELINE_EDIT_EVENTS = [
     'track-label-change',
     'add-clip',
     'remove-clip',
-    'after-clip-change',
+    'clip-change',
     'clip-visibility-change',
     'clip-enabled-change',
     'clip-extend',
@@ -1259,10 +1259,6 @@ export const ReplayTimelinePreview = forwardRef(({
         if (!linkedPreparation || !element || getReplayTimelineDebugStage() !== 'full') return undefined
 
         const persistTimelineEdit = event => {
-            if (event?.type === 'lgs1920-timeline-after-clip-change'
-                && event.detail?.committed === false) {
-                return
-            }
             const localTimeMillis = Number(element.currentTimeMillis)
             if (Number.isFinite(localTimeMillis)) {
                 _preservedPlayheadTimeMillis.current = localTimeMillis

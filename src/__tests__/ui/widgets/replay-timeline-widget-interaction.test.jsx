@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-08
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -158,6 +158,7 @@ const installGlobals = () => {
                 disposeElement: vi.fn(),
                 getTransform: vi.fn(() => ({scale: {x: 1, y: 1}, rotate: 0})),
                 getWidgetConfig: vi.fn(id => ({id, ratio: {locked: false}})),
+                maxWidgets: vi.fn(() => 50),
                 manageControlBox: vi.fn(),
                 onDrag: vi.fn(),
                 onDragEnd: vi.fn(),
@@ -460,19 +461,18 @@ describe('Replay timeline widget interaction isolation', () => {
     })
 
     it.each(['move', 'trim'])('finishes a %s with reactive preparation metadata', async mode => {
-        lgs.stores.replay.preparationTimeline = {
-            timeline: {durationMillis: 10_000, rangeEndMillis: 10_000},
-            tracks: [{id: 'editable', clips: [{
-                id: 'editable-clip', start: 1, end: 4,
-                metadata: {widgetId: 'text-widget', clip: {duration: 3}},
-            }]}],
-        }
+        const widgetId = 'dynamic-stats-widget'
+        lgs.settings.widgets[widgetId] = {name: 'Dynamic Stats', icon: 'chart-line', timelineColor: 'indigo'}
+        lgs.stores.ui.widget.list.set(widgetId, {widgetsBoard: VIDEO_WIDGETS_BOARD, zIndex: 4000})
         const {container} = render(<ReplayTimelinePreview/>)
         const timeline = container.querySelector('lgs1920-timeline')
-        await waitFor(() => expect(timeline.shadowRoot.querySelector('[data-clip-id="editable-clip"]')).not.toBeNull())
+        await waitFor(() => expect(timeline.tracks.find(track => track.id === widgetId)?.clips.length).toBeGreaterThan(0))
+        const timelineClip = timeline.tracks.find(track => track.id === widgetId).clips[0]
+        const clipSelector = `[data-clip-id="${timelineClip.id}"]`
+        await waitFor(() => expect(timeline.shadowRoot.querySelector(clipSelector)).not.toBeNull())
         const surface = timeline.shadowRoot.querySelector('[data-surface]')
         vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 900, bottom: 200, width: 900, height: 200})
-        const clip = timeline.shadowRoot.querySelector('[data-clip-id="editable-clip"]')
+        const clip = timeline.shadowRoot.querySelector(clipSelector)
         const target = mode === 'trim' ? clip.querySelector('[data-clip-handle="end"]') : clip
         expect(target).not.toBeNull()
         /** Dispatch one step of a complete pointer gesture. */
@@ -492,8 +492,11 @@ describe('Replay timeline widget interaction isolation', () => {
         await dispatch(window, 'pointerup', 240)
         expect(JSON.stringify(timeline.tracks)).toBe(committed)
         expect(changes).toHaveBeenCalledOnce()
-        await waitFor(() => expect(lgs.stores.replay.preparationTimeline.tracks[0].clips[0])
-            .toMatchObject(timeline.tracks[0].clips[0]))
+        const findEditedClip = tracks => tracks.find(track => track.id === widgetId)
+            ?.clips.find(candidate => candidate.id === timelineClip.id)
+        await waitFor(() => expect(findEditedClip(lgs.stores.replay.preparationTimeline.tracks))
+            .toMatchObject(findEditedClip(timeline.tracks)))
+        expect(findEditedClip(lgs.stores.replay.preparationTimeline.tracks).metadata.widgetId).toBe(widgetId)
         expect(() => structuredClone(timeline.tracks)).not.toThrow()
     }, 10_000)
 

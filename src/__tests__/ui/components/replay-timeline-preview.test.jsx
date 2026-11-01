@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -576,7 +576,7 @@ describe('ReplayTimelinePreview', () => {
         tracks.find(track => track.id === 'dynamic-stats-widget').visible = false
         tracks.find(track => track.id === 'replay').clips
             .find(clip => clip.kind === 'pre-replay').end = 3.5
-        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-clip-change', {
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-change', {
             bubbles: true,
             detail: {tracks},
         }))
@@ -868,7 +868,7 @@ describe('ReplayTimelinePreview', () => {
         widgetTrack.clips[0].end = widgetTrack.clips[0].end - 0.25
 
         timelineElement.currentTimeMillis = 2_500
-        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-clip-change', {
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-change', {
             bubbles: true,
             detail: {
                 tracks: editedTracks,
@@ -973,7 +973,7 @@ describe('ReplayTimelinePreview', () => {
             },
         })
 
-        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-clip-change', {
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-change', {
             detail: {tracks: initialTracks, committed: true},
         }))
         timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-reorder', {
@@ -1120,7 +1120,7 @@ describe('ReplayTimelinePreview', () => {
             return track
         })
 
-        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-clip-change', {
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-change', {
             detail: {tracks},
         }))
 
@@ -1153,7 +1153,7 @@ describe('ReplayTimelinePreview', () => {
             }
             : track)
 
-        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-clip-change', {
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-change', {
             detail: {tracks},
         }))
 
@@ -1177,7 +1177,7 @@ describe('ReplayTimelinePreview', () => {
             ? {...track, clips: track.clips.map(clip => ({...clip, end: 2}))}
             : track)
 
-        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-clip-change', {
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-change', {
             detail: {tracks: editedTracks, committed: true},
         }))
         timelineElement.tracks = editedTracks
@@ -1214,7 +1214,7 @@ describe('ReplayTimelinePreview', () => {
             : track)
         const editedClip = editedTracks.find(track => track.id === 'dynamic-stats-widget').clips[0]
         timelineElement.tracks = editedTracks
-        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-clip-change', {
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-change', {
             bubbles: true,
             detail: {
                 tracks: editedTracks,
@@ -1272,7 +1272,7 @@ describe('ReplayTimelinePreview', () => {
             'replay',
         ]))
 
-        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-clip-change', {
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-change', {
             detail: {tracks: orderedTracks, committed: true},
         }))
         timelineElement.tracks = orderedTracks
