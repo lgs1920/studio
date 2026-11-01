@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-24
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,7 +50,7 @@ describe('Map POI style', () => {
         const leaderStyle = css.slice(css.indexOf('.poi-expanded-leader-space {'), css.indexOf('.poi-shrinked .poi-card-inner {'))
 
         expect(cardStyle).toContain('--poi-expanded-leader-gap: 0px;')
-        expect(cardStyle).toContain('--poi-open-frame-line-width: calc(1.5 * var(--poi-border-width));')
+        expect(cardStyle).toContain('--poi-open-frame-line-width: 5px;')
         expect(cardStyle).toContain('--poi-expanded-leader-gap: var(--poi-open-frame-line-width);')
         expect(leaderStyle).toContain('width: 0;')
         expect(leaderStyle).toContain('height: 0;')

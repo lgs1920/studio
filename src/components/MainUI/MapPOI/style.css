@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,8 @@
  * POI on MAP
  ******************************************************************************/
 :root {
-    --poi-border-width: 3px;
+    --poi-border-width: 2px;
+    --poi-stick-width: 2px; /* Keep POI connectors at the requested width, regardless of the card border style. */
     --poi-reduce-dimension: var(--lgs-dimension);
     --poi-in-menu-dimension: calc(var(--lgs-dimension-s));
     --poi-menu-icons-column-width: calc(0.8 * var(--lgs-dimension));
@@ -138,12 +139,13 @@
     }
 
     &.poi-card--style-open-frame {
-        --poi-open-frame-line-width: calc(1.5 * var(--poi-border-width)); /* Keep the open-frame corners bold but lighter than the base POI border. */
+        --poi-open-frame-line-width: 5px; /* Keep the open-frame corners stronger than the standard POI border. */
         --poi-expanded-leader-gap: var(--poi-open-frame-line-width);
     }
 
     &.poi-card--style-underline {
-        --poi-expanded-leader-gap: var(--poi-border-width);
+        --poi-underline-line-width: 4px; /* Give the underline its requested emphasis over the standard POI border. */
+        --poi-expanded-leader-gap: var(--poi-underline-line-width);
     }
 }
 
@@ -187,7 +189,7 @@
     & .poi-expanded-leader {
         top: var(--poi-expanded-leader-position, 50%);
         width: var(--poi-expanded-leader-length, 1rem);
-        height: var(--poi-border-width);
+        height: var(--poi-stick-width);
     }
 
     & .poi-geographic-anchor {
@@ -288,7 +290,7 @@
         position: absolute;
         top: var(--poi-expanded-leader-gap, 0px);
         left: var(--poi-expanded-leader-position, 50%);
-        width: var(--poi-border-width);
+        width: var(--poi-stick-width);
         height: var(--poi-expanded-leader-length, 1rem);
         transform: translateX(-50%) rotate(var(--poi-expanded-leader-angle, 0deg));
         transform-origin: top center;
@@ -502,9 +504,9 @@
     &::after {
         position: absolute;
         right: 0;
-        bottom: calc(-1 * var(--poi-border-width));
+        bottom: calc(-1 * var(--poi-underline-line-width));
         left: 0;
-        height: var(--poi-border-width);
+        height: var(--poi-underline-line-width);
         content: '';
         pointer-events: none;
         background-color: var(--lgs-poi-border-color);
@@ -516,7 +518,7 @@
 }
 
 .poi-card.poi-card--style-underline.poi-card--stick-above .poi-card-inner--style-underline::after {
-    top: calc(-1 * var(--poi-border-width));
+    top: calc(-1 * var(--poi-underline-line-width));
     bottom: auto;
 }
 
