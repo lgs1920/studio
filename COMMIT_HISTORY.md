@@ -4515,3 +4515,19 @@
 ## 2026-11-01 — [`docs(fix-path): correct Codex plan reference paths`](https://github.com/lgs1920/studio/commit/f92420b50109a0ccc688d5f5f48a222d0e3b4c63)
 
 - Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: pace map POI startup rendering`](https://github.com/lgs1920/studio/commit/ba2d5fea574b8d2b41fdb0b3ae3c0b8b13c77b53)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: align Replay lifecycle and camera behavior`](https://github.com/lgs1920/studio/commit/4902306ecd034da1482ff2c8f1b18efe96799462)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`test: align UI fixtures with Web Awesome components`](https://github.com/lgs1920/studio/commit/7c7615f59315d841386db9a74558e7073c808e7b)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`docs: record POI and Fix Path follow-ups`](https://github.com/lgs1920/studio/commit/594fd2034d33cde515d238ef0905f095de11ccbb)
+
+- Recorded automatically from Git history.
