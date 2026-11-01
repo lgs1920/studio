@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -168,46 +168,47 @@ export const MapPOIDisplaySettings = memo(({
             ) : (
                 <>
                     <section className="map-poi-display-group" aria-label="Typography">
+                        <WaSelect
+                            className="map-poi-display-font-family"
+                            appearance="filled"
+                            size="s"
+                            label="Typeface"
+                            label-at-start
+                            value={fontFamily.replace(/\s/g, '_')}
+                            onChange={handleFontFamilyChange}
+                        >
+                            <WaIcon slot="start" variant="regular" name="font"/>
+                            {WIDGET_FONT_FAMILIES.map(font => (
+                                <WaOption key={font} value={font.replace(/\s/g, '_')}>
+                                    <span style={{fontFamily: font === 'System' ? WIDGET_SYSTEM_FONT_STACK : font}}>{font}</span>
+                                </WaOption>
+                            ))}
+                        </WaSelect>
                         <div className="map-poi-display-font-style-row">
-                            <WaSelect
-                                className="map-poi-display-font-family"
-                                appearance="filled"
-                                size="s"
-                                label="Typeface"
-                                label-at-start
-                                value={fontFamily.replace(/\s/g, '_')}
-                                onChange={handleFontFamilyChange}
-                            >
-                                <WaIcon slot="start" variant="regular" name="font"/>
-                                {WIDGET_FONT_FAMILIES.map(font => (
-                                    <WaOption key={font} value={font.replace(/\s/g, '_')}>
-                                        <span style={{fontFamily: font === 'System' ? WIDGET_SYSTEM_FONT_STACK : font}}>{font}</span>
-                                    </WaOption>
-                                ))}
-                            </WaSelect>
-                            <WaButtonGroup className="map-poi-display-font-style" size="s" aria-label="Text style">
+                            <span className="map-poi-display-font-style-label">{'Text style'}</span>
+                            <WaButtonGroup className="map-poi-display-font-style" size="s" label="Text style">
                                 <WaButton
                                     id={`${anchorTooltipIdPrefix}-bold`}
-                                    size="s"
+                                    size="xs"
                                     variant={displaySettings.bold ? 'brand' : 'default'}
                                     aria-label="Bold"
                                     onClick={() => onDisplayValueChange('bold', !displaySettings.bold)}
                                 >
                                     <WaIcon variant="regular" name="bold"/>
                                 </WaButton>
-                                <WaTooltip for={`${anchorTooltipIdPrefix}-bold`}>{'Bold'}</WaTooltip>
                                 <WaButton
                                     id={`${anchorTooltipIdPrefix}-italic`}
-                                    size="s"
+                                    size="xs"
                                     variant={displaySettings.italic ? 'brand' : 'default'}
                                     aria-label="Italic"
                                     onClick={() => onDisplayValueChange('italic', !displaySettings.italic)}
                                 >
                                     <WaIcon variant="regular" name="italic"/>
                                 </WaButton>
-                                <WaTooltip for={`${anchorTooltipIdPrefix}-italic`}>{'Italic'}</WaTooltip>
                             </WaButtonGroup>
                         </div>
+                        <WaTooltip for={`${anchorTooltipIdPrefix}-bold`}>{'Bold'}</WaTooltip>
+                        <WaTooltip for={`${anchorTooltipIdPrefix}-italic`}>{'Italic'}</WaTooltip>
                         <WaNumberInput
                             className="map-poi-display-font-size half-width"
                             appearance="filled"
@@ -267,14 +268,19 @@ export const MapPOIDisplaySettings = memo(({
                             withTooltip
                             onInput={event => onDisplayChange('maxWidth', event)}
                         />
-                        <RotationElement
-                            localRotation={widgetRotation}
-                            applyRotation={rotation => onDisplayValueChange('widgetRotation', rotation)}
-                            showNumberInput={false}
-                            min={POI_DISPLAY_WIDGET_ROTATION_MIN}
-                            max={POI_DISPLAY_WIDGET_ROTATION_MAX}
-                            step={POI_DISPLAY_WIDGET_ROTATION_STEP}
-                        />
+                        <div className="map-poi-display-rotation-row">
+                            <RotationElement
+                                localRotation={widgetRotation}
+                                applyRotation={rotation => onDisplayValueChange('widgetRotation', rotation)}
+                                showNumberInput={false}
+                                min={POI_DISPLAY_WIDGET_ROTATION_MIN}
+                                max={POI_DISPLAY_WIDGET_ROTATION_MAX}
+                                step={POI_DISPLAY_WIDGET_ROTATION_STEP}
+                                label="Rotation"
+                                showResetButton
+                                labelClassName="map-poi-display-rotation-label"
+                            />
+                        </div>
                     </section>
                     <WaDivider className="map-poi-display-decoration-divider"/>
                     <section className="map-poi-display-group" aria-label="Stick">

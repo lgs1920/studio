@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-06
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,9 @@ import { useCallback, useMemo }                       from 'react'
  * @param {number} [props.min=-180]
  * @param {number} [props.max=180]
  * @param {number} [props.step=1]
+ * @param {string} [props.label='Rotation (deg)']
+ * @param {boolean} [props.showResetButton=false] - Whether to show a reset button beside the slider label.
+ * @param {string} [props.labelClassName] - Optional class for a custom slider label.
  */
 export const RotationElement = ({
                                     localRotation,
@@ -35,6 +38,9 @@ export const RotationElement = ({
                                     min = -90,
                                     max = 90,
                                     step = 1,
+                                    label = 'Rotation (deg)',
+                                    showResetButton = false,
+                                    labelClassName,
 }) => {
     const sanitizeRotationValue = useCallback((rawValue) => {
         const numericValue = Number(rawValue)
@@ -68,7 +74,7 @@ export const RotationElement = ({
                     onInput={(e) => handleRotationInput(e.target.value)}
                 >
                     <span slot="label">
-                    {'Rotation (deg)'}
+                        {label}
                         {isRotated && (
                             <WaButton size="s" appearance="plain" aria-label="Reset rotation"
                                       onClick={() => applyRotation(0)}>
@@ -80,7 +86,7 @@ export const RotationElement = ({
             )}
             <WaSlider
                 label-at-start
-                label={showNumberInput ? undefined : 'Rotation (deg)'}
+                label={showNumberInput || showResetButton ? undefined : label}
                 className={showNumberInput ? 'half-width' : undefined}
                 size="s"
                 min={min}
@@ -91,7 +97,24 @@ export const RotationElement = ({
                 withTooltip
                 style={{'--track-active-offset': '50%'}}
                 onInput={(e) => handleRotationInput(e.target.value)}
-            />
+            >
+                {!showNumberInput && showResetButton && (
+                    <span slot="label" className={labelClassName}>
+                        {label}
+                        {isRotated && (
+                            <WaButton
+                                className="square-button small"
+                                size="s"
+                                appearance="plain"
+                                aria-label="Reset rotation"
+                                onClick={() => applyRotation(0)}
+                            >
+                                <WaIcon size="s" name="arrow-rotate-left" variant="regular"/>
+                            </WaButton>
+                        )}
+                    </span>
+                )}
+            </WaSlider>
         </>
 
 

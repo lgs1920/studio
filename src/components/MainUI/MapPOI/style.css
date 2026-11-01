@@ -1249,27 +1249,57 @@
 }
 
 .map-poi-display-font-style-row {
-    display: grid;
+    box-sizing: border-box;
+    display: flex;
     align-items: center;
+    justify-content: space-between;
+    width: 100%;
     min-width: 0;
+    padding-inline-end: 2px;
     gap: var(--lgs-gutter-xxs);
-    grid-template-columns: minmax(0, 1fr) auto;
 
-    & .map-poi-display-font-family {
-        width: 100%;
+    & .map-poi-display-font-style-label {
+        flex: 1 1 auto;
         min-width: 0;
     }
 
     & .map-poi-display-font-style {
-        justify-self: end;
-
-        & wa-button::part(base) {
-            padding-inline: var(--lgs-gutter-xs);
-        }
+        display: inline-flex;
+        flex: 0 0 auto;
+        width: auto;
+        max-width: 100%;
     }
 }
 
+.map-poi-display-font-style-label {
+    font-size: var(--lgs-font-size);
+    font-weight: var(--wa-form-control-label-font-weight);
+    line-height: var(--wa-form-control-label-line-height);
+    color: var(--wa-form-control-label-color);
+}
+
 .map-poi-display-font-size {
+    width: 100%;
+    min-width: 0;
+}
+
+.map-poi-display-rotation-row {
+    width: 100%;
+    min-width: 0;
+
+    & wa-slider {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+.map-poi-display-rotation-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.map-poi-display-font-family {
     width: 100%;
     min-width: 0;
 }
