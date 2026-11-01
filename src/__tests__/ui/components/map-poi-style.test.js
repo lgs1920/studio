@@ -148,7 +148,10 @@ describe('Map POI style', () => {
             css.indexOf('\n}', css.indexOf('.poi-card-inner--style-side-accent {')),
         )
         expect(sideAccentStyle).toContain('border: var(--poi-border-width) solid var(--lgs-poi-border-color);')
-        expect(sideAccentStyle).toContain('border-left-width: 10px;')
+        expect(sideAccentStyle).toContain('padding-left: calc(var(--poi-padding) + 8px);')
+        expect(sideAccentStyle).toContain('&::before {')
+        expect(sideAccentStyle).toContain('width: 8px;')
+        expect(sideAccentStyle).not.toContain('border-left-width')
         expect(sideAccentStyle).not.toContain('border-right')
         const roundBadgeStyle = css.slice(
             css.indexOf('.poi-card-inner--style-round-badge {'),
