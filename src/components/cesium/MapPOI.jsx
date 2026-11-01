@@ -130,8 +130,6 @@ export const MapPOI = memo(({point}) => {
             }
             else {
                 setPixels(null)
-                clearPOIHoverPreview(currentPOI.id)
-                clearPOIHoverTitlePreview(currentPOI.id)
             }
 
             const scaleInfo = POIUtils.adaptScaleToDistance(currentPOI)

@@ -24,6 +24,7 @@ import {
 import {
     poiCaptureSurfaceStore, useActivePOICaptureSurfaces,
 } from '@Components/MainUI/MapPOI/poiCaptureSurfaceStore'
+import {createPOITerrainOcclusionController} from '@Components/MainUI/MapPOI/poiTerrainOcclusionController'
 import {getPOICanvasRenderPriority} from '@Components/MainUI/MapPOI/poiCanvasRenderPriority'
 import {getReplayPOISelectorSnapshot} from '@Components/MainUI/MapPOI/replayPOISelectorStore'
 import {
@@ -44,6 +45,13 @@ const getPOIPositionSignature = poi => JSON.stringify([
     poi?.latitude,
     poi?.height,
     poi?.simulatedHeight,
+])
+
+/** Return the visibility inputs that can make an existing terrain mask stale. */
+const getPOIVisibilitySignature = poi => JSON.stringify([
+    poi?.parent,
+    poi?.visible,
+    poi?.tooClose,
 ])
 
 /** Return the model fields that affect a POI's captured image. */
@@ -254,6 +262,7 @@ export const MapPOIMonitor = () => {
             poiSubscriptions.get(poiId)?.()
             poiSubscriptions.delete(poiId)
             poiCaptureSurfaceStore.cancel(poiId)
+            poiTerrainOcclusionController.requestCheck(poiId)
         }
 
         /** Observe POI model changes without mounting a React content tree for every item. */
@@ -266,20 +275,32 @@ export const MapPOIMonitor = () => {
 
             const state = {
                 positionSignature: getPOIPositionSignature(poi),
+                visibilitySignature: getPOIVisibilitySignature(poi),
                 visualSignature: getPOIVisualSignature(poi),
                 expanded: poi.expanded === true,
             }
             requestPOICapture(poiId)
+            poiTerrainOcclusionController.requestCheck(poiId)
             const unsubscribe = subscribe(poi, () => {
                 const currentPOI = $pois.list.get(poiId)
                 if (!currentPOI) {
                     return
                 }
 
+                let terrainFocusChanged = false
                 const nextPositionSignature = getPOIPositionSignature(currentPOI)
                 if (state.positionSignature !== nextPositionSignature) {
                     state.positionSignature = nextPositionSignature
                     POIUtils.updatePosition(currentPOI)
+                    terrainFocusChanged = true
+                }
+                const nextVisibilitySignature = getPOIVisibilitySignature(currentPOI)
+                if (state.visibilitySignature !== nextVisibilitySignature) {
+                    state.visibilitySignature = nextVisibilitySignature
+                    terrainFocusChanged = true
+                }
+                if (terrainFocusChanged) {
+                    poiTerrainOcclusionController.requestCheck(poiId)
                 }
 
                 const visualSignature = getPOIVisualSignature(currentPOI)
@@ -302,6 +323,11 @@ export const MapPOIMonitor = () => {
         }
 
         const poiSubscriptions = new Map()
+        const poiTerrainOcclusionController = createPOITerrainOcclusionController({
+            scene: lgs.viewer?.scene ?? lgs.scene,
+            poiList: $pois.list,
+            isReplayActive: () => isReplayPOIPresentationActive(lgs.stores.replay),
+        })
 
         for (const poiId of $pois.list.keys()) {
             addPOIEventListeners(poiId)
@@ -341,6 +367,7 @@ export const MapPOIMonitor = () => {
             const nearbyMembershipChanged = !arePOIIdSetsEqual(previousNearbyIds, nextNearbyIds)
 
             if (replayModeChanged) {
+                poiTerrainOcclusionController.requestCheck()
                 if (replayActive) {
                     poiSubscriptions.forEach(unsubscribe => unsubscribe())
                     poiSubscriptions.clear()
@@ -414,6 +441,7 @@ export const MapPOIMonitor = () => {
         document.fonts?.addEventListener?.('loadingdone', requestAllCaptures)
 
         return () => {
+            poiTerrainOcclusionController.dispose()
             removeSubscription()
             replaySubscriptions.forEach(remove => remove())
             removeReplayRuntimeSubscription?.()

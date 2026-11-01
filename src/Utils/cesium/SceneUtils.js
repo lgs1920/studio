@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-06
- * Last modified: 2026-10-14
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,8 @@ const finiteNumber = value => {
 
 const MIN_CAMERA_POSITION_HEIGHT = -1000
 const MIN_MAP_TARGET_HEIGHT = -12000
+// Avoid treating small terrain depth precision differences as an occlusion.
+const TERRAIN_FOCUS_DEPTH_TOLERANCE_METERS = 2
 
 const finiteHeightAtLeast = (value, minimum) => {
     const height = finiteNumber(value)
@@ -281,7 +283,7 @@ export class SceneUtils {
      * @param precision                     LOW_TERRAIN_PRECISION or HIGH_TERRAIN_PRECISION (default)
      * @param level                         Zoom level, only used with low precision
      *
-     * @return {Array|number} altitude
+     * @return {Promise<Array|number>} altitude
      */
     static getHeightFromTerrain = async ({coordinates, precision = HIGH_TERRAIN_PRECISION, level = 11} = {}) => {
         if (!coordinates) {
@@ -337,17 +339,20 @@ export class SceneUtils {
     static degreesToPixelsCoordinates = async (point, clampToGround = true) => {
         // TODO add precision and level
 
-        // simulatedHeight : height from Terrain.
+        const scene = lgs.scene
+        const noRelief = __.ui.sceneManager.noRelief()
         let simulatedHeight
-        if (clampToGround && !__.ui.sceneManager.noRelief()) {
-            simulatedHeight = await SceneUtils.getHeightFromTerrain({coordinates: point})
+        if (clampToGround && !noRelief) {
+            const terrainPosition = Cartographic.fromDegrees(point.longitude, point.latitude)
+            simulatedHeight = scene.globe.getHeight(terrainPosition)
+                ?? await SceneUtils.getHeightFromTerrain({coordinates: point})
         }
         else {
             simulatedHeight = point.simulatedHeight
         }
 
         const cartographic = Cartographic.fromDegrees(point.longitude, point.latitude,
-                                                      __.ui.sceneManager.noRelief() ? 0 : (simulatedHeight ?? point.height))
+                                                      noRelief ? 0 : (simulatedHeight ?? point.height))
         const cartesian = Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, simulatedHeight ?? cartographic.height)
         if (!cartesian) {
             return {visible: false}
@@ -356,25 +361,27 @@ export class SceneUtils {
 
         // Get Pixels
         const pixels = new Cartesian2()
-        lgs.scene.cartesianToCanvasCoordinates(cartesian, pixels)
-        if (!pixels) {
+        const projectedPixels = scene.cartesianToCanvasCoordinates(cartesian, pixels)
+        if (!projectedPixels || !Number.isFinite(pixels.x) || !Number.isFinite(pixels.y)) {
             return {visible: false}
         }
 
-        // Check if it's OK with terrain
-        const pickRay = lgs.scene.camera.getPickRay(pixels)
-        const pickedPosition = lgs.scene.globe.pick(pickRay, lgs.scene)
-        if (!pickedPosition) {
-            return {visible: false}
-        }
+        // A globe hit only proves terrain lies along the ray, not that the POI focus is visible.
+        const camera = scene.camera
+        const pickRay = camera.getPickRay(pixels)
+        const pickedPosition = pickRay ? scene.globe.pick(pickRay, scene) : null
+        const cameraPosition = camera.positionWC ?? camera.position
+        const focusVisible = !pickedPosition || !cameraPosition
+            || Cartesian3.distance(cameraPosition, pickedPosition) + TERRAIN_FOCUS_DEPTH_TOLERANCE_METERS
+                >= Cartesian3.distance(cameraPosition, cartesian)
 
 
         // Return the final canvas coordinates, height and visibility
         return {
             x:       Math.round(pixels.x),
             y:       Math.round(pixels.y),
-            height: __.ui.sceneManager.noRelief() ? 0 : (simulatedHeight ?? cartographic.height),
-            visible: true,
+            height: noRelief ? 0 : (simulatedHeight ?? cartographic.height),
+            visible: focusVisible,
         }
     }
 
