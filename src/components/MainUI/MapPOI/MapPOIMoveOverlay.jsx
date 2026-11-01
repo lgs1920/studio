@@ -160,10 +160,11 @@ export const MapPOIMoveOverlay = () => {
     const [dragging, setDragging] = useState(false)
     const [markerGeometry, setMarkerGeometry] = useState(DEFAULT_MARKER_GEOMETRY)
     const [viewportRevision, setViewportRevision] = useState(0)
+    const [captureSourceRevision, setCaptureSourceRevision] = useState(0)
 
     const viewer = lgs.viewer
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!session?.poiId) {
             return undefined
         }
@@ -345,9 +346,26 @@ export const MapPOIMoveOverlay = () => {
 
         const sourceId = globalThis.CSS?.escape?.(session.poiId)
             ?? String(session.poiId).replaceAll('\\', '\\\\').replaceAll('"', '\\"')
-        const source = document.querySelector(`[data-poi-canvas-source="${sourceId}"]`)
+        const findSource = () => document.querySelector(`[data-poi-canvas-source="${sourceId}"]`)
+        let source = findSource()
+        let sourceObserver
         if (!source) {
-            return undefined
+            const observeRoot = document.getElementById('map-poi-list') ?? document.body
+            if (typeof MutationObserver === 'function' && observeRoot) {
+                sourceObserver = new MutationObserver(() => {
+                    if (!findSource()) {
+                        return
+                    }
+                    sourceObserver.disconnect()
+                    setCaptureSourceRevision(revision => revision + 1)
+                })
+                sourceObserver.observe(observeRoot, {childList: true, subtree: true})
+                source = findSource()
+                if (source) sourceObserver.disconnect()
+            }
+            if (!source) {
+                return () => sourceObserver?.disconnect()
+            }
         }
 
         const clone = source.cloneNode(true)
@@ -402,6 +420,7 @@ export const MapPOIMoveOverlay = () => {
         sourceSvgInlineCallbacks.forEach(inlineSvg => inlineSvg())
 
         return () => {
+            sourceObserver?.disconnect()
             sourceSvgLoadListeners.forEach(([sourceIcon, listener]) => {
                 sourceIcon.removeEventListener('wa-load', listener)
             })
@@ -409,7 +428,7 @@ export const MapPOIMoveOverlay = () => {
                 markerContent.removeChild(clone)
             }
         }
-    }, [captureSurfaceActive, hasAnchor, poi.id, session])
+    }, [captureSourceRevision, captureSurfaceActive, hasAnchor, poi.id, session])
 
     /** Begin dragging the marker with its geographic anchor beneath the pointer. */
     const handlePointerDown = useCallback(event => {
