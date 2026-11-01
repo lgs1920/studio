@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-09
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -232,6 +232,9 @@ export class PanelManager {
      */
     #shouldPersistDetails = (details) => details?.getAttribute?.('data-ui-state-persist') !== 'false'
 
+    /** Checks whether the drawer manager owns a tab group's state. */
+    #shouldPersistTabs = (tabGroup) => tabGroup?.getAttribute?.('data-ui-state-persist') !== 'false'
+
     #resolveTabPanelName = (tabGroup, tabName) => {
         if (!tabGroup || !tabName) {
             return null
@@ -273,6 +276,10 @@ export class PanelManager {
         const detailsGroups = Array.from(drawer.querySelectorAll('wa-details'))
 
         for (const [index, tabGroup] of tabGroups.entries()) {
+            if (!this.#shouldPersistTabs(tabGroup)) {
+                continue
+            }
+
             const key = this.#getGroupKey(tabGroup, 'wa-tab-group', `tabgroup:${index}`)
             const activeTab = tabGroup.active ?? tabGroup.getAttribute?.('active') ?? null
 
@@ -308,6 +315,10 @@ export class PanelManager {
 
         const tabGroups = Array.from(drawer.querySelectorAll('wa-tab-group'))
         for (const [index, tabGroup] of tabGroups.entries()) {
+            if (!this.#shouldPersistTabs(tabGroup)) {
+                continue
+            }
+
             const key = this.#getGroupKey(tabGroup, 'wa-tab-group', `tabgroup:${index}`)
             const activeTab = state.tabs.get(key)
             if (!activeTab) {
@@ -392,7 +403,7 @@ export class PanelManager {
         }
 
         Array.from(drawer.querySelectorAll('wa-tab-group')).forEach((tabGroup) => {
-            if (this.#tabGroupAttached.has(tabGroup)) {
+            if (!this.#shouldPersistTabs(tabGroup) || this.#tabGroupAttached.has(tabGroup)) {
                 return
             }
 

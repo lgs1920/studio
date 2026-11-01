@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-25
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,9 @@
 import { MapPOICategorySelector } from '@Components/MainUI/MapPOI/MapPOICategorySelector'
 import { MapPOIDisplaySettings }  from '@Components/MainUI/MapPOI/MapPOIDisplaySettings'
 import { MapPOIEditPreview }      from '@Components/MainUI/MapPOI/MapPOIEditPreview'
+import {
+    getPOIEditorPanelName, getPOIEditorTabFromPanelName, poiEditorTabSessionStore, setPOIEditorActiveTab,
+}                                 from '@Components/MainUI/MapPOI/poiEditorTabSessionStore'
 import { LGSScrollbars }          from '@Components/MainUI/LGSScrollbars'
 import { DateTimeDisplay }        from '@Components/DateTimeDisplay'
 import { MapPOIEditMenu }         from '@Components/MainUI/MapPOI/MapPOIEditMenu'
@@ -206,7 +209,8 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                                                      latitude:  false,
                                                                                                      longitude: false,
                                                                                                  })
-                                          const [activeTab, setActiveTab] = useState(`poi-edit-${id}`)
+                                          const {activeTab: sharedActiveTab} = useSnapshot(poiEditorTabSessionStore)
+                                          const activeTab = getPOIEditorPanelName(id, sharedActiveTab)
 
                                           /** @type {[boolean, function]} Tracks if the altitude is currently simulated */
                                           const [simulated, setSimulated] = useState(height == null || height === simulatedHeight)
@@ -383,9 +387,12 @@ export const MapPOIEditContent = memo(({poi}) => {
                                           const handleTabShow = useCallback((event) => {
                                               const panelName = event?.detail?.name
                                               if (panelName) {
-                                                  setActiveTab(panelName)
+                                                  const tab = getPOIEditorTabFromPanelName(id, panelName)
+                                                  if (tab) {
+                                                      setPOIEditorActiveTab(tab)
+                                                  }
                                               }
-                                          }, [])
+                                          }, [id])
 
                                           const handleTitleFocus = useCallback(() => {
                                               previousTitleRef.current = title
@@ -442,10 +449,6 @@ export const MapPOIEditContent = memo(({poi}) => {
                                           useEffect(() => {
                                               setSimulated(height == null || height === simulatedHeight)
                                           }, [height, simulatedHeight])
-
-                                          useEffect(() => {
-                                              setActiveTab(`poi-edit-${id}`)
-                                          }, [id])
 
                                           useEffect(() => {
                                               setCoordinateDraft((prev) => ({
@@ -614,6 +617,7 @@ export const MapPOIEditContent = memo(({poi}) => {
 
                                                       <WaTabGroup
                                                           className="map-poi-edit-tabs"
+                                                          data-ui-state-persist="false"
                                                           active={activeTab}
                                                           onWaTabShow={handleTabShow}
                                                       >
