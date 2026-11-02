@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-03-01
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,7 @@ import {
 import {
     POI_BILLBOARD_FAR_DISTANCE, POI_BILLBOARD_NEAR_DISTANCE,
 } from '@Utils/cesium/POIBillboardScale'
+import {requestSceneRender} from '@Utils/cesium/SceneRenderScheduler'
 
 import { Canvg, Property } from 'canvg'
 import {
@@ -151,10 +152,9 @@ const journeyForPOI = poi => globalThis.__?.ui?.poiManager?.getJourneyForPOI?.(p
 export class POIUtils {
 
 
-    /** Request a map frame after updating a POI entity. */
-    static requestRender = () => {
-        const scene = globalThis.lgs?.viewer?.scene ?? globalThis.lgs?.scene
-        scene?.requestRender?.()
+    /** Request a map frame through the scene lifecycle's shared scheduler. */
+    static requestRender = (scene = globalThis.lgs?.viewer?.scene ?? globalThis.lgs?.scene) => {
+        return requestSceneRender(scene)
     }
 
     /** Update only an existing POI entity's geographic position. */
@@ -616,12 +616,28 @@ export class POIUtils {
      */
     static remove = async (poi) => {
         const container = POIUtils.getEntityContainer(poi)
+        let removed = false
         if (container) {
-            for (const entity of container.values) {
-                if (entity.id === poi.id) {
-                    container.remove(entity)
+            const entity = container.getById?.(poi.id)
+            if (entity && typeof container.removeById === 'function') {
+                container.removeById(poi.id)
+                removed = true
+            }
+            else if (entity && typeof container.remove === 'function') {
+                container.remove(entity)
+                removed = true
+            }
+            else {
+                for (const currentEntity of container.values ?? []) {
+                    if (currentEntity.id === poi.id && typeof container.remove === 'function') {
+                        container.remove(currentEntity)
+                        removed = true
+                    }
                 }
             }
+        }
+        if (removed) {
+            POIUtils.requestRender()
         }
     }
 

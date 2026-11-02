@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -210,7 +210,7 @@ export const MapPOIMoveOverlay = () => {
         if (entity.billboard) {
             entity.billboard.show = previous.billboardShow
         }
-        viewer?.scene?.requestRender?.()
+        POIUtils.requestRender(viewer?.scene)
         _entity.current = null
         _entityState.current = null
     }, [viewer])
@@ -651,7 +651,7 @@ export const MapPOIMoveOverlay = () => {
         if (entity.billboard) {
             entity.billboard.show = false
         }
-        viewer.scene?.requestRender?.()
+        POIUtils.requestRender(viewer.scene)
         // Preserve the real projected location on entry. Clamping here would move the pin away from its POI.
         setAnchor(toViewportPoint(initialAnchor))
         setCandidate({

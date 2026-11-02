@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-12
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { GLOBAL_PARENT } from '@Core/constants'
 import { POIUtils } from '@Utils/cesium/POIUtils'
+import {getOrCreateSceneRenderScheduler} from '@Utils/cesium/SceneRenderScheduler'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
@@ -26,7 +27,9 @@ const createEntityContainer = () => {
     return {
         entities,
         container: {
-            values:  [],
+            get values() {
+                return Array.from(entities.values())
+            },
             getById: id => entities.get(id),
             removeById: id => entities.delete(id),
             add:     entity => {
@@ -38,6 +41,8 @@ const createEntityContainer = () => {
 }
 
 describe('POIUtils replay visibility', () => {
+    const schedulers = new Set()
+
     beforeEach(() => {
         const {container} = createEntityContainer()
         globalThis.lgs = {
@@ -71,6 +76,8 @@ describe('POIUtils replay visibility', () => {
     })
 
     afterEach(() => {
+        schedulers.forEach(scheduler => scheduler.destroy())
+        schedulers.clear()
         globalThis.lgs = undefined
         globalThis.__ = undefined
     })
@@ -517,6 +524,65 @@ describe('POIUtils replay visibility', () => {
         expect(entity.show).toBe(false)
         expect(propertyValue(entity.billboard.show)).toBe(false)
         expect(globalThis.lgs.viewer.scene.requestRender).toHaveBeenCalledOnce()
+    })
+
+    it('requests a render only after removing an existing POI entity', async () => {
+        const poi = {
+            id: 'poi-remove-render',
+            longitude: 2,
+            latitude: 48,
+            height: 100,
+            visible: true,
+            image: {src: 'remove-image', width: 40, height: 20},
+        }
+        await POIUtils.draw(poi)
+        globalThis.lgs.viewer.scene.requestRender.mockClear()
+
+        await POIUtils.remove(poi)
+        expect(globalThis.lgs.viewer.entities.getById(poi.id)).toBeUndefined()
+        expect(globalThis.lgs.viewer.scene.requestRender).toHaveBeenCalledOnce()
+
+        globalThis.lgs.viewer.scene.requestRender.mockClear()
+        await POIUtils.remove(poi)
+        expect(globalThis.lgs.viewer.scene.requestRender).not.toHaveBeenCalled()
+    })
+
+    it('starts a render window after a delayed final image is drawn', async () => {
+        const scene = globalThis.lgs.viewer.scene
+        const listeners = new Set()
+        scene.requestRenderMode = true
+        scene.postUpdate = {
+            addEventListener: listener => {
+                listeners.add(listener)
+                return () => listeners.delete(listener)
+            },
+        }
+        const scheduler = getOrCreateSceneRenderScheduler(scene)
+        schedulers.add(scheduler)
+        let resolveImage
+        const imagePromise = new Promise(resolve => {
+            resolveImage = resolve
+        })
+        const poi = {
+            id: 'poi-delayed-image',
+            longitude: 2,
+            latitude: 48,
+            height: 100,
+            visible: true,
+        }
+        const pendingDraw = imagePromise.then(async image => {
+            poi.image = image
+            await POIUtils.draw(poi)
+        })
+
+        expect(scene.requestRender).not.toHaveBeenCalled()
+        resolveImage({src: 'delayed-canvas', width: 80, height: 60})
+        await pendingDraw
+
+        expect(scene.requestRender).toHaveBeenCalledOnce()
+        expect(listeners.size).toBe(1)
+        scheduler.destroy()
+        expect(listeners.size).toBe(0)
     })
 
     it('removes duplicate entities when a POI moves between the main collection and a data source', async () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-27
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -331,7 +331,7 @@ export const MapPOIEditPreview = ({poi}) => {
             if (entity.billboard) {
                 entity.billboard.show = previousVisibility.billboardShow
             }
-            scene?.requestRender?.()
+            POIUtils.requestRender(scene)
         }
 
         /** Copy only after Cesium has rendered the temporarily hidden source POI. */
@@ -381,7 +381,7 @@ export const MapPOIEditPreview = ({poi}) => {
                     hiddenRenderCount++
                     if (hiddenRenderCount < 2) {
                         // The first event may belong to a frame that was already rendering when visibility changed.
-                        scene.requestRender?.()
+                        POIUtils.requestRender(scene)
                         return
                     }
                     removePostRender?.()
@@ -395,11 +395,11 @@ export const MapPOIEditPreview = ({poi}) => {
                     removePostRender = null
                     restoreEntity()
                 }, 2000)
-                scene.requestRender?.()
+                POIUtils.requestRender(scene)
             }
             else {
                 // Without a render-completion signal, use the themed background instead of a stale capture.
-                scene?.requestRender?.()
+                POIUtils.requestRender(scene)
                 restoreEntity()
             }
         }

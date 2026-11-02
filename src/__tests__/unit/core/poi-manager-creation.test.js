@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-28
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {POI_STANDARD_TYPE, POI_TMP_TYPE} from '@Core/constants'
+import {CURRENT_POI, POI_STANDARD_TYPE, POI_TMP_TYPE} from '@Core/constants'
 import {MapPOI} from '@Core/MapPOI'
 import {POIManager} from '@Core/ui/POIManager'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
@@ -66,6 +66,33 @@ afterEach(() => {
 })
 
 describe('POIManager interactive creation defaults', () => {
+    it('stops a POI camera orbit before deleting its target', async () => {
+        const manager = new POIManager()
+        const callOrder = []
+        const poi = {
+            id: 'poi-being-removed',
+            type: POI_STANDARD_TYPE,
+            remove: vi.fn(async () => callOrder.push('remove')),
+        }
+        manager.list.set(poi.id, poi)
+        globalThis.lgs.stores.ui = {
+            mainUI: {
+                rotate: {target: {element: CURRENT_POI, slug: poi.id}},
+                panorama: {active: false, target: false},
+            },
+        }
+        globalThis.__.ui.cameraManager = {
+            isRotating: vi.fn(() => true),
+            stopRotate: vi.fn(async () => callOrder.push('stop')),
+        }
+
+        const result = await manager.remove({id: poi.id, dbSync: false})
+
+        expect(result.success).toBe(true)
+        expect(callOrder).toEqual(['stop', 'remove'])
+        expect(globalThis.__.ui.cameraManager.stopRotate).toHaveBeenCalledOnce()
+    })
+
     it('creates temporary POIs with shared colors, category, background, and description defaults', () => {
         const manager = new POIManager()
         const poi = manager.createPOI({

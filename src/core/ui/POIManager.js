@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-13
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@ import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
 import { Export }                                  from '@Core/ui/Export'
 import { POIUtils }                                from '@Utils/cesium/POIUtils'
 import { KM }                                      from '@Utils/UnitUtils'
-import { Cartesian3, HeightReference }              from 'cesium'
+import { Cartesian3, HeightReference, JulianDate }   from 'cesium'
 import { v4 as uuid }                              from 'uuid'
 import { subscribe }                               from 'valtio'
 
@@ -981,6 +981,7 @@ export class POIManager {
         const heightReference = __.ui.sceneManager.noRelief()
             ? HeightReference.NONE
             : HeightReference.CLAMP_TO_GROUND
+        const currentTime = JulianDate.now()
         let updated = 0
 
         for (const poi of this.list.values()) {
@@ -990,12 +991,18 @@ export class POIManager {
                 continue
             }
 
+            const currentHeightReference = entity.billboard.heightReference?.getValue?.(currentTime)
+                ?? entity.billboard.heightReference
+            if (currentHeightReference === heightReference) {
+                continue
+            }
+
             entity.billboard.heightReference = heightReference
             updated += 1
         }
 
         if (updated > 0) {
-            lgs.scene?.requestRender?.()
+            POIUtils.requestRender()
         }
 
         return updated
@@ -1009,6 +1016,19 @@ export class POIManager {
         if (poi.type === POI_STARTER_TYPE) {
             return {id, success: false}
         }
+
+        const panorama = lgs.stores?.ui?.mainUI?.panorama
+        const panoramaTargetId = panorama?.target?.slug ?? panorama?.target?.id
+        const cameraManager = globalThis.__?.ui?.cameraManager
+        const rotationTargetsPOI = cameraManager?.isRotating?.() === true
+            && this.getRotatingPoiId() === id
+        if (cameraManager && rotationTargetsPOI) {
+            await cameraManager.stopRotate()
+        }
+        if (cameraManager && panorama?.active && panoramaTargetId === id) {
+            cameraManager.stopPanoramic?.()
+        }
+
         this.list.delete(id)
         await poi.remove(dbSync)
         return {id, success: true}

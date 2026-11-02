@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-01
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -103,7 +103,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
             checkAllRequested = true
             requestedPOIIds.clear()
         }
-        scene?.requestRender?.()
+        POIUtils.requestRender(scene)
     }
 
     /** Subscribe to effective POI visibility writes made outside this controller. */
@@ -171,7 +171,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
             const changed = restoreOccludedPOIs()
             checkAllRequested = true
             if (changed) {
-                scene.requestRender?.()
+                POIUtils.requestRender(scene)
             }
             return
         }
@@ -203,7 +203,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
             changed = setBillboardVisibility(poiId, entity, false, time) || changed
         }
         if (changed) {
-            scene.requestRender?.()
+            POIUtils.requestRender(scene)
         }
     }
 
@@ -268,7 +268,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
         }
 
         if (changed) {
-            scene.requestRender?.()
+            POIUtils.requestRender(scene)
         }
     }
 
@@ -282,7 +282,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
             requestCheck()
         }
     })
-    scene?.requestRender?.()
+    POIUtils.requestRender(scene)
 
     return {
         /** Schedule one focus check for a POI, or all POIs after a scene change. */
@@ -302,7 +302,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
             entitySubscriptions.forEach(subscription => subscription.remove?.())
             entitySubscriptions.clear()
             if (changed) {
-                scene?.requestRender?.()
+                POIUtils.requestRender(scene)
             }
         },
     }
