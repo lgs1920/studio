@@ -1929,7 +1929,8 @@ wa-callout::part(message) {
 
 .lgs-toast-callout::part(message) {
     padding-right: calc(var(--lgs-gutter) + 1.5rem);
-    padding-bottom: calc(var(--lgs-gutter-s) + 0.45rem);
+    padding-top: calc(var(--lgs-gutter-s) + 0.225rem);
+    padding-bottom: calc(var(--lgs-gutter-s) + 0.225rem);
 }
 
 .toast-caption {
@@ -1940,6 +1941,10 @@ wa-callout::part(message) {
 .toast-text {
     font-size: var(--lgs-font-size-s);
     margin-top: var(--lgs-gutter-xxs);
+}
+
+.toast-text wa-slider {
+    margin-block-start: var(--lgs-gutter-xs);
 }
 
 .toast-action-stack {
