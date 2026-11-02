@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-02
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -92,7 +92,7 @@ const valueOf = value => {
 }
 const coordinateOf = value => {
     const numericValue = valueOf(value)
-    return numericValue === null ? null : __.convert(numericValue).to(lgs.settings.coordinateSystem.current)
+    return numericValue === null ? null : UnitUtils.formatCoordinate(numericValue, lgs.settings.coordinateSystem.current)
 }
 
 const normalizeAngle = value => {

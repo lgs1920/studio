@@ -828,8 +828,8 @@ export const MapPOIMoveOverlay = () => {
     const coordinateSystem = coordinateSettings.current
     const unitSystem = unitSettings.current
     const elevationUnit = ELEVATION_UNITS[unitSystem] ?? ELEVATION_UNITS[0]
-    const latitudeLabel = candidate ? __.convert(candidate.latitude).to(coordinateSystem) : ''
-    const longitudeLabel = candidate ? __.convert(candidate.longitude).to(coordinateSystem) : ''
+    const latitudeLabel = candidate ? UnitUtils.formatCoordinate(candidate.latitude, coordinateSystem) : ''
+    const longitudeLabel = candidate ? UnitUtils.formatCoordinate(candidate.longitude, coordinateSystem) : ''
     const elevationLabel = candidate
         ? `${Math.round(UnitUtils.convert(candidate.height).to(elevationUnit))} ${elevationUnit}`
         : ''
@@ -879,8 +879,8 @@ export const MapPOIMoveOverlay = () => {
                     }}
                     aria-live="polite"
                 >
-                    <span>{latitudeLabel}</span>
-                    <span>{longitudeLabel}</span>
+                    <span>{latitudeLabel}, {longitudeLabel}</span>
+                    <span aria-hidden="true">-</span>
                     <span>{elevationLabel}</span>
                 </div>
             )}

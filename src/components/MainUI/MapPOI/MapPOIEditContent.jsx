@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-25
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -243,8 +243,8 @@ export const MapPOIEditContent = memo(({poi}) => {
                                            * Uses snapped values to ensure the UI re-renders when the store updates.
                                            */
                                           const formattedCoordinates = useMemo(() => {
-                                              const lat = __.convert(point.latitude).to(lgs.settings.coordinateSystem.current)
-                                              const lng = __.convert(point.longitude).to(lgs.settings.coordinateSystem.current)
+                                              const lat = UnitUtils.formatCoordinate(point.latitude, lgs.settings.coordinateSystem.current)
+                                              const lng = UnitUtils.formatCoordinate(point.longitude, lgs.settings.coordinateSystem.current)
                                               return `${lat}, ${lng}`
                                           }, [point.latitude, point.longitude, coordinateSystem])
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-05-09
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -56,6 +56,37 @@ const getPOIVisibilitySignature = poi => JSON.stringify([
     poi?.visible,
     poi?.tooClose,
 ])
+
+/** Check whether a POI currently renders an altitude value affected by metric or imperial units. */
+const hasUnitDependentPOIAltitude = poi => {
+    if (poi?.expanded !== true) {
+        return false
+    }
+
+    const display = normalizePOIDisplaySettings(poi?.display)
+    const replayActive = isReplayPOIPresentationActive()
+    const displaysAltitude = shouldDisplayPOIField('altitude', display, replayActive)
+        && poi?.height > 0
+        && poi?.height !== poi?.simulatedHeight
+    const explicitTitleAltitude = Number(poi?.height)
+    const simulatedTitleAltitude = Number(poi?.simulatedHeight)
+    const titleAltitude = Number.isFinite(explicitTitleAltitude) && explicitTitleAltitude > 0
+        ? explicitTitleAltitude
+        : simulatedTitleAltitude
+    const displaysTitleAltitude = shouldDisplayPOIField('titleAltitude', display, replayActive)
+        && Number.isFinite(titleAltitude)
+        && titleAltitude > 0
+
+    return displaysAltitude || displaysTitleAltitude
+}
+
+/** Check whether a POI currently renders coordinates that use the selected coordinate format. */
+const hasDisplayedPOICoordinates = poi => poi?.expanded === true
+    && shouldDisplayPOIField(
+        'coordinates',
+        normalizePOIDisplaySettings(poi?.display),
+        isReplayPOIPresentationActive(),
+    )
 
 /** Return the model fields that affect a POI's captured image. */
 const getPOIVisualSignature = poi => {
@@ -446,8 +477,34 @@ export const MapPOIMonitor = () => {
                 requestPOICapture(poiId)
             }
         }
-        const removeUnitSubscription = subscribe(lgs.settings.unitSystem, requestAllCaptures, true)
-        const removeCoordinateSubscription = subscribe(lgs.settings.coordinateSystem, requestAllCaptures, true)
+        /** Refresh only POIs whose captured altitude text changes with the unit system. */
+        const requestUnitDependentCaptures = () => {
+            if (isReplayPOIPresentationActive(lgs.stores.replay)) {
+                requestAllCaptures()
+                return
+            }
+
+            for (const [poiId, poi] of $pois.list) {
+                if (hasUnitDependentPOIAltitude(poi)) {
+                    requestPOICapture(poiId)
+                }
+            }
+        }
+        /** Refresh only POIs whose captured coordinates use the selected coordinate format. */
+        const requestCoordinateCaptures = () => {
+            if (isReplayPOIPresentationActive(lgs.stores.replay)) {
+                requestAllCaptures()
+                return
+            }
+
+            for (const [poiId, poi] of $pois.list) {
+                if (hasDisplayedPOICoordinates(poi)) {
+                    requestPOICapture(poiId)
+                }
+            }
+        }
+        const removeUnitSubscription = subscribe(lgs.settings.unitSystem, requestUnitDependentCaptures, true)
+        const removeCoordinateSubscription = subscribe(lgs.settings.coordinateSystem, requestCoordinateCaptures, true)
         const themeObserver = typeof MutationObserver === 'function'
             ? new MutationObserver(requestAllCaptures)
             : null

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-23
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,7 +55,7 @@ export const formatCoordinate = value => {
     }
 
     const coordinateSystem = globalThis.lgs?.settings?.coordinateSystem?.current
-    return coordinateSystem ? UnitUtils.convert(number).to(coordinateSystem) : number.toFixed(6)
+    return coordinateSystem ? UnitUtils.formatCoordinate(number, coordinateSystem) : number.toFixed(6)
 }
 
 /** Formats journey report timestamps in UTC without applying the interactive display zone. */

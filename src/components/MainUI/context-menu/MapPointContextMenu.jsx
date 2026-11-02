@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-27
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -258,11 +258,11 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
         && panoramaState.target?.slug === target.slug
 
     const latitudeLabel = useMemo(
-        () => target ? __.convert(target.latitude).to(coordinateSystem) : '',
+        () => target ? UnitUtils.formatCoordinate(target.latitude, coordinateSystem) : '',
         [coordinateSystem, target],
     )
     const longitudeLabel = useMemo(
-        () => target ? __.convert(target.longitude).to(coordinateSystem) : '',
+        () => target ? UnitUtils.formatCoordinate(target.longitude, coordinateSystem) : '',
         [coordinateSystem, target],
     )
     const simulatedAltitude = useMemo(() => {

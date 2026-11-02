@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -212,11 +212,11 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
         && Number.isFinite(Number(currentPoi?.longitude))
     const showOrbitItem = isPOIRotating || isPOIPanoramic
     const latitudeLabel = useMemo(
-        () => currentPoi?.latitude != null ? __.convert(currentPoi.latitude).to(coordinateSystem) : '',
+        () => currentPoi?.latitude != null ? UnitUtils.formatCoordinate(currentPoi.latitude, coordinateSystem) : '',
         [coordinateSystem, currentPoi.latitude],
     )
     const longitudeLabel = useMemo(
-        () => currentPoi?.longitude != null ? __.convert(currentPoi.longitude).to(coordinateSystem) : '',
+        () => currentPoi?.longitude != null ? UnitUtils.formatCoordinate(currentPoi.longitude, coordinateSystem) : '',
         [coordinateSystem, currentPoi.longitude],
     )
     const simulatedAltitude = useMemo(() => {

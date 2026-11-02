@@ -23,7 +23,7 @@ import { normalizePOIDisplaySettings }              from '@Core/POIDisplaySettin
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
 import { Export }                                  from '@Core/ui/Export'
 import { POIUtils }                                from '@Utils/cesium/POIUtils'
-import { KM }                                      from '@Utils/UnitUtils'
+import { KM, UnitUtils }                           from '@Utils/UnitUtils'
 import { Cartesian3, HeightReference, JulianDate }   from 'cesium'
 import { v4 as uuid }                              from 'uuid'
 import { subscribe }                               from 'valtio'
@@ -400,7 +400,7 @@ export class POIManager {
     }
 
     copyCoordinatesToClipboard = async (point) => {
-        return Export.toClipboard(`${__.convert(point.latitude).to(lgs.settings.coordinateSystem.current)}, ${__.convert(point.longitude).to(lgs.settings.coordinateSystem.current)}`)
+        return Export.toClipboard(`${UnitUtils.formatCoordinate(point.latitude, lgs.settings.coordinateSystem.current)}, ${UnitUtils.formatCoordinate(point.longitude, lgs.settings.coordinateSystem.current)}`)
     }
 
     static async create() {

@@ -313,8 +313,8 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
         cardExpanded ? [displayCategory, displayTitleCategoryIcon, displayLocation, displayAltitude,
             displayTitleAltitude, displayCoordinates, displayDateTime, isTitleOnly] : null,
         cardExpanded ? [replayActive, replayAnimationActive, replaySettings.visible, replaySettings.hiddenFields] : null,
-        cardExpanded ? unitSystem : null,
-        cardExpanded ? coordinateSystem : null,
+        cardExpanded && displayHeightContent ? unitSystem.current : null,
+        cardExpanded && displayCoordinates ? coordinateSystem.current : null,
         lgs.colors.poiDefault,
         lgs.colors.poiDefaultBackground,
         globalThis.document?.documentElement?.className,
@@ -935,8 +935,8 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                   displayCoordinates,
                   displayHeightContent,
                   captureSurfaceActive,
-                  unitSystem,
-                  coordinateSystem,
+                  cardExpanded && displayHeightContent ? unitSystem.current : null,
+                  displayCoordinates ? coordinateSystem.current : null,
                   renderToCanvas,
                   poi,
               ])
@@ -1104,8 +1104,8 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                                     {displayCoordinates && (
                                         <div className="poi-coordinates">
                                             <span>
-                                                {__.convert(point.latitude).to(coordinateSystem.current)},{' '}
-                                                {__.convert(point.longitude).to(coordinateSystem.current)}
+                                                {UnitUtils.formatCoordinate(point.latitude, coordinateSystem.current)},{' '}
+                                                {UnitUtils.formatCoordinate(point.longitude, coordinateSystem.current)}
                                             </span>
                                         </div>
                                     )}
