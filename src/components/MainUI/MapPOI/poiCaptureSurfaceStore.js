@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-01
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,7 @@ export const createPOICaptureSurfaceStore = (maxConcurrent = 2) => {
     const retainedPOIs = new Set()
     const listenersByPOI = new Map()
     const activeListeners = new Set()
+    const idleListeners = new Set()
     let activeSnapshot = []
     let pendingDrain = false
     let nextSequence = 0
@@ -48,6 +49,17 @@ export const createPOICaptureSurfaceStore = (maxConcurrent = 2) => {
     const notifyActiveSurfaces = () => {
         activeSnapshot = Array.from(activePOIs)
         activeListeners.forEach(listener => listener())
+    }
+
+    /** Resolve readiness waiters after all queued and active capture surfaces settle. */
+    const notifyIdle = () => {
+        if (activePOIs.size > 0 || pendingPOIs.size > 0) {
+            return
+        }
+
+        const listeners = Array.from(idleListeners)
+        idleListeners.clear()
+        listeners.forEach(listener => listener())
     }
 
     /** Notify only the component subscribed to one POI's surface state. */
@@ -126,6 +138,7 @@ export const createPOICaptureSurfaceStore = (maxConcurrent = 2) => {
         while (activePOIs.size - overflowPOIs.size < limit && pendingPOIs.size > 0) {
             const nextPOIId = selectNextPOI()
             if (nextPOIId === undefined) {
+                notifyIdle()
                 return
             }
             pendingPOIs.delete(nextPOIId)
@@ -150,6 +163,7 @@ export const createPOICaptureSurfaceStore = (maxConcurrent = 2) => {
                 }
             }
         }
+        notifyIdle()
     }
 
     /** Subscribe to whether one POI currently owns a mounted capture surface. */
@@ -238,6 +252,7 @@ export const createPOICaptureSurfaceStore = (maxConcurrent = 2) => {
             notifyActiveSurfaces()
             drainQueue()
         }
+        notifyIdle()
     }
 
     /** Retain a high-priority surface for an active drag or other short interaction. */
@@ -253,7 +268,16 @@ export const createPOICaptureSurfaceStore = (maxConcurrent = 2) => {
         }
     }
 
-    return {subscribe, getSnapshot, getActiveSnapshot, subscribeActive, request, release, cancel, retain}
+    /** Wait until the queued POI captures and active capture surfaces are clear. */
+    const waitForIdle = () => {
+        if (activePOIs.size === 0 && pendingPOIs.size === 0) {
+            return Promise.resolve()
+        }
+
+        return new Promise(resolve => idleListeners.add(resolve))
+    }
+
+    return {subscribe, getSnapshot, getActiveSnapshot, subscribeActive, request, release, cancel, retain, waitForIdle}
 }
 
 /** Shared scheduler keeps one routine surface and one priority interaction overflow mounted. */

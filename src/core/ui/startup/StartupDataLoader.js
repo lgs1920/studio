@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -477,15 +477,17 @@ export class StartupDataLoader {
         }
     }
 
+    /** Load POI records and report whether the requested data read completed successfully. */
     loadPOIs = async ({currentOnly = false, journey = lgs.theJourney, includeStarter = true} = {}) => {
         await this.#waitForActiveJourney()
         if (!this.#client) {
             if (currentOnly) {
                 const result = await __.ui.poiManager.readStartupPOIsFromDB({includeStarter, journey})
-                this.#currentPOIsReady = true
-                return result
+                this.#currentPOIsReady = result !== false
+                return result !== false
             }
-            return __.ui.poiManager.readAllFromDB({ensureLocations: false})
+            const result = await __.ui.poiManager.readAllFromDB({ensureLocations: false})
+            return result !== false
         }
         const parents = new Set()
         if (journey?.slug) {
@@ -515,13 +517,20 @@ export class StartupDataLoader {
                     await yieldStartupIdleTask()
                 }
             })
+            if (currentOnly) {
+                this.#currentPOIsReady = true
+            }
+            return true
         }
         catch (error) {
             console.warn('[StartupDataLoader] POI worker load failed, using the legacy loader:', error)
             if (currentOnly) {
-                return __.ui.poiManager.readStartupPOIsFromDB({includeStarter, journey})
+                const result = await __.ui.poiManager.readStartupPOIsFromDB({includeStarter, journey})
+                this.#currentPOIsReady = result !== false
+                return result !== false
             }
-            return __.ui.poiManager.readAllFromDB({ensureLocations: false})
+            const result = await __.ui.poiManager.readAllFromDB({ensureLocations: false})
+            return result !== false
         }
     }
 

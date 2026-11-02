@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-24
- * Last modified: 2026-10-23
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,10 +16,12 @@
 
 import { CURRENT_JOURNEY } from '@Core/constants'
 import { TrackUtils } from '@Utils/cesium/TrackUtils'
-import { UIToast }    from '@Utils/UIToast'
+import { LGS_SUCCESS_TOAST, LGS_WARNING_TOAST, UIToast } from '@Utils/UIToast'
 import { yieldStartupIdleTask, yieldStartupTask } from './startup/StartupWorkerClient'
 
 const POI_LOCATION_BATCH_SIZE = 2
+/** Stable toast identifier for the deferred Journey and POI startup phase. */
+export const DEFERRED_JOURNEY_DATA_TOAST_ID = 'deferred-journeys-and-pois'
 
 /**
  * Keep startup capture preparation disabled while startup responsiveness is diagnosed.
@@ -146,9 +148,10 @@ const resumeCurrentJourneyOrbit = async suspendedOrbit => {
 }
 
 /**
- * Load secondary journey data after the app is visible.
+ * Load secondary journey and POI data, then wait for queued map POI captures.
  *
  * @param {object} options - Deferred loading dependencies.
+ * @param {Function} options.waitForPOICaptures - Resolves when queued POI map captures settle.
  * @returns {Promise<void>} Promise resolved when UI-critical deferred data is ready.
  */
 export const runDeferredJourneyDataLoad = async ({
@@ -159,9 +162,14 @@ export const runDeferredJourneyDataLoad = async ({
                                                      uiToast = UIToast,
                                                      startupLoader = null,
                                                      currentPOIsReady = false,
+                                                     waitForPOICaptures = () => Promise.resolve(),
                                                      onCurrentJourneyReady,
                                                      onJourneysReady,
                                                  } = {}) => {
+    const loadingToastId = uiToast.loading?.(
+        {caption: 'Loading all your data ...'},
+        DEFERRED_JOURNEY_DATA_TOAST_ID,
+    )
     await yieldStartupIdleTask()
 
     if (startupLoader && !currentPOIsReady) {
@@ -187,12 +195,14 @@ export const runDeferredJourneyDataLoad = async ({
     }
     onJourneysReady?.(journeys)
 
+    let poiDataLoaded = true
     if (startupLoader) {
         await yieldStartupIdleTask()
-        await startupLoader.loadPOIs()
+        poiDataLoaded = await startupLoader.loadPOIs() !== false
     }
     else {
-        await poiManager.readAllFromDB({ensureLocations: false})
+        const result = await poiManager.readAllFromDB({ensureLocations: false})
+        poiDataLoaded = result !== false
     }
     await yieldStartupIdleTask()
     await journeyGroupManager.initialize()
@@ -200,14 +210,23 @@ export const runDeferredJourneyDataLoad = async ({
         poiManager.rebuildJourneyIndex()
     }
 
-    runStartupBackgroundTask(resolvePoiLocationsInBackground(poiManager), 'Deferred POI location resolution')
-
-    if (journeys.length > 0) {
-        uiToast.success({
-                            caption: 'Journeys loaded',
-                            text:    'All journeys are ready.',
-                        })
+    if (poiDataLoaded) {
+        await waitForPOICaptures()
+        uiToast.update?.(
+            loadingToastId,
+            {caption: 'Journeys and POIs are ready ...'},
+            LGS_SUCCESS_TOAST,
+        )
     }
+    else {
+        uiToast.update?.(
+            loadingToastId,
+            {caption: 'Could not load all Journey and POI data.'},
+            LGS_WARNING_TOAST,
+        )
+    }
+
+    runStartupBackgroundTask(resolvePoiLocationsInBackground(poiManager), 'Deferred POI location resolution')
 
     runStartupBackgroundTask((async () => {
         await yieldStartupIdleTask()

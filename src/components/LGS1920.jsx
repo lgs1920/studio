@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-10-19
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,6 +33,7 @@ import {
 import {
     WelcomeHero,
 }                       from '@Components/MainUI/WelcomeHero'
+import { poiCaptureSurfaceStore } from '@Components/MainUI/MapPOI/poiCaptureSurfaceStore'
 import {
     APP_EVENT, CURRENT_JOURNEY, POI_STARTER_TYPE,
 }                       from '@Core/constants'
@@ -44,14 +45,16 @@ import {
     configureStartupCamera,
     getStartupOrbitSettings,
 }                       from '@Core/ui/cameraStartup'
-import { runDeferredJourneyDataLoad } from '@Core/ui/deferredJourneyData'
+import {
+    DEFERRED_JOURNEY_DATA_TOAST_ID, runDeferredJourneyDataLoad,
+} from '@Core/ui/deferredJourneyData'
 import { StartupDataLoader } from '@Core/ui/startup/StartupDataLoader'
 import {markStartup, measureStartup} from '@Core/ui/startup/startupTelemetry'
 import {
     TerrainUtils,
 }                       from '@Utils/cesium/TerrainUtils'
 import {
-    UIToast,
+    LGS_ERROR_TOAST, UIToast,
 }                       from '@Utils/UIToast'
 import {
     useCallback, useEffect, useRef, useState,
@@ -183,6 +186,7 @@ export const LGS1920 = () => {
     const initializeDeferredJourneyData = useCallback(() => runDeferredJourneyDataLoad({
                                                                                           startupLoader: startupDataLoader.current,
                                                                                           currentPOIsReady: true,
+                                                                                          waitForPOICaptures: poiCaptureSurfaceStore.waitForIdle,
                                                                                       }), [])
 
     /**
@@ -399,10 +403,11 @@ export const LGS1920 = () => {
         deferredJourneyDataStarted.current = true
         void initializeDeferredJourneyData().catch(error => {
             console.error('[LGS1920] Deferred journey loading failed:', error)
-            UIToast.error({
-                              caption: 'Journey loading failed!',
-                              text:    error.message,
-                          })
+            UIToast.update(
+                DEFERRED_JOURNEY_DATA_TOAST_ID,
+                {caption: 'Journey loading failed!', text: error.message},
+                LGS_ERROR_TOAST,
+            )
         })
     }, [appReady, initializeDeferredJourneyData])
 

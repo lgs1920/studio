@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-24
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -160,28 +160,56 @@ export const CalloutToast = ({message, type = LGS_INFORMATION_TOAST}) => {
     )
 }
 
-export const showToast = (message, type = LGS_INFORMATION_TOAST, duration = LGS_TOAST_DURATION) => {
+/** Build the shared React Toastify options for a LGS toast presentation. */
+const getToastOptions = (type, duration, toastId = null) => {
     const toastClass = LGS_TOAST_CLASSES[type] || LGS_TOAST_CLASSES[LGS_INFORMATION_TOAST]
+    return {
+        autoClose: duration === false ? false : duration,
+        className: `lgs-toast ${toastClass}`,
+        closeOnClick: false,
+        closeButton: true,
+        draggable: true,
+        hideProgressBar: duration === false,
+        progressClassName: `lgs-toast-progress ${toastClass}`,
+        style: {
+            background: 'transparent',
+            boxShadow: 'none',
+            padding: 0,
+            minHeight: 0,
+            borderRadius: 0,
+        },
+        ...(toastId ? {toastId} : {}),
+    }
+}
 
+/** Show or update a LGS toast, optionally without automatic dismissal. */
+export const showToast = (
+    message,
+    type = LGS_INFORMATION_TOAST,
+    duration = LGS_TOAST_DURATION,
+    toastId = null,
+    updateExisting = false,
+) => {
     bringToastLayerToFront()
 
-    return toast(<CalloutToast message={message} type={type}/>, {
-                                                                    autoClose:         duration,
-                                                                    className:         `lgs-toast ${toastClass}`,
-                                                                    closeOnClick:      false,
-                                                                    closeButton:       true,
-                                                                    draggable:         true,
-                                                                    hideProgressBar:   false,
-                                                                    pauseOnHover:      true,
-                                                                    progressClassName: `lgs-toast-progress ${toastClass}`,
-                                                                    style:             {
-                                                                        background:   'transparent',
-                                                                        boxShadow:    'none',
-                                                                        padding:      0,
-                                                                        minHeight:    0,
-                                                                        borderRadius: 0,
-                                                                    },
-                                                                })
+    const content = <CalloutToast message={message} type={type}/>
+    if (updateExisting) {
+        if (!toastId) {
+            return null
+        }
+
+        toast.update(toastId, {
+            ...getToastOptions(type, duration),
+            pauseOnHover: true,
+            render: content,
+        })
+        return toastId
+    }
+
+    return toast(content, {
+        ...getToastOptions(type, duration, toastId),
+        pauseOnHover: true,
+    })
 }
 
 export const Toast = () => {

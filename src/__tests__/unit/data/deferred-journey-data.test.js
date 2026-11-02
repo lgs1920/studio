@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-24
- * Last modified: 2026-10-23
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -43,7 +43,8 @@ const dependencies = ({journeys = []} = {}) => ({
     },
     precacheAssets:      vi.fn(async () => undefined),
     uiToast:             {
-        success: vi.fn(),
+        loading: vi.fn(() => 'startup-toast'),
+        update: vi.fn(),
     },
 })
 
@@ -86,15 +87,30 @@ describe('deferred journey data loading', () => {
         resolvePrecache()
     })
 
-    it('shows a success toast when additional journeys were loaded', async () => {
+    it('keeps a persistent loading toast until the journey and POI data are ready', async () => {
         const deps = dependencies({journeys: [{slug: 'journey-a'}]})
+        let resolvePOICaptures
+        const poiCapturesReady = new Promise(resolve => {
+            resolvePOICaptures = resolve
+        })
+        const waitForPOICaptures = vi.fn(() => poiCapturesReady)
 
-        await runDeferredJourneyDataLoad(deps)
+        const loading = runDeferredJourneyDataLoad({...deps, waitForPOICaptures})
+        await vi.waitFor(() => expect(waitForPOICaptures).toHaveBeenCalledOnce())
 
-        expect(deps.uiToast.success).toHaveBeenCalledWith({
-                                                              caption: 'Journeys loaded',
-                                                              text:    'All journeys are ready.',
-                                                          })
+        expect(deps.uiToast.loading).toHaveBeenCalledWith(
+            {caption: 'Loading Journeys and POIs ...'},
+            'deferred-journeys-and-pois',
+        )
+        expect(deps.uiToast.update).not.toHaveBeenCalled()
+        resolvePOICaptures()
+        await loading
+
+        expect(deps.uiToast.update).toHaveBeenCalledWith(
+            'startup-toast',
+            {caption: 'Journeys and POIs are ready ...'},
+            'success',
+        )
     })
 
     it('pauses the current Journey orbit while the remaining Journeys load, then resumes it in place', async () => {
@@ -199,12 +215,16 @@ describe('deferred journey data loading', () => {
         }
     })
 
-    it('does not show a toast when there are no additional journeys', async () => {
+    it('shows ready after startup data settles even when there are no additional journeys', async () => {
         const deps = dependencies({journeys: []})
 
         await runDeferredJourneyDataLoad(deps)
 
-        expect(deps.uiToast.success).not.toHaveBeenCalled()
+        expect(deps.uiToast.update).toHaveBeenCalledWith(
+            'startup-toast',
+            {caption: 'Journeys and POIs are ready ...'},
+            'success',
+        )
     })
 
     it('propagates loading errors without running follow-up refreshes', async () => {
@@ -218,6 +238,6 @@ describe('deferred journey data loading', () => {
         expect(deps.poiManager.rebuildJourneyIndex).not.toHaveBeenCalled()
         expect(deps.poiManager.ensureAllPOILocations).not.toHaveBeenCalled()
         expect(deps.precacheAssets).not.toHaveBeenCalled()
-        expect(deps.uiToast.success).not.toHaveBeenCalled()
+        expect(deps.uiToast.update).not.toHaveBeenCalled()
     })
 })
