@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-26
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -416,18 +416,6 @@ export const TrackStyleSettings = ({showTitle = true}) => {
     const handleSmoothingStep = (event) => {
         void updateRenderSmoothing({step: event.target.value})
     }
-
-    /**
-     * Scene render loop
-     */
-    const requestRender = useCallback(() => {
-        lgs.scene.requestRender()
-    }, [])
-
-    useEffect(() => {
-        lgs.scene.postUpdate.addEventListener(requestRender)
-        return () => lgs.scene.postUpdate.removeEventListener(requestRender)
-    }, [requestRender])
 
     const meterWidthMin = TRACK_METER_WIDTHS[0]
     const meterWidthMax = TRACK_METER_WIDTHS[TRACK_METER_WIDTHS.length - 1]

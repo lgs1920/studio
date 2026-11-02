@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {DRAWING_FROM_UI} from '@Core/constants'
+import {POIUtils} from '@Utils/cesium/POIUtils'
 import { TrackUtils } from '@Utils/cesium/TrackUtils'
 import {getFixPathSourceFingerprint} from '@Utils/cesium/fixPathCorrections'
 
@@ -124,6 +125,48 @@ describe('TrackUtils draw scheduling', () => {
         expect(source.load.mock.calls[0][0].geometry.coordinates).toEqual(displayContent.geometry.coordinates)
         expect(track.content).toEqual(originalContent)
         expect(source.__lgsTrackPathContent.geometry.coordinates).toEqual(displayContent.geometry.coordinates)
+    })
+
+    it('requests a render after committing asynchronous track geometry and style without an editor', async () => {
+        const source = {
+            name: 'track-stationary-style-update',
+            entities: {values: []},
+            load: vi.fn(async () => {}),
+            show: true,
+        }
+        const scene = {requestRender: vi.fn()}
+        const track = {
+            content: {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                    type: 'LineString',
+                    coordinates: [[0, 0, 10], [0.001, 0, 10]],
+                },
+            },
+            parent: 'journey-stationary-style-update',
+            slug: source.name,
+            title: 'Stationary style update test',
+            visible: true,
+        }
+        globalThis.lgs = {
+            getJourneyBySlug: () => null,
+            viewer: {
+                dataSources: {
+                    contains: candidate => candidate === source,
+                    getByName: name => name === source.name ? [source] : [],
+                },
+                scene,
+            },
+        }
+        const applyStyle = vi.spyOn(TrackUtils, 'applyTrackRenderStyle').mockImplementation(() => {})
+        const requestRender = vi.spyOn(POIUtils, 'requestRender')
+
+        await TrackUtils.drawOnce(track, {action: DRAWING_FROM_UI})
+
+        expect(source.load).toHaveBeenCalledOnce()
+        expect(applyStyle).toHaveBeenCalledOnce()
+        expect(requestRender).toHaveBeenCalledWith(scene)
     })
 
     it('redraws the source route after the final correction section is deleted', async () => {

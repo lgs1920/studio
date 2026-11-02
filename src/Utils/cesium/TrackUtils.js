@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-10-23
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -217,18 +217,30 @@ const removeTrackPrimitive = source => {
     source.__lgsTrackPrimitiveDisplayVisible = null
 }
 
+/** Apply track source and primitive visibility only when an effective value changes. */
 const setTrackSourceVisibility = (source, visible) => {
     if (!source) {
-        return
+        return false
     }
 
-    source.show = visible
-    if (source.__lgsTrackPrimitive) {
-        source.__lgsTrackPrimitive.show = Boolean(visible)
+    const nextVisibility = Boolean(visible)
+    let changed = false
+    if (source.show !== nextVisibility) {
+        source.show = nextVisibility
+        changed = true
     }
-    if (source.__lgsTrackPrimitive?.polylines) {
-        source.__lgsTrackPrimitive.polylines.show = Boolean(visible) && source.__lgsTrackPrimitiveDisplayVisible !== false
+    if (source.__lgsTrackPrimitive && source.__lgsTrackPrimitive.show !== nextVisibility) {
+        source.__lgsTrackPrimitive.show = nextVisibility
+        changed = true
     }
+    const polylineVisibility = nextVisibility && source.__lgsTrackPrimitiveDisplayVisible !== false
+    if (source.__lgsTrackPrimitive?.polylines
+        && source.__lgsTrackPrimitive.polylines.show !== polylineVisibility) {
+        source.__lgsTrackPrimitive.polylines.show = polylineVisibility
+        changed = true
+    }
+
+    return changed
 }
 
 const getTrackDataSource = slug => {
@@ -1166,7 +1178,7 @@ export class TrackUtils {
 
             source.__lgsTrackWidthState = state
             if (changed) {
-                lgs.scene.requestRender()
+                POIUtils.requestRender(lgs.scene)
             }
         }
 
@@ -1243,7 +1255,7 @@ export class TrackUtils {
                 }
                 state.displayMode = displayMode
                 state.width = width
-                lgs.scene.requestRender()
+                POIUtils.requestRender(lgs.scene)
             }
         }
 
@@ -1553,7 +1565,7 @@ export class TrackUtils {
             TrackUtils.removeTrackWidthUpdater(source)
             TrackUtils.removeTrackLocatorMarkerEntity(source, track)
         }
-        lgs.viewer.scene.requestRender()
+        POIUtils.requestRender(lgs.viewer.scene)
     }
 
     /**
@@ -1902,30 +1914,52 @@ export class TrackUtils {
         await lgs.db.lgs1920.put(CURRENT_POI, current, CURRENT_STORE)
     }
 
-    static updatePOIsVisibility = (journey, visibility) => {
+    /** Update the attached POI entities and optionally defer the shared render request. */
+    static updatePOIsVisibility = (journey, visibility, {requestRender = true} = {}) => {
+        let changed = false
         TrackUtils.getDataSourcesByName(journey.slug, true)[0]?.entities.values.forEach(entity => {
             if (entity.id.startsWith(POI_STD) || entity.id.startsWith(POI_FLAG)) {
-                entity.show = POIUtils.setPOIVisibility(__.ui.poiManager.get(entity.id), visibility)
+                const nextVisibility = POIUtils.setPOIVisibility(__.ui.poiManager.get(entity.id), visibility)
+                if (entity.show !== nextVisibility) {
+                    entity.show = nextVisibility
+                    changed = true
+                }
             }
         })
+        if (changed && requestRender) {
+            POIUtils.requestRender()
+        }
+        return changed
     }
 
+    /** Update the selected track's start or stop flag visibility. */
     static updateFlagsVisibility = (journey, track, type = 'start', visibility) => {
+        let changed = false
         TrackUtils.getDataSourcesByName(journey.slug, true)[0]?.entities.values.forEach(entity => {
             const current = TrackUtils.getTrackFromEntityId(journey, entity.id)
             if (entity.id.startsWith(POI_FLAG) && entity.id.endsWith(type) && current?.slug === track.slug) {
                 const poiId = track.flags[entity.id.endsWith(POI_FLAG_START) ? 'start' : 'stop']
-                entity.show = POIUtils.setPOIVisibility(
+                const nextVisibility = POIUtils.setPOIVisibility(
                     __.ui.poiManager.get(poiId), visibility,
                 )
+                if (entity.show !== nextVisibility) {
+                    entity.show = nextVisibility
+                    changed = true
+                }
             }
         })
+        if (changed) {
+            POIUtils.requestRender()
+        }
+        return changed
     }
 
+    /** Apply Journey and track visibility as one rendered scene mutation. */
     static updateJourneyVisibility = (journey, visibility) => {
+        let changed = false
         TrackUtils.getDataSourcesByName(journey.slug).forEach(dataSource => {
             if (dataSource.name === journey.slug) {
-                setTrackSourceVisibility(dataSource, visibility)
+                changed = setTrackSourceVisibility(dataSource, visibility) || changed
             }
             else {
                 const track = journey.tracks.get(dataSource.name)
@@ -1933,12 +1967,19 @@ export class TrackUtils {
                     return
                 }
 
-                setTrackSourceVisibility(dataSource, visibility ? track.visible : false)
+                changed = setTrackSourceVisibility(dataSource, visibility ? track.visible : false) || changed
             }
         })
 
-        TrackUtils.updatePOIsVisibility(journey, visibility && journey?.POIsVisible !== false)
+        const changedPOIVisibility = TrackUtils.updatePOIsVisibility(
+            journey,
+            visibility && journey?.POIsVisible !== false,
+            {requestRender: false},
+        )
         TrackUtils.setProfileVisibility(journey)
+        if (changed || changedPOIVisibility) {
+            POIUtils.requestRender()
+        }
     }
 
     static getTrackFromEntityId = (journey, entityId) => {
@@ -1949,15 +1990,20 @@ export class TrackUtils {
         }
     }
 
+    /** Apply one track's effective visibility and request only when it changes. */
     static updateTrackVisibility = (journey, track, visibility) => {
+        let changed = false
         TrackUtils.getDataSourcesByName(track.slug).forEach(dataSource => {
             const current = journey.tracks.get(dataSource.name)
             if (!current) {
                 return
             }
 
-            setTrackSourceVisibility(dataSource, visibility ? current.visible : false)
+            changed = setTrackSourceVisibility(dataSource, visibility ? current.visible : false) || changed
         })
+        if (changed) {
+            POIUtils.requestRender()
+        }
     }
 
     static setProfileVisibility(journey) {
@@ -1978,6 +2024,6 @@ export class TrackUtils {
             removeTrackPrimitive(dataSource)
             lgs.viewer.dataSources.remove(dataSource)
         })
-        lgs.viewer.scene.requestRender()
+        POIUtils.requestRender(lgs.viewer.scene)
     }
 }

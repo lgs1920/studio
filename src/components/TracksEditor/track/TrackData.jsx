@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-26
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,7 @@ import {
     WidgetDynamicRenderer,
 }                                                                              from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { UIToast }                                                             from '@Utils/UIToast'
+import { POIUtils }                                                            from '@Utils/cesium/POIUtils'
 import { useOptionalSnapshot, useProxyValue }                                 from '@Utils/ValtioUtils'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
@@ -397,7 +398,7 @@ export const TrackData = memo(({compactAfterProfile = false, showWidgetControls 
         for (let index = 0; index < lgs.viewer.dataSources.length; index++) {
             removeFrom(lgs.viewer.dataSources.get(index).entities)
         }
-        lgs.viewer.scene.requestRender?.()
+        POIUtils.requestRender(lgs.viewer.scene)
     }, [])
 
     const removeStatsPOIs = useCallback(async () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-21
- * Last modified: 2026-10-21
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,9 @@ describe('TrackUtils journey POI visibility', () => {
                     getByName: () => [{name: journey.slug, entities: {values: entities}}],
                 },
             },
+            scene: {
+                requestRender: vi.fn(),
+            },
         }
         globalThis.__ = {ui: {poiManager: {get: id => ({id})}}}
 
@@ -51,5 +54,10 @@ describe('TrackUtils journey POI visibility', () => {
 
         expect(entities.map(entity => entity.show)).toEqual([false, false, false, true])
         expect(setPOIVisibility).toHaveBeenCalledTimes(3)
+        expect(globalThis.lgs.scene.requestRender).toHaveBeenCalledOnce()
+
+        globalThis.lgs.scene.requestRender.mockClear()
+        TrackUtils.updatePOIsVisibility(journey, false)
+        expect(globalThis.lgs.scene.requestRender).not.toHaveBeenCalled()
     })
 })
