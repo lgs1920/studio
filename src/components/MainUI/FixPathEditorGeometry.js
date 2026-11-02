@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-21
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -571,7 +571,7 @@ export const worldPositionForCoordinate = (scene, coordinate) => {
  * Check whether a projected world position is in front of the visible terrain.
  * @param {object} scene - Cesium scene.
  * @param {object} camera - Cesium camera.
- * @param {Cartesian2} position - Drawing-buffer screen position.
+ * @param {Cartesian2} position - Canvas-window screen position.
  * @param {Cartesian3} worldPosition - Projected world position.
  * @returns {boolean} True if no nearer terrain surface occludes the position.
  */
@@ -608,7 +608,7 @@ export const isWorldPositionVisible = (scene, camera, position, worldPosition) =
  * Check a nearby route coordinate at its own projected pixel, including terrain occlusion.
  * @param {object} scene - Cesium scene.
  * @param {object} camera - Active Cesium camera.
- * @param {{x: number, y: number}} pointerPosition - Pointer position in canvas pixels.
+ * @param {{x: number, y: number}} pointerPosition - Pointer position in canvas-window pixels.
  * @param {Array<number>} coordinate - Candidate route coordinate.
  * @param {number} tolerance - Maximum pointer distance in canvas pixels.
  * @returns {boolean} Whether the visible route coordinate is close enough to the pointer.
@@ -635,7 +635,7 @@ export const isRouteCoordinateScreenHit = (scene, camera, pointerPosition, coord
  * @param {HTMLCanvasElement} canvas - Cesium canvas.
  * @param {Array<number>} coordinate - Longitude, latitude, and optional height.
  * @param {Cartesian3|null} knownWorldPosition - Previously computed world position.
- * @returns {object|null} Local and drawing-buffer positions.
+ * @returns {object|null} Overlay-local and canvas-window positions.
  */
 export const projectCoordinate = (scene, overlayRect, canvasRect, canvas, coordinate, knownWorldPosition = null) => {
     const worldPosition = knownWorldPosition ?? worldPositionForCoordinate(scene, coordinate)
@@ -646,8 +646,10 @@ export const projectCoordinate = (scene, overlayRect, canvasRect, canvas, coordi
     if (!canvasPosition || !Number.isFinite(canvasPosition.x) || !Number.isFinite(canvasPosition.y)) {
         return null
     }
-    const x = canvasPosition.x * canvasRect.width / canvas.width + canvasRect.left - overlayRect.left
-    const y = canvasPosition.y * canvasRect.height / canvas.height + canvasRect.top - overlayRect.top
+    const canvasClientWidth = canvas.clientWidth || canvasRect.width
+    const canvasClientHeight = canvas.clientHeight || canvasRect.height
+    const x = canvasPosition.x * canvasRect.width / canvasClientWidth + canvasRect.left - overlayRect.left
+    const y = canvasPosition.y * canvasRect.height / canvasClientHeight + canvasRect.top - overlayRect.top
     if (x < 0 || y < 0 || x > overlayRect.width || y > overlayRect.height) {
         return null
     }

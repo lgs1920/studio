@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-20
- * Last modified: 2026-10-21
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,12 +20,36 @@ import {
     findClosestRoutePosition,
     getControlPointCoordinate,
     isRouteCoordinateScreenHit,
+    projectCoordinate,
     projectEditOverlay,
 } from '@Components/MainUI/FixPathEditorGeometry'
 import {getFixPathSegmentDistanceMeters, getFixPathSourceFingerprint} from '@Utils/cesium/fixPathCorrections'
 import {Cartesian3} from 'cesium'
 
 describe('Fix Path editor geometry', () => {
+    it('keeps projected route points aligned with the CSS overlay on high-DPI canvases', () => {
+        const worldPosition = Cartesian3.fromDegrees(1, 2, 3)
+        const canvas = {
+            width: 2000,
+            height: 1000,
+            clientWidth: 1000,
+            clientHeight: 500,
+        }
+        const projectedPosition = {x: 200, y: 100}
+        const scene = {cartesianToCanvasCoordinates: () => projectedPosition}
+        const overlayRect = {left: 80, top: 25, width: 900, height: 450}
+        const canvasRect = {left: 100, top: 50, width: 1000, height: 500}
+
+        expect(projectCoordinate(
+            scene,
+            overlayRect,
+            canvasRect,
+            canvas,
+            [1, 2, 3],
+            worldPosition,
+        )).toMatchObject({x: 220, y: 125, canvasX: 200, canvasY: 100})
+    })
+
     it('checks nearby route hits against the terrain at the route pixel instead of the pointer pixel', () => {
         const coordinate = [1, 2, 0]
         const worldPosition = Cartesian3.fromDegrees(1, 2, 0.5)

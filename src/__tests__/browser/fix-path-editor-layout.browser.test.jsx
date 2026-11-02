@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-20
- * Last modified: 2026-10-21
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -229,11 +229,17 @@ it('keeps correction markers clickable and mirrors point colors with status indi
 
     const statusStates = [
         {selector: '.is-moved:not(.is-selected)', count: 3, name: 'circle', primary: '#ffffff', secondary: '#ff3d91'},
-        {selector: '.is-unmodified:not(.is-selected)', count: 3, name: 'diamond', primary: '#000000', secondary: '#2680ff'},
+        {
+            selector: '.is-unmodified:not(.is-selected)',
+            count: 3,
+            name: 'diamond',
+            primary: '#000000',
+            secondaryToken: '--wa-color-orange-60',
+        },
         {selector: '.is-selected', count: 2, primary: '#000000', secondary: '#7fff00'},
         {selector: '.is-removed', count: 1, name: 'trash-can', family: null, colorToken: '--wa-color-text-normal'},
     ]
-    for (const {selector, count, name, family = 'duotone', colorToken, primary, secondary} of statusStates) {
+    for (const {selector, count, name, family = 'duotone', colorToken, primary, secondary, secondaryToken} of statusStates) {
         const indicators = statusIcons.filter(icon => icon.matches(selector))
         expect(indicators).toHaveLength(count)
         indicators.forEach(icon => {
@@ -256,7 +262,7 @@ it('keeps correction markers clickable and mirrors point colors with status indi
                 : primary
             const secondaryColor = secondary === 'danger-fill'
                 ? getComputedStyle(panel).getPropertyValue('--wa-color-danger-fill-normal').trim()
-                : secondary
+                : secondaryToken ? getComputedStyle(panel).getPropertyValue(secondaryToken).trim() : secondary
             expect(getComputedStyle(icon).getPropertyValue('--primary-color').trim()).toBe(primaryColor)
             expect(getComputedStyle(icon).getPropertyValue('--secondary-color').trim()).toBe(secondaryColor)
             expect(svg.getAttribute('data-prefix')).toBe('fadr')
@@ -286,10 +292,10 @@ it('keeps correction markers clickable and mirrors point colors with status indi
     const visualStates = [
         {states: ['is-selected', 'is-unmodified'], tag: 'path', fill: 'rgb(127, 255, 0)', stroke: 'rgb(0, 0, 0)'},
         {states: ['is-selected', 'is-moved'], tag: 'circle', fill: 'rgb(127, 255, 0)', stroke: 'rgb(0, 0, 0)'},
-        {states: ['is-unmodified'], tag: 'path', fill: 'rgb(38, 128, 255)', stroke: 'rgb(0, 0, 0)'},
+        {states: ['is-unmodified'], tag: 'path', fillToken: '--wa-color-orange-60', stroke: 'rgb(0, 0, 0)'},
         {states: ['is-moved'], tag: 'circle', fill: 'rgb(255, 61, 145)', stroke: 'rgb(255, 255, 255)'},
     ]
-    for (const {states, tag, fill, stroke} of visualStates) {
+    for (const {states, tag, fill, fillToken, stroke} of visualStates) {
         const point = document.createElementNS('http://www.w3.org/2000/svg', 'g')
         point.classList.add('fix-path-control-point', ...states)
         const visual = document.createElementNS('http://www.w3.org/2000/svg', tag)
@@ -297,7 +303,10 @@ it('keeps correction markers clickable and mirrors point colors with status indi
         point.append(visual)
         markers.append(point)
         expect(visual.tagName.toLowerCase()).toBe(tag)
-        expect(getComputedStyle(visual).fill).toBe(fill)
+        const expectedFill = fillToken
+            ? resolveColor(getComputedStyle(panel).getPropertyValue(fillToken).trim())
+            : fill
+        expect(getComputedStyle(visual).fill).toBe(expectedFill)
         expect(getComputedStyle(visual).stroke).toBe(stroke)
         expect(getComputedStyle(visual).strokeWidth).toBe('2px')
     }
