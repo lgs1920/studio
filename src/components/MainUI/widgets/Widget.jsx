@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -736,17 +736,6 @@ const WidgetHost = ({
                 createStyledGuidelines(gridGuidelines.horizontalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
                 createStyledGuidelines(localGridGuidelines.horizontalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
             )
-
-        // Replay widgets are portaled into a fixed viewport layer. Moveable adds the crop board's
-        // viewport offset to fixed-target guidelines, so pass crop-relative values here.
-        if (config.widgetsBoard === VIDEO_WIDGETS_BOARD) {
-            const leftOffset = rect.left - (container.clientLeft || 0)
-            const topOffset = rect.top - (container.clientTop || 0)
-            return {
-                verticalGuidelines: verticalGuidelines.map(guideline => ({...guideline, pos: guideline.pos - leftOffset})),
-                horizontalGuidelines: horizontalGuidelines.map(guideline => ({...guideline, pos: guideline.pos - topOffset})),
-            }
-        }
 
         return {
             verticalGuidelines,
@@ -2044,13 +2033,13 @@ const WidgetHost = ({
                 )}
             </div>
 
+            {/* Keep Moveable in the widget host's coordinate space. actualContainer supplies bounds and snapping only. */}
             <Moveable
                 className={classNames('lgs-widget-control-box', moveableClassName)}
                 style={{
                     opacity:      showMoveableControls ? 1 : 0,
                     pointerEvents: showMoveableControls && (!replayPlaybackActive || !config.isCropper) ? 'auto' : 'none',
                 }}
-                container={actualContainer ?? lgs.canvas}
                 origin={false}
                 ref={_moveable}
                 target={_widget}
