@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -723,6 +723,10 @@
     width: 100%;
     min-width: 0;
     gap: var(--lgs-gutter-xs);
+
+    & .poi-title-altitude {
+        white-space: nowrap;
+    }
 }
 
 .poi-card-inner .poi-title h3 {

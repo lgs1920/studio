@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -909,7 +909,12 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                                     )}
                                     <h3>
                                         {point.title ?? 'Point Of Interest'}
-                                        {formattedTitleAltitude && ` (${formattedTitleAltitude})`}
+                                        {formattedTitleAltitude && (
+                                            <>
+                                                {' '}
+                                                <span className="poi-title-altitude">({formattedTitleAltitude})</span>
+                                            </>
+                                        )}
                                     </h3>
                                 </div>
                                 {point.location && displayLocation && (
