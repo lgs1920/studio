@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-01
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,6 +57,10 @@ const setupMonitor = (pois = [
     canvas.style.cursor = 'crosshair'
 
     globalThis.lgs = {
+        colors: {
+            poiDefault: 'var(--wa-color-brand-fill-normal)',
+            poiDefaultBackground: 'var(--wa-color-brand-fill-quiet)',
+        },
         stores: {
             main: proxy({
                 components: {pois: {list: proxyMap(pois.map(currentPOI => [currentPOI.id, currentPOI]))}},

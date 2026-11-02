@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,6 +41,8 @@ vi.mock('@Components/MainUI/MapPOI/openPOIEditor', () => ({
 
 vi.mock('@Core/MapPOI', () => ({
     MapPOI: class {
+        static categoryIcon = () => 'location-dot'
+
         constructor(poi) {
             Object.assign(this, poi)
             this.utils = {draw: drawPOI}

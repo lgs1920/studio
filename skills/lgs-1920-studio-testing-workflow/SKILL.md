@@ -7,6 +7,8 @@ description: Create, repair, and run reliable LGS1920 tests with Vitest, React T
 
 Use this skill whenever a feature or bug fix changes behavior. Read neighboring tests and the affected implementation before writing assertions.
 
+When a change affects behavior or an exported API, search for every relevant test contract before editing: module mocks, mock classes, spies, fixture builders, static guardrail allowlists, snapshots, and source-based CSS assertions. Keep mocks and fixtures aligned with the real implementation's API and semantics, and update all affected contracts instead of stopping after the reported test passes.
+
 Before any real-browser test, visual check, or screenshot, apply
 [Reliable Studio Browser Tests](../lgs-1920-studio-browser-webgl/SKILL.md). Require its WebGL 2 render preflight
 before loading Studio. A separate Playwright or Vitest browser must pass the same check in its own browser
@@ -23,6 +25,6 @@ Workflow:
 7. For Replay and capture, cover the preparation timeline projection, camera preparation, state transitions, synchronization, latest-request-wins scrubbing, cancellation, and final cleanup.
 8. For asynchronous tests, prefer explicit completion signals. Use microtasks for synchronous callback delivery and fake timers only for behavior that depends on a controlled clock or scheduler. Do not add arbitrary sleeps or chained animation-frame promises merely to wait for rendering.
 9. Restore fake timers, globals, browser API stubs, observers, event listeners, DOM nodes, and module mocks in test cleanup. A failure that disappears with `--no-file-parallelism` is a test-isolation defect to investigate, not an assertion to weaken.
-10. Run the focused test file, then the affected project with the intended CI parallelism. Run `bun run lint`, `bun run typecheck`, `bun run build`, and `bun run test:lint-config` when the change affects shared configuration, test infrastructure, or build behavior.
+10. Run focused tests, then each affected project against the final working tree with the intended CI parallelism. Run expensive Vitest projects sequentially to avoid resource contention. If a test times out during concurrent project runs, rerun it or its project in isolation before changing its timeout or synchronization. Run `bun run lint`, `bun run typecheck`, `bun run build`, and `bun run test:lint-config` when the change affects shared configuration, test infrastructure, or build behavior.
 
 Prefer deterministic fixtures and fake timers only when necessary. Do not weaken assertions merely to make a regression pass. Never run `bun run dev`.

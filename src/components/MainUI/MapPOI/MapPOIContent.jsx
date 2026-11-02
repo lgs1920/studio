@@ -54,9 +54,10 @@ import { ELEVATION_UNITS, UnitUtils }               from '@Utils/UnitUtils'
 import { WaIcon, WaTooltip }                       from '@awesome.me/webawesome/dist/react'
 import { snapdom }                                 from '@zumer/snapdom'
 import classNames                                  from 'classnames'
-import { memo, useCallback, useEffect, useId, useLayoutEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useId, useLayoutEffect, useRef, useSyncExternalStore } from 'react'
 import { proxy, useSnapshot }                      from 'valtio'
 import { createPOICanvasRenderQueue }              from '@Components/MainUI/MapPOI/poiCanvasRenderQueue'
+import { getPOIMoveSession, subscribeToPOIMove }     from '@Components/MainUI/MapPOI/poiMoveStore'
 import './style.css'
 
 const EMPTY_REPLAY_PROXY = proxy({nearbyPois: []})
@@ -128,6 +129,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
     managedCaptureSurface = false, style}) => {
     const rawTooltipId = useId()
     const tooltipIdPrefix = `map-poi-content-${rawTooltipId.replace(/:/g, '')}`
+    const moveSession = useSyncExternalStore(subscribeToPOIMove, getPOIMoveSession, getPOIMoveSession)
     const _poiIconWrapper = useRef(null)
     const _poiContent = useRef(null)
     const _poiCanvasCaptureSurface = useRef(null)
@@ -717,13 +719,17 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
             return
         }
 
+        if (moveSession?.poiId === pointId) {
+            return
+        }
+
         const currentPoint = $pois.list.get(pointId)
         if (!currentPoint?.id) {
             return
         }
 
         POIUtils.updateVisibility(currentPoint, !replayMasked && !hiddenBecauseTooClose)
-    }, [isEmbedded, pointId, replayMasked, hiddenBecauseTooClose, $pois.list])
+    }, [isEmbedded, pointId, replayMasked, hiddenBecauseTooClose, $pois.list, moveSession])
 
     useEffect(() => {
         if (isEmbedded || !pointId) {

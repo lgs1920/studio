@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-24
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,8 +54,8 @@ describe('Map POI style', () => {
         expect(cardStyle).toContain('--poi-expanded-leader-gap: var(--poi-open-frame-line-width);')
         expect(leaderStyle).toContain('width: 0;')
         expect(leaderStyle).toContain('height: 0;')
-        expect(leaderStyle).toContain('width: calc(3 * var(--poi-border-width));')
-        expect(leaderStyle).toContain('height: calc(3 * var(--poi-border-width));')
+        expect(leaderStyle).toContain('width: calc(3 * var(--poi-stick-width));')
+        expect(leaderStyle).toContain('height: calc(3 * var(--poi-stick-width));')
         expect(leaderStyle).toContain('transform: translate(-50%, -50%);')
         expect(leaderStyle).toContain('border-radius: 50%;')
         expect(leaderStyle).toContain('background-color: var(--lgs-poi-border-color);')
@@ -176,7 +176,7 @@ describe('Map POI style', () => {
             css.indexOf('.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-slanted-banner'),
         )
         expect(openFrameStyle).toContain('border: 0;')
-        expect(openFrameStyle).toContain('height: 50%;')
+        expect(openFrameStyle).toContain('height: calc(50% + var(--poi-open-frame-line-width));')
         expect(openFrameStyle).toContain('left: calc(-1 * var(--poi-open-frame-line-width));')
         expect(openFrameStyle).toContain('border-width: 0 0 var(--poi-open-frame-line-width) var(--poi-open-frame-line-width);')
         expect(openFrameStyle).toContain('width: calc(var(--poi-expanded-leader-position, 50%) + var(--poi-open-frame-line-width));')
