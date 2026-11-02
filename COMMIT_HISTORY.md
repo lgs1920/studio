@@ -4623,3 +4623,11 @@
 ## 2026-11-01 — [`fix: prevent POI title text clipping`](https://github.com/lgs1920/studio/commit/ca8e350a6edf87509f673db10db83fc03931569a)
 
 - Recorded automatically from Git history.
+
+## 2026-11-01 — [`fix: keep POI capture updates responsive`](https://github.com/lgs1920/studio/commit/f1de73f1e7eb36f732f16f90927e65c69a9a17d1)
+
+- Recorded automatically from Git history.
+
+## 2026-11-01 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/2f183cde59ee054b8b375979cf4492e18acfa6a3)
+
+- Recorded automatically from Git history.
