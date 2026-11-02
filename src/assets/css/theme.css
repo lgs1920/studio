@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -2164,6 +2164,16 @@ hr {
     cursor: grabbing !important;
     pointer-events: none;
     background: transparent;
+}
+
+.lgs-widget-shift-drag-overlay {
+    position: absolute;
+    z-index: 10001;
+    inset: 0;
+    background: transparent;
+    cursor: grab;
+    pointer-events: auto;
+    touch-action: none;
 }
 
 .lgs-visual-widget {

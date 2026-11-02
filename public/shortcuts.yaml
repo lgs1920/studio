@@ -551,10 +551,11 @@
   reference: true
   scope: Widget interaction
 - action: Move widget
-  description: Drags a movable on-map widget.
+  description: Drags a movable on-map widget. Hold Shift to drag it from anywhere on the widget, including interactive controls.
   id: widget-move-pointer
   keys:
     - Left drag
+    - Shift+Left drag
   reference: true
   scope: Widget interaction
 - action: Double-click widget

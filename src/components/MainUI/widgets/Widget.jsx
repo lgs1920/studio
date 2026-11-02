@@ -416,6 +416,7 @@ const WidgetHost = ({
     const _children = childRef ?? _fallbackChildren
     const _dragConfirmed = useRef(false)
     const _dragStart = useRef({x: 0, y: 0})
+    const _shiftDrag = useRef(false)
     const _initialized = useRef(false)
     const _lastPointerDown = useRef({time: 0, x: 0, y: 0, pointerType: ''})
     const _lockedHintTimer = useRef(null)
@@ -434,6 +435,7 @@ const WidgetHost = ({
     const [guidelineRevision, setGuidelineRevision] = useState(0)
     const [isMouseOver, setIsMouseOver] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
+    const [shiftDragArmed, setShiftDragArmed] = useState(false)
     const [boardContainer, setBoardContainer] = useState(null)
     const [collapsed, setCollapsed] = useState(false)
     const [locked, setLocked] = useState(false)
@@ -839,6 +841,35 @@ const WidgetHost = ({
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
     }, [widgetId, drawers.entity, drawers.open, canInteract])
 
+    useEffect(() => {
+        if (!canDrag) {
+            setShiftDragArmed(false)
+            return undefined
+        }
+
+        const handleKeyDown = event => {
+            if (event.key === 'Shift' && _widget.current?.matches(':hover')) {
+                setShiftDragArmed(true)
+            }
+        }
+        const handleKeyUp = event => {
+            if (event.key === 'Shift') {
+                setShiftDragArmed(false)
+            }
+        }
+        const clearShiftDrag = () => setShiftDragArmed(false)
+
+        window.addEventListener('keydown', handleKeyDown, true)
+        window.addEventListener('keyup', handleKeyUp, true)
+        window.addEventListener('blur', clearShiftDrag)
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown, true)
+            window.removeEventListener('keyup', handleKeyUp, true)
+            window.removeEventListener('blur', clearShiftDrag)
+        }
+    }, [canDrag])
+
     /**
      * Updates the reactive widget entry only when a persisted field changes.
      * @param {Object} patch - Reactive fields to merge into the widget entry
@@ -1048,16 +1079,18 @@ const WidgetHost = ({
         persistInteractionState(widgetConfig, {locked: nextLocked})
     }, [canLock, interactionLocked, locked, persistInteractionState, widgetId])
 
-    const handleMouseEnter = useCallback(() => {
+    const handleMouseEnter = useCallback((event) => {
         showLockedHoverHint()
+        setShiftDragArmed(Boolean(event.shiftKey && canDrag))
         if (!canInteract || (selectedId && !isSelected)) {
             return
         }
         setIsMouseOver(true)
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, false, true)
-    }, [canInteract, isSelected, selectedId, showLockedHoverHint])
+    }, [canDrag, canInteract, isSelected, selectedId, showLockedHoverHint])
 
     const handleMouseLeave = useCallback((event) => {
+        setShiftDragArmed(false)
         if (effectiveLocked) {
             hideLockedHoverHint()
             return
@@ -1075,10 +1108,13 @@ const WidgetHost = ({
 
     const handleDragStart = useCallback((event) => {
         const input = event?.inputEvent
-        if (!canDrag || !input || hasDrawerInPath(input) || hasNoDragInPath(input)) {
+        const shiftDrag = Boolean(input?.shiftKey)
+        if (!canDrag || !input || hasDrawerInPath(input) || (hasNoDragInPath(input) && !shiftDrag)) {
+            _shiftDrag.current = false
             event.stopDrag()
             return
         }
+        _shiftDrag.current = shiftDrag
         setIsDragging(false)
         _dragConfirmed.current = false
         _dragStart.current = {
@@ -1092,7 +1128,7 @@ const WidgetHost = ({
 
     const handleDrag = useCallback((event) => {
         const input = event.inputEvent
-        if (!canDrag || !input || hasDrawerInPath(input) || hasNoDragInPath(input)) {
+        if (!canDrag || !input || hasDrawerInPath(input) || (hasNoDragInPath(input) && !_shiftDrag.current)) {
             event.stopDrag()
             return
         }
@@ -1127,6 +1163,7 @@ const WidgetHost = ({
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, false, isMouseOver)
         setIsDragging(false)
         _dragConfirmed.current = false
+        _shiftDrag.current = false
         _children.current?.onDragEnd?.(event)
         await __.ui.widgetManager.onDragEnd(event)
         _moveable.current?.updateRect()
@@ -1146,10 +1183,9 @@ const WidgetHost = ({
     }, [blockDoubleClick, canReduce, openEditorFromDoubleClick, toggleCollapsed])
 
     const handlePointerDownCapture = useCallback((event) => {
-        // Timeline interactive elements are marked no-drag so their own
-        // editor gestures stay local. Neutral areas continue to the widget
-        // pointer handler and can select or move it.
-        if (hasNoDragInPath(event)) {
+        // Interactive elements keep their own gestures unless the Shift overlay is armed.
+        const shiftDrag = Boolean(event.shiftKey && canDrag && !event.ctrlKey && isPrimaryLeftPointer(event))
+        if (hasNoDragInPath(event) && !shiftDrag) {
             return
         }
 
@@ -1157,7 +1193,7 @@ const WidgetHost = ({
             selectWidget()
         }
 
-        if (!canReduce || !isPrimaryLeftPointer(event) || event.ctrlKey) {
+        if (shiftDrag || !canReduce || !isPrimaryLeftPointer(event) || event.ctrlKey) {
             return
         }
 
@@ -1181,7 +1217,7 @@ const WidgetHost = ({
 
         blockDoubleClick(event)
         toggleCollapsed()
-    }, [blockDoubleClick, canReduce, selectWidget, toggleCollapsed])
+    }, [blockDoubleClick, canDrag, canReduce, selectWidget, toggleCollapsed])
 
     const handleDoubleClickCapture = useCallback((event) => {
         if (hasNoDragInPath(event)) {
@@ -1376,6 +1412,20 @@ const WidgetHost = ({
 
         return config?.handle ?? element
     }, [config.handle])
+
+    /**
+     * Starts a Moveable drag from the temporary Shift overlay.
+     * @param {Object} event - Shift-modified mouse event from the overlay.
+     */
+    const handleShiftDragMouseDown = useCallback((event) => {
+        if (!event.shiftKey || event.button !== 0 || event.ctrlKey
+            || !canDrag || !config.handle) {
+            return
+        }
+
+        event.preventDefault()
+        _moveable.current?.dragStart(event.nativeEvent ?? event, resolveDragTarget())
+    }, [canDrag, config.handle, resolveDragTarget])
 
     const handleBound = useCallback(() => __.ui.widgetManager.setBoundStatus(_widget.current), [])
 
@@ -2030,6 +2080,13 @@ const WidgetHost = ({
                     <div className="lgs-widget-preview-forbidden" aria-hidden="true">
                         <WaIcon name="ban" variant="regular"/>
                     </div>
+                )}
+                {shiftDragArmed && canDrag && (
+                    <div
+                        className="lgs-widget-shift-drag-overlay"
+                        aria-hidden="true"
+                        onMouseDown={handleShiftDragMouseDown}
+                    />
                 )}
             </div>
 
