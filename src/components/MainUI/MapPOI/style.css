@@ -143,7 +143,7 @@
     }
 
     &.poi-card--style-open-frame {
-        --poi-open-frame-line-width: var(--poi-custom-border-width, 5px); /* Keep the open-frame default stronger than the standard POI border. */
+        --poi-open-frame-line-width: var(--poi-custom-border-width, 6px); /* Keep the open-frame default stronger than the standard POI border. */
         --poi-expanded-leader-gap: var(--poi-open-frame-line-width);
     }
 
@@ -465,6 +465,7 @@
 .poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-round-badge {
     padding: 0;
     border: 0;
+    border-radius: var(--poi-border-radius, var(--lgs-border-radius-s));
     background: transparent;
 
     & .poi-card-inner-background {
@@ -563,7 +564,7 @@
         pointer-events: none;
         border-style: solid;
         border-color: var(--lgs-poi-border-color);
-        border-radius: var(--poi-border-radius, var(--lgs-border-radius-s));
+        border-radius: 0;
     }
 
     &::before {
@@ -610,6 +611,7 @@
     position: relative;
     isolation: isolate;
     border: 0;
+    border-radius: var(--poi-border-radius, var(--lgs-border-radius-s));
     background: transparent;
 
     &::before {
@@ -649,7 +651,7 @@
 
     padding: 0;
     border: 0;
-    border-radius: 0;
+    border-radius: var(--poi-border-radius, var(--lgs-border-radius-s));
     background: transparent;
 
     & .poi-card-inner-background {

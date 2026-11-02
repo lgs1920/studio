@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -63,7 +63,9 @@ export const calculatePOIReducedPinAnchor = pinShape => {
  * @param {number} geometry.width - Untransformed POI card width in CSS pixels.
  * @param {number} geometry.height - Untransformed POI card height in CSS pixels.
  * @param {number} geometry.position - Anchor percentage along the side edge.
- * @param {number} [geometry.borderRadius=0] - Used corner radius for the rounded style.
+ * @param {number} [geometry.borderRadius=0] - Used corner radius for the measured outline.
+ * @param {number} [geometry.outlineOffset=0] - Horizontal offset from the card edge to the measured outline.
+ * @param {number} [geometry.openFrameLineWidth=0] - Open Frame stroke width in CSS pixels.
  * @returns {number} Signed horizontal offset in CSS pixels from the card edge to its outline.
  */
 export const calculatePOIStickEdgeOffset = ({
@@ -73,6 +75,8 @@ export const calculatePOIStickEdgeOffset = ({
     height,
     position,
     borderRadius = 0,
+    outlineOffset = 0,
+    openFrameLineWidth = 0,
 }) => {
     if ((side !== 'left' && side !== 'right')
         || !Number.isFinite(width)
@@ -84,23 +88,34 @@ export const calculatePOIStickEdgeOffset = ({
     }
 
     const progress = Math.min(100, Math.max(0, position)) / 100
-    if (style === 'slanted-banner') {
-        return Math.tan(-15 * Math.PI / 180) * (progress - 0.5) * height
+    if (style === 'open-frame') {
+        const lineWidth = Number.isFinite(openFrameLineWidth) ? Math.max(0, openFrameLineWidth) : 0
+        const strokeReachesAnchor = side === 'left'
+            ? progress * height >= height / 2 - lineWidth / 2
+            : progress * height <= height / 2 + lineWidth / 2
+        return strokeReachesAnchor ? (side === 'left' ? -lineWidth : lineWidth) : 0
     }
 
+    const slantedOffset = style === 'slanted-banner'
+        ? Math.tan(-15 * Math.PI / 180) * (progress - 0.5) * height
+        : 0
+    const hasRoundedOutline = ['icon-frame', 'round-badge', 'rounded', 'side-accent', 'slanted-banner']
+        .includes(style)
     const radius = style === 'pill'
         ? Math.min(width, height) / 2
-        : style === 'rounded' && Number.isFinite(borderRadius)
+        : hasRoundedOutline && Number.isFinite(borderRadius)
             ? Math.min(Math.max(0, borderRadius), width / 2, height / 2)
             : 0
     const distanceFromEnd = Math.min(progress, 1 - progress) * height
     if (!radius || distanceFromEnd >= radius) {
-        return 0
+        return (Number.isFinite(outlineOffset) ? outlineOffset : 0) + slantedOffset
     }
 
     const distanceFromCornerCenter = radius - distanceFromEnd
     const inset = radius - Math.sqrt(Math.max(0, radius ** 2 - distanceFromCornerCenter ** 2))
-    return side === 'left' ? inset : -inset
+    return (Number.isFinite(outlineOffset) ? outlineOffset : 0)
+        + slantedOffset
+        + (side === 'left' ? inset : -inset)
 }
 
 /**

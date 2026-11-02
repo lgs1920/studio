@@ -70,6 +70,62 @@ const POI_BORDER_RADIUS_CSS_VALUES = Object.freeze({
     medium: 'var(--lgs-border-radius)',
     large: 'var(--lgs-border-radius-l)',
 })
+
+/** Measure an element's untransformed layout bounds relative to its POI card. */
+const measurePOIElementWithinCard = (element, card) => {
+    if (!element || !card) {
+        return null
+    }
+
+    let left = 0
+    let top = 0
+    let current = element
+    while (current && current !== card) {
+        left += current.offsetLeft
+        top += current.offsetTop
+        current = current.offsetParent
+    }
+
+    return current === card
+        ? {left, top, width: element.offsetWidth, height: element.offsetHeight}
+        : null
+}
+
+/** Align a connector with the measured outline of a POI card or one of its framed elements. */
+const calculateMeasuredPOIStickEdgeOffset = ({
+    card,
+    outline,
+    style,
+    side,
+    position,
+    borderRadius,
+    openFrameLineWidth,
+}) => {
+    if (!card?.offsetHeight || !outline?.width || !outline?.height) {
+        return null
+    }
+
+    const anchorY = card.offsetHeight * Math.min(100, Math.max(0, position)) / 100
+    if (anchorY < outline.top || anchorY > outline.top + outline.height) {
+        return null
+    }
+
+    const outlineOffset = side === 'left'
+        ? outline.left
+        : outline.left + outline.width - card.offsetWidth
+    const outlinePosition = (anchorY - outline.top) / outline.height * 100
+    return calculatePOIStickEdgeOffset({
+        style,
+        side,
+        width: outline.width,
+        height: outline.height,
+        position: outlinePosition,
+        borderRadius,
+        outlineOffset,
+        openFrameLineWidth,
+    })
+}
+
 const assertPOICanvasDimensions = (element, scale, ratio) => {
     const bounds = element.getBoundingClientRect()
     const width = Math.max(bounds.width, element.scrollWidth, element.offsetWidth)
@@ -661,25 +717,107 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
     }, [managedCaptureSurface, poi])
 
     useLayoutEffect(() => {
-        /** Align the stick endpoint with rounded or skewed visible POI outlines. */
+        /** Align the stick endpoint with the selected style's visible POI outline. */
         const updatePOIStickEdgeOffset = () => {
             const wrapper = _poiIconWrapper.current
             const card = _poiContent.current?.querySelector('.poi-card-inner')
-            if (!wrapper || !card) {
+            const poiCard = _poiContent.current
+            if (!wrapper || !card || !poiCard) {
                 return false
             }
 
             const cardStyle = window.getComputedStyle(card)
-            const edgeOffset = isExpanded && horizontalStick
-                ? calculatePOIStickEdgeOffset({
-                    style: poiStyle,
-                    side: stickPosition,
-                    width: card.offsetWidth,
-                    height: card.offsetHeight,
-                    position: stickHorizontalPosition,
-                    borderRadius: Number.parseFloat(cardStyle.borderTopLeftRadius),
-                })
-                : 0
+            const poiCardStyle = window.getComputedStyle(poiCard)
+            const computedRadius = Number.parseFloat(cardStyle.borderTopLeftRadius)
+            const borderRadius = Number.isFinite(computedRadius) ? computedRadius : 0
+            const openFrameLineWidth = Number.parseFloat(poiCardStyle.getPropertyValue('--poi-open-frame-line-width'))
+            let edgeOffset = 0
+
+            if (isExpanded && horizontalStick && card.offsetWidth && card.offsetHeight) {
+                if (poiStyle === 'icon-frame') {
+                    const content = card.querySelector('.poi-card-content')
+                    const icon = card.querySelector('.poi-category-title-icon')
+                    const contentBounds = measurePOIElementWithinCard(content, card)
+                    const iconBounds = measurePOIElementWithinCard(icon, card)
+                    const anchorY = card.offsetHeight * stickHorizontalPosition / 100
+                    const attachedOutline = stickPosition === 'left' && iconBounds
+                        && anchorY >= iconBounds.top && anchorY <= iconBounds.top + iconBounds.height
+                        ? icon
+                        : content
+                    const outlineBounds = attachedOutline === icon ? iconBounds : contentBounds
+                    const outlineStyle = attachedOutline ? window.getComputedStyle(attachedOutline) : null
+                    edgeOffset = calculateMeasuredPOIStickEdgeOffset({
+                        card,
+                        outline: outlineBounds,
+                        style: 'icon-frame',
+                        side: stickPosition,
+                        position: stickHorizontalPosition,
+                        borderRadius: Number.parseFloat(outlineStyle?.borderTopLeftRadius)
+                            || borderRadius,
+                        openFrameLineWidth,
+                    }) ?? 0
+                }
+                else if (poiStyle === 'round-badge' && stickPosition === 'left') {
+                    const content = card.querySelector('.poi-card-content')
+                    const icon = card.querySelector('.poi-category-title-icon')
+                    const contentBounds = measurePOIElementWithinCard(content, card)
+                    const iconBounds = measurePOIElementWithinCard(icon, card)
+                    const fontSize = Number.parseFloat(cardStyle.fontSize)
+                    const badgeInset = Number.isFinite(fontSize) ? 1.1 * fontSize : 0
+                    const badgeOutline = contentBounds && badgeInset > 0
+                        ? {
+                            left: contentBounds.left + badgeInset,
+                            top: contentBounds.top,
+                            width: Math.max(0, contentBounds.width - badgeInset),
+                            height: contentBounds.height,
+                        }
+                        : null
+                    const badgeOffset = calculateMeasuredPOIStickEdgeOffset({
+                        card,
+                        outline: badgeOutline,
+                        style: 'round-badge',
+                        side: 'left',
+                        position: stickHorizontalPosition,
+                        borderRadius,
+                        openFrameLineWidth,
+                    })
+                    const anchorY = card.offsetHeight * stickHorizontalPosition / 100
+                    const iconTop = iconBounds
+                        ? contentBounds.top + (contentBounds.height - iconBounds.height) / 2
+                        : 0
+                    const iconOffset = iconBounds && anchorY >= iconTop
+                        && anchorY <= iconTop + iconBounds.height
+                        ? calculateMeasuredPOIStickEdgeOffset({
+                            card,
+                            outline: {...iconBounds, top: iconTop},
+                            style: 'pill',
+                            side: 'left',
+                            position: (anchorY - iconTop) / iconBounds.height * 100,
+                            borderRadius: iconBounds.width / 2,
+                            openFrameLineWidth,
+                        })
+                        : null
+                    edgeOffset = [badgeOffset, iconOffset]
+                        .filter(Number.isFinite)
+                        .reduce((outermost, candidate) => Math.min(outermost, candidate), Infinity)
+                    if (!Number.isFinite(edgeOffset)) {
+                        edgeOffset = 0
+                    }
+                }
+                else {
+                    const usesConfiguredRadius = ['round-badge', 'slanted-banner'].includes(poiStyle)
+                    edgeOffset = calculatePOIStickEdgeOffset({
+                        style: poiStyle,
+                        side: stickPosition,
+                        width: card.offsetWidth,
+                        height: card.offsetHeight,
+                        position: stickHorizontalPosition,
+                        borderRadius: usesConfiguredRadius ? borderRadius : computedRadius,
+                        openFrameLineWidth,
+                    })
+                }
+            }
+
             const nextValue = `${edgeOffset}px`
             if (wrapper.style.getPropertyValue('--poi-expanded-leader-edge-offset') === nextValue) {
                 return false
@@ -711,8 +849,8 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
         })
         observer.observe(card)
         return () => observer.disconnect()
-    }, [horizontalStick, isEmbedded, isExpanded, poiBorderRadius, poiBorderWidth, poiStyle, renderToCanvas,
-        stickHorizontalPosition, stickPosition])
+    }, [displaySettings.fontSize, displayTitleCategoryIcon, horizontalStick, isEmbedded, isExpanded,
+        poiBorderRadius, poiBorderWidth, poiStyle, renderToCanvas, stickHorizontalPosition, stickPosition])
 
     useEffect(() => {
         if (isEmbedded || !pointId) {

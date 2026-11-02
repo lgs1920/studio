@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -83,8 +83,45 @@ describe('POI canvas geometry', () => {
         {name: 'slanted upper edge', geometry: {style: 'slanted-banner', side: 'left', width: 200, height: 100, position: 20}, expected: 8.0384757729},
         {name: 'slanted lower edge', geometry: {style: 'slanted-banner', side: 'right', width: 200, height: 100, position: 80}, expected: -8.0384757729},
         {name: 'rounded corner', geometry: {style: 'rounded', side: 'right', width: 100, height: 50, position: 10, borderRadius: 10}, expected: -1.3397459622},
+        {name: 'side-accent rounded corner', geometry: {style: 'side-accent', side: 'left', width: 100, height: 40, position: 20, borderRadius: 12}, expected: 0.686291501},
+        {name: 'round badge rounded corner', geometry: {style: 'round-badge', side: 'right', width: 100, height: 40, position: 20, borderRadius: 12}, expected: -0.686291501},
+        {name: 'icon frame rounded corner', geometry: {style: 'icon-frame', side: 'left', width: 100, height: 40, position: 20, borderRadius: 12}, expected: 0.686291501},
+        {name: 'slanted rounded corner', geometry: {style: 'slanted-banner', side: 'right', width: 100, height: 40, position: 20, borderRadius: 12}, expected: 2.5290988},
+        {name: 'Open Frame outer stroke', geometry: {style: 'open-frame', side: 'right', width: 100, height: 40, position: 20, openFrameLineWidth: 6}, expected: 6},
+        {name: 'Open Frame lower left stroke', geometry: {style: 'open-frame', side: 'left', width: 100, height: 40, position: 80, openFrameLineWidth: 6}, expected: -6},
+        {name: 'Open Frame gap', geometry: {style: 'open-frame', side: 'left', width: 100, height: 40, position: 20, openFrameLineWidth: 6}, expected: 0},
+        {name: 'outline inset', geometry: {style: 'rounded', side: 'left', width: 100, height: 40, position: 50, borderRadius: 12, outlineOffset: 8}, expected: 8},
     ])('aligns a $name anchor with its visible outline', ({geometry, expected}) => {
         expect(calculatePOIStickEdgeOffset(geometry)).toBeCloseTo(expected, 6)
+    })
+
+    it('resolves every display style at each selectable side anchor and border width', () => {
+        const styles = [
+            'icon-frame', 'label', 'open-frame', 'pill', 'round-badge', 'rounded', 'side-accent',
+            'slanted-banner', 'underline',
+        ]
+        const borderWidths = [2, 3, 4, 5, 6]
+        const sides = ['left', 'right']
+        const positions = [20, 50, 80]
+
+        styles.forEach(style => {
+            borderWidths.forEach(borderWidth => {
+                sides.forEach(side => {
+                    positions.forEach(position => {
+                        const offset = calculatePOIStickEdgeOffset({
+                            style,
+                            side,
+                            width: 220,
+                            height: 64,
+                            position,
+                            borderRadius: 16,
+                            openFrameLineWidth: borderWidth,
+                        })
+                        expect(Number.isFinite(offset)).toBe(true)
+                    })
+                })
+            })
+        })
     })
 
     it.each([

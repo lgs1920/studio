@@ -50,7 +50,7 @@ describe('Map POI style', () => {
         const leaderStyle = css.slice(css.indexOf('.poi-expanded-leader-space {'), css.indexOf('.poi-shrinked .poi-card-inner {'))
 
         expect(cardStyle).toContain('--poi-expanded-leader-gap: 0px;')
-        expect(cardStyle).toContain('--poi-open-frame-line-width: var(--poi-custom-border-width, 5px);')
+        expect(cardStyle).toContain('--poi-open-frame-line-width: var(--poi-custom-border-width, 6px);')
         expect(cardStyle).toContain('--poi-expanded-leader-gap: var(--poi-open-frame-line-width);')
         expect(leaderStyle).toContain('width: 0;')
         expect(leaderStyle).toContain('height: 0;')
@@ -81,6 +81,26 @@ describe('Map POI style', () => {
         expect(rightStyle).toContain('left: 100%;')
         expect(rightStyle).toContain('var(--poi-expanded-leader-x, 1rem) + var(--poi-expanded-leader-edge-offset, 0px)')
         expect(rightStyle).toContain('left: var(--poi-expanded-leader-edge-offset, 0px);')
+    })
+
+    it('resolves rounded outlines from the same radius used by their visible frame', () => {
+        const css = loadMapPOIStyle()
+        const roundBadge = css.slice(
+            css.indexOf('.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-round-badge {'),
+            css.indexOf('.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-underline {'),
+        )
+        const slanted = css.slice(
+            css.indexOf('.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-slanted-banner {'),
+            css.indexOf('.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-rounded {'),
+        )
+        const iconFrame = css.slice(
+            css.indexOf('.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-icon-frame {'),
+            css.indexOf('.poi-card-content {', css.indexOf('.poi-icon-wrapper:not(.poi-shrinked) .poi-card-inner--style-icon-frame {')),
+        )
+
+        expect(roundBadge).toContain('border-radius: var(--poi-border-radius, var(--lgs-border-radius-s));')
+        expect(slanted).toContain('border-radius: var(--poi-border-radius, var(--lgs-border-radius-s));')
+        expect(iconFrame).toContain('border-radius: var(--poi-border-radius, var(--lgs-border-radius-s));')
     })
 
     it('keeps the expanded title icon upright and the configured card width within its canvas', () => {
@@ -231,7 +251,7 @@ describe('Map POI style', () => {
     it('uses configurable non-pill radii on multi-edge POI frames and preserves special default widths', () => {
         const css = loadMapPOIStyle()
 
-        expect(css).toContain('--poi-open-frame-line-width: var(--poi-custom-border-width, 5px);')
+        expect(css).toContain('--poi-open-frame-line-width: var(--poi-custom-border-width, 6px);')
         expect(css).toContain('--poi-underline-line-width: var(--poi-custom-border-width, 4px);')
         expect(css).toContain('.poi-card-inner--style-pill {\n    border-radius: 9999px;')
         expect(css).toContain('.poi-card-inner--style-rounded {\n    border-radius: var(--poi-border-radius, var(--lgs-border-radius-s));')

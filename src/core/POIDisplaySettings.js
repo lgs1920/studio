@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,7 +45,7 @@ export const POI_DISPLAY_BORDER_WIDTHS = Object.freeze([2, 3, 4, 5, 6])
 export const POI_DISPLAY_DEFAULT_BORDER_RADIUS = 'small'
 export const POI_DISPLAY_BORDER_RADII = Object.freeze(['none', 'small', 'medium', 'large'])
 const POI_DISPLAY_STYLE_BORDER_WIDTH_DEFAULTS = Object.freeze({
-    'open-frame': 5,
+    'open-frame': 6,
     underline:     4,
 })
 export const POI_DISPLAY_STYLES = [
@@ -57,7 +57,7 @@ export const POI_DISPLAY_BORDER_STYLES = Object.freeze([
 ])
 /** Multi-edge border styles that support a non-pill corner radius. */
 export const POI_DISPLAY_BORDER_RADIUS_STYLES = Object.freeze([
-    'icon-frame', 'open-frame', 'round-badge', 'rounded', 'side-accent', 'slanted-banner',
+    'icon-frame', 'round-badge', 'rounded', 'side-accent', 'slanted-banner',
 ])
 export const POI_DISPLAY_STYLE_LABELS = Object.freeze({
     pill: 'Pill',

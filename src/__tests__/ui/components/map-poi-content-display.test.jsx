@@ -266,6 +266,50 @@ describe('MapPOIContent display settings', () => {
         expect(card?.querySelector('.poi-geographic-anchor')).not.toBeNull()
     })
 
+    it.each(
+        ['left', 'right'].flatMap(side => [20, 50, 80].flatMap(position => [
+            {stickAngle: '-45', angle: -45},
+            {stickAngle: '-30', angle: -30},
+            {stickAngle: 'straight', angle: 0},
+            {stickAngle: '30', angle: 30},
+            {stickAngle: '45', angle: 45},
+        ].map(({stickAngle, angle}) => ({side, position, stickAngle, angle})))),
+    )('keeps the $side $position% anchor aligned with a $angle degree stick', ({side, position, angle}) => {
+        poiList.get('poi-1').display.stickPosition = side
+        poiList.get('poi-1').display.stickHorizontalPosition = position
+        poiList.get('poi-1').display.stickAngle = angle === 0 ? 'straight' : String(angle)
+        poiList.get('poi-1').display.stickLength = 60
+        poiList.get('poi-1').display.borderWidth = 6
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
+
+        const wrapper = document.querySelector('.poi-icon-wrapper')
+        const radians = angle * Math.PI / 180
+
+        expect(wrapper.style.getPropertyValue('--poi-expanded-leader-position')).toBe(`${position}%`)
+        expect(Number.parseFloat(wrapper.style.getPropertyValue('--poi-expanded-leader-x')))
+            .toBeCloseTo(Math.cos(radians) * 60)
+        expect(Number.parseFloat(wrapper.style.getPropertyValue('--poi-expanded-leader-y')))
+            .toBeCloseTo(Math.sin(radians) * 60)
+        expect(wrapper.style.getPropertyValue('--poi-border-width')).toBe('6px')
+    })
+
+    it.each([
+        'icon-frame', 'label', 'open-frame', 'pill', 'round-badge', 'rounded', 'side-accent',
+        'slanted-banner', 'underline',
+    ])('renders the connector alongside the %s POI style', style => {
+        poiList.get('poi-1').display.style = style
+        poiList.get('poi-1').display.stickPosition = 'right'
+        poiList.get('poi-1').display.stickHorizontalPosition = 80
+
+        renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
+
+        const card = document.querySelector(`.poi-card--style-${style}`)
+        expect(card?.querySelector('.poi-expanded-leader')).not.toBeNull()
+        expect(card?.querySelector('.poi-geographic-anchor')).not.toBeNull()
+        expect(document.querySelector('.poi-icon-wrapper').style.getPropertyValue('--poi-expanded-leader-position'))
+            .toBe('80%')
+    })
+
     it('updates an underline POI when its background is disabled and enabled again', async () => {
         const point = poiList.get('poi-1')
         point.display.style = 'underline'
