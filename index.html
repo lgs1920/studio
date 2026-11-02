@@ -8,7 +8,7 @@
   ~ email: studio@lgs1920.fr
   ~
   ~ Created on: 2026-04-27
-  ~ Last modified: 2026-09-29
+  ~ Last modified: 2026-11-02
   ~
   ~
   ~ Copyright © 2026 LGS1920
@@ -37,6 +37,7 @@
     <link href="/assets/icons/app-icons/ios/167.png" rel="apple-touch-icon" sizes="167x167">
     <link href="/assets/icons/app-icons/ios/152.png" rel="apple-touch-icon" sizes="152x152">
     <link href="/assets/icons/app-icons/ios/120.png" rel="apple-touch-icon" sizes="120x120">
+    <link href="/assets/logo/logo-horizontal.png" rel="preload" as="image" fetchpriority="high">
 
 
     <!-- Android and browser icons -->
@@ -107,6 +108,13 @@
            data-welcome-background-media
            autoplay muted playsinline preload="auto">
     </video>
+    <img id="lgs-boot-splash-logo"
+         src="/assets/logo/logo-horizontal.png"
+         alt=""
+         fetchpriority="high"
+         loading="eager"
+         decoding="async"
+         style="background: transparent">
     <span class="welcome-branding-spinner" aria-hidden="true">
         <wa-spinner></wa-spinner>
     </span>

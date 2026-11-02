@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-07
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,6 +50,12 @@
   --lgs--logo-wordmark-main-weight: 700;
 
   --lgs--logo-wordmark-year-weight: var(--lgs--logo-wordmark-main-weight);
+}
+
+.lgs--logo-horizontal,
+.lgs--logo-vertical,
+.lgs--logo-only {
+  background: transparent !important;
 }
 
 .lgs--logo-only,

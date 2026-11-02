@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,31 +17,28 @@
 import {act, cleanup, fireEvent, render, screen} from '@testing-library/react'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
+vi.mock('@Components/MainUI/WelcomeHeroControls', () => ({
+    WelcomeHeroControls: () => <div aria-label="Welcome hero controls"/>,
+}))
+
 vi.mock('@Components/MainUI/LogoSvg', async () => {
-    const {useEffect} = await import('react')
+    const {useLayoutEffect} = await import('react')
 
     return {
-        LogoSvg: ({src, className, onLoaded}) => {
-            useEffect(() => {
-                globalThis.__welcomeLogoLoaded = onLoaded
-                if (!globalThis.__deferWelcomeLogoLoad) {
-                    onLoaded?.()
-                }
-            }, [onLoaded])
+        LogoSvg: ({className, onLoaded}) => {
+            useLayoutEffect(() => onLoaded?.(), [onLoaded])
 
             return (
-                <svg aria-label="Logo" data-src={src} className={className}>
-                    <g className="lgs--logo-clapper"/>
-                    <path className="lgs--logo-clapper-occlusion"/>
-                </svg>
+                <span className={className}>
+                    <svg className="lgs--logo-composition lgs--logo-horizontal">
+                        <g className="lgs--logo-clapper"/>
+                        <path className="lgs--logo-clapper-occlusion"/>
+                    </svg>
+                </span>
             )
         },
     }
 })
-
-vi.mock('@Components/MainUI/WelcomeHeroControls', () => ({
-    WelcomeHeroControls: () => <div aria-label="Welcome hero controls"/>,
-}))
 
 vi.mock('@awesome.me/webawesome/dist/react', async () => {
     const {forwardRef} = await import('react')
@@ -82,8 +79,6 @@ describe('WelcomeHero', () => {
         cleanup()
         stopWelcomeHeroRouteInSplash()
         vi.unstubAllGlobals()
-        globalThis.__welcomeLogoLoaded = undefined
-        globalThis.__deferWelcomeLogoLoad = undefined
         document.querySelector('#lgs-boot-splash-status')?.remove()
         vi.useRealTimers()
         globalThis.lgs = undefined
@@ -294,8 +289,9 @@ describe('WelcomeHero', () => {
             <WelcomeHero initComplete={ready} appReady={ready}/>
         </>
         const {unmount, rerender} = render(view(false))
-        expect(document.querySelector('.welcome-branding-logo')?.classList.contains('welcome-branding-logo-animated')).toBe(false)
-        const animations = [...document.querySelectorAll('.lgs--logo-clapper, .lgs--logo-clapper-occlusion')]
+        const logoElement = document.querySelector('.welcome-branding-logo')
+        expect(logoElement.classList.contains('welcome-branding-logo-animated')).toBe(false)
+        const animations = [...logoElement.querySelectorAll('.lgs--logo-clapper, .lgs--logo-clapper-occlusion')]
             .map(element => {
                 const animation = {
                     animationName: 'lgs-logo-clapper-close',
@@ -310,7 +306,7 @@ describe('WelcomeHero', () => {
         rerender(view(true))
 
         expect(animations.length).toBeGreaterThan(1)
-        expect(document.querySelector('.welcome-branding-logo')?.classList.contains('welcome-branding-logo-animated')).toBe(true)
+        expect(logoElement.classList.contains('welcome-branding-logo-animated')).toBe(true)
         expect(MockAudioContext.instances).toBe(1)
         expect(sources).toHaveLength(0)
 
@@ -329,7 +325,7 @@ describe('WelcomeHero', () => {
         expect(sources.every(source => source.start.mock.calls.length === 1)).toBe(true)
 
         unmount()
-        expect(document.querySelector('.welcome-branding-logo')).toBeNull()
+        expect(logoElement.classList.contains('welcome-branding-logo-animated')).toBe(false)
         const playbackCounts = animations.map(animation => animation.play.mock.calls.length)
         await act(async () => sources[3].onended())
         expect(animations.map(animation => animation.play.mock.calls.length)).toEqual(playbackCounts)
@@ -466,45 +462,19 @@ describe('WelcomeHero', () => {
 })
 
 describe('WelcomeBranding', () => {
-    it('renders the logo, slogan, and loading spinner while the CTA enters', () => {
+    it('renders the horizontal logo, slogan, and loading spinner', () => {
         render(<WelcomeBranding/>)
 
-        expect(document.querySelector('.welcome-branding-logo-horizontal')?.getAttribute('data-src'))
-            .toBe('/assets/logo/logo-horizontal.svg')
-        expect(document.querySelectorAll('.welcome-branding-logo svg')).toHaveLength(1)
+        expect(document.querySelector('.welcome-branding-logo svg.lgs--logo-horizontal')).toBeTruthy()
         expect(document.querySelector('.welcome-branding-spinner wa-spinner')).toBeTruthy()
         expect(document.querySelector('.welcome-branding')?.classList.contains('welcome-branding-cta-visible')).toBe(false)
         const slogan = screen.getByLabelText('Replay Your World Outdoors!')
-        const sloganGlyphs = [...slogan.querySelectorAll('.welcome-slogan-outline')]
+        const sloganGlyphs = [...slogan.querySelectorAll('.welcome-slogan-glyph')]
         expect(slogan.tagName.toLowerCase()).toBe('svg')
         expect(sloganGlyphs).toHaveLength(24)
         expect(slogan.querySelector('text')).toBeNull()
-        expect(sloganGlyphs[0].getAttribute('pathLength')).toBe('1')
-        expect(sloganGlyphs[0].style.animationDelay).toBe('0ms')
-        expect(sloganGlyphs.at(-1).style.animationDelay).toBe('5720ms')
-    })
-
-    it('mounts only the vertical SVG on a narrow screen and switches variants on resize', () => {
-        const listeners = new Set()
-        const mediaQuery = {
-            matches: false,
-            addEventListener: (_eventName, listener) => listeners.add(listener),
-            removeEventListener: (_eventName, listener) => listeners.delete(listener),
-        }
-        vi.stubGlobal('matchMedia', vi.fn(() => mediaQuery))
-
-        const {rerender} = render(<WelcomeBranding/>)
-        expect(document.querySelector('.welcome-branding-logo-horizontal')).toBeTruthy()
-        expect(document.querySelectorAll('.welcome-branding-logo svg')).toHaveLength(1)
-
-        mediaQuery.matches = true
-        act(() => listeners.forEach(listener => listener()))
-        rerender(<WelcomeBranding/>)
-
-        expect(document.querySelector('.welcome-branding-logo-vertical')?.getAttribute('data-src'))
-            .toBe('/assets/logo/logo-vertical.svg')
-        expect(document.querySelector('.welcome-branding-logo-horizontal')).toBeNull()
-        expect(document.querySelectorAll('.welcome-branding-logo svg')).toHaveLength(1)
+        expect(sloganGlyphs[0].getAttribute('style')).toBeNull()
+        expect(sloganGlyphs.at(-1).getAttribute('style')).toBeNull()
     })
 
     it('takes over the static splash branding for its own lifecycle', () => {
@@ -522,17 +492,15 @@ describe('WelcomeBranding', () => {
         splashElement.remove()
     })
 
-    it('keeps the startup logo visible until the inline SVG has rendered', () => {
+    it('marks the splash overlay ready after loading the inline logo', () => {
         const splashElement = document.createElement('div')
         splashElement.id = 'lgs-boot-splash'
         document.body.append(splashElement)
-        vi.stubGlobal('__deferWelcomeLogoLoad', true)
 
         const {unmount} = render(<WelcomeBranding/>)
 
-        expect(splashElement.classList.contains('lgs-boot-splash-react-ready')).toBe(false)
-        act(() => globalThis.__welcomeLogoLoaded())
         expect(splashElement.classList.contains('lgs-boot-splash-react-ready')).toBe(true)
+        expect(document.querySelector('.welcome-branding-logo svg')).toBeTruthy()
 
         unmount()
         expect(splashElement.classList.contains('lgs-boot-splash-react-ready')).toBe(false)

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-21
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ import {describe, expect, it} from 'vitest'
 const indexDocument = new JSDOM(readFileSync('index.html', 'utf8')).window.document
 const startupStyle = readFileSync('src/assets/css/startup-shell.css', 'utf8')
 const mainUiStyle = readFileSync('src/components/MainUI/style.css', 'utf8')
+const logoStyle = readFileSync('public/assets/logo/style.css', 'utf8')
 const lgs1920Source = readFileSync('src/components/LGS1920.jsx', 'utf8')
 const mainSource = readFileSync('src/main.jsx', 'utf8')
 const startupBackgroundSource = readFileSync('src/assets/media/welcome-startup-background.js', 'utf8')
@@ -66,7 +67,18 @@ const registerBootSplashMediaLoadingTests = () => {
         const splashSpinner = indexDocument.querySelector('#lgs-boot-splash .welcome-branding-spinner wa-spinner')
         const splashStatus = indexDocument.querySelector('#lgs-boot-splash-status')
         const startupStylesheet = indexDocument.querySelector('link[rel="stylesheet"][href="/src/assets/css/startup-shell.css"]')
-        expect(splashLogo).toBeNull()
+        expect(splashLogo?.tagName.toLowerCase()).toBe('img')
+        expect(splashLogo?.getAttribute('src')).toBe('/assets/logo/logo-horizontal.png')
+        expect(splashLogo?.getAttribute('fetchpriority')).toBe('high')
+        expect(splashLogo?.getAttribute('loading')).toBe('eager')
+        expect(splashLogo?.getAttribute('style')).toContain('background: transparent')
+        expect(indexDocument.querySelector('link[rel="preload"][as="image"][href="/assets/logo/logo-horizontal.png"]')).not.toBeNull()
+        expect(startupStyle).toContain('background: transparent !important;')
+        expect(startupStyle).toContain('&.lgs-boot-splash-react-ready #lgs-boot-splash-logo')
+        expect(logoStyle).toContain('background: transparent !important;')
+        expect(logoStyle).toContain('.lgs--logo-horizontal')
+        expect(logoStyle).toContain('.lgs--logo-vertical')
+        expect(logoStyle).toContain('.lgs--logo-only')
         expect(splashSlogan).toBeNull()
         expect(splashSpinner).not.toBeNull()
         expect(splashSpinner?.getAttribute('style')).toBeNull()
@@ -136,17 +148,16 @@ describe('welcome logo animation', () => {
         )
         expect(mainUiStyle).toContain('.welcome-branding-logo-animated .lgs--logo-clapper')
         expect(mainUiStyle).not.toContain('lgs-logo-clapper-close 1200ms cubic-bezier(.2, .75, .3, 1) infinite')
-        expect(mainUiStyle).not.toContain(
-            '.lgs-boot-splash-cta-ready ~ #lgs1920-container .welcome-branding-logo .lgs--logo-clapper'
-        )
+        expect(logoStyle).not.toContain('lgs-logo-clapper-close')
     })
 })
 
 describe('welcome slogan animation', () => {
-    it('draws each outlined SVG glyph in sequence without a horizontal wipe', () => {
-        expect(mainUiStyle).toContain('animation: lgs-slogan-glyph-write 200ms linear both;')
-        expect(mainUiStyle).toContain('stroke-dashoffset: 1;')
-        expect(mainUiStyle).toContain('stroke-dashoffset: 0;')
-        expect(mainUiStyle).not.toContain('clip-path: inset(0 100% 0 0)')
+    it('fades in the complete slogan once without tracing individual glyphs', () => {
+        expect(mainUiStyle).toContain('animation: lgs-slogan-fade-in 240ms ease-out 1 both;')
+        expect(mainUiStyle).toContain('@keyframes lgs-slogan-fade-in')
+        expect(mainUiStyle).not.toContain('lgs-slogan-glyph-write')
+        expect(mainUiStyle).not.toContain('stroke-dashoffset:')
+        expect(mainUiStyle).not.toContain('welcome-slogan-outline')
     })
 })

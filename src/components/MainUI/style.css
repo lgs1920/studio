@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -899,20 +899,9 @@ body.mobile .orbit-widget-body {
         /* Keeps the existing gold fill configurable through the welcome branding class. */
         --lgs-slogan-color: #f0c800;
         color: var(--lgs-slogan-color);
+        opacity: 1;
+        animation: lgs-slogan-fade-in 240ms ease-out 1 both;
         filter: drop-shadow(0 0 14px rgba(0, 0, 0, .72));
-
-        & .welcome-slogan-outline {
-            fill-opacity: 0;
-            stroke: currentColor;
-            stroke-width: 22;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            stroke-dasharray: 1;
-            stroke-dashoffset: 1;
-            stroke-opacity: 1;
-            /* Keeps each glyph trace sequential instead of overlapping the next character. */
-            animation: lgs-slogan-glyph-write 200ms linear both;
-        }
     }
 }
 
@@ -922,24 +911,18 @@ body.mobile .orbit-widget-body {
     transform: rotate(var(--lgs-slogan-angle, -8deg)) skewX(var(--lgs-slogan-skew, -14deg));
 }
 
-@keyframes lgs-slogan-glyph-write {
+@keyframes lgs-slogan-fade-in {
     from {
-        fill-opacity: 0;
-        stroke-dashoffset: 1;
-        stroke-opacity: 1;
+        opacity: 0;
     }
 
     to {
-        fill-opacity: 1;
-        stroke-dashoffset: 0;
-        stroke-opacity: 0;
+        opacity: 1;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .welcome-branding-slogan .welcome-slogan-outline {
-        fill-opacity: 1;
-        stroke: none;
+    .welcome-branding-slogan {
         animation: none;
     }
 }

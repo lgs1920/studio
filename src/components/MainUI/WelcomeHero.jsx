@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -108,21 +108,17 @@ const playClapperCue = (audioContext) => {
 
 /** Returns the visible logo clapper and its synchronized flap and mountain animations. */
 const getVisibleClapperAnimation = () => {
-    const clappers = [...document.querySelectorAll('.welcome-branding-logo .lgs--logo-clapper')]
-    if (clappers.length === 0) {
+    const logo = document.querySelector('.welcome-branding-logo')
+    const clappers = [...(logo?.querySelectorAll('.lgs--logo-clapper') ?? [])]
+    if (!logo || clappers.length === 0) {
         return null
     }
 
-    const clapper = clappers.find(candidate => {
-        const svg = candidate.closest('svg')
-        const responsiveLogo = candidate.closest('.welcome-branding-logo-horizontal, .welcome-branding-logo-vertical')
-        const visibleElement = responsiveLogo ?? svg
-        return !visibleElement || globalThis.getComputedStyle?.(visibleElement)?.display !== 'none'
-    }) ?? clappers[0]
-    const logo = clapper.closest('.welcome-branding-logo')
-    const synchronizedAnimations = [...(logo?.querySelectorAll(
+    logo.classList.add('welcome-branding-logo-animated')
+    const clapper = clappers[0]
+    const synchronizedAnimations = [...logo.querySelectorAll(
         '.lgs--logo-clapper, .lgs--logo-clapper-occlusion',
-    ) ?? [])].flatMap(element => element.getAnimations?.() ?? [])
+    )].flatMap(element => element.getAnimations?.() ?? [])
         .filter(candidate => candidate.animationName === 'lgs-logo-clapper-close')
     const animation = synchronizedAnimations.find(candidate => candidate.effect?.target === clapper)
         ?? clapper.getAnimations?.()[0]
@@ -232,9 +228,6 @@ export const WelcomeHero = ({
         }
 
         const AudioContextConstructor = globalThis.AudioContext ?? globalThis.webkitAudioContext
-        if (!AudioContextConstructor) {
-            return undefined
-        }
 
         let active = true
         let cueTimer = null
@@ -243,12 +236,14 @@ export const WelcomeHero = ({
         let animatedLogo = null
         let clapperObserver = null
         let hasPlayedCue = false
-        let audioContext
-        try {
-            audioContext = new AudioContextConstructor()
-        }
-        catch {
-            return undefined
+        let audioContext = null
+        if (AudioContextConstructor) {
+            try {
+                audioContext = new AudioContextConstructor()
+            }
+            catch {
+                audioContext = null
+            }
         }
 
         /** Clears the pending single clapper sound timer. */
@@ -275,13 +270,12 @@ export const WelcomeHero = ({
                 return
             }
 
-            animatedLogo = document.querySelector('.welcome-branding-logo')
-            animatedLogo?.classList.add('welcome-branding-logo-animated')
             const {animation, logo, synchronizedAnimations = []} = getVisibleClapperAnimation() ?? {}
             if (!animation || !logo) {
                 return
             }
 
+            animatedLogo = logo
             const duration = Number(animation.effect?.getTiming?.().duration) || WELCOME_LOGO_ANIMATION_DURATION
             const currentTime = Number(animation.currentTime) || 0
             const closeTime = duration * WELCOME_LOGO_CLOSE_PROGRESS
@@ -294,14 +288,13 @@ export const WelcomeHero = ({
 
                 holdingClosed = true
                 hasPlayedCue = true
-                clapperObserver?.disconnect()
                 heldAnimations = [...new Set([animation, ...synchronizedAnimations])]
                 heldAnimations.forEach(candidate => {
                     candidate.currentTime = duration * WELCOME_LOGO_CLOSE_PROGRESS
                     candidate.pause?.()
                 })
 
-                if (audioContext.state !== 'running') {
+                if (!audioContext || audioContext.state !== 'running') {
                     finishClapperCue()
                     return
                 }
@@ -315,7 +308,7 @@ export const WelcomeHero = ({
             clapperObserver = new MutationObserver(scheduleClapperCue)
             clapperObserver.observe(animatedLogo ?? document.body, {childList: true, subtree: true})
         }
-        if (audioContext.state !== 'running') {
+        if (audioContext && audioContext.state !== 'running') {
             void audioContext.resume().catch(() => {})
         }
 
@@ -325,7 +318,7 @@ export const WelcomeHero = ({
             finishClapperCue()
             clapperObserver?.disconnect()
             animatedLogo?.classList.remove('welcome-branding-logo-animated')
-            if (audioContext.state !== 'closed') {
+            if (audioContext && audioContext.state !== 'closed') {
                 void audioContext.close().catch(() => {})
             }
         }

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-29
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -144,6 +144,26 @@ body:not(.lgs-app-booting) {
     &.lgs-boot-splash-cta-ready::after {
         opacity: 0.3;
         transition-delay: 3s;
+    }
+
+    & #lgs-boot-splash-logo {
+        position: absolute;
+        top: 42%;
+        left: 50%;
+        z-index: 3;
+        display: block;
+        width: min(220px, calc(100vw - 2rem));
+        height: auto;
+        aspect-ratio: 1220 / 485;
+        transform: translate(-50%, -50%);
+        background: transparent !important;
+        filter: drop-shadow(0 0 18px rgba(0, 0, 0, 0.55));
+        pointer-events: none;
+    }
+
+    &.lgs-boot-splash-react-ready #lgs-boot-splash-logo {
+        visibility: hidden;
+        opacity: 0;
     }
 
     & .welcome-branding-spinner {
