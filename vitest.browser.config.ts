@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-13
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,6 +20,27 @@ import mdPlugin, {Mode} from 'vite-plugin-markdown'
 import {playwright} from '@vitest/browser-playwright'
 import {fileURLToPath} from 'url'
 
+const chromiumWebGLArgs = [
+    '--enable-webgl',
+    '--ignore-gpu-blocklist',
+    '--use-gl=angle',
+    '--use-angle=swiftshader-webgl',
+    '--enable-unsafe-swiftshader',
+]
+const browserLaunchEnv = {...process.env}
+
+delete browserLaunchEnv.DISPLAY
+delete browserLaunchEnv.WAYLAND_DISPLAY
+delete browserLaunchEnv.DBUS_SESSION_BUS_ADDRESS
+const firefoxBrowserEnv: Record<string, string | undefined> = {
+    ...browserLaunchEnv,
+    LIBGL_ALWAYS_SOFTWARE: '1',
+}
+
+if (process.env.LGS1920_VITEST_BROWSER_XVFB === '1' && process.env.DISPLAY) {
+    firefoxBrowserEnv.DISPLAY = process.env.DISPLAY
+}
+
 export default defineConfig({
     plugins: [
         react(),
@@ -28,6 +49,7 @@ export default defineConfig({
     test: {
         name: 'browser',
         include: ['src/__tests__/browser/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+        setupFiles: ['./src/__tests__/browser/webgl2-preflight.setup.js'],
         api: {
             host: '127.0.0.1',
             port: 63316,
@@ -37,9 +59,27 @@ export default defineConfig({
             provider: playwright(),
             headless: true,
             instances: [
-                {browser: 'chromium', name: 'Chromium'},
-                {browser: 'firefox', name: 'Firefox'},
-                {browser: 'webkit', name: 'WebKit'},
+                {
+                    browser: 'chromium',
+                    name: 'Chromium',
+                    provider: playwright({launchOptions: {args: chromiumWebGLArgs, env: browserLaunchEnv}}),
+                },
+                {
+                    browser: 'firefox',
+                    name: 'Firefox',
+                    provider: playwright({launchOptions: {
+                        env: firefoxBrowserEnv,
+                        firefoxUserPrefs: {
+                            'webgl.force-enabled': true,
+                            'webgl.forbid-software': false,
+                        },
+                    }}),
+                },
+                {
+                    browser: 'webkit',
+                    name: 'WebKit',
+                    provider: playwright({launchOptions: {env: browserLaunchEnv}}),
+                },
             ],
         },
     },

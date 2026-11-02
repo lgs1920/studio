@@ -101,6 +101,13 @@ Use an accessible runtime directory and omit desktop display/session-bus variabl
 child environment. Keep runner changes within the task's scope. Preserve its existing test isolation and lifecycle.
 Software rendering is suitable for behavior and visual checks; do not present its timings as hardware-GPU performance.
 
+On Linux, headless Firefox may fail to initialize software WebGL without an X server, even when
+`webgl.force-enabled` is true and `webgl.forbid-software` is false. Run the Studio browser matrix inside a task-owned
+Xvfb session with `xvfb-run -a env LGS1920_VITEST_BROWSER_XVFB=1 bun run test:browser`. The Vitest configuration
+passes that generated `DISPLAY` only to Firefox and sets `LIBGL_ALWAYS_SOFTWARE=1`; it continues to omit inherited
+display and session-bus variables from the other headless browser children. Keep the Firefox runner's WebGL 2
+pixel-readback preflight enabled so the separate browser engine is verified before its tests run.
+
 ## Sources
 
 - [Chromium SwiftShader modes and explicit WebGL opt-in](https://chromium.googlesource.com/chromium/src/+/main/docs/gpu/swiftshader.md)

@@ -8,13 +8,12 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-22
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {server} from 'vitest/browser'
 import {afterEach, expect, test, vi} from 'vitest'
 import {CallbackProperty, Cartesian3, CesiumWidget, Color, EllipsoidTerrainProvider} from 'cesium'
 import {BufferTarget, CanvasSource, Mp4OutputFormat, Output} from 'mediabunny'
@@ -32,16 +31,6 @@ afterEach(async () => {
 })
 
 test('renders updated terrain entities into a real MP4 with the default loop suspended', async () => {
-    const probe = document.createElement('canvas')
-    const gl = probe.getContext('webgl2')
-    expect(gl, 'The actual browser runner must support WebGL 2').not.toBeNull()
-    gl.clearColor(0.25, 0.5, 0.75, 1)
-    gl.clear(gl.COLOR_BUFFER_BIT)
-    const pixel = new Uint8Array(4)
-    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel)
-    expect(Array.from(pixel)).toEqual([64, 128, 191, 255])
-    gl.getExtension('WEBGL_lose_context')?.loseContext()
-
     vi.stubGlobal('CESIUM_BASE_URL', new URL('/node_modules/cesium/Build/Cesium/', location.href).href)
     const host = document.createElement('div')
     host.style.cssText = 'width:320px;height:180px'
@@ -85,7 +74,6 @@ test('renders updated terrain entities into a real MP4 with the default loop sus
     }, {timeout: 15000}).toBe(true)
 
     const framePixels = []
-    const frameSnapshots = []
     const timeline = new ReplayFrameTimeline({durationMillis: 500, fps: 10})
     const canvas = document.createElement('canvas')
     canvas.width = 320
@@ -111,9 +99,6 @@ test('renders updated terrain entities into a real MP4 with the default loop sus
         loop.render()
         context.drawImage(viewer.canvas, 0, 0, canvas.width, canvas.height)
         framePixels.push(context.getImageData(0, 0, canvas.width, canvas.height).data)
-        if (frame.isFirst || frame.isLast) {
-            frameSnapshots.push(canvas.toDataURL('image/png'))
-        }
         await source.add(frame.frameTimeMs / 1000, frame.frameIntervalMs / 1000)
     }
     await source.close()
@@ -130,11 +115,6 @@ test('renders updated terrain entities into a real MP4 with the default loop sus
     expect(magentaPixels).toBeGreaterThan(20)
     expect(viewer.useDefaultRenderLoop).toBe(false)
 
-    const bytes = new Uint8Array(await blob.arrayBuffer())
-    const videoBase64 = btoa(Array.from(bytes, value => String.fromCharCode(value)).join(''))
-    await server.commands.writeFile('/tmp/lgs-replay-render-loop.mp4', videoBase64, 'base64')
-    await server.commands.writeFile('/tmp/lgs-replay-render-loop-first.png', frameSnapshots[0].split(',')[1], 'base64')
-    await server.commands.writeFile('/tmp/lgs-replay-render-loop-last.png', frameSnapshots[1].split(',')[1], 'base64')
     // Save the captured pixels before resuming autonomous dense-geometry draws.
     console.info('Replay render-loop visual check', {frames: timeline.frameCount, dimensions: [320, 180], elapsedMillis, magentaPixels})
     loop.release()

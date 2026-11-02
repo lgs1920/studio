@@ -65,7 +65,7 @@ jobs:
         run: bunx playwright install --with-deps chromium firefox webkit
 
       - name: Run browser tests
-        run: bun run test:browser
+        run: xvfb-run -a env LGS1920_VITEST_BROWSER_XVFB=1 bun run test:browser
 
       - name: Run Oxlint
         run: bun run lint

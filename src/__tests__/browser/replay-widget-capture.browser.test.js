@@ -8,13 +8,12 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-10-02
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {page} from 'vitest/browser'
 import {afterEach, expect, test, vi} from 'vitest'
 import {Cartesian3, CesiumWidget, Color, EllipsoidTerrainProvider} from 'cesium'
 import {snapdom} from '@zumer/snapdom'
@@ -128,7 +127,6 @@ test('preserves Cesium crop pixels with direct composition', async ({skip}) => {
     const referencePixels = readPixels(reference.getCanvas())
     expect(referencePixels.some((channel, index) => index % 4 === 2 && channel > 100)).toBe(true)
     const outputCanvas = document.createElement('canvas')
-    outputCanvas.dataset.testid = 'replay-capture-frame'
     document.body.append(outputCanvas)
     resources.push(() => outputCanvas.remove())
     const direct = new CanvasOverlayComposer(viewer.canvas, {...options, outputCanvas})
@@ -137,7 +135,6 @@ test('preserves Cesium crop pixels with direct composition', async ({skip}) => {
     direct.addOverlay(mirror.getCanvas(), {x: 8, y: 8, w: 120, h: 50})
     expect(await direct.renderFrame()).toBe(outputCanvas)
     expect(samePixels(readPixels(outputCanvas), referencePixels)).toBe(true)
-    await page.getByTestId('replay-capture-frame').screenshot({path: '/tmp/lgs-replay-capture.png'})
 }, 60000)
 
 test('encodes dynamic widget updates and disappearance into a real MP4', async ({skip}) => {
