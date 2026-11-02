@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-11
- * Last modified: 2026-10-24
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import '@shoelace-style/shoelace/dist/themes/light.css'
 /* oxlint-disable react/only-export-components */
 import { CanvasEventManager } from '@Core/events/CanvasEventManager'
 import {constrainReplayCesiumCameraAboveTerrain} from '@Core/ui/replay/ReplayCesiumCameraAdapter'
+import {getOrCreateSceneRenderScheduler, requestSceneRender} from '@Utils/cesium/SceneRenderScheduler'
 import { SceneUtils }                                                                                  from '@Utils/cesium/SceneUtils'
 import { Color, ScreenSpaceEventType, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
 import { useEffect }                                                                                   from 'react'
@@ -58,10 +59,13 @@ const disposeViewerLifecycle = () => {
         return
     }
 
+    viewerLifecycle.renderScheduler?.destroy()
+    viewerLifecycle.renderScheduler = null
+    viewerLifecycle.renderSchedulerScene = null
     if (viewerLifecycle.renderRecoveryTimer !== null) {
         globalThis.clearTimeout(viewerLifecycle.renderRecoveryTimer)
     }
-    viewerLifecycle.disposers.forEach(dispose => dispose())
+    viewerLifecycle.disposers.splice(0).forEach(dispose => dispose())
 }
 
 /**
@@ -81,8 +85,37 @@ const resetViewerLifecycle = viewer => {
         renderRecoveryAttempts:      0,
         renderRecoveryTimer:          null,
         webglContextLost:             false,
+        renderScheduler:              null,
+        renderSchedulerScene:         null,
         disposers:                    [],
     }
+}
+
+/** Create the shared render scheduler when this viewer acquires a scene. */
+const ensureSceneRenderScheduler = viewer => {
+    if (!viewerLifecycle || viewerLifecycle.viewer !== viewer) {
+        return null
+    }
+
+    const scene = viewer.scene
+    if (viewerLifecycle.renderSchedulerScene !== scene) {
+        viewerLifecycle.renderScheduler?.destroy()
+        viewerLifecycle.renderScheduler = getOrCreateSceneRenderScheduler(scene)
+        viewerLifecycle.renderSchedulerScene = scene
+    }
+
+    return viewerLifecycle.renderScheduler
+}
+
+/** Release the scene scheduler when the React-owned viewer surface unmounts. */
+const disposeViewerSceneRenderScheduler = viewer => {
+    if (viewerLifecycle?.viewer !== viewer) {
+        return
+    }
+
+    viewerLifecycle.renderScheduler?.destroy()
+    viewerLifecycle.renderScheduler = null
+    viewerLifecycle.renderSchedulerScene = null
 }
 
 /**
@@ -126,7 +159,7 @@ const scheduleViewerRecovery = (viewer, {countAttempt = true} = {}) => {
 
         viewer.useDefaultRenderLoop = true
         viewer.forceResize?.()
-        viewer.scene.requestRender?.()
+        requestSceneRender(viewer.scene)
         console.warn('[LGS1920][Cesium] Render loop recovery requested.', {
             attempt: countAttempt ? lifecycle.renderRecoveryAttempts : 'context-restored',
         })
@@ -165,6 +198,10 @@ const getOrCreateViewer = () => {
 
     if (isViewerDestroyed(lgs.viewer)) {
         console.warn('[LGS1920][Cesium] Discarding a destroyed viewer before reinitialization.')
+        if (viewerLifecycle?.viewer === lgs.viewer) {
+            disposeViewerLifecycle()
+            viewerLifecycle = null
+        }
         lgs.viewer = null
     }
 
@@ -189,7 +226,8 @@ const getOrCreateViewer = () => {
                 baseLayer:             false,
                 baseLayerPicker:       false,
             })
-            lgs.viewer.resolutionScale = 2
+            // Keep the draw buffer at the browser's effective display resolution.
+            lgs.viewer.resolutionScale = 1
         }
         catch (error) {
             console.error('[LGS1920][Cesium] Viewer construction failed.', {
@@ -210,6 +248,8 @@ const getOrCreateViewer = () => {
         console.error(error.message)
         throw error
     }
+
+    ensureSceneRenderScheduler(lgs.viewer)
 
     return lgs.viewer
 }
@@ -274,7 +314,7 @@ const attachViewerDiagnostics = viewer => {
     }
 
     viewer.forceResize?.()
-    scene.requestRender?.()
+    requestSceneRender(scene)
 }
 
 /**
@@ -389,15 +429,16 @@ export const ensureViewer = () => {
         viewerLifecycle.canvasEventsInitialized = true
     }
 
-    lgs.scene.requestRender?.()
+    requestSceneRender(lgs.scene)
 
     return viewer
 }
 
 export function Viewer() {
     useEffect(() => {
-        ensureViewer()
+        const viewer = ensureViewer()
         __.ui.replay?.bindCesiumCameraBridge?.()
+        return () => disposeViewerSceneRenderScheduler(viewer)
     }, [])
 
     return (<></>)

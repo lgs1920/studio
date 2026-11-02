@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-30
- * Last modified: 2026-09-30
+ * Created on: 2026-09-25
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,9 @@ const {FakeViewer, fakeCanvasEventManager} = vi.hoisted(() => {
                 listeners.add(listener)
                 return () => listeners.delete(listener)
             }),
+            get listenerCount() {
+                return listeners.size
+            },
             raise: (...args) => listeners.forEach(listener => listener(...args)),
         }
     }
@@ -52,9 +55,11 @@ const {FakeViewer, fakeCanvasEventManager} = vi.hoisted(() => {
                 canvas,
                 globe:                       {},
                 postRender:                  createEvent(),
+                postUpdate:                  createEvent(),
                 renderError:                 createEvent(),
                 screenSpaceCameraController: {},
                 requestRender:               vi.fn(),
+                requestRenderMode:           true,
             }
             this.screenSpaceEventHandler = {removeInputAction: vi.fn()}
             this.forceResize = vi.fn()
@@ -95,6 +100,7 @@ vi.mock('@Utils/cesium/SceneUtils', () => ({
 }))
 
 import {ensureViewer, ensureViewerBase, ensureViewerBaseWithRetry} from '@Components/cesium/Viewer'
+import {getSceneRenderScheduler, requestSceneRender} from '@Utils/cesium/SceneRenderScheduler'
 
 const createContext = () => {
     const context = {
@@ -133,6 +139,7 @@ describe('Cesium viewer lifecycle', () => {
     })
 
     afterEach(() => {
+        getSceneRenderScheduler(globalThis.lgs?.viewer?.scene)?.destroy()
         globalThis.lgs = undefined
         globalThis.__ = undefined
         globalThis.document = undefined
@@ -152,6 +159,7 @@ describe('Cesium viewer lifecycle', () => {
 
         expect(viewer).toBe(globalThis.lgs.viewer)
         expect(FakeViewer.instances).toHaveLength(1)
+        expect(viewer.resolutionScale).toBe(1)
         expect(viewer.forceResize).toHaveBeenCalledOnce()
         expect(viewer.scene.requestRender).toHaveBeenCalledTimes(2)
         expect(fakeCanvasEventManager).toHaveBeenCalledOnce()
@@ -195,6 +203,23 @@ describe('Cesium viewer lifecycle', () => {
         expect(FakeViewer.instances).toHaveLength(2)
         expect(fakeCanvasEventManager).toHaveBeenCalledTimes(2)
         expect(previousViewer.scene.canvas.removeEventListener).toHaveBeenCalledTimes(2)
+    })
+
+    it('owns scene render scheduling independently of editor components and destroys it with the viewer', () => {
+        vi.useFakeTimers()
+        const previousViewer = ensureViewerBase()
+
+        requestSceneRender(previousViewer.scene)
+        expect(previousViewer.scene.postUpdate.listenerCount).toBe(1)
+        expect(vi.getTimerCount()).toBe(1)
+
+        previousViewer.destroyed = true
+        const nextViewer = ensureViewerBase()
+
+        expect(nextViewer).not.toBe(previousViewer)
+        expect(previousViewer.scene.postUpdate.listenerCount).toBe(0)
+        expect(vi.getTimerCount()).toBe(1)
+        expect(nextViewer.scene.postUpdate.listenerCount).toBe(1)
     })
 
     it('restarts the default render loop after a bounded render error', async () => {

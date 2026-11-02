@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-08
- * Last modified: 2026-10-24
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,6 +28,7 @@ import {
   normalizeOrbitRPM,
 } from "@Core/OrbitSettings";
 import { CameraUtils } from "@Utils/cesium/CameraUtils.js";
+import { getSceneRenderScheduler, requestSceneRender } from "@Utils/cesium/SceneRenderScheduler";
 import { UIToast } from "@Utils/UIToast";
 import { Cartesian3, HeadingPitchRange, Matrix4 } from "cesium";
 import { snapshot } from "valtio";
@@ -104,6 +105,8 @@ export class CameraManager {
     locks: 0,
     msaaSamples: null,
     shadows: null,
+    scene: null,
+    continuousReleases: [],
   };
   #panoramicCancel = null;
 
@@ -390,17 +393,21 @@ export class CameraManager {
     lgs.stores.main.components.camera.target = deepClone(this.target);
   };
 
+  /** Lower scene quality during a continuous camera animation and acquire a render demand. */
   optimizeContinuousCameraRender = () => {
     if (!lgs.viewer) {
       return;
     }
 
     const scene = lgs.scene ?? lgs.viewer.scene;
+    const releaseContinuous = getSceneRenderScheduler(scene)?.acquireContinuous();
+    this.renderQuality.continuousReleases.push(releaseContinuous ?? null);
     this.renderQuality.locks += 1;
     if (this.renderQuality.locks !== 1) {
       return;
     }
 
+    this.renderQuality.scene = scene;
     this.renderQuality.msaaSamples = scene?.msaaSamples ?? null;
     if (scene?.msaaSamples > 1) {
       scene.msaaSamples = 1;
@@ -412,14 +419,24 @@ export class CameraManager {
     }
   };
 
+  /** Release one continuous-render consumer and restore quality after the final release. */
   restoreContinuousCameraRender = () => {
-    if (!lgs.viewer || this.renderQuality.locks === 0) {
+    if (this.renderQuality.locks === 0) {
       return;
     }
 
-    const scene = lgs.scene ?? lgs.viewer.scene;
+    this.renderQuality.continuousReleases.pop()?.();
     this.renderQuality.locks -= 1;
     if (this.renderQuality.locks > 0) {
+      return;
+    }
+
+    const scene = this.renderQuality.scene;
+    const activeScene = lgs.scene ?? lgs.viewer?.scene;
+    if (!scene || scene !== activeScene || scene.isDestroyed?.()) {
+      this.renderQuality.msaaSamples = null;
+      this.renderQuality.shadows = null;
+      this.renderQuality.scene = null;
       return;
     }
 
@@ -435,8 +452,9 @@ export class CameraManager {
       shouldRequestRender = true;
     }
     if (shouldRequestRender) {
-      scene?.requestRender?.();
+      requestSceneRender(scene);
     }
+    this.renderQuality.scene = null;
   };
 
   /**
@@ -510,7 +528,6 @@ export class CameraManager {
     this.stopWatching();
 
     __.ui.sceneManager.startRotate;
-    this.optimizeContinuousCameraRender();
 
     if (point === null) {
       //take current settings from proxy
@@ -558,10 +575,10 @@ export class CameraManager {
     // Do we need a camera pre-positioning ?
     if (preserveView) {
       this.proxy.setOrbitTransform(lgs.camera, point);
-      lgs.scene?.requestRender?.();
+      requestSceneRender(lgs.scene);
     } else if (lookAt) {
       this.lookAt(point);
-      lgs.scene?.requestRender?.();
+      requestSceneRender(lgs.scene);
     }
     // Setting spinner speed
     __.ui.css.setCSSVariable(
@@ -648,7 +665,11 @@ export class CameraManager {
     let lastFrameTime = null;
 
     const rotateCamera = () => {
-      if (this.isRotating()) {
+      if (!this.isRotating()) {
+        return;
+      }
+
+      try {
         const currentTime = performance.now();
         if (lastFrameTime === null) {
           lastFrameTime = currentTime;
@@ -694,13 +715,29 @@ export class CameraManager {
           this.stopRotate();
           totalRotation = totalTurns;
         }
+      } catch (error) {
+        console.error("[LGS1920][Camera] Continuous orbit failed.", error);
+        void this.stopRotate().catch(cleanupError => {
+          console.error("[LGS1920][Camera] Failed to release the stopped orbit.", cleanupError);
+        });
       }
     };
-    this.move = {
-      type: CameraManager.ROTATE,
-      animation: __.requestAnimationFrame(rotateCamera),
-      stopWatching: null,
-    };
+
+    try {
+      this.optimizeContinuousCameraRender();
+      this.move = {
+        type: CameraManager.ROTATE,
+        animation: __.requestAnimationFrame(rotateCamera),
+        stopWatching: null,
+      };
+    } catch (error) {
+      try {
+        this.restoreContinuousCameraRender();
+      } catch (cleanupError) {
+        console.error("[LGS1920][Camera] Failed to release an interrupted orbit.", cleanupError);
+      }
+      throw error;
+    }
   };
 
   /**
@@ -727,7 +764,7 @@ export class CameraManager {
       );
       this.saveInformation(Date.now(), { sync: false });
       this.enableMapDragging();
-      lgs.scene?.requestRender?.();
+      requestSceneRender(lgs.scene);
     }
   };
 

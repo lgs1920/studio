@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-13
- * Last modified: 2026-10-24
+ * Last modified: 2026-11-02
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {acquireReplayCameraOwnership, releaseReplayCameraOwnership} from '@Core/ui/replay/ReplayCameraOwnership'
+import {getOrCreateSceneRenderScheduler, getSceneRenderScheduler} from '@Utils/cesium/SceneRenderScheduler'
 
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -30,6 +31,21 @@ vi.mock('@Utils/UIToast', () => ({
 
 const installCameraManagerGlobals = () => {
     const animationFrames = []
+    const postUpdateListeners = new Set()
+    const scene = {
+        cartesianToCanvasCoordinates: vi.fn(() => ({x: 0, y: 0})),
+        postUpdate: {
+            addEventListener: listener => {
+                postUpdateListeners.add(listener)
+                return () => postUpdateListeners.delete(listener)
+            },
+            get listenerCount() {
+                return postUpdateListeners.size
+            },
+        },
+        requestRender: vi.fn(),
+        requestRenderMode: true,
+    }
     const rotate = proxy({
                              direction: 1,
                              heightAdjustmentUntil: 0,
@@ -68,10 +84,7 @@ const installCameraManagerGlobals = () => {
                 put: vi.fn(),
             },
         },
-        scene: {
-            cartesianToCanvasCoordinates: vi.fn(() => ({x: 0, y: 0})),
-            requestRender: vi.fn(),
-        },
+        scene,
         settings: {
             camera: {
                 heading: 0,
@@ -158,6 +171,7 @@ describe('CameraManager orbit', () => {
     })
 
     afterEach(() => {
+        getSceneRenderScheduler(globalThis.lgs?.scene)?.destroy()
         CameraManager.instance = null
         vi.unstubAllGlobals()
     })
@@ -205,25 +219,38 @@ describe('CameraManager orbit', () => {
         expect(lgs.camera.lookAtTransform).toHaveBeenCalledTimes(1)
     })
 
-    it('keeps Cesium resolution scale unchanged during continuous camera rendering', () => {
+    it('keeps continuous camera render demands independent until each consumer releases', async () => {
+        vi.useFakeTimers()
         installCameraManagerGlobals()
         const manager = new CameraManager()
         lgs.viewer = {resolutionScale: 2}
+        const scheduler = getOrCreateSceneRenderScheduler(lgs.scene)
         lgs.scene.msaaSamples = 4
         lgs.scene.shadows = true
 
+        manager.optimizeContinuousCameraRender()
         manager.optimizeContinuousCameraRender()
 
         expect(lgs.viewer.resolutionScale).toBe(2)
         expect(lgs.scene.msaaSamples).toBe(1)
         expect(lgs.scene.shadows).toBe(false)
+        expect(lgs.scene.postUpdate.listenerCount).toBe(1)
+
+        manager.restoreContinuousCameraRender()
+        expect(lgs.scene.msaaSamples).toBe(1)
+        expect(lgs.scene.postUpdate.listenerCount).toBe(1)
 
         manager.restoreContinuousCameraRender()
 
         expect(lgs.viewer.resolutionScale).toBe(2)
         expect(lgs.scene.msaaSamples).toBe(4)
         expect(lgs.scene.shadows).toBe(true)
+        expect(lgs.scene.postUpdate.listenerCount).toBe(1)
         expect(lgs.scene.requestRender).toHaveBeenCalled()
+
+        await vi.advanceTimersByTimeAsync(200)
+        expect(lgs.scene.postUpdate.listenerCount).toBe(0)
+        scheduler.destroy()
     })
 
     it('cancels the active panorama motion before clearing its state', () => {
