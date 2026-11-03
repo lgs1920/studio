@@ -26,7 +26,7 @@ import { POIUtils }                                from '@Utils/cesium/POIUtils'
 import { KM, UnitUtils }                           from '@Utils/UnitUtils'
 import { Cartesian3, HeightReference, JulianDate }   from 'cesium'
 import { v4 as uuid }                              from 'uuid'
-import { subscribe }                               from 'valtio'
+import { subscribeKey }                            from 'valtio/utils'
 
 const METERS_PER_DEGREE_LATITUDE = 111_320
 const MIN_LONGITUDE_COSINE = 0.01
@@ -358,6 +358,7 @@ export class POIManager {
 
     #structureSubscription = null
     #initialized = false
+    #knownPOIs = new Map()
     #pendingWrites = new Map()
     #updateTimeout = 300
 
@@ -544,26 +545,44 @@ export class POIManager {
         return poi
     }
 
+    /** Subscribe POI indexing and lifecycle events to the canonical map structure. */
     setupSubscriptions() {
-        this.#structureSubscription = subscribe(
+        this.#structureSubscription = subscribeKey(
             this.list,
-            (ops) => {
-                ops.forEach(([op, , value, prevValue]) => {
-                    // Si on ajoute un POI (op 'set' et pas de valeur précédente)
-                    if (op === 'set' && prevValue === undefined) {
-                        this.#handlePOIAdded(value.id, value)
-                    }
-                    // Si on modifie un POI existant
-                    else if (op === 'set') {
-                        this.#handlePOIUpdated(value.id, value, prevValue)
-                    }
-                    // Si on supprime
-                    if (op === 'delete') {
-                        this.#handlePOIRemoved(prevValue.id, prevValue)
-                    }
-                })
-            },
+            'epoch',
+            this.#synchronizePOIStructure,
+            true,
         )
+    }
+
+    /** Synchronize POI indexing and lifecycle events with the canonical POI map. */
+    #synchronizePOIStructure = () => {
+        const currentPOIIds = new Set(this.list.keys())
+
+        currentPOIIds.forEach(poiId => {
+            const poi = this.list.get(poiId)
+            const previous = this.#knownPOIs.get(poiId)
+            if (!previous) {
+                this.#handlePOIAdded(poiId, poi)
+                this.#knownPOIs.set(poiId, {poi, parent: poi?.parent ?? null})
+                return
+            }
+
+            const parent = poi?.parent ?? null
+            if (previous.parent !== parent) {
+                this.#handlePOIUpdated(poiId, poi, {parent: previous.parent})
+            }
+            this.#knownPOIs.set(poiId, {poi, parent})
+        })
+
+        this.#knownPOIs.forEach((previous, poiId) => {
+            if (currentPOIIds.has(poiId)) {
+                return
+            }
+
+            this.#handlePOIRemoved(poiId, previous.poi)
+            this.#knownPOIs.delete(poiId)
+        })
     }
 
     #debouncedPersist(poi) {
@@ -623,6 +642,7 @@ export class POIManager {
         }
         this.#pendingWrites.forEach(timeoutId => clearTimeout(timeoutId))
         this.#pendingWrites.clear()
+        this.#knownPOIs.clear()
         this.#initialized = false
         POIManager.instance = null
     }

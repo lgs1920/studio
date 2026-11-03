@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-05-09
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -375,21 +375,31 @@ export const MapPOIMonitor = () => {
             isReplayActive: () => isReplayPOIPresentationActive(lgs.stores.replay),
         })
 
-        for (const poiId of $pois.list.keys()) {
-            addPOIEventListeners(poiId)
-            observePOI(poiId)
-        }
-        const removeSubscription = subscribe($pois.list, operations => {
-            operations.forEach(([operation, , value, previousValue]) => {
-                if (operation === 'set' && previousValue === undefined) {
-                    addPOIEventListeners(value.id)
-                    observePOI(value.id)
+        const registeredPOIIds = new Set()
+        /** Reconcile per-POI listeners against the map's structural epoch. */
+        const synchronizePOIListeners = () => {
+            const currentPOIIds = new Set($pois.list.keys())
+            currentPOIIds.forEach(poiId => {
+                if (registeredPOIIds.has(poiId)) {
+                    return
                 }
-                else if (operation === 'delete') {
-                    removePOIEventListeners(previousValue.id)
-                }
+
+                addPOIEventListeners(poiId)
+                observePOI(poiId)
+                registeredPOIIds.add(poiId)
             })
-        })
+
+            registeredPOIIds.forEach(poiId => {
+                if (currentPOIIds.has(poiId)) {
+                    return
+                }
+
+                removePOIEventListeners(poiId)
+                registeredPOIIds.delete(poiId)
+            })
+        }
+        synchronizePOIListeners()
+        const removeSubscription = subscribeKey($pois.list, 'epoch', synchronizePOIListeners, true)
 
         // Resolve double-clicks against the current POI store so global POIs remain editable across list updates.
         __.canvasEvents.onDoubleClick(handleEditor, {
@@ -531,9 +541,10 @@ export const MapPOIMonitor = () => {
             themeObserver?.disconnect()
             window.removeEventListener('resize', requestAllCaptures)
             document.fonts?.removeEventListener?.('loadingdone', requestAllCaptures)
-            for (const poiId of $pois.list.keys()) {
+            for (const poiId of registeredPOIIds) {
                 removePOIEventListeners(poiId)
             }
+            registeredPOIIds.clear()
         }
     }, [$pois, handleEditor, handlePOIClick, handlePOIHover, handlePOIHoverEnd, handlePOIShiftHover,
         handlePOIShiftHoverEnd, handlePOIShiftUp, openContextMenu, requestPOICapture])

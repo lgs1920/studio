@@ -37,6 +37,7 @@ export const MapPOIEditFilterPopup = memo(() => {
     const drawers = useSnapshot(lgs.stores.ui.drawers)
     const journey = useProxyValue(lgs.mainProxy, main => main.theJourney ?? null, null)
     const journeySlug = journey?.slug ?? null
+    const currentPOIId = pois.current
 
     const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
 
@@ -46,8 +47,9 @@ export const MapPOIEditFilterPopup = memo(() => {
         list: pois.list,
         journeySlug,
         journey,
+        currentPOIId,
         getJourneyByTrackSlug: lgs.getJourneyByTrackSlug,
-    }), [onlyJourney, poi.filter, pois.list, journey, journeySlug])
+    }), [onlyJourney, poi.filter, pois.list, currentPOIId, journey, journeySlug])
 
     useEffect(() => {
         const {byName, byCategories, alphabetic, allPOIs} = poi.filter

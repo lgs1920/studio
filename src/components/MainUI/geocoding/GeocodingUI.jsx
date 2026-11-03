@@ -41,7 +41,6 @@ export const GeocodingUI = () => {
     const geocoder = useSnapshot(store)
     const address = useRef(null)
     const geolocationRequestId = useRef(0)
-    const displayCloseTimer = useRef(null)
     const _reopenAfterHide = useRef(false)
     const [exactMatch, setExactMatch] = useState(false)
     const [coordinates, setCoordinates] = useState(false)
@@ -59,10 +58,6 @@ export const GeocodingUI = () => {
 
     const resetTransientState = ({keepInput = false} = {}) => {
         geolocationRequestId.current += 1
-        if (displayCloseTimer.current !== null) {
-            window.clearTimeout(displayCloseTimer.current)
-            displayCloseTimer.current = null
-        }
 
         resetSearchState()
         store.dialog.loading = false
@@ -82,10 +77,6 @@ export const GeocodingUI = () => {
     const requestClose = () => {
         _reopenAfterHide.current = false
         geolocationRequestId.current += 1
-        if (displayCloseTimer.current !== null) {
-            window.clearTimeout(displayCloseTimer.current)
-            displayCloseTimer.current = null
-        }
 
         store.dialog.visible = false
     }
@@ -132,13 +123,47 @@ export const GeocodingUI = () => {
     }
 
     /**
-     * Focus the map on a point and optionally close the dialog after a delay.
+     * Resolve terrain height after a provisional POI has been created.
+     * @param {Object} poi - POI whose terrain height should be resolved.
+     * @param {Promise<number>} terrainHeightRequest - Terrain height request started during POI insertion.
+     * @returns {Promise<void>} Resolves after the POI height update is attempted.
+     */
+    const resolvePOITerrainHeight = async (poi, terrainHeightRequest) => {
+        let simulatedHeight = 0
+        try {
+            simulatedHeight = await terrainHeightRequest
+        }
+        catch {
+            // Keep the same zero-height fallback used by the previous synchronous terrain lookup.
+        }
+
+        const currentPOI = __.ui.poiManager.get(poi.id)
+        if (!currentPOI
+            || currentPOI.longitude !== poi.longitude
+            || currentPOI.latitude !== poi.latitude
+            || !Number.isFinite(simulatedHeight)) {
+            return
+        }
+
+        try {
+            await __.ui.poiManager.updatePOI(poi.id, {simulatedHeight}, {
+                immediate:          true,
+                skipLocationUpdate: true,
+            })
+        }
+        catch {
+            // The POI remains visible at its provisional ground-clamped position if saving its height fails.
+        }
+    }
+
+    /**
+     * Focus a POI immediately after insertion and complete slower persistence and terrain work afterward.
      * @param {Object} geoPoint - GeoJSON point to display.
-     * @param {{closeAfter?: number, shouldContinue?: () => boolean}} [options] - Optional close delay and cancellation guard.
+     * @param {{keepDialogOpen?: boolean, shouldContinue?: () => boolean}} [options] - Dialog and cancellation options.
      * @returns {Promise<Object|null>} The created POI, or null when creation is cancelled or rejected.
      */
-    const showPOI = async (geoPoint, {closeAfter = 0, shouldContinue = () => true} = {}) => {
-        const point = await __.ui.poiManager.getPointFromGeoJson(geoPoint, true)
+    const showPOI = async (geoPoint, {keepDialogOpen = false, shouldContinue = () => true} = {}) => {
+        const point = await __.ui.poiManager.getPointFromGeoJson(geoPoint, false)
         if (!shouldContinue()) {
             return null
         }
@@ -146,14 +171,29 @@ export const GeocodingUI = () => {
         // Search-created POIs follow the same persisted standard type as context-menu POIs.
         point.type = POI_STANDARD_TYPE
         point.newBadgeExpiresAt = Date.now() + POI_NEW_BADGE_DURATION
-        const poi = await __.ui.poiManager.add(point)
+        const creation = __.ui.poiManager.add(point)
+        const poi = __.ui.poiManager.get(point.id)
         if (!poi) {
+            const rejectedPOI = await creation
+            if (rejectedPOI) {
+                return rejectedPOI
+            }
+
             UIToast.warning({
                                 caption: 'POI not created !',
                                 text:    'This location is too closed to an existing POI!',
                             })
             return null
         }
+
+        const terrainHeightRequest = Promise.resolve()
+            .then(() => __.ui.poiManager.getHeightFromTerrain({
+                coordinates: {
+                    longitude: poi.longitude,
+                    latitude:  poi.latitude,
+                },
+            }))
+            .catch(() => 0)
 
         focusPOIInOpenList(poi.id)
 
@@ -173,17 +213,16 @@ export const GeocodingUI = () => {
             },
         })
 
-        if (closeAfter > 0) {
-            if (displayCloseTimer.current !== null) {
-                window.clearTimeout(displayCloseTimer.current)
-            }
-            displayCloseTimer.current = window.setTimeout(requestClose, closeAfter)
-        }
-        else {
+        if (!keepDialogOpen) {
             requestClose()
         }
 
-        return poi
+        const createdPOI = await creation
+        if (createdPOI) {
+            void resolvePOITerrainHeight(createdPOI, terrainHeightRequest)
+        }
+
+        return createdPOI
     }
 
     const handleSubmit = async (event) => {
@@ -245,12 +284,27 @@ export const GeocodingUI = () => {
         void handleSubmit(event)
     }
 
+    /**
+     * Add the selected search result and show the success toast after persistence completes.
+     * @param {string|number} placeId - Geocoder result identifier.
+     * @returns {Promise<void>} Resolves after selection handling completes.
+     */
     const handleSelect = async (placeId) => {
         const point = store.list.get(placeId)
         if (!point) {
             return
         }
-        const createdPOI = await showPOI(point)
+        let createdPOI
+        try {
+            createdPOI = await showPOI(point)
+        }
+        catch {
+            UIToast.error({
+                caption: 'POI creation failed.',
+                text:    'The selected location could not be added to the map.',
+            })
+            return
+        }
         if (!createdPOI) {
             return
         }
@@ -326,27 +380,33 @@ export const GeocodingUI = () => {
             }
 
             const {latitude, longitude} = position.coords
-            let location = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-
-            try {
-                const details = await __.ui.geocoder.getCoordinateLocationDetails({longitude, latitude})
-                if (details.location) {
-                    location = details.location
-                }
-            }
-            catch {
-                // Keep the coordinates when reverse geocoding cannot resolve the device position.
-            }
-
-            if (requestId !== geolocationRequestId.current || !address.current) {
+            const coordinateLabel = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+            if (!address.current) {
                 return
             }
 
-            address.current.value = location
+            address.current.value = coordinateLabel
             handleChange({preserveGeolocationRequest: true})
             isDisplayingLocation = true
+
+            void __.ui.geocoder.getCoordinateLocationDetails({longitude, latitude})
+                .then(details => {
+                    if (requestId !== geolocationRequestId.current
+                        || !address.current
+                        || address.current.value !== coordinateLabel
+                        || !details.location) {
+                        return
+                    }
+
+                    address.current.value = details.location
+                    handleChange({preserveGeolocationRequest: true})
+                })
+                .catch(() => {
+                    // Keep the coordinates in the search field when reverse geocoding fails.
+                })
+
             await showPOI(turf.point([longitude, latitude]), {
-                closeAfter:     5 * SECOND,
+                keepDialogOpen: true,
                 shouldContinue: () => requestId === geolocationRequestId.current,
             })
         }

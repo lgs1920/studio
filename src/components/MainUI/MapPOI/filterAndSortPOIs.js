@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-28
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import { GLOBAL_PARENT } from '@Core/constants'
 
 /**
  * Filters and sorts POIs using the same rules for the editor list and its count.
- * @param {{onlyJourney: boolean, filterSettings: object, list: Map, journeySlug: string|null, journey: object|null, getJourneyByTrackSlug: (slug: string) => object|null}} options
+ * @param {{onlyJourney: boolean, filterSettings: object, list: Map, journeySlug: string|null, journey: object|null, currentPOIId?: string|null, getJourneyByTrackSlug: (slug: string) => object|null}} options
  * @returns {string[]}
  */
 export const filterAndSortPOIs = ({
@@ -28,6 +28,7 @@ export const filterAndSortPOIs = ({
     list,
     journeySlug,
     journey,
+    currentPOIId = null,
     getJourneyByTrackSlug,
 }) => {
     const {
@@ -53,14 +54,15 @@ export const filterAndSortPOIs = ({
             continue
         }
 
+        const isCurrentPOI = id === currentPOIId
         const isGlobal = poi.parent == null || poi.parent === GLOBAL_PARENT
         const poiJourneySlug = !isGlobal && journeySlug
             ? getJourneyByTrackSlug(poi.parent)?.slug ?? null
             : null
         const isJourney = Boolean(journeySlug) && poiJourneySlug === journeySlug
-        const isIncludedByScope = onlyJourney
+        const isIncludedByScope = isCurrentPOI || (onlyJourney
             ? isJourney || (isGlobal && isNearCurrentJourney(poi))
-            : (global && isGlobal && (!environmentFilterActive || isNearCurrentJourney(poi))) || (showJourney && isJourney)
+            : (global && isGlobal && (!environmentFilterActive || isNearCurrentJourney(poi))) || (showJourney && isJourney))
 
         if (!isIncludedByScope) {
             continue
@@ -70,11 +72,11 @@ export const filterAndSortPOIs = ({
         if (!`${poi.title ?? ''}`.trim()) {
             hasEmptyTitle = true
         }
-        if (lowerName && !displayTitle.toLowerCase().includes(lowerName)) {
+        if (!isCurrentPOI && lowerName && !displayTitle.toLowerCase().includes(lowerName)) {
             continue
         }
 
-        if (byCategories.length) {
+        if (!isCurrentPOI && byCategories.length) {
             const category = poi.category ?? poi.type
             const inCategory = category != null && byCategories.includes(category)
             if (exclude ? inCategory : !inCategory) {

@@ -16,12 +16,10 @@
 
 import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
-import { useSnapshot }                 from 'valtio'
 
 
 export const GeocodingButton = (props) => {
     const store = lgs.stores.main.components.geocoder
-    const snap = useSnapshot(store)
 
     const resetDialogState = () => {
         __.ui.geocoder.init()
@@ -33,11 +31,14 @@ export const GeocodingButton = (props) => {
         store.dialog.submitDisabled = true
     }
 
+    /**
+     * Toggle the geocoder using the live store state and let the dialog finish closing before unmount.
+     * @returns {void} Nothing.
+     */
     const handleClick = () => {
-        if (snap.dialog.visible) {
+        if (store.dialog.visible) {
             resetDialogState()
             store.dialog.visible = false
-            store.dialog.mounted = false
             return
         }
 
