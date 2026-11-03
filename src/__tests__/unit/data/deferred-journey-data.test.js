@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-24
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -99,7 +99,7 @@ describe('deferred journey data loading', () => {
         await vi.waitFor(() => expect(waitForPOICaptures).toHaveBeenCalledOnce())
 
         expect(deps.uiToast.loading).toHaveBeenCalledWith(
-            {caption: 'Loading Journeys and POIs ...'},
+            {caption: 'Your world is still unfolding...'},
             'deferred-journeys-and-pois',
         )
         expect(deps.uiToast.update).not.toHaveBeenCalled()

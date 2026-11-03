@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-24
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -167,7 +167,7 @@ export const runDeferredJourneyDataLoad = async ({
                                                      onJourneysReady,
                                                  } = {}) => {
     const loadingToastId = uiToast.loading?.(
-        {caption: 'Loading all your data ...'},
+        {caption: 'Your world is still unfolding...'},
         DEFERRED_JOURNEY_DATA_TOAST_ID,
     )
     await yieldStartupIdleTask()
