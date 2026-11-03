@@ -4771,3 +4771,27 @@
 ## 2026-11-03 — [`fix: follow Replay camera focus with compass`](https://github.com/lgs1920/studio/commit/28e1e3f0d34efb8dc36bd3a2aeee4638a2f88302)
 
 - Recorded automatically from Git history.
+
+## 2026-11-03 — [`fix: respect Replay widget capabilities in editor`](https://github.com/lgs1920/studio/commit/8bf0dcc37d706692a7c684c7dfa876884b572650)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`fix: use live camera heading in Compass`](https://github.com/lgs1920/studio/commit/8218cc8822b34010b49bd5ba8a40d1b1366be85c)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`fix: apply Replay POI visibility consistently`](https://github.com/lgs1920/studio/commit/7368763348d085c8b3c907c1a5551d697b5a6777)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`fix: guard POI journey index lookup`](https://github.com/lgs1920/studio/commit/bcee186477a0e3b707b57ecb6f02c497f10e681c)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`test: align POI suites with the unit runner`](https://github.com/lgs1920/studio/commit/91f3bc0b0be3ea05b9235271feff9e1971a18a21)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`docs: update Replay and download backlog`](https://github.com/lgs1920/studio/commit/bf403e9bd7f30f4f0e2911ea7c91b18bc1d31760)
+
+- Recorded automatically from Git history.
