@@ -208,6 +208,7 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
     const _previewCleanup = useRef(null)
     const _pictureInPictureWindow = useRef(null)
     const _pictureInPictureCleanup = useRef(null)
+    const _cancellationRequested = useRef(false)
     const [pictureInPictureWindow, setPictureInPictureWindow] = useState(null)
     const recordingActive = snapshot.active === true
     const isDryRun = snapshot.mode === 'dry-run'
@@ -357,14 +358,77 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
     }, [closePictureInPicture])
 
     /**
-     * Discard the export and close the transient Replay recording surface.
+     * Request export cancellation and choose whether Replay preparation remains open.
+     * @param {boolean} returnToPreparation - Whether cancellation should restore preparation.
      * @returns {void} Nothing.
      */
-    const cancelRecording = useCallback(() => {
-        closePictureInPicture()
-        globalThis.window?.dispatchEvent?.(new Event(REPLAY_DEFERRED_EXPORT_CANCEL_EVENT))
-        stopReplayRecordingMonitor()
+    const dispatchRecordingCancellation = useCallback((returnToPreparation) => {
+        if (_cancellationRequested.current) {
+            return
+        }
+
+        _cancellationRequested.current = true
+        globalThis.window?.dispatchEvent?.(new CustomEvent(REPLAY_DEFERRED_EXPORT_CANCEL_EVENT, {
+            detail: {returnToPreparation},
+        }))
+    }, [])
+
+    useEffect(() => {
+        /**
+         * Close PiP and stop the monitor for either cancellation destination.
+         * @returns {void} Nothing.
+         */
+        const handleRecordingCancellation = () => {
+            _cancellationRequested.current = true
+            closePictureInPicture()
+            stopReplayRecordingMonitor()
+        }
+
+        globalThis.window?.addEventListener(REPLAY_DEFERRED_EXPORT_CANCEL_EVENT, handleRecordingCancellation)
+        return () => globalThis.window?.removeEventListener(REPLAY_DEFERRED_EXPORT_CANCEL_EVENT, handleRecordingCancellation)
     }, [closePictureInPicture])
+
+    useEffect(() => {
+        if (!recordingActive) {
+            _cancellationRequested.current = false
+        }
+    }, [recordingActive])
+
+    /**
+     * Cancel the export and return to Replay preparation.
+     * @returns {void} Nothing.
+     */
+    const cancelRecording = useCallback(() => dispatchRecordingCancellation(true), [dispatchRecordingCancellation])
+
+    /**
+     * Cancel the export and leave Replay.
+     * @returns {void} Nothing.
+     */
+    const exitReplay = useCallback(() => dispatchRecordingCancellation(false), [dispatchRecordingCancellation])
+
+    useEffect(() => {
+        if (!recordingActive || isDryRun) {
+            return undefined
+        }
+
+        const targets = [pictureInPictureWindow]
+            .filter(target => typeof target?.addEventListener === 'function'
+                              && typeof target?.removeEventListener === 'function')
+
+        /** Exit Replay when Escape is pressed in the PiP recording window. */
+        const handleEscape = event => {
+            if (event.key !== 'Escape' || event.defaultPrevented) {
+                return
+            }
+
+            event.preventDefault()
+            event.stopPropagation()
+            exitReplay()
+        }
+
+        targets.forEach(target => target.addEventListener('keydown', handleEscape, true))
+        return () => targets.forEach(target => target.removeEventListener('keydown', handleEscape, true))
+    }, [exitReplay, isDryRun, pictureInPictureWindow, recordingActive])
 
     const takeSnapshot = useCallback(() => {
         void captureReplayCropSnapshot()
@@ -496,7 +560,7 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                             )}
                             <MonitorIconButton
                                 id="replay-monitor-cancel"
-                                label={isDryRun ? 'Cancel Dry run and return to preparation' : 'Cancel recording and close Replay'}
+                                label={isDryRun ? 'Cancel Dry run and return to preparation' : 'Cancel recording and return to preparation'}
                                 tooltipLabel="Cancel"
                                 icon="xmark"
                                 appearance="plain"

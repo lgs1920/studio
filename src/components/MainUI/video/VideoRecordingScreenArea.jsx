@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-30
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,6 +55,7 @@ export const VideoRecordingScreenArea = memo(() => {
     const _recordingStartToken = useRef(0)
     const _recordingAbortController = useRef(null)
     const _mediaHandoffToken = useRef(0)
+    const _escapeCancellationRequested = useRef(false)
     const [mountTimeoutOpen, setMountTimeoutOpen] = useState(false)
     const [mountTimeoutError, setMountTimeoutError] = useState({missing: [], timeoutMs: WIDGET_MOUNT_TIMEOUT})
     const [mountTimeoutAction, setMountTimeoutAction] = useState('record')
@@ -78,9 +79,44 @@ export const VideoRecordingScreenArea = memo(() => {
      * Cancel the active browser recording and restore Replay preparation.
      * @returns {void} Nothing.
      */
-    const handleCancelRecording = useCallback(() => {
-        void cancelVideoRecording({invalidateRecording}).finally(stopReplayRecordingMonitor)
+    const handleCancelRecording = useCallback((event) => {
+        void cancelVideoRecording({
+            invalidateRecording,
+            returnToPreparation: event?.detail?.returnToPreparation === true,
+        }).finally(stopReplayRecordingMonitor)
     }, [invalidateRecording])
+
+    /**
+     * Cancel an active MP4 export and leave Replay on Escape.
+     * @param {KeyboardEvent} event - Keyboard event from the active recording window.
+     * @returns {void} Nothing.
+     */
+    const handleRecordingEscape = useCallback((event) => {
+        const currentVideo = globalThis.lgs?.stores?.ui?.video
+        const recordingActive = currentVideo?.preRecording === true
+            || currentVideo?.exporting === true
+            || currentVideo?.finalizing === true
+        if (event.key !== 'Escape'
+            || event.defaultPrevented
+            || !recordingActive
+            || currentVideo?.dryRun === true
+            || currentVideo?.snapshot === true
+            || _escapeCancellationRequested.current) {
+            return
+        }
+
+        _escapeCancellationRequested.current = true
+        event.preventDefault()
+        event.stopPropagation()
+        globalThis.window?.dispatchEvent?.(new CustomEvent(REPLAY_DEFERRED_EXPORT_CANCEL_EVENT, {
+            detail: {returnToPreparation: false},
+        }))
+    }, [])
+
+    useEffect(() => {
+        globalThis.window?.addEventListener('keydown', handleRecordingEscape, true)
+        return () => globalThis.window?.removeEventListener('keydown', handleRecordingEscape, true)
+    }, [handleRecordingEscape])
 
     useEffect(() => {
         globalThis.window?.addEventListener(REPLAY_DEFERRED_EXPORT_CANCEL_EVENT, handleCancelRecording)

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -240,7 +240,7 @@ describe('ReplayRecordingMonitorWidget', () => {
 
         const pauseButton = screen.getByRole('button', {name: 'Pause recording'})
         const stopButton = screen.getByRole('button', {name: 'Stop recording and save or share'})
-        const cancelButton = screen.getByRole('button', {name: 'Cancel recording and close Replay'})
+        const cancelButton = screen.getByRole('button', {name: 'Cancel recording and return to preparation'})
         expect(pauseButton.textContent).toBe('')
         expect(stopButton.textContent).toBe('')
         expect(cancelButton.textContent).toBe('')
@@ -263,7 +263,10 @@ describe('ReplayRecordingMonitorWidget', () => {
 
         expect(pauseExport).toHaveBeenCalledTimes(1)
         expect(abortExport).not.toHaveBeenCalled()
-        expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({type: REPLAY_DEFERRED_EXPORT_CANCEL_EVENT}))
+        expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({
+            type: REPLAY_DEFERRED_EXPORT_CANCEL_EVENT,
+            detail: {returnToPreparation: true},
+        }))
         expect(snapshotHarness.capture).toHaveBeenCalledTimes(1)
         expect(getReplayRecordingMonitorSnapshot().active).toBe(false)
     })
@@ -469,7 +472,10 @@ describe('ReplayRecordingMonitorWidget', () => {
 
         await waitFor(() => expect(externalWindow.close).toHaveBeenCalledTimes(1))
         expect(abortExport).not.toHaveBeenCalled()
-        expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({type: REPLAY_DEFERRED_EXPORT_CANCEL_EVENT}))
+        expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({
+            type: REPLAY_DEFERRED_EXPORT_CANCEL_EVENT,
+            detail: {returnToPreparation: true},
+        }))
         expect(getReplayRecordingMonitorSnapshot().active).toBe(false)
     })
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -250,7 +250,9 @@ describe('Replay recording media handoff', () => {
         exportReplayDeferredMp4.mockReturnValueOnce(recording.promise)
         render(<VideoRecordingScreenArea/>)
         await waitFor(() => expect(exportReplayDeferredMp4).toHaveBeenCalledOnce())
-        await act(async () => window.dispatchEvent(new Event(REPLAY_DEFERRED_EXPORT_CANCEL_EVENT)))
+        await act(async () => window.dispatchEvent(new CustomEvent(REPLAY_DEFERRED_EXPORT_CANCEL_EVENT, {
+            detail: {returnToPreparation: true},
+        })))
         expect(exportReplayDeferredMp4.mock.calls[0][0].signal.aborted).toBe(true)
         await act(async () => recording.resolve(videoResult('cancelled.mp4')))
 

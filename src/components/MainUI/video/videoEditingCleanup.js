@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,8 @@
 
 import { CROP_TOOLS_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import {resetRuntimeProgress} from '@Core/ui/replay/JourneyReplayRuntime'
+import {publishReplayTimelineTime} from '@Core/ui/replay/ReplayFramePublisher'
+import {resolveReplayVideoFramePhase} from '@Core/ui/replay/ReplayVideoTimeline'
 
 export const prepareVideoEditingUi = () => {
     globalThis.__?.ui?.widgetCache?.hideAllExceptBoards?.(VIDEO_WIDGETS_BOARD)
@@ -54,6 +56,31 @@ export const restoreVideoCaptureUi = () => {
     }
 }
 
+/** Return the Replay controller and preparation playhead to the selected range start. */
+const resetReplayPreparationPlayhead = replayStore => {
+    if (!replayStore) {
+        return
+    }
+
+    const timeline = replayStore.preparationTimeline?.timeline
+    const rangeStartMillis = Number(timeline?.rangeStartMillis)
+    const startMillis = Number.isFinite(rangeStartMillis) ? Math.max(0, rangeStartMillis) : 0
+    const phase = timeline
+        ? resolveReplayVideoFramePhase({timeline, frameTimeMs: startMillis})
+        : null
+    const phaseProgress = timeline?.phases?.length ? phase?.progress : phase?.anchorProgress
+    const fallbackProgress = Number(timeline?.direction ?? replayStore.direction) < 0 ? 1 : 0
+    const progress = Number.isFinite(Number(phaseProgress)) ? Number(phaseProgress) : fallbackProgress
+    const replayController = globalThis.__?.ui?.replay?.controller
+    replayController?.stop?.({emit: false, clearProgress: true})
+    replayController?.seek?.(progress)
+    if (timeline) {
+        timeline.currentTimeMillis = startMillis
+    }
+    replayStore.progress = progress
+    publishReplayTimelineTime({replay: replayStore, timeMillis: startMillis})
+}
+
 /**
  * Cancel video editing and release any transient linked Replay preparation.
  *
@@ -86,9 +113,10 @@ export const cancelVideoEditing = () => {
  * Cancel the active Replay video export and discard its transient recording data.
  * @param {Object} [options={}] - Cancellation options.
  * @param {Function|null} [options.invalidateRecording=null] - Invalidates pending recording UI work.
+ * @param {boolean} [options.returnToPreparation=false] - Restores the active Replay preparation instead of leaving Replay.
  * @returns {Promise<void>} Resolves after the active export releases its render resources.
  */
-export const cancelVideoRecording = async ({invalidateRecording = null} = {}) => {
+export const cancelVideoRecording = async ({invalidateRecording = null, returnToPreparation = false} = {}) => {
     const replayStore = globalThis.lgs?.stores?.replay
     const videoStore = globalThis.lgs?.stores?.ui?.video
     if (videoStore) {
@@ -106,19 +134,49 @@ export const cancelVideoRecording = async ({invalidateRecording = null} = {}) =>
         }
     }
     try {
-        if (videoStore) {
+        if (returnToPreparation) {
+            try {
+                if (replayStore?.recordingSync === true || replayStore?.basicPreparationActive === true) {
+                    __.ui.replay?.pause?.()
+                }
+            }
+            finally {
+                if (replayStore) {
+                    resetRuntimeProgress(replayStore)
+                    replayStore.deferredExportPlan = null
+                }
+                if (videoStore) {
+                    Object.assign(videoStore, {
+                        preRecording: false,
+                        exporting: false,
+                        dryRun: false,
+                        dryRunSelection: null,
+                        snapshot: false,
+                        paused: false,
+                        size: 0,
+                        finalizing: false,
+                        editing: true,
+                    })
+                }
+                restoreVideoCaptureUi()
+                if (replayStore) {
+                    resetReplayPreparationPlayhead(replayStore)
+                }
+            }
+        }
+        else if (videoStore) {
             cancelVideoEditing()
         }
     }
     finally {
-        if (replayStore) {
+        if (replayStore && !returnToPreparation) {
             resetRuntimeProgress(replayStore)
             replayStore.recordingSync = false
             replayStore.basicPreparationActive = false
             replayStore.preparationTimeline = null
             replayStore.deferredExportPlan = null
         }
-        if (videoStore) {
+        if (videoStore && !returnToPreparation) {
             Object.assign(videoStore, {
                 preRecording: false,
                 exporting:  false,

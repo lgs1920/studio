@@ -2,7 +2,7 @@
 
 Status: current implementation inventory; see the implementation status for known gaps
 
-Date: 2026-10-22
+Date: 2026-11-03
 
 ## Purpose
 
@@ -533,7 +533,11 @@ The surface is a read-only projection of replay and recording authorities. It
 does not resolve frames, drive the replay clock, move either camera, qualify the
 scene, or participate in composition. Widget reduction, positioning, and
 removal belong to the widget manager; the monitor has no private close or
-minimize controls. Explicit cancellation stops recording and exits
+minimize controls. Pressing Escape during an MP4 export cancels it and exits
+Replay. The monitor's X action cancels the export and returns to the active
+Basic or Expert preparation at the beginning of its selected range, preserving
+its camera, crop, and timeline settings. Expert preparation returns its
+playhead to the selected timeline range start. Both actions close
 Picture-in-Picture before terminal cleanup.
 
 ## Required invariants

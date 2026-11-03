@@ -144,6 +144,15 @@
     - Alt+Shift+W
   scope: Replay mode
 
+## Replay recording
+
+- action: Cancel Replay recording and exit
+  description: During MP4 recording, Escape cancels the export and exits Basic or Expert Replay.
+  id: replay-recording-escape-exit
+  keys:
+    - Escape
+  scope: Replay recording
+
 ## Timeline controls
 
 - action: Resize Replay track rows
