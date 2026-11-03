@@ -1246,7 +1246,7 @@ export class POIManager {
         let indexKey = GLOBAL_PARENT
 
         if (parentValue !== null) {
-            const journey = lgs.getJourneyByTrackSlug(parentValue)
+            const journey = globalThis.lgs?.getJourneyByTrackSlug?.(parentValue)
             indexKey = journey?.slug ?? parentValue
         }
 
@@ -1260,7 +1260,7 @@ export class POIManager {
         const parentValue = poi?.parent ?? null
         let indexKey = GLOBAL_PARENT
         if (parentValue !== null) {
-            const journey = lgs.getJourneyByTrackSlug(parentValue)
+            const journey = globalThis.lgs?.getJourneyByTrackSlug?.(parentValue)
             indexKey = journey?.slug ?? parentValue
         }
         const set = this.#journeyIndex.get(indexKey)
