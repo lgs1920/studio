@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-28
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -112,7 +112,13 @@ describe('POIManager interactive creation defaults', () => {
             latitude:   48.8566,
             longitude:  2.3522,
             title:      'Paris',
+            textBorderColorsLinked: true,
             type:       POI_TMP_TYPE,
+        })
+        expect(poi.display).toMatchObject({category: false, titleCategoryIcon: true})
+        expect(MapPOI.clone(poi)).toMatchObject({
+            textBorderColorsLinked: true,
+            display: {category: false, titleCategoryIcon: true},
         })
     })
 
@@ -120,10 +126,14 @@ describe('POIManager interactive creation defaults', () => {
         const manager = new POIManager()
         const poi = manager.createPOI({bgColor: '#445566'})
         const customPoi = manager.createPOI({bgColor: '#445566', borderColor: '#778899'})
+        const customDisplayPoi = manager.createPOI({
+            display: {category: true, titleCategoryIcon: false},
+        })
 
         expect(poi.borderColor).toBe(POI_DEFAULT)
         expect(MapPOI.clone(poi).borderColor).toBe(POI_DEFAULT)
         expect(customPoi.borderColor).toBe('#778899')
+        expect(customDisplayPoi.display).toMatchObject({category: true, titleCategoryIcon: false})
     })
 
     it('persists a later Border color through the standard POI update path', async () => {
@@ -162,8 +172,10 @@ describe('POIManager interactive creation defaults', () => {
             longitude:       2.3522,
             simulatedHeight: 128,
             title:           'Paris',
+            textBorderColorsLinked: true,
             type:            POI_TMP_TYPE,
         })
+        expect(poi.display).toMatchObject({category: false, titleCategoryIcon: true})
     })
 
     it('promotes a temporary POI by setting its standard type and category before persistence', async () => {

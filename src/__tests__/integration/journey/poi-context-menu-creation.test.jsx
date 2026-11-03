@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -100,7 +100,9 @@ describe('POI context-menu creation and editing', () => {
             category:     'poi',
             color:        '#000000',
             description:  '',
+            display:      {category: false, titleCategoryIcon: true},
             title:        'Point Of Interest',
+            textBorderColorsLinked: true,
             type:         'poi',
         })
         const firstToast = UIToast.success.mock.calls[0][0]

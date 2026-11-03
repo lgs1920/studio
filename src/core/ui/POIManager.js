@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-13
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -434,14 +434,23 @@ export class POIManager {
      * @returns {MapPOI} The newly created POI.
      */
     createPOI = (options = {}) => {
-        const poiOptions = Object.assign({
+        const defaults = {
             bgColor:     lgs.colors.poiDefaultBackground,
             category:    POI_STANDARD_TYPE,
             color:       lgs.colors.poiDefault,
             description: '',
+            display:     {category: false, titleCategoryIcon: true},
             title:       '',
+            textBorderColorsLinked: true,
             type:        POI_TMP_TYPE,
-        }, options)
+        }
+        const poiOverrides = options && typeof options === 'object' ? options : {}
+        const displayOverrides = poiOverrides.display && typeof poiOverrides.display === 'object'
+            ? poiOverrides.display
+            : {}
+        const poiOptions = Object.assign({}, defaults, poiOverrides, {
+            display: {...defaults.display, ...displayOverrides},
+        })
 
         return new MapPOI(poiOptions)
     }

@@ -178,6 +178,23 @@ describe('MapPOIEditContent settings', () => {
         expect(container.querySelector('[data-tooltip-for="map-poi-text-poi-1"]').textContent).toBe('Text')
         expect(container.querySelector('[data-tooltip-for="map-poi-border-poi-1"]').textContent).toBe('Border')
         expect(container.querySelector('[data-tooltip-for="map-poi-bg-poi-1"]').textContent).toBe('Background')
+        expect(screen.getByRole('button', {name: 'Link Text and Border colors'}).getAttribute('aria-pressed'))
+            .toBe('false')
+    })
+
+    it('shows the linked state from the POI record and persists unlinking', async () => {
+        poi.textBorderColorsLinked = true
+        render(<MapPOIEditContent poi="poi-1"/>)
+
+        const unlinkButton = screen.getByRole('button', {name: 'Unlink Text and Border colors'})
+        expect(unlinkButton.getAttribute('aria-pressed')).toBe('true')
+
+        fireEvent.click(unlinkButton)
+
+        await waitFor(() => expect(updatePOI).toHaveBeenCalledWith('poi-1', {
+            textBorderColorsLinked: false,
+        }, {markAsEdited: true}))
+        expect(poi.textBorderColorsLinked).toBe(false)
     })
 
     it('changes Text independently and preserves the legacy Border color', async () => {
@@ -273,9 +290,12 @@ describe('MapPOIEditContent settings', () => {
 
         await waitFor(() => {
             expect(updatePOI).toHaveBeenCalledWith('poi-1', {
-                color: '#778899',
+                color:                  '#778899',
+                borderColor:            '#778899',
+                textBorderColorsLinked: true,
             }, {markAsEdited: true})
             expect(poi.color).toBe('#778899')
+            expect(poi.textBorderColorsLinked).toBe(true)
             expect(screen.getByRole('button', {name: 'Unlink Text and Border colors'}).getAttribute('aria-pressed'))
                 .toBe('true')
         })
@@ -297,7 +317,10 @@ describe('MapPOIEditContent settings', () => {
         render(<MapPOIEditContent poi="poi-1"/>)
 
         fireEvent.click(screen.getByRole('button', {name: 'Link Text and Border colors'}))
-        await waitFor(() => expect(poi.color).toBe('#778899'))
+        await waitFor(() => {
+            expect(poi.color).toBe('#778899')
+            expect(poi.textBorderColorsLinked).toBe(true)
+        })
         updatePOI.mockClear()
 
         fireEvent.click(screen.getByRole('button', {name: 'Reverse color'}))

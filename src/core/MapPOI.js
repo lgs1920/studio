@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,6 +37,9 @@ export class MapPOI extends MapElement {
 
     /** @type {boolean} */
     background = true
+
+    /** @type {boolean} Whether Text and Border colors update together. */
+    textBorderColorsLinked = false
 
     /**
      * @type {Camera}

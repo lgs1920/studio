@@ -78,8 +78,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               __.ui.poiManager.updatePOI(poi, updates, {...options, markAsEdited: true})
                                           ), [poi])
                                           const _colorPickerShift = useRef({})
-                                          const [textBorderLinkState, setTextBorderLinkState] = useState({poi, linked: false})
-                                          const textBorderColorsLinked = textBorderLinkState.poi === poi && textBorderLinkState.linked
+                                          const textBorderColorsLinked = point.textBorderColorsLinked === true
 
                                           /**
                                            * Persist a changed display flag while retaining the other POI choices.
@@ -379,14 +378,14 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               await updateEditedPOI(updates)
                                           }
 
-                                          /** Link Text and Border after making Text match the current Border color. */
+                                          /** Toggle the persisted Text and Border link, aligning Text to Border when linking. */
                                           const handleToggleTextBorderLink = async () => {
                                               if (!window.isOK) {
                                                   return
                                               }
 
                                               if (textBorderColorsLinked) {
-                                                  setTextBorderLinkState({poi, linked: false})
+                                                  await updateEditedPOI({textBorderColorsLinked: false})
                                                   return
                                               }
 
@@ -398,13 +397,12 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               const borderColor = currentPoint.borderColor
                                                   ?? currentPoint.color
                                                   ?? lgs.colors.poiDefault
-                                              const textColor = currentPoint.color ?? lgs.colors.poiDefault
-
                                               try {
-                                                  if (textColor !== borderColor) {
-                                                      await updateEditedPOI({color: borderColor})
-                                                  }
-                                                  setTextBorderLinkState({poi, linked: true})
+                                                  await updateEditedPOI({
+                                                      color:                   borderColor,
+                                                      borderColor,
+                                                      textBorderColorsLinked: true,
+                                                  })
                                               }
                                               catch (error) {
                                                   console.error('[MapPOIEditContent] Failed to link Text and Border colors:', error)
