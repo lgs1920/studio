@@ -523,7 +523,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                         />
                     </BasicReplaySettingsRow>
                     {basicEndFocus.enabled && (
-                        <BasicReplaySettingsRow label="Duration (s)" iconSpacer>
+                        <BasicReplaySettingsRow label="Duration" iconSpacer>
                             <WaNumberInput
                                 id="basic-replay-end-focus-duration"
                                 className="basic-replay-end-focus-duration lgs--short-input"
@@ -553,7 +553,10 @@ export const VideoRecordingSettingsToolbar = memo(({
             className="basic-replay-settings-drawer wa-theme-lgs1920"
             onWaAfterHide={handleBasicSettingsDrawerAfterHide}
         >
-            <span slot="label">{'Basic Replay settings'}</span>
+            <span slot="label" className="basic-replay-settings-drawer__title">
+                <WaIcon name="video-down-to-line" variant="regular" rotate={45} label=""/>
+                {'Basic Replay settings'}
+            </span>
             <PanelActions/>
             <div className="basic-replay-settings-drawer__content">
                 <LGSScrollbars autoHide={false}>{basicSettingsContent}</LGSScrollbars>

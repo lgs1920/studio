@@ -198,6 +198,12 @@
     min-height: 0;
 }
 
+.basic-replay-settings-drawer__title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
+
 .basic-replay-settings-drawer__content {
     display: flex;
     overflow: hidden;
