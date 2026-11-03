@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,9 +18,9 @@ import {describe, expect, it} from 'vitest'
 import {resolveCompassCameraHeading} from '@Components/MainUI/compass/CompassCameraHeading'
 
 describe('compass camera heading', () => {
-    it('uses the export render contract before the interactive camera fallback', () => {
+    it('uses the published Replay camera pose before the live camera fallback', () => {
         expect(resolveCompassCameraHeading({
-            exportFrame: {
+            replayFrame: {
                 renderContract: {
                     cameraPose: {heading: 1.25},
                 },

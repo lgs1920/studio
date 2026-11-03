@@ -15,18 +15,18 @@
  ******************************************************************************/
 
 /**
- * Resolve the heading exposed by a published Replay export frame.
+ * Resolve the heading exposed by a published Replay frame.
  *
  * @param {Object} options - Heading resolution options.
- * @param {Object|null} [options.exportFrame=null] - Published export frame state.
- * @param {number|null} [options.fallbackHeading=null] - Interactive camera fallback.
+ * @param {Object|null} [options.replayFrame=null] - Published interactive or export frame state.
+ * @param {number|null} [options.fallbackHeading=null] - Live camera heading fallback.
  * @returns {number|null} Camera heading in radians.
  */
-export const resolveCompassCameraHeading = ({exportFrame = null, fallbackHeading = null} = {}) => {
+export const resolveCompassCameraHeading = ({replayFrame = null, fallbackHeading = null} = {}) => {
     const candidates = [
-        exportFrame?.renderContract?.cameraPose?.heading,
-        exportFrame?.renderContract?.logicalFrame?.cameraPose?.heading,
-        exportFrame?.intent?.scene?.cameraPose?.heading,
+        replayFrame?.renderContract?.cameraPose?.heading,
+        replayFrame?.renderContract?.logicalFrame?.cameraPose?.heading,
+        replayFrame?.intent?.scene?.cameraPose?.heading,
         fallbackHeading,
     ]
 
