@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-26
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -421,6 +421,7 @@ describe('replay preparation camera', () => {
                 return true
             }),
             hideOtherJourneysVisibility: vi.fn(),
+            applyJourneyReplayPOIPreparationVisibility: vi.fn(async () => {}),
         }
         const mode = {
             [JOURNEY_REPLAY_INTERNAL_STATE]: {sceneRestorePromise},
@@ -460,6 +461,7 @@ describe('replay preparation camera', () => {
         })
         expect(call.captureCameraState).not.toHaveBeenCalled()
         expect(call.hideOtherJourneysVisibility).toHaveBeenCalledOnce()
+        expect(call.applyJourneyReplayPOIPreparationVisibility).toHaveBeenCalledTimes(2)
         expect(call.setReplayPreparationPivot).not.toHaveBeenCalled()
         expect(call.lockReplayCameraToAnchor).not.toHaveBeenCalled()
     })

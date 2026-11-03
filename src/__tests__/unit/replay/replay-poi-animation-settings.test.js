@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -830,8 +830,14 @@ describe('Replay POI animation settings', () => {
 
         applyJourneyReplayPOIVisibility(mode, [{poi}, {poi: idlePOI}])
 
-        expect(setPOIEntityVisibility).toHaveBeenCalledWith(poi, true, {allowReplayAnimation: true})
-        expect(setPOIEntityVisibility).toHaveBeenCalledWith(idlePOI, false, {allowReplayAnimation: false})
+        expect(setPOIEntityVisibility).toHaveBeenCalledWith(poi, true, {
+            allowReplayAnimation: true,
+            allowReplayPreparation: false,
+        })
+        expect(setPOIEntityVisibility).toHaveBeenCalledWith(idlePOI, false, {
+            allowReplayAnimation: false,
+            allowReplayPreparation: false,
+        })
     })
 
     it('applies Hide all before waiting for previous POI state to restore', async () => {

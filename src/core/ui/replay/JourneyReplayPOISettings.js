@@ -232,7 +232,9 @@ export const resolveReplayPOIPresentation = (poi, {
     const forceShow = policyActive && basicMode && behavior.poiVisibilityMode === 'yes'
     const hiddenByReplay = policyActive && !animationActive && (
         basicMode
-            ? behavior.poiVisibilityMode === 'no'
+            ? endpoint
+                ? normalizeJourneyReplayPOISettings(poi?.replay).visible === false
+                : behavior.poiVisibilityMode === 'no'
                 || (behavior.poiVisibilityMode === 'user'
                     && normalizeJourneyReplayPOISettings(poi?.replay).visible === false)
             : (!endpoint && (settings?.hideAllPoisDuringJourneyReplay === true
