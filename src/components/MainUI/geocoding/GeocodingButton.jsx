@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-19
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import { useSnapshot }                 from 'valtio'
 
 
@@ -48,13 +49,13 @@ export const GeocodingButton = (props) => {
 
     return (
         <>
-            <WaTooltip for="launch-the-geocoder" placement={props.tooltip}>{'Search location'}</WaTooltip>
+            <WaTooltip for="launch-the-geocoder" placement={props.tooltip}>{UI_ACTIONS.searchLocation.label}</WaTooltip>
             <WaButton className="square-button"
                       id="launch-the-geocoder"
                       onClick={handleClick}
                       variant={'brand'}
                       appearance="Filled">
-                <WaIcon name="map-location-dot" variant="regular"/>
+                <WaIcon {...UI_ACTIONS.searchLocation.icon}/>
             </WaButton>
 
         </>

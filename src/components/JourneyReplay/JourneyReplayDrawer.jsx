@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ import { PopupAnchor } from '@Components/PopupAnchor'
 import { PopupDrawer } from '@Components/PopupDrawer'
 import WaDrawer     from '@Components/WaDrawerNonModal'
 import { REPLAY_DRAWER } from '@Core/constants'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import classNames from 'classnames'
 import {
     clampJourneyReplayNumber, DEFAULT_REPLAY_CAMERA, DEFAULT_REPLAY_SCOPE, ensureJourneyReplaySettings, REPLAY_CAMERA_ALTITUDE_CONSTANT,
@@ -1685,7 +1686,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                                  slot="header-actions"
                                                                  onClick={() => setAdvancedCameraPopupOpen(false)}
                                                              >
-                                                                 <WaIcon size="s" name="xmark" variant="regular"/>
+                                                                 <WaIcon size="s" {...UI_ACTIONS.close.icon}/>
                                                              </WaButton>
                                                          )}
                                                          appearance="filled"

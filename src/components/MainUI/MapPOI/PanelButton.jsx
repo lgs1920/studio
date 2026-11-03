@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-19
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { POIS_EDITOR_DRAWER }          from '@Core/constants'
 import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import { useCallback } from 'react'
 
 
@@ -28,13 +29,13 @@ export const PanelButton = (props) => {
 
     return (
         <>
-            <WaTooltip for="launch-the-pois" placement={props.tooltip}>{'Edit POIs'}</WaTooltip>
+            <WaTooltip for="launch-the-pois" placement={props.tooltip}>{UI_ACTIONS.managePOIs.label}</WaTooltip>
             <WaButton className="square-button"
                       id="launch-the-pois"
                       onClick={openPanel}
                       variant={'brand'}
                       appearance="Filled">
-                <WaIcon name="location-dot" variant="regular"/>
+                <WaIcon {...UI_ACTIONS.managePOIs.icon}/>
             </WaButton>
         </>
     )

@@ -8,19 +8,24 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGSPopup } from '@Components/LGSPopup'
+import DrawerFooter from '@Components/DrawerFooter'
+import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
+import PanelActions from '@Components/PanelsActions'
+import WaDrawer from '@Components/WaDrawerNonModal'
 import {
     cancelVideoEditing,
     prepareVideoCaptureUi,
     prepareVideoEditingUi,
 } from '@Components/MainUI/video/videoEditingCleanup'
-import { REPLAY_DRAWER, VIDEO_CROP_ZONE } from '@Core/constants'
+import { BASIC_REPLAY_SETTINGS_DRAWER, REPLAY_DRAWER, VIDEO_CROP_ZONE } from '@Core/constants'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import {
     DEFAULT_REPLAY_VIDEO_FPS_INDEX,
     DEFAULT_REPLAY_VIDEO_QUALITY_INDEX,
@@ -47,8 +52,9 @@ import {
     syncJourneyBasicReplayDuration,
     syncJourneyBasicReplayEndFocus,
 } from '@Core/ui/replay/ReplayUserModes'
-import { WaButton, WaIcon, WaNumberInput, WaSwitch, WaTooltip } from '@awesome.me/webawesome/dist/react'
+import { WaButton, WaDivider, WaIcon, WaNumberInput, WaSwitch, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { memo, useCallback, useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useSnapshot } from 'valtio'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import { VideoRecordingSettingsMenuContent } from './VideoRecordingSettingsMenus'
@@ -59,7 +65,27 @@ import '../style.css'
 
 const RATIO_POPUP = 'ratio'
 const VIDEO_PRESET_POPUP = 'video-preset'
-const BASIC_SETTINGS_POPUP = 'basic-settings'
+const COMPACT_SETTINGS_POPUP = 'compact-replay-settings'
+
+/**
+ * Render a Basic Replay setting with equal legend and value columns.
+ * @param {Object} props - Setting row properties.
+ * @param {string} props.label - Visible label and accessible group name.
+ * @param {string} [props.icon] - Optional legend icon.
+ * @param {boolean} [props.iconSpacer=false] - Reserve the icon column without rendering an icon.
+ * @param {React.ReactNode} props.children - Setting value controls.
+ * @returns {JSX.Element} A two-column setting row.
+ */
+const BasicReplaySettingsRow = ({label, icon, iconSpacer = false, children}) => (
+    <div className="basic-replay-settings-row basic-replay-settings-row--split" role="group" aria-label={label}>
+        <div className="basic-replay-settings-row__legend">
+            {icon && <WaIcon name={icon} variant="regular" label=""/>}
+            {!icon && iconSpacer && <span className="basic-replay-settings-row__legend-icon-spacer" aria-hidden="true"/>}
+            <span>{label}</span>
+        </div>
+        <div className="basic-replay-settings-row__value">{children}</div>
+    </div>
+)
 
 const formatBasicReplayDuration = seconds => {
     const totalSeconds = Math.max(0, Math.round(Number(seconds) || 0))
@@ -91,6 +117,8 @@ export const VideoRecordingSettingsToolbar = memo(({
     const $replay = lgs.stores.replay
     const replay = useSnapshot(lgs.stores.replay)
     const replaySettings = useSnapshot(lgs.settings.ui.replay)
+    const drawers = useSnapshot(lgs.stores.ui.drawers)
+    const drawerPlacement = useSnapshot(lgs.editorSettingsProxy.menu).drawer
     const main = useOptionalSnapshot(lgs.stores.main)
     const video = useSnapshot($video)
     const [openPopup, setOpenPopup] = useState(null)
@@ -104,6 +132,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                               && !video.snapshot
                               && !video.finalizing
     const basicPreparation = replay.basicPreparationActive === true
+    const basicSettingsDrawerOpen = drawers.open === BASIC_REPLAY_SETTINGS_DRAWER
     const compactReplaySettings = basicPreparation || timelineSettings
     const dryRunEnabled = basicPreparation
                           && (video.dryRunSelection ?? getBasicReplaySettings(replaySettings)?.dryRun) === true
@@ -394,26 +423,173 @@ export const VideoRecordingSettingsToolbar = memo(({
         }
     }, [replay.recordingSync, shouldShowToolbar, syncCropFrame])
 
+    useEffect(() => {
+        if ((!shouldShowToolbar || !basicPreparation)
+            && __.ui.drawerManager.isCurrent(BASIC_REPLAY_SETTINGS_DRAWER)) {
+            __.ui.drawerManager.close()
+        }
+    }, [basicPreparation, shouldShowToolbar])
+
+    /** Close the Basic Replay settings drawer after it has hidden. */
+    const handleBasicSettingsDrawerAfterHide = useCallback(event => {
+        if (event?.target?.tagName === 'WA-DRAWER'
+            && __.ui.drawerManager.isCurrent(BASIC_REPLAY_SETTINGS_DRAWER)) {
+            window.dispatchEvent(new Event('resize'))
+            __.ui.drawerManager.close()
+        }
+    }, [])
+
     if (!shouldShowToolbar) {
         return null
     }
 
+    const basicSettingsContent = (
+        <div className="video-recording-settings-popup video-recording-settings-popup--basic lgs-card wa-theme-lgs1920">
+            <BasicReplaySettingsRow label="Dry Run" icon="bolt">
+                <div className="basic-replay-settings-row__value--dry-run">
+                    <WaSwitch
+                        className="basic-replay-dry-run-switch"
+                        size="xs"
+                        aria-label="Dry Run"
+                        checked={dryRunEnabled}
+                        onChange={handleDryRunChange}
+                    />
+                    <WaButton
+                        size="s"
+                        variant="brand"
+                        appearance="filled"
+                        className="basic-replay-settings-start-recording"
+                        aria-label={dryRunEnabled ? 'Start Dry Run' : 'Start Record'}
+                        disabled={linkedPlaybackActive}
+                        onClick={() => void handleReplayRecording()}
+                    >
+                        <WaIcon name={dryRunEnabled ? 'bolt' : 'clapperboard-play'} variant="regular" label=""/>
+                        <span>{dryRunEnabled ? 'Start Dry Run' : 'Start Record'}</span>
+                    </WaButton>
+                </div>
+            </BasicReplaySettingsRow>
+            <BasicReplaySettingsRow label="Sampling" icon="route">
+                <BasicReplaySamplingSettings/>
+            </BasicReplaySettingsRow>
+            <WaDivider className="basic-replay-settings-divider"/>
+            <div className="basic-replay-settings-core">
+                <BasicReplaySettingsRow label="Ratio" icon="crop-simple">
+                    <VideoRecordingSettingsMenuContent menu="ratio"
+                                                       context={$cropper}
+                                                       cropzoneId={VIDEO_CROP_ZONE}
+                                                       unifiedChoices
+                                                       mainTheme/>
+                </BasicReplaySettingsRow>
+                {!dryRunEnabled && (
+                    <BasicReplaySettingsRow label="Quality" icon="ranking-star">
+                        <VideoRecordingSettingsMenuContent menu="preset"
+                                                           context={$cropper}
+                                                           cropzoneId={VIDEO_CROP_ZONE}
+                                                           compactBasic
+                                                           basicDrawer
+                                                           mainTheme/>
+                    </BasicReplaySettingsRow>
+                )}
+                <BasicReplaySettingsRow label="Duration" icon="clock">
+                    <div className="basic-replay-duration-buttons">
+                        {BASIC_REPLAY_DURATIONS.map(duration => (
+                            <WaButton key={duration}
+                                      className={`video-choice-button${basicDuration === duration ? ' is-selected' : ''}`}
+                                      size="s"
+                                      variant="neutral"
+                                      appearance={basicDuration === duration ? 'outlined' : 'plain'}
+                                      aria-pressed={basicDuration === duration ? 'true' : 'false'}
+                                      onClick={() => handleBasicDurationChange(duration)}>
+                                {duration === 60 ? '1 min' : `${duration}s`}
+                            </WaButton>
+                        ))}
+                    </div>
+                </BasicReplaySettingsRow>
+            </div>
+            {basicPreparation && <WaDivider className="basic-replay-settings-divider"/>}
+            {basicPreparation && <BasicReplayAppearanceSettings/>}
+            {basicPreparation && <WaDivider className="basic-replay-settings-divider"/>}
+            {basicPreparation && <BasicReplayPOISettings/>}
+            {basicPreparation && (
+                <>
+                    <WaDivider className="basic-replay-settings-divider"/>
+                    <BasicReplaySettingsRow label="End Focus" icon="rotate">
+                        <WaSwitch
+                            className="basic-replay-end-focus-switch"
+                            size="xs"
+                            aria-label="End Focus"
+                            checked={basicEndFocus.enabled}
+                            onChange={handleBasicEndFocusSwitchChange}
+                        />
+                    </BasicReplaySettingsRow>
+                    {basicEndFocus.enabled && (
+                        <BasicReplaySettingsRow label="Duration (s)" iconSpacer>
+                            <WaNumberInput
+                                id="basic-replay-end-focus-duration"
+                                className="basic-replay-end-focus-duration lgs--short-input"
+                                appearance="filled"
+                                size="s"
+                                type="number"
+                                aria-label="End Focus duration in seconds"
+                                min={1}
+                                max={5}
+                                step={1}
+                                value={basicEndFocus.duration}
+                                onInput={handleBasicEndFocusDurationInput}
+                            />
+                        </BasicReplaySettingsRow>
+                    )}
+                </>
+            )}
+        </div>
+    )
+
+    const basicSettingsDrawer = basicPreparation && basicSettingsDrawerOpen ? (
+        <WaDrawer
+            id={BASIC_REPLAY_SETTINGS_DRAWER}
+            open={true}
+            resize={true}
+            placement={drawerPlacement}
+            className="basic-replay-settings-drawer wa-theme-lgs1920"
+            onWaAfterHide={handleBasicSettingsDrawerAfterHide}
+        >
+            <span slot="label">{'Basic Replay settings'}</span>
+            <PanelActions/>
+            <div className="basic-replay-settings-drawer__content">
+                <LGSScrollbars autoHide={false}>{basicSettingsContent}</LGSScrollbars>
+            </div>
+            <DrawerFooter slot="footer"/>
+        </WaDrawer>
+    ) : null
+
+    const basicSettingsDrawerPortal = basicSettingsDrawer && __.ui.drawerManager.drawerRoot
+        ? createPortal(basicSettingsDrawer, __.ui.drawerManager.drawerRoot)
+        : basicSettingsDrawer
+    const replaySettingsLabel = basicPreparation ? 'Basic Replay settings' : 'Video Settings'
+    const replaySettingsExpanded = basicPreparation
+        ? basicSettingsDrawerOpen
+        : openPopup === COMPACT_SETTINGS_POPUP
+
     const replaySettingsTrigger = compactReplaySettings ? (
         <>
             <div className="basic-replay-settings-summary" aria-label="Current Replay settings">
-                <WaTooltip for={replaySettingsTriggerId} placement="top">{'Video Settings'}</WaTooltip>
-                <WaButton
-                    id={replaySettingsTriggerId}
-                    size="s"
-                    variant="brand"
-                    appearance={openPopup === BASIC_SETTINGS_POPUP ? 'outlined' : 'plain'}
-                    aria-label="Video Settings"
-                    aria-expanded={openPopup === BASIC_SETTINGS_POPUP}
-                    onClick={() => togglePopup(BASIC_SETTINGS_POPUP)}
-                >
-                    <WaIcon name="gear" variant="regular" label=""/>
-                </WaButton>
-                <span className="basic-replay-settings-summary__separator" aria-hidden="true"/>
+                {!basicPreparation && (
+                    <>
+                        <WaTooltip for={replaySettingsTriggerId} placement="top">{replaySettingsLabel}</WaTooltip>
+                        <WaButton
+                            id={replaySettingsTriggerId}
+                            size="s"
+                            variant="brand"
+                            appearance={replaySettingsExpanded ? 'outlined' : 'plain'}
+                            aria-label={replaySettingsLabel}
+                            aria-expanded={replaySettingsExpanded}
+                            onClick={() => togglePopup(COMPACT_SETTINGS_POPUP)}
+                        >
+                            <WaIcon name="sliders" variant="regular" label=""/>
+                        </WaButton>
+                        <span className="basic-replay-settings-summary__separator" aria-hidden="true"/>
+                    </>
+                )}
                 <span className="basic-replay-settings-summary__item">
                     <WaIcon name="crop-simple" variant="regular" label=""/>
                     <span>{currentRatio?.label ?? video.ratio}</span>
@@ -442,9 +618,9 @@ export const VideoRecordingSettingsToolbar = memo(({
                     </span>
                 )}
             </div>
-            <LGSPopup
+            {!basicPreparation && <LGSPopup
                 anchor={replaySettingsTriggerId}
-                active={openPopup === BASIC_SETTINGS_POPUP}
+                active={openPopup === COMPACT_SETTINGS_POPUP}
                 onRequestClose={() => setOpenPopup(null)}
                 placement="bottom"
                 flip
@@ -462,24 +638,6 @@ export const VideoRecordingSettingsToolbar = memo(({
                                                            unifiedChoices
                                                            mainTheme={mainTheme}/>
                     </div>
-                    {basicPreparation && (
-                        <div className="basic-replay-settings-row basic-replay-settings-row--preparation" role="group" aria-label="Replay preparation options">
-                            <div className="basic-replay-dry-run-control half-width">
-                                <WaSwitch
-                                    className="basic-replay-dry-run-switch"
-                                    size="xs"
-                                    label-at-start width-auto
-                                    checked={dryRunEnabled}
-                                    onChange={handleDryRunChange}
-                                >
-                                    <WaIcon name="bolt" variant="regular" label=""/>
-                                    {'\u00a0'}
-                                    {'Dry run'}
-                                </WaSwitch>
-                            </div>
-                            <BasicReplaySamplingSettings/>
-                        </div>
-                    )}
                     {!dryRunEnabled && (
                         <div className="basic-replay-settings-row basic-replay-settings-row--label-and-controls" role="group" aria-label="Video quality">
                             <WaIcon name="ranking-star" variant="regular" label=""/>
@@ -491,68 +649,13 @@ export const VideoRecordingSettingsToolbar = memo(({
                                                                mainTheme={mainTheme}/>
                         </div>
                     )}
-                    {basicPreparation && (
-                        <BasicReplayAppearanceSettings/>
-                    )}
-                    {basicPreparation && (
-                        <BasicReplayPOISettings/>
-                    )}
-                    {basicPreparation && (
-                        <div className="basic-replay-settings-row basic-replay-end-focus-row" role="group" aria-label="End Focus Duration">
-                            <WaIcon name="rotate" variant="regular" label=""/>
-                            <div className="basic-replay-end-focus-controls">
-                                <WaSwitch
-                                    className="basic-replay-end-focus-switch"
-                                    size="xs"
-                                    label-at-start width-auto
-                                    checked={basicEndFocus.enabled}
-                                    onChange={handleBasicEndFocusSwitchChange}
-                                >
-                                    {'End Focus'}
-                                </WaSwitch>
-                                {basicEndFocus.enabled && (
-                                    <WaNumberInput
-                                        className="basic-replay-end-focus-duration lgs--short-input"
-                                        appearance="filled"
-                                        size="s"
-                                        type="number"
-                                        label="Duration (s)"
-                                        label-at-start
-                                        min={1}
-                                        max={5}
-                                        step={1}
-                                        value={basicEndFocus.duration}
-                                        onInput={handleBasicEndFocusDurationInput}
-                                    />
-                                )}
-                            </div>
-                        </div>
-                    )}
-                    {basicPreparation && (
-                        <div className="basic-replay-settings-row basic-replay-settings-row--label-and-controls" role="group" aria-label="Duration">
-                            <WaIcon name="clock" variant="regular" label=""/>
-                            <span className="basic-replay-settings-row__label">{'Duration'}</span>
-                            <div className="basic-replay-duration-buttons">
-                                {BASIC_REPLAY_DURATIONS.map(duration => (
-                                    <WaButton key={duration}
-                                              className={`video-choice-button${basicDuration === duration ? ' is-selected' : ''}`}
-                                              size="s"
-                                              variant="neutral"
-                                              appearance={basicDuration === duration ? 'outlined' : 'plain'}
-                                              aria-pressed={basicDuration === duration ? 'true' : 'false'}
-                                              onClick={() => handleBasicDurationChange(duration)}>
-                                        {duration === 60 ? '1 min' : `${duration}s`}
-                                    </WaButton>
-                                ))}
-                            </div>
-                        </div>
-                    )}
                 </div>
-            </LGSPopup>
+            </LGSPopup>}
         </>
     ) : null
 
     return (
+        <>
         <div className={`video-recording-settings-toolbar lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal ${mainTheme ? 'wa-theme-lgs1920' : 'wa-theme-lgs1920-on-map'}${layout === 'timeline-drawer' ? ' video-recording-settings-toolbar--timeline-drawer' : ''}`}>
             <div className="video-recording-settings-menu" role="toolbar" aria-label="Video recording settings">
                 {showVideoOptions && !basicPreparation ? <WaButton
@@ -641,6 +744,26 @@ export const VideoRecordingSettingsToolbar = memo(({
                     </>
                 ) : null}
 
+                {showActions && basicPreparation ? (
+                    <>
+                        <WaTooltip for="basic-replay-open-settings-toolbar" placement="top">
+                            {'Replay settings'}
+                        </WaTooltip>
+                        <WaButton
+                            id="basic-replay-open-settings-toolbar"
+                            size="s"
+                            variant="brand"
+                            appearance="plain"
+                            className="video-recording-settings-action video-recording-settings-replay"
+                            aria-label="Replay settings"
+                            aria-expanded={basicSettingsDrawerOpen}
+                            onClick={() => __.ui.drawerManager.toggle(BASIC_REPLAY_SETTINGS_DRAWER)}
+                        >
+                            <WaIcon name="sliders" variant="regular" label=""/>
+                        </WaButton>
+                    </>
+                ) : null}
+
                 {showActions && compactReplaySettings ? (
                     <>
                         <WaTooltip for="video-start-recording" placement="top">
@@ -668,21 +791,23 @@ export const VideoRecordingSettingsToolbar = memo(({
 
                 {showActions ? (
                     <>
-                        <WaTooltip for="video-cancel-editing" placement="top">{'Cancel'}</WaTooltip>
+                        <WaTooltip for="video-cancel-editing" placement="top">{UI_ACTIONS.cancel.label}</WaTooltip>
                         <WaButton
                             id="video-cancel-editing"
                             size="s"
                             appearance="plain"
                             className="video-recording-settings-cancel"
-                            aria-label="Cancel"
+                            aria-label={UI_ACTIONS.cancel.label}
                             onClick={() => void handleCancel()}
                         >
-                            <WaIcon name="xmark" variant="regular" label=""/>
-                            <span>{'Cancel'}</span>
+                            <WaIcon {...UI_ACTIONS.cancel.icon} label=""/>
+                            <span>{UI_ACTIONS.cancel.label}</span>
                         </WaButton>
                     </>
                 ) : null}
             </div>
         </div>
+        {basicSettingsDrawerPortal}
+        </>
     )
 })

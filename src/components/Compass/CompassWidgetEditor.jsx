@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-20
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@ import {
     ColorElement,
 }                                                                   from '@Components/MainUI/widgets/editor/elements/ColorElement'
 import { COMPASS_FLAT, COMPASS_FULL, COMPASS_LIGHT, COMPASS_MODERN } from '@Core/constants'
+import { UI_ACTIONS }                                             from '@Core/ui/metadata/uiActionCatalog'
 import { WaButton, WaCard, WaDivider, WaIcon, WaOption, WaSelect } from '@awesome.me/webawesome/dist/react'
 import { colord, extend }                                             from 'colord'
 import namesPlugin                                                    from 'colord/plugins/names'
@@ -304,8 +305,8 @@ export const CompassWidgetEditor = ({entity, syncGlobalCompass = false}) => {
                     </div>
                     <div className="drawer-horizontal-element">
                         <div className="widget-editor-reset-menus">
-                            <WaButton size="s" appearance="plain" onClick={handleReset} aria-label="Reset">
-                                <WaIcon size="s" variant="regular" name="arrow-rotate-left"/>
+                            <WaButton size="s" appearance="plain" onClick={handleReset} aria-label={UI_ACTIONS.reset.label}>
+                                <WaIcon size="s" {...UI_ACTIONS.reset.icon}/>
                             </WaButton>
                         </div>
                     </div>

@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { DATABASE_SYNC_STATUS }                                           from '@Core/db/DatabaseSyncManager'
+import { UI_ACTIONS, UI_ICONS }                                            from '@Core/ui/metadata/uiActionCatalog'
 import {
     UIToast,
 }                                                                         from '@Utils/UIToast'
@@ -50,7 +51,7 @@ const getSyncStatusLabel = syncState => {
 
 const ResolveSyncConflictMessage = () => (
     <WaCallout variant="danger" appearance="filled-outlined">
-        <WaIcon slot="icon" name="triangle-exclamation" variant="regular"/>
+        <WaIcon slot="icon" {...UI_ICONS.warning}/>
         {'This will overwrite the linked profile folder with the current local profile data.'}
     </WaCallout>
 )
@@ -145,14 +146,14 @@ const IonTokenEditor = ({activeMode, initialToken}) => {
 
             <div className="ion-token-settings-actions">
                 <WaButton variant="brand" appearance="outlined" onClick={handleSave} disabled={!canSave}>
-                    <WaIcon slot="start" name="check" variant="regular"/>
-                    {'Save token'}
+                    <WaIcon slot="start" {...UI_ACTIONS.save.icon}/>
+                    {`${UI_ACTIONS.save.label} token`}
                 </WaButton>
 
                 <WaButton variant="neutral" appearance="outlined" onClick={handleClear}
                           disabled={activeMode !== 'personal'}>
-                    <WaIcon slot="start" name="trash" variant="regular"/>
-                    {'Remove token'}
+                    <WaIcon slot="start" {...UI_ACTIONS.remove.icon}/>
+                    {`${UI_ACTIONS.remove.label} token`}
                 </WaButton>
             </div>
         </div>

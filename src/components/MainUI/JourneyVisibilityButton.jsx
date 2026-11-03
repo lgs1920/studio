@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-08
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { UPDATE_JOURNEY_SILENTLY }     from '@Core/constants'
+import { UI_ACTIONS }                  from '@Core/ui/metadata/uiActionCatalog'
 import { Utils }                       from '@Editor/Utils'
 import { SlButton, SlTooltip }         from '@shoelace-style/shoelace/dist/react'
 import { WaIcon }                      from '@awesome.me/webawesome/dist/react'
@@ -39,10 +40,10 @@ export const JourneyVisibilityButton = (props) => {
                 <SlButton size={'small'} className="square-button" id={'focus-on-current-journey'}
                           onClick={setJourneyVisibility}>
                     {!journeyVisible &&
-                        <WaIcon slot="prefix" name="eye" variant="regular"/>
+                        <WaIcon slot="prefix" {...UI_ACTIONS.show.icon}/>
                     }
                     {journeyVisible &&
-                        <WaIcon slot="prefix" name="eye-slash" variant="regular"/>
+                        <WaIcon slot="prefix" {...UI_ACTIONS.hide.icon}/>
                     }
                 </SlButton>
             </SlTooltip>

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-24
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,12 +19,13 @@ import {createPolylineEndCapImage, getPolylineEndCapRotation} from '@Utils/cesiu
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {normalizeReplaySampleCount} from './ReplayModeSettings'
 import {
-    ArcType, CallbackProperty, Cartesian3, Cartographic, Color, CustomDataSource, HeightReference,
-    ColorMaterialProperty, HorizontalOrigin, PolylineGlowMaterialProperty, VerticalOrigin,
+    ArcType, CallbackProperty, Cartesian3, Cartographic, Color, CustomDataSource, Event, HeightReference,
+    ColorMaterialProperty, HorizontalOrigin, Material, PolylineGlowMaterialProperty, VerticalOrigin,
 } from 'cesium'
 import {
-    getJourneyReplaySettings, normalizeJourneyReplayProgressionStyle, normalizeJourneyReplayTrace, REPLAY_EFFECT_NEON,
-    REPLAY_EFFECT_NONE, REPLAY_MIN_TRACE_WIDTH, REPLAY_TRACE_MODE_FULL,
+    BASIC_REPLAY_COLOR_MODE_SIDE_BY_SIDE, getJourneyReplaySettings, normalizeJourneyReplayProgressionStyle,
+    normalizeJourneyReplayTrace, REPLAY_EFFECT_NEON, REPLAY_EFFECT_NONE, REPLAY_MIN_TRACE_WIDTH,
+    REPLAY_TRACE_MODE_FULL,
 } from './JourneyReplayProgressionStyle'
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
@@ -56,6 +57,70 @@ const REPLAY_EFFECT_NEON_FILL_SPREAD_METERS = 3
 const REPLAY_EFFECT_GLOW_FILL_ALPHA = 0.55
 const REPLAY_EFFECT_NEON_FILL_ALPHA = 0.45
 const REPLAY_EFFECT_EDGE_BLEND = 0.75
+const SIDE_BY_SIDE_MATERIAL_TYPE = 'LGS1920ReplaySideBySideTrace'
+const SIDE_BY_SIDE_MATERIAL_SOURCE = `
+czm_material czm_getMaterial(czm_materialInput materialInput)
+{
+    czm_material material = czm_getDefaultMaterial(materialInput);
+    vec4 laneColor = materialInput.st.t < 0.5 ? firstColor : secondColor;
+    material.diffuse = laneColor.rgb;
+    material.alpha = laneColor.a;
+    return material;
+}`
+let sideBySideMaterialTemplate = null
+
+const registerSideBySideMaterial = () => {
+    if (!sideBySideMaterialTemplate) {
+        sideBySideMaterialTemplate = new Material({
+            fabric: {
+                type: SIDE_BY_SIDE_MATERIAL_TYPE,
+                uniforms: {
+                    firstColor: Color.WHITE,
+                    secondColor: Color.WHITE,
+                },
+                source: SIDE_BY_SIDE_MATERIAL_SOURCE,
+            },
+            translucent() {
+                return this.uniforms.firstColor.alpha < 1 || this.uniforms.secondColor.alpha < 1
+            },
+        })
+    }
+}
+
+/** Define two immutable color lanes across the width of a Cesium polyline. */
+class ReplaySideBySideMaterialProperty {
+    constructor(firstColor, secondColor) {
+        this.firstColor = Color.clone(firstColor)
+        this.secondColor = Color.clone(secondColor)
+        this.styleKey = `${this.firstColor.toCssColorString()}|${this.secondColor.toCssColorString()}`
+        this._definitionChanged = new Event()
+    }
+
+    get isConstant() {
+        return true
+    }
+
+    get definitionChanged() {
+        return this._definitionChanged
+    }
+
+    getType() {
+        registerSideBySideMaterial()
+        return SIDE_BY_SIDE_MATERIAL_TYPE
+    }
+
+    getValue(_time, result = {}) {
+        result.firstColor = Color.clone(this.firstColor, result.firstColor)
+        result.secondColor = Color.clone(this.secondColor, result.secondColor)
+        return result
+    }
+
+    equals(other) {
+        return this === other || other instanceof ReplaySideBySideMaterialProperty
+            && this.styleKey === other.styleKey
+    }
+}
+
 const cssColor = (value, fallback) => {
     if (value instanceof Color) {
         return value
@@ -121,6 +186,8 @@ export class JourneyReplayCesiumRenderer {
     #traceVisible = true
     #renderTarget = null
     #maxRenderPoints = MAX_RENDER_POINTS
+    #sideBySideMaterialKey = null
+    #sideBySideMaterial = null
 
     constructor(options = {}) {
         this.#options = options
@@ -579,6 +646,7 @@ export class JourneyReplayCesiumRenderer {
     #traceStyleKey = (style = this.#style()) => {
         return [
             style.traceMode,
+            style.colorMode,
             style.effectMode,
             style.fillColor?.toCssColorString?.(),
             style.fillWidth,
@@ -1009,9 +1077,11 @@ export class JourneyReplayCesiumRenderer {
             REPLAY_EFFECT_EDGE_BLEND,
             new Color(),
         ).withAlpha(fill.opacity)
+        const colorMode = basicMode ? settings.basic?.presentation?.colorMode : null
 
         return {
             traceMode: trace.mode,
+            colorMode,
             fillColor: cssColor(fillColor, Color.fromCssColorString(DEFAULT_COLOR)).withAlpha(fill.opacity),
             cursorColor: cssColor(fillColor, Color.fromCssColorString(DEFAULT_COLOR)).withAlpha(Math.max(0.85, fill.opacity)),
             borderColor: cssColor(borderColor, Color.WHITE).withAlpha(border.opacity),
@@ -1453,6 +1523,7 @@ export class JourneyReplayCesiumRenderer {
             glowPower ?? '',
             taperPower ?? '',
             material?.toCssColorString?.() ?? '',
+            material?.styleKey ?? '',
         ].join(':')
     }
 
@@ -1850,6 +1921,99 @@ export class JourneyReplayCesiumRenderer {
         })
     }
 
+    #sideBySideMaterialForStyle = style => {
+        const styleKey = `${style.borderColor.toCssColorString()}|${style.fillColor.toCssColorString()}`
+        if (styleKey !== this.#sideBySideMaterialKey) {
+            this.#sideBySideMaterialKey = styleKey
+            this.#sideBySideMaterial = new ReplaySideBySideMaterialProperty(style.borderColor, style.fillColor)
+        }
+        return this.#sideBySideMaterial
+    }
+
+    #upsertSideBySideTrace = ({key, id, name, positions, positionsFactory, style}) => {
+        const useDynamicGeometry = typeof positionsFactory === 'function'
+        const upsert = options => useDynamicGeometry
+            ? this.#upsertDynamicPolyline({...options, positionsFactory})
+            : this.#upsertPolyline({...options, positions})
+        const activeKeys = new Set([key])
+
+        if (style.effectMode !== REPLAY_EFFECT_NONE) {
+            const glowKey = `${key}#glow`
+            activeKeys.add(glowKey)
+            upsert({
+                key: glowKey,
+                id: `${id}#glow`,
+                name: `${name} glow`,
+                material: this.#effectMaterial(style, style.effectFillColor, 'border'),
+                width: this.#traceWidth(style, style.fillWidth, 'border'),
+                zIndex: PROGRESS_Z_INDEX_BORDER,
+            })
+        }
+
+        upsert({
+            key,
+            id,
+            name,
+            material: this.#sideBySideMaterialForStyle(style),
+            width: this.#traceWidth(style, style.fillWidth + (style.borderWidth * 2)),
+            zIndex: PROGRESS_Z_INDEX_FILL,
+        })
+        return activeKeys
+    }
+
+    #updateSideBySideCompletedLines = (sample, {staticGeometry = false, style}) => {
+        const smoothedPositions = this.#smoothedGuideEntries()
+        this.#invalidateDynamicTraceFrames()
+        const activeKeys = new Set()
+
+        if (smoothedPositions.length >= 2) {
+            const replayStore = globalThis.lgs?.stores?.replay
+            const playing = replayStore?.playing === true && replayStore?.recordingSync !== true
+            let positions = null
+            let positionsFactory = null
+
+            if (staticGeometry) {
+                this.#completedTracePositionsFactory = null
+                positions = this.#completedSmoothedPositions()
+            } else if (playing) {
+                this.#completedTracePositionsFactory = this.#liveCompletedSmoothedPositions
+                positionsFactory = this.#liveCompletedSmoothedPositions
+            } else {
+                this.#completedTracePositionsFactory = this.#completedSmoothedPositions
+                positionsFactory = this.#completedSmoothedPositions
+            }
+
+            if (positionsFactory || positions.length >= 2) {
+                this.#upsertSideBySideTrace({
+                    key: 'smoothed#side-by-side',
+                    id: `${this.#source.name}#completed#smoothed#side-by-side`,
+                    name: 'JourneyReplay completed track',
+                    positions,
+                    positionsFactory,
+                    style,
+                }).forEach(key => activeKeys.add(key))
+            }
+        } else {
+            this.#completedTracePositionsFactory = null
+            this.#sampler.completedSegmentsAt(sample).forEach(segment => {
+                const positions = this.#groundPositionsFromCoordinates(segment.coordinates ?? [])
+                if (positions.length < 2) {
+                    return
+                }
+
+                this.#upsertSideBySideTrace({
+                    key: `${segment.key}#side-by-side`,
+                    id: `${this.#source.name}#completed#${segment.key}#side-by-side`,
+                    name: 'JourneyReplay completed track',
+                    positions,
+                    style,
+                }).forEach(key => activeKeys.add(key))
+            })
+        }
+
+        this.#hideLineEntities(key => !key.startsWith(REMAINING_KEY_PREFIX) && !activeKeys.has(key))
+    }
+
     #updateCompletedLines = (sample, {staticGeometry = false} = {}) => {
         const source = this.#ensureSource()
         if (!source || !this.#sampler) {
@@ -1857,6 +2021,11 @@ export class JourneyReplayCesiumRenderer {
         }
 
         const style = this.#style()
+        if (style.colorMode === BASIC_REPLAY_COLOR_MODE_SIDE_BY_SIDE) {
+            this.#updateSideBySideCompletedLines(sample, {staticGeometry, style})
+            return
+        }
+
         const smoothedPositions = this.#smoothedGuideEntries()
         this.#invalidateDynamicTraceFrames()
         if (smoothedPositions.length >= 2) {

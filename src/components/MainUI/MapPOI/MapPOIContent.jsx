@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,6 +28,7 @@ import {
 import {poiCaptureSurfaceStore, usePOICaptureSurface} from '@Components/MainUI/MapPOI/poiCaptureSurfaceStore'
 import { ICONS_PATH, WIDGET_SYSTEM_FONT_STACK }     from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
+import { UI_ICONS }                                from '@Core/ui/metadata/uiActionCatalog'
 import { POIUtils }                                from '@Utils/cesium/POIUtils'
 import { poiCanvasImageCache }                      from '@Components/MainUI/MapPOI/poiCanvasImageCache'
 import {getPOICanvasRenderPriority} from '@Components/MainUI/MapPOI/poiCanvasRenderPriority'
@@ -1064,8 +1065,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                                 {point.location && displayLocation && (
                                     <>
                                         <div className="poi-location" id={`${tooltipIdPrefix}-location`}>
-                                            <WaIcon name="location-dot"
-                                                    variant="regular"
+                                            <WaIcon {...UI_ICONS.location}
                                                     onWaLoad={handlePOIIconLoad}
                                             />
                                             <span>{point.location}</span>

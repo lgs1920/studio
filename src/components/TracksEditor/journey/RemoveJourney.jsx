@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-09
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { JOURNEY_WIDGETS }                              from '@Core/constants'
 import { hasActiveRemoveJourneyDialog }                 from '@Core/events/shortcutBlockers'
+import { UI_ACTIONS }                                    from '@Core/ui/metadata/uiActionCatalog'
 import {
     WidgetDynamicRenderer,
 }                                                       from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
@@ -161,13 +162,13 @@ export const RemoveJourney = (props) => {
 
     return (
         <>
-            <WaTooltip placement="bottom" for={removeButtonId}>{'Remove journey'}</WaTooltip>
+            <WaTooltip placement="bottom" for={removeButtonId}>{`${UI_ACTIONS.remove.label} journey`}</WaTooltip>
             <WaButton size="s"
                       id={removeButtonId}
                       variant="brand"
                       appearance="plain"
                       onClick={toggleRemoveDialog}>
-                <WaIcon name="trash-can"/>
+                <WaIcon {...UI_ACTIONS.remove.icon}/>
             </WaButton>
 
 
@@ -180,8 +181,8 @@ export const RemoveJourney = (props) => {
                      distance={lgs.gutter.xs}
             >
                 <WaCard className="lgs--popup-in-drawer lgs--popup-in-drawer-small lgs-slide-down" appearance="filled">
-                    <WaButton appearance="plain" slot="header-actions" onClick={hideRemoveDialog}>
-                        <WaIcon size="s" name="xmark" variant="regular"/>
+                    <WaButton appearance="plain" slot="header-actions" aria-label={UI_ACTIONS.close.label} onClick={hideRemoveDialog}>
+                        <WaIcon size="s" {...UI_ACTIONS.close.icon}/>
                     </WaButton>
 
                     <span slot="header">{'Remove journey'}</span>
@@ -190,11 +191,11 @@ export const RemoveJourney = (props) => {
                     <div slot="footer">
                         <div className="lgs--popup-in-drawer-footer">
                     <WaButton variant="neutral" appearance="outlined" size={'s'} onClick={hideRemoveDialog}>
-                                <WaIcon name="xmark"/> {'No'}
+                                <WaIcon {...UI_ACTIONS.cancel.icon}/> {'No'}
                             </WaButton>
                     <WaButton variant="danger" appearance="filled-outlined" size={'s'}
                                       onClick={removeJourney}>
-                                <WaIcon name="trash-can"/> {'Yes'}
+                                <WaIcon {...UI_ACTIONS.delete.icon}/> {'Yes'}
                             </WaButton>
                         </div>
                     </div>

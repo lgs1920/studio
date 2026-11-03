@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-10
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -121,6 +121,7 @@
 }
 
 .video-recording-settings-menu .video-recorder-start-recording wa-icon,
+.video-recording-settings-menu .video-recording-settings-playback wa-icon,
 .video-recording-settings-menu .video-recording-settings-replay wa-icon {
     font-size: var(--lgs-font-size-m);
 }
@@ -183,6 +184,309 @@
     height: auto;
     max-width: calc(100vw - 2 * var(--lgs-gutter-s));
     min-width: 0;
+    box-shadow: none;
+}
+
+.video-recording-settings-popup--basic.wa-theme-lgs1920-on-map {
+    box-shadow: none !important;
+}
+
+.basic-replay-settings-drawer::part(body) {
+    display: flex;
+    overflow: hidden;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.basic-replay-settings-drawer__content {
+    display: flex;
+    overflow: hidden;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: var(--lgs-gutter-s);
+}
+
+.basic-replay-settings-drawer__content .lgs-scrollbars-container {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    padding: 0;
+    box-shadow: none;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row--split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--lgs-gutter-s);
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__legend {
+    display: flex;
+    align-items: flex-start;
+    align-self: start;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__legend > wa-icon {
+    flex: 0 0 var(--lgs-dimension-s);
+    font-size: var(--lgs-font-size-s);
+    text-align: center;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__legend > span {
+    min-width: 0;
+    text-align: left;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__legend-icon-spacer {
+    flex: 0 0 var(--lgs-dimension-s);
+    width: var(--lgs-dimension-s);
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__value {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: nowrap;
+    width: 100%;
+    min-width: 0;
+    gap: var(--lgs-gutter-xxs);
+    container-name: basic-replay-setting-value;
+    container-type: inline-size;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__value--dry-run {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-start-recording {
+    flex: 0 0 auto;
+    margin-inline-start: auto;
+    white-space: nowrap;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__value > * {
+    min-width: 0;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-core {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .crop-ratio-popup-menu,
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .video-preset-toolbar-embedded,
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .video-preset-toolbar-embedded .video-preset-widget {
+    box-sizing: border-box;
+    width: max-content;
+    min-width: 0;
+    max-width: 100%;
+    margin-inline-start: 0;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .crop-ratio-popup-menu {
+    box-shadow: none !important;
+    filter: none;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .crop-ratio-popup-menu ul,
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .video-preset-toolbar-embedded .video-choice-buttons,
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-duration-buttons {
+    box-sizing: border-box;
+    flex-wrap: nowrap;
+    width: max-content;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0;
+    justify-content: flex-start;
+    margin-inline-start: 0;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .video-preset-toolbar-embedded .video-preset-widget {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .crop-ratio-popup-menu ul {
+    gap: var(--lgs-gutter-xxs);
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .crop-ratio-popup-menu li {
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 0;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-duration-buttons {
+    flex: 0 0 auto;
+}
+
+@container basic-replay-setting-value (max-width: 340px) {
+    .basic-replay-settings-drawer .video-recording-settings-popup--basic .crop-ratio-popup-menu,
+    .basic-replay-settings-drawer .video-recording-settings-popup--basic .video-preset-toolbar-embedded,
+    .basic-replay-settings-drawer .video-recording-settings-popup--basic .video-preset-toolbar-embedded .video-preset-widget {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .basic-replay-settings-drawer .video-recording-settings-popup--basic .crop-ratio-popup-menu ul,
+    .basic-replay-settings-drawer .video-recording-settings-popup--basic .video-preset-toolbar-embedded .video-choice-buttons,
+    .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-duration-buttons {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        gap: var(--lgs-gutter-xxs);
+        margin-inline-start: 0;
+        padding: 0;
+    }
+
+    .basic-replay-settings-drawer .video-recording-settings-popup--basic .crop-ratio-popup-menu li {
+        display: flex;
+        min-width: 0;
+        width: 100%;
+    }
+
+    .basic-replay-settings-drawer .video-recording-settings-popup--basic .crop-ratio-popup-menu wa-button,
+    .basic-replay-settings-drawer .video-recording-settings-popup--basic .video-preset-toolbar-embedded .video-choice-buttons wa-button,
+    .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-duration-buttons wa-button {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-poi-settings {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--lgs-gutter-xs);
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__value--poi-animation {
+    justify-content: space-between;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-duration-buttons wa-button::part(base),
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .crop-ratio-popup-menu wa-button::part(base) {
+    height: var(--wa-form-control-height) !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__controls {
+    align-items: stretch;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__control-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__control-row:first-child {
+    justify-content: space-between;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__control-row wa-tooltip {
+    display: contents;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__sizes::part(form-control-input),
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__border-mode::part(form-control-input) {
+    flex-wrap: wrap;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-divider {
+    width: 100%;
+    margin-block: var(--lgs-gutter-xxs);
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-end-focus-switch {
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic :is(.basic-replay-poi-settings__duration, .basic-replay-end-focus-duration) {
+    box-shadow: none !important;
+    filter: none !important;
+
+    &::part(number-input),
+    &::part(base),
+    &::part(input),
+    &::part(stepper) {
+        box-shadow: none !important;
+        filter: none !important;
+    }
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-sampling-control {
+    width: 100%;
+    min-width: 0;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-sampling__select {
+    width: 100%;
+    min-width: 0;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-sampling__select::part(form-control-input) {
+    flex: 1 1 auto;
+    width: 100% !important;
+    margin-left: 0 !important;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-poi-settings__select {
+    flex: 1 1 auto;
+    width: 100%;
+    margin-inline-start: 0;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__value--poi-animation .basic-replay-poi-settings__switch {
+    margin: 0;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic.wa-theme-lgs1920 .basic-replay-appearance :is(.basic-replay-appearance__border-mode, .basic-replay-appearance__sizes) wa-radio {
+    color: var(--wa-color-text-normal) !important;
+    border-color: var(--wa-color-surface-border) !important;
+    background-color: var(--wa-color-surface-raised) !important;
+    background-image: none !important;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic.wa-theme-lgs1920 .basic-replay-appearance :is(.basic-replay-appearance__border-mode, .basic-replay-appearance__sizes) wa-radio.is-selected {
+    color: var(--wa-color-text-normal) !important;
+    border-color: var(--wa-color-brand-border-normal) !important;
+    border-width: 2px !important;
+    background-color: var(--wa-color-surface-raised) !important;
+    background-image: none !important;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic.wa-theme-lgs1920 .basic-replay-appearance :is(.basic-replay-appearance__border-mode, .basic-replay-appearance__sizes) wa-radio:not(.is-selected):hover {
+    color: var(--wa-color-brand-on-normal) !important;
+    border-color: var(--wa-color-brand-border-normal) !important;
+    background-color: var(--wa-color-brand-fill-quiet) !important;
 }
 
 .video-recording-settings-popup--basic .basic-replay-settings-row {
@@ -214,20 +518,6 @@
 
 .video-recording-settings-popup--basic .basic-replay-settings-row--label-and-controls > :last-child {
     justify-self: end;
-}
-
-.video-recording-settings-popup--basic .basic-replay-end-focus-row {
-    display: grid;
-    grid-template-columns: var(--lgs-dimension-s) minmax(0, 1fr);
-    align-items: center;
-}
-
-.video-recording-settings-popup--basic .basic-replay-end-focus-controls {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) max-content;
-    align-items: center;
-    min-width: 0;
-    gap: var(--lgs-gutter-xxs);
 }
 
 .video-recording-settings-popup--basic .basic-replay-end-focus-switch {
@@ -431,6 +721,7 @@
     & .basic-replay-appearance__colors {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: var(--lgs-gutter-xs);
     }
 
@@ -438,25 +729,27 @@
         margin-top: 0;
     }
 
-    & .basic-replay-appearance__border-mode {
-        display: flex;
-        align-items: center;
+    & :is(.basic-replay-appearance__border-mode, .basic-replay-appearance__sizes) {
+        flex: 0 1 auto;
+        min-width: 0;
+        margin: 0;
     }
 
-    & .basic-replay-appearance__border-mode::part(form-control-input) {
+    & :is(.basic-replay-appearance__border-mode, .basic-replay-appearance__sizes)::part(form-control-input) {
         display: flex;
         align-items: center;
+        justify-content: flex-start;
         gap: var(--lgs-gutter-xxs);
     }
 
-    & .basic-replay-appearance__border-mode wa-radio {
+    & :is(.basic-replay-appearance__border-mode, .basic-replay-appearance__sizes) wa-radio {
         display: flex;
-        flex: 0 0 calc(var(--lgs-dimension-s) + var(--lgs-gutter-xxs));
+        flex: 0 0 2.5rem;
         align-items: center;
         justify-content: center;
-        width: calc(var(--lgs-dimension-s) + var(--lgs-gutter-xxs));
-        height: calc(var(--lgs-dimension-s) + var(--lgs-gutter-xxs));
-        min-height: calc(var(--lgs-dimension-s) + var(--lgs-gutter-xxs));
+        width: 2.5rem;
+        height: var(--wa-form-control-height);
+        min-height: var(--wa-form-control-height);
         padding: 0;
         box-sizing: border-box;
         border-radius: var(--wa-border-radius-m) !important;
@@ -465,29 +758,15 @@
     }
 
     & .basic-replay-appearance__sizes {
-        margin-inline-start: auto;
         min-width: 0;
     }
 
-    & .basic-replay-appearance__sizes::part(form-control-input) {
-        gap: var(--lgs-gutter-xxs);
-    }
-
     & .basic-replay-appearance__sizes wa-radio {
-        flex: 0 0 2.5rem;
-        width: 2.5rem;
-        height: var(--wa-form-control-height);
-        min-height: var(--wa-form-control-height);
-        padding: var(--lgs-gutter-xs) 0;
-        box-sizing: border-box;
-        border-radius: var(--wa-border-radius-m) !important;
-        margin: 0;
-        border: 1px solid var(--wa-color-border-normal, var(--lgs-card-on-map-border-color));
 
         &.is-selected {
             border-color: var(--lgs-card-on-map-selected-border-color, var(--wa-color-brand-border-normal));
-            background-color: var(--lgs-card-on-map-selected-bg-color, var(--wa-color-brand-fill-quiet));
-            background-image: var(--lgs-card-on-map-selected-bg-image, none);
+            background-color: transparent;
+            background-image: none;
         }
     }
 
@@ -514,11 +793,21 @@
         height: 1.3125rem;
         overflow: visible;
     }
+
+    & .basic-replay-appearance__color-mode-preview,
+    & .basic-replay-appearance__side-by-side-preview {
+        display: block;
+        flex: 0 0 2.25rem;
+        width: 2.25rem;
+        height: var(--lgs-dimension-s);
+        overflow: visible;
+    }
 }
 
 .video-recording-settings-popup.wa-theme-lgs1920 .basic-replay-appearance wa-radio.is-selected {
     border-color: var(--wa-color-brand-border-normal);
-    background-color: var(--wa-color-brand-fill-quiet);
+    border-width: 2px;
+    background-color: transparent;
     background-image: none;
 }
 
@@ -531,8 +820,16 @@
 
 .video-recording-settings-popup--basic .basic-replay-appearance__border-mode wa-radio.is-selected {
     border-color: var(--lgs-card-on-map-selected-border-color) !important;
-    background-color: var(--lgs-card-on-map-selected-bg-color) !important;
-    background-image: var(--lgs-card-on-map-selected-bg-image) !important;
+    border-width: 2px !important;
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+.video-recording-settings-popup--basic .basic-replay-appearance__sizes wa-radio.is-selected {
+    border-color: var(--lgs-card-on-map-selected-border-color, var(--wa-color-brand-border-normal)) !important;
+    border-width: 2px !important;
+    background-color: transparent !important;
+    background-image: none !important;
 }
 
 .video-recording-settings-popup--basic .basic-replay-appearance__border-mode wa-radio:not(.is-selected):hover {
@@ -1084,6 +1381,14 @@
     color: var(--wa-color-text-normal);
     border-color: var(--wa-color-surface-border);
     background-color: var(--wa-color-surface-raised);
+    background-image: none;
+    box-shadow: var(--wa-shadow-m);
+}
+
+.video-preset-custom--basic-drawer.wa-theme-lgs1920 {
+    color: var(--wa-color-text-normal);
+    border-color: var(--wa-color-surface-border);
+    background-color: var(--wa-color-surface-lowered);
     background-image: none;
     box-shadow: var(--wa-shadow-m);
 }

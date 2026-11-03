@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-29
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,17 +16,13 @@
 
 import { CURRENT_POI }                             from '@Core/constants'
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
+import { UI_ACTIONS }                              from '@Core/ui/metadata/uiActionCatalog'
 import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { memo, useCallback }                       from 'react'
 import { useSnapshot } from 'valtio'
 
 /** @constant {string} FOCUS_TARGET - Target identifier for camera focus */
 const FOCUS_TARGET = 'target'
-/** @constant {string} TOOLTIP_STOP - Tooltip text when orbit is active */
-const TOOLTIP_STOP = 'Stop Orbit'
-/** @constant {string} TOOLTIP_START - Tooltip text when orbit is inactive */
-const TOOLTIP_START = 'Start Orbit'
-
 const finiteNumber = value => {
     if (value === null || value === undefined || value === '') {
         return null
@@ -142,7 +138,7 @@ export const OrbitButton = memo(({tooltip = 'top'}) => {
 
     return (<>
             <WaTooltip for="launch-orbit"
-                       placement={tooltip}>{rotate.running || panorama.active ? TOOLTIP_STOP : TOOLTIP_START}</WaTooltip>
+                       placement={tooltip}>{rotate.running || panorama.active ? UI_ACTIONS.stopOrbit.label : UI_ACTIONS.startOrbit.label}</WaTooltip>
             <WaButton
                 className="square-button orbit-button"
                 id="launch-orbit"
@@ -151,8 +147,7 @@ export const OrbitButton = memo(({tooltip = 'top'}) => {
                 variant={'brand'}
                 appearance="Filled"
             >
-                <WaIcon name="arrows-rotate" animation={rotate.running || panorama.active ? 'spin' : 'none'}
-                        variant="regular"/>
+                <WaIcon {...(rotate.running || panorama.active ? UI_ACTIONS.stopOrbit.icon : UI_ACTIONS.startOrbit.icon)}/>
             </WaButton>
         </>
     )

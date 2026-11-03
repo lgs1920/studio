@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-25
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,6 +31,7 @@ import {
     COORDINATE_INPUT_ERROR_DURATION_MS, COORDINATE_INPUT_NORMALIZE_DELAY_MS,
 }                                 from '@Core/constants'
 import { normalizePOIDisplaySettings } from '@Core/POIDisplaySettings'
+import { UI_ACTIONS, UI_ICONS } from '@Core/ui/metadata/uiActionCatalog'
 
 import {hasVisibleColorAlpha} from '@Utils/ColorUtils'
 import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAwesomeKits'
@@ -570,7 +571,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                       <>
                                                           <WaTooltip
                                                               for={`simulated-altitude-help-${id}`}>{'Enter the real altitude to replace the simulated value.'}</WaTooltip>
-                                                          <WaIcon id={`simulated-altitude-help-${id}`} name="circle-info" variant="regular"
+                                                          <WaIcon id={`simulated-altitude-help-${id}`} {...UI_ICONS.info}
                                                                   style={{marginLeft: '4px'}}/>
                                                       </>
                                                   ) : (
@@ -585,7 +586,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                            onClick={handleResetAltitude}
                                                                            disabled={!Number.isFinite(simulatedHeight)}
                                                                        >
-                                                                           <WaIcon name="arrow-rotate-left" variant="regular"/>
+                                                                           <WaIcon {...UI_ACTIONS.reset.icon}/>
                                                                        </WaButton>
                                                                    </>
                                                                ))}
@@ -678,7 +679,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                           onWaTabShow={handleTabShow}
                                                       >
                                                           <WaTab slot="nav" panel={`poi-edit-${id}`} active={sharedActiveTab === 'details'}>
-                                                              <WaIcon size="s" name="pen-to-square" variant="regular"/>{'Details'}
+                                                              <WaIcon size="s" {...UI_ACTIONS.poiDetails.icon}/>{UI_ACTIONS.poiDetails.label}
                                                           </WaTab>
                                                           <WaTab slot="nav" panel={`poi-content-${id}`} active={sharedActiveTab === 'content'}>
                                                               <WaIcon size="s" name="rectangle-list" variant="regular"/>{'Content'}
@@ -729,7 +730,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                       {location && (
                                                                           <>
                                                                               <div className="map-poi-location" id={`${tooltipIdPrefix}-location`}>
-                                                                                  <WaIcon name="location-dot" variant="regular"/>
+                                                                                  <WaIcon {...UI_ICONS.location}/>
                                                                                   <span>{location}</span>
                                                                               </div>
                                                                               <WaTooltip for={`${tooltipIdPrefix}-location`}>{location}</WaTooltip>

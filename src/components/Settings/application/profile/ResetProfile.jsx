@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-17
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WIDGETS_STORE } from '@Core/constants'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 
 import { WaButton, WaDetails, WaDivider, WaIcon, WaSwitch } from '@awesome.me/webawesome/dist/react'
 import { useSnapshot }                                      from 'valtio/index'
@@ -108,7 +109,7 @@ export const ResetProfile = () => {
     return (
         <WaDetails small className={'lgs--details-hoverable'} name="profile-tools">
             <span slot="summary">
-                <WaIcon name="arrows-rotate" variant="regular"/> {'Profile Reset'}
+                <WaIcon {...UI_ACTIONS.resetProfile.icon}/> {'Profile Reset'}
             </span>
             <div className="manage-profile-ui">
                 <WaDivider/>
@@ -168,8 +169,8 @@ export const ResetProfile = () => {
                     onClick={reset}
                     disabled={isResetDisabled}
                 >
-                    <WaIcon slot="start" name="arrows-rotate" variant="regular"/>
-                    {'Reset Profile'}
+                    <WaIcon slot="start" {...UI_ACTIONS.resetProfile.icon}/>
+                    {UI_ACTIONS.resetProfile.label}
                 </WaButton>
             </div>
             <ConfirmResetDialog/>

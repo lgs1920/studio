@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-28
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { Range }                               from '@Components/Range'
 import { BASE_ENTITY, DEFAULT_LAYERS_COLOR_SETTINGS, OVERLAY_ENTITY } from '@Core/constants'
+import { UI_ACTIONS }                          from '@Core/ui/metadata/uiActionCatalog'
 import { ensureLayerColorSettings } from '@Utils/cesium/LayerColorSettingsUtils'
 import { LayersUtils }                         from '@Utils/cesium/LayersUtils'
 import { WaButton, WaCard, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
@@ -86,8 +87,9 @@ export const LayersColorsAdjustementPopup = (props) => {
                         appearance="outlined">
                     <WaButton appearance="plain"
                               slot="header-actions"
+                              aria-label={UI_ACTIONS.close.label}
                               onClick={close}>
-                        <WaIcon size="s" name="xmark" variant="regular"/>
+                        <WaIcon size="s" {...UI_ACTIONS.close.icon}/>
                     </WaButton>
 
                     <h3 slot="header">
@@ -133,17 +135,16 @@ export const LayersColorsAdjustementPopup = (props) => {
                                       appearance="outlined"
                                       variant="brand"
                             >
-                                <WaIcon slot="start" size="s" name="arrow-rotate-left"/> {'Reset'}
+                                <WaIcon slot="start" size="s" {...UI_ACTIONS.reset.icon}/>{UI_ACTIONS.reset.label}
                             </WaButton>
 
                             <div className="buttons-bar">
-                                <WaTooltip for="lgs--undo-layer-settings-last-changes">{'Undo Last Changes'}</WaTooltip>
+                                <WaTooltip for="lgs--undo-layer-settings-last-changes">{`${UI_ACTIONS.undo.label} Last Changes`}</WaTooltip>
                                 <WaButton id="lgs--undo-layer-settings-last-changes"
                                           size="s"
                                           appearance="plain"
                                           disabled={!editor.layer.settingsChanged} onClick={undoChanges}>
-                                    <WaIcon slot="start" size="s" name="arrow-u-turn-up-left"
-                                            variant="regular"/> {'Undo'}
+                                    <WaIcon slot="start" size="s" {...UI_ACTIONS.undo.icon}/> {UI_ACTIONS.undo.label}
                                 </WaButton>
 
                                 <WaTooltip for="lgs--close-layer-settings">{'Close settings'}</WaTooltip>
@@ -151,7 +152,7 @@ export const LayersColorsAdjustementPopup = (props) => {
                                           size="s"
                                           variant="brand"
                                           onClick={close}>
-                                    <WaIcon slot="start" size="s" name="xmark" variant="regular"/> {'Close'}
+                                    <WaIcon slot="start" size="s" {...UI_ACTIONS.close.icon}/>{UI_ACTIONS.close.label}
                                 </WaButton>
                             </div>
                         </div>

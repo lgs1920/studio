@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-28
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { JOURNEY_EDITOR_DRAWER, JOURNEY_GROUPS_DRAWER, REMOVE_JOURNEY_IN_TOOLBAR } from '@Core/constants'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import { LGSPopup }                    from '@Components/LGSPopup'
 import { useProxyValue }               from '@Utils/ValtioUtils'
 import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
@@ -162,14 +163,14 @@ export const EditorPanelButton = memo((props) => {
                      role="menu">
                     {hasJourney && (
                         <>
-                            <WaTooltip for="journey-action-edit" placement="top">{'Edit Journey'}</WaTooltip>
+                            <WaTooltip for="journey-action-edit" placement="top">{`${UI_ACTIONS.edit.label} Journey`}</WaTooltip>
                             <WaButton id="journey-action-edit"
                                       className="square-button"
                                       variant="brand"
                                       appearance="Filled"
                                       onClick={editJourney}
                                       role="menuitem">
-                                <WaIcon name="pen-to-square" variant="regular"/>
+                                <WaIcon {...UI_ACTIONS.edit.icon}/>
                             </WaButton>
                         </>
                     )}

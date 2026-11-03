@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-01
- * Last modified: 2026-10-23
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaDivider, WaIcon } from '@awesome.me/webawesome/dist/react'
+import { UI_ICONS } from '@Core/ui/metadata/uiActionCatalog'
 import { useEffect, useState } from 'react'
 import { DateTimeDisplay }   from '@Components/DateTimeDisplay'
 
@@ -78,7 +79,7 @@ export const DateInfo = function DateInfo(props) {
             <>
                 {trackLocation && (
                     <div className="track-location">
-                        <WaIcon name="location-dot" variant="regular"/>
+                        <WaIcon {...UI_ICONS.location}/>
                         <span>{trackLocation}</span>
                     </div>
                 )}

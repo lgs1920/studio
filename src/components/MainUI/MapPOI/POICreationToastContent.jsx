@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-28
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {WaButton, WaIcon} from '@awesome.me/webawesome/dist/react'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import {useSnapshot, proxy} from 'valtio'
 
 const EMPTY_POI_PROXY = proxy({})
@@ -39,7 +40,7 @@ export const POICreationToastContent = ({poi, canEdit, onEdit}) => {
                     variant="brand"
                     onClick={onEdit}
                 >
-                    <WaIcon slot="start" size="s" name="pen-to-square" variant="regular"/>{'Edit'}
+                    <WaIcon slot="start" size="s" {...UI_ACTIONS.edit.icon}/>{UI_ACTIONS.edit.label}
                 </WaButton>
             )}
         </div>

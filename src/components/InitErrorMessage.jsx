@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-08-11
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { ErrorDiagnosticDetails } from '@Components/Modals/ErrorDiagnosticDetails'
+import { UI_ACTIONS, UI_ICONS } from '@Core/ui/metadata/uiActionCatalog'
 import {
     collectErrorDiagnostic, formatErrorDiagnostic, sanitizeErrorHtml,
 } from '@Utils/ErrorDiagnosticUtils'
@@ -61,7 +62,7 @@ export const InitErrorMessage = ({error}) => {
             <div className="lgs--init-error-message">
 
                 <WaCallout variant="danger" open>
-                    <WaIcon slot="icon" name="triangle-exclamation" variant="regular"/>
+                    <WaIcon slot="icon" {...UI_ICONS.warning}/>
                     {errorType}{' '}
                     <span dangerouslySetInnerHTML={{__html: errorMessageHtml}}/><br/><br/>
 
@@ -79,10 +80,10 @@ export const InitErrorMessage = ({error}) => {
 
             <div slot="footer" className="buttons-bar">
                 <WaButton variant="neutral" appearance="plain" href={backendSupportMailto}>
-                    <WaIcon name="envelope" variant="regular"/>{'Contact Support'}
+                    <WaIcon {...UI_ACTIONS.contactSupport.icon}/>{UI_ACTIONS.contactSupport.label}
                 </WaButton>
                 <WaButton variant="brand" onClick={() => window.location.reload()}>
-                    <WaIcon name="arrows-rotate" variant="regular"/>{'Retry'}
+                    <WaIcon {...UI_ACTIONS.retry.icon}/>{UI_ACTIONS.retry.label}
                 </WaButton>
             </div>
         </WaDialog>

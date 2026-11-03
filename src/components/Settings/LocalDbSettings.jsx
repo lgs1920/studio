@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-22
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaButton, WaCallout, WaDetails, WaDivider, WaIcon } from '@awesome.me/webawesome/dist/react'
+import { UI_ICONS } from '@Core/ui/metadata/uiActionCatalog'
 import { UIToast } from '@Utils/UIToast'
 import { useCallback } from 'react'
 import './application/profile/style.css'
@@ -108,7 +109,7 @@ export const LocalDbSettings = () => {
                 <WaDivider/>
 
                 <WaCallout open variant="neutral">
-                    <WaIcon slot="icon" name="circle-info" variant="regular"/>
+                    <WaIcon slot="icon" {...UI_ICONS.info}/>
                     {'Export or import your user profile.'}
                 </WaCallout>
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-12
- * Last modified: 2026-10-24
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,6 +32,7 @@ import {memo} from 'react'
  * @param {boolean} [props.mainTheme=false] - Use the main application theme.
  * @param {boolean} [props.inlineCustom=false] - Show custom preset controls inline.
  * @param {boolean} [props.compactBasic=false] - Use concise choices for Basic Replay.
+ * @param {boolean} [props.basicDrawer=false] - Anchor the Flex editor to the Basic Replay drawer layout.
  * @param {boolean} [props.unifiedChoices=false] - Render ratio choices as matching Web Awesome buttons.
  * @returns {JSX.Element} Reusable menu content.
  */
@@ -42,6 +43,7 @@ export const VideoRecordingSettingsMenuContent = memo(({
     mainTheme = false,
     inlineCustom = false,
     compactBasic = false,
+    basicDrawer = false,
     unifiedChoices = false,
 }) => {
     if (menu === 'ratio') {
@@ -55,6 +57,7 @@ export const VideoRecordingSettingsMenuContent = memo(({
     return <VideoPresetToolbar embedded
                                inlineCustom={inlineCustom}
                                compactBasic={compactBasic}
+                               basicDrawer={basicDrawer}
                                idPrefix={inlineCustom ? 'timeline-video-preset' : 'video-preset'}
                                mainTheme={mainTheme}/>
 })

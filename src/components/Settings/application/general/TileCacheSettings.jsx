@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { $cartographicCache, cartographicCacheController } from '@Core/cache/CartographicCacheController'
 import {TILE_CACHE_BUDGETS, normalizeTileCacheBudget} from '@Core/cache/CartographicCachePolicy'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import { WaButton, WaDivider, WaIcon, WaOption, WaSelect } from '@awesome.me/webawesome/dist/react'
 import { useEffect, useState } from 'react'
 import { useSnapshot } from 'valtio'
@@ -79,7 +80,7 @@ export const TileCacheSettings = () => {
                 )}
                 <WaButton size="s" appearance="outlined" variant="neutral" loading={clearing}
                           disabled={clearing || !cache.available} onClick={clearCache}>
-                    <WaIcon slot="start" name="trash" variant="regular"/>{'Clear cartographic cache'}
+                    <WaIcon slot="start" {...UI_ACTIONS.clearCartographicCache.icon}/>{UI_ACTIONS.clearCartographicCache.label}
                 </WaButton>
             </div>
         </>

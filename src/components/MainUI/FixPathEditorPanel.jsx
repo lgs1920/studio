@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import {useLayoutEffect, useRef, useState} from 'react'
 import {LGSScrollbars} from '@Components/MainUI/LGSScrollbars'
 import {applyPOIDuotoneIconStyles} from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import {ToggleStateIcon} from '@Components/ToggleStateIcon'
+import {UI_ACTIONS, UI_ICONS} from '@Core/ui/metadata/uiActionCatalog'
 import {UnitUtils} from '@Utils/UnitUtils'
 import {WaButton, WaCallout, WaIcon, WaInput, WaNumberInput, WaProgressBar, WaTooltip} from '@awesome.me/webawesome/dist/react'
 import {getControlPointCoordinate} from './FixPathEditorGeometry'
@@ -68,7 +69,7 @@ export const FixPathCallout = ({
                         aria-label={dismissLabel}
                         onClick={() => setClosed(true)}
                     >
-                        <WaIcon name="xmark" variant="regular" aria-hidden="true"/>
+                        <WaIcon {...UI_ACTIONS.close.icon} aria-hidden="true"/>
                     </WaButton>
                 )}
             </div>
@@ -219,37 +220,37 @@ export const FixPathEditorPanel = ({
                 >
                     <WaIcon name="question" variant="regular" aria-hidden="true"/>
                 </WaButton>
-                <WaButton className="lgs-widget-no-drag" size="s" appearance="plain" variant="neutral" aria-label="Close Fix Path editor" disabled={saving} onClick={close}>
-                    <WaIcon name="xmark" variant="regular"/>
+                <WaButton className="lgs-widget-no-drag" size="s" appearance="plain" variant="neutral" aria-label={`${UI_ACTIONS.close.label} Fix Path editor`} disabled={saving} onClick={close}>
+                    <WaIcon {...UI_ACTIONS.close.icon}/>
                 </WaButton>
             </div>
         </header>
 
         <nav className="fix-path-main-toolbar lgs-widget-no-drag" aria-label="Fix Path tools">
             <div className="fix-path-toolbar-group fix-path-toolbar-history">
-                <WaTooltip for="fix-path-undo" placement="top">{'Undo'}</WaTooltip>
+                <WaTooltip for="fix-path-undo" placement="top">{UI_ACTIONS.undo.label}</WaTooltip>
                 <WaButton
                     id="fix-path-undo"
                     size="s"
                     appearance="plain"
                     variant="neutral"
-                    aria-label="Undo correction change"
+                    aria-label={`${UI_ACTIONS.undo.label} correction change`}
                     disabled={saving || !canUndo}
                     onClick={undoCorrectionEdit}
                 >
-                    <WaIcon name="arrow-rotate-left" variant="regular" aria-hidden="true"/>
+                    <WaIcon {...UI_ACTIONS.undo.icon} aria-hidden="true"/>
                 </WaButton>
-                <WaTooltip for="fix-path-redo" placement="top">{'Redo'}</WaTooltip>
+                <WaTooltip for="fix-path-redo" placement="top">{UI_ACTIONS.redo.label}</WaTooltip>
                 <WaButton
                     id="fix-path-redo"
                     size="s"
                     appearance="plain"
                     variant="neutral"
-                    aria-label="Redo correction change"
+                    aria-label={`${UI_ACTIONS.redo.label} correction change`}
                     disabled={saving || !canRedo}
                     onClick={redoCorrectionEdit}
                 >
-                    <WaIcon name="arrow-rotate-right" variant="regular" aria-hidden="true"/>
+                    <WaIcon {...UI_ACTIONS.redo.icon} aria-hidden="true"/>
                 </WaButton>
             </div>
 
@@ -353,17 +354,17 @@ export const FixPathEditorPanel = ({
                 >
                     <WaIcon name="eraser" variant="regular" aria-hidden="true"/>
                 </WaButton>
-                <WaTooltip for="fix-path-delete-section" placement="top">{'Delete entire section'}</WaTooltip>
+                <WaTooltip for="fix-path-delete-section" placement="top">{`${UI_ACTIONS.delete.label} entire section`}</WaTooltip>
                 <WaButton
                     id="fix-path-delete-section"
                     size="s"
                     appearance="plain"
                     variant="danger"
-                    aria-label="Delete entire section"
+                    aria-label={`${UI_ACTIONS.delete.label} entire section`}
                     disabled={saving || !displayedCorrection}
                     onClick={deleteCurrentSection}
                 >
-                    <WaIcon name="trash-can" variant="regular" aria-hidden="true"/>
+                    <WaIcon {...UI_ACTIONS.delete.icon} aria-hidden="true"/>
                 </WaButton>
             </div>
         </nav>
@@ -470,7 +471,7 @@ export const FixPathEditorPanel = ({
                             <div className="fix-path-correction-point-actions fix-path-coordinate-header-actions lgs-widget-no-drag">
                                 {multipleCorrectionPointsSelected && (
                                     <>
-                                        <WaTooltip for="fix-path-reset-selection" placement="top">{'Reset selected points'}</WaTooltip>
+                                        <WaTooltip for="fix-path-reset-selection" placement="top">{`${UI_ACTIONS.reset.label} selected points`}</WaTooltip>
                                         <WaButton
                                             className="lgs-widget-no-drag"
                                             id="fix-path-reset-selection"
@@ -484,9 +485,9 @@ export const FixPathEditorPanel = ({
                                                 resetSelectedControlPoints()
                                             }}
                                         >
-                                            <WaIcon name="arrow-rotate-left" variant="regular" aria-hidden="true"/>
+                                            <WaIcon {...UI_ACTIONS.reset.icon} aria-hidden="true"/>
                                         </WaButton>
-                                        <WaTooltip for="fix-path-remove-selection" placement="top">{'Remove selected points'}</WaTooltip>
+                                        <WaTooltip for="fix-path-remove-selection" placement="top">{`${UI_ACTIONS.remove.label} selected points`}</WaTooltip>
                                         <WaButton
                                             className="lgs-widget-no-drag"
                                             id="fix-path-remove-selection"
@@ -500,7 +501,7 @@ export const FixPathEditorPanel = ({
                                                 removeSelectedControlPoints()
                                             }}
                                         >
-                                            <WaIcon name="trash-can" variant="regular" aria-hidden="true"/>
+                                            <WaIcon {...UI_ACTIONS.remove.icon} aria-hidden="true"/>
                                         </WaButton>
                                     </>
                                 )}
@@ -576,9 +577,9 @@ export const FixPathEditorPanel = ({
                                                 {showStatus && (
                                                     <WaIcon
                                                         className={'fix-path-correction-point-status-indicator ' + statusClass}
-                                                        name={removed ? 'trash-can' : unmodified ? 'diamond' : 'circle'}
-                                                        variant="regular"
-                                                        family={removed ? undefined : 'duotone'}
+                                                        {...(removed
+                                                            ? UI_ICONS.removed
+                                                            : {name: unmodified ? 'diamond' : 'circle', variant: 'regular', family: 'duotone'})}
                                                         onWaLoad={removed ? undefined : applyPOIDuotoneIconStyles}
                                                         aria-hidden="true"
                                                     />
@@ -615,30 +616,30 @@ export const FixPathEditorPanel = ({
                                                     onChange={persistCurrentDraftCorrections}
                                                 />
                                                 <div className="fix-path-correction-point-actions lgs-widget-no-drag">
-                                                    <WaTooltip for={resetButtonId} placement="top">{removed ? 'Restore' : 'Reset'}</WaTooltip>
+                                                    <WaTooltip for={resetButtonId} placement="top">{removed ? UI_ACTIONS.restore.label : UI_ACTIONS.reset.label}</WaTooltip>
                                                     <WaButton
                                                         className="lgs-widget-no-drag"
                                                         id={resetButtonId}
                                                         size="s"
                                                         appearance="plain"
                                                         variant="neutral"
-                                                        aria-label={removed ? 'Restore correction point' : 'Reset correction point'}
+                                                        aria-label={`${removed ? UI_ACTIONS.restore.label : UI_ACTIONS.reset.label} correction point`}
                                                         disabled={saving || multipleCorrectionPointsSelected || (!removed && point.fixed !== true)}
                                                         onClick={event => {
                                                             event.stopPropagation()
                                                             resetControlPoint(displayedCorrection.trackSlug, displayedCorrection.id, point.id)
                                                         }}
                                                     >
-                                                        <WaIcon name="arrow-rotate-left" variant="regular"/>
+                                                        <WaIcon {...(removed ? UI_ACTIONS.restore.icon : UI_ACTIONS.reset.icon)}/>
                                                     </WaButton>
-                                                    <WaTooltip for={removeButtonId} placement="top">{'Remove'}</WaTooltip>
+                                                    <WaTooltip for={removeButtonId} placement="top">{UI_ACTIONS.remove.label}</WaTooltip>
                                                     <WaButton
                                                         className="lgs-widget-no-drag"
                                                         id={removeButtonId}
                                                         size="s"
                                                         appearance="plain"
                                                         variant="danger"
-                                                        aria-label="Remove correction point"
+                                                        aria-label={`${UI_ACTIONS.remove.label} correction point`}
                                                         disabled={saving || multipleCorrectionPointsSelected || removed}
                                                         onClick={event => {
                                                             event.stopPropagation()
@@ -647,8 +648,7 @@ export const FixPathEditorPanel = ({
                                                     >
                                                         <WaIcon
                                                             className={removed ? 'fix-path-correction-point-deleted-indicator' : ''}
-                                                            name="trash-can"
-                                                            variant="regular"
+                                                            {...UI_ACTIONS.remove.icon}
                                                             aria-hidden="true"
                                                         />
                                                     </WaButton>

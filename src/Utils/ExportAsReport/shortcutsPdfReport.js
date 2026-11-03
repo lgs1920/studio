@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-06
- * Last modified: 2026-09-13
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { jsPDF } from 'jspdf'
+import { SHORTCUT_KEY_LABELS } from '@Core/events/shortcutPresentation'
 import {
     PAGE_MARGIN,
     PDF_COLORS,
@@ -45,15 +46,6 @@ const COLUMN_DEFS = [
     {key: 'description', label: 'Description', width: 0.34},
     {key: 'platform', label: 'Platform', width: 0.14},
 ]
-const KEY_TOKEN_LABELS = {
-    ArrowDown:  'Down',
-    ArrowLeft:  'Left',
-    ArrowRight: 'Right',
-    ArrowUp:    'Up',
-    Minus:      '-',
-    Plus:       '+',
-}
-
 const ensurePdfExtension = fileName => {
     const normalized = `${fileName || DEFAULT_SHORTCUTS_PDF_FILENAME}`.trim()
     return /\.pdf$/i.test(normalized) ? normalized : `${normalized}.pdf`
@@ -64,7 +56,7 @@ const shortcutTokens = combo => `${combo ?? ''}`
     .map(token => token.trim())
     .filter(Boolean)
 
-const keyLabel = token => KEY_TOKEN_LABELS[token] ?? token
+const keyLabel = token => SHORTCUT_KEY_LABELS.pdf[token] ?? token
 
 const createPalette = () => ({
     headerFill: PDF_COLORS.headerFill,

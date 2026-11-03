@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-20
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import DrawerFooter                 from '@Components/DrawerFooter'
 import { JourneyLoaderButton }      from '@Components/FileLoader/JourneyLoaderButton'
 import PanelActions                                  from '@Components/PanelsActions'
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import WaDrawer                                      from '@Components/WaDrawerNonModal'
 import { setGlobalHideOtherJourneys }                from '@Core/ui/JourneyVisibility'
 import { useOptionalSnapshot, useProxyValue }         from '@Utils/ValtioUtils'
@@ -150,7 +151,7 @@ export const TracksEditor = memo(() => {
                         placement={drawerPlacement}
                         className={classNames({'drawer-is-stacked': isStacked})}
                     >
-                        <span slot="label"><WaIcon name="route" variant="regular"/>{'Edit Journey'}</span>
+                        <span slot="label"><WaIcon {...UI_ACTIONS.editJourney.icon}/>{UI_ACTIONS.editJourney.label}</span>
                         <PanelActions stackedPanel={isStacked} onBack={isStacked ? closePanelWithManager : null}>
                             <ToolbarHeader
                             show={toolbarShow}

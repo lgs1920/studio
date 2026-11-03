@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-03-22
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import { MapPOICategorySelectorFilter }          from '@Components/MainUI/MapPOI
 import { filterAndSortPOIs }                     from '@Components/MainUI/MapPOI/filterAndSortPOIs'
 import { ToggleStateIcon }                       from '@Components/ToggleStateIcon'
 import { JOURNEY_EDITOR_DRAWER }                 from '@Core/constants'
+import { UI_ACTIONS }                             from '@Core/ui/metadata/uiActionCatalog'
 import { useProxyValue }                          from '@Utils/ValtioUtils'
 import {
     WaButton, WaCallout, WaCard, WaIcon, WaInput, WaSwitch, WaTooltip,
@@ -116,8 +117,8 @@ export const MapPOIEditFilterPopup = memo(() => {
 
     return (
         <WaCard className="map-poi-filter-panel lgs-slide-down">
-            <WaButton appearance="plain" slot="header-actions" onClick={handleClose}>
-                <WaIcon size="s" name="xmark" variant="regular"/>
+            <WaButton appearance="plain" slot="header-actions" aria-label={UI_ACTIONS.close.label} onClick={handleClose}>
+                <WaIcon size="s" {...UI_ACTIONS.close.icon}/>
             </WaButton>
 
             <h3 slot="header">
@@ -194,7 +195,7 @@ export const MapPOIEditFilterPopup = memo(() => {
                     {poi.filter.count === 0 && (
                         <WaButton id="lgs--reset-pois-filters-callout" size="x-small" onClick={resetFilter}
                                   appearance="outlined" variant="danger" disabled={!poi.filter.active}>
-                            <WaIcon slot="start" size="s" name="filter-circle-xmark"/> {'Reset'}
+                            <WaIcon slot="start" size="s" {...UI_ACTIONS.resetFilter.icon}/> {UI_ACTIONS.resetFilter.label}
                         </WaButton>
                     )}
                 </div>
@@ -211,7 +212,7 @@ export const MapPOIEditFilterPopup = memo(() => {
                         variant="brand"
                         disabled={!poi.filter.active}
                     >
-                        <WaIcon slot="start" size="s" name="filter-circle-xmark"/> {'Reset'}
+                        <WaIcon slot="start" size="s" {...UI_ACTIONS.resetFilter.icon}/> {UI_ACTIONS.resetFilter.label}
                     </WaButton>
 
                     <WaTooltip for="lgs--close-pois-filters">{'Close settings'}</WaTooltip>
@@ -221,7 +222,7 @@ export const MapPOIEditFilterPopup = memo(() => {
                         variant="brand"
                         onClick={handleClose}
                     >
-                        <WaIcon slot="start" size="s" name="xmark" variant="regular"/> {'Close'}
+                        <WaIcon slot="start" size="s" {...UI_ACTIONS.close.icon}/> {UI_ACTIONS.close.label}
                     </WaButton>
                 </div>
             </div>

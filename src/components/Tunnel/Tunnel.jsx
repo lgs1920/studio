@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@
  * @module Tunnel
  */
 import { LGSPopup }         from '@Components/LGSPopup'
+import { UI_ACTIONS }       from '@Core/ui/metadata/uiActionCatalog'
 import { WaButton, WaIcon } from '@awesome.me/webawesome/dist/react'
 import classNames                                                  from 'classnames'
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
@@ -306,9 +307,9 @@ export const Tunnel = memo(({
                         variant="neutral"
                         appearance={cancelAppearance}
                         className="lgs-tunnel-cancel"
-                        aria-label="Exit"
+                        aria-label={UI_ACTIONS.exit.label}
                         onPointerDown={onCancel}>
-                        <WaIcon name="xmark" variant="regular"/>
+                        <WaIcon {...UI_ACTIONS.exit.icon}/>
                     </WaButton>
                 </TunnelTooltip>
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-06
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ import PanelActions              from '@Components/PanelsActions'
 import { PopupAnchor }           from '@Components/PopupAnchor'
 import WaDrawer                  from '@Components/WaDrawerNonModal'
 import { JOURNEY_GROUPS_DRAWER } from '@Core/constants'
+import { UI_ACTIONS, UI_ICONS }   from '@Core/ui/metadata/uiActionCatalog'
 import { UIToast }               from '@Utils/UIToast'
 import { Journey }               from '@Core/Journey'
 import {
@@ -83,7 +84,7 @@ const renderJourneyIcons = (journey) => {
     const tracks = Array.from(journey.tracks?.values?.() ?? [])
 
     if (tracks.length === 0) {
-        return <WaIcon name="route" variant="regular"/>
+        return <WaIcon {...UI_ICONS.journey}/>
     }
 
     if (tracks.length === 1) {
@@ -204,14 +205,14 @@ const renderJourneyGroupTreeItems = (
                         variant="brand"
                         appearance="plain"
                         className="journey-group-tree-action"
-                        aria-label={`Remove ${group.name}`}
+                        aria-label={`${UI_ACTIONS.remove.label} ${group.name}`}
                         onClick={event => {
                             event.preventDefault()
                             event.stopPropagation()
                             onRemoveGroup(group.id)
                         }}
                     >
-                        <WaIcon name="trash" variant="regular"/>
+                        <WaIcon {...UI_ACTIONS.remove.icon}/>
                     </WaButton>
                 )}
                 {onEditGroup && (
@@ -220,14 +221,14 @@ const renderJourneyGroupTreeItems = (
                         variant="brand"
                         appearance="plain"
                         className="journey-group-tree-action"
-                        aria-label={`Edit ${group.name}`}
+                        aria-label={`${UI_ACTIONS.edit.label} ${group.name}`}
                         onClick={event => {
                             event.preventDefault()
                             event.stopPropagation()
                             onEditGroup(group.id, popupAnchorId)
                         }}
                     >
-                        <WaIcon name="pen-to-square" variant="regular"/>
+                        <WaIcon {...UI_ACTIONS.edit.icon}/>
                     </WaButton>
                 )}
                 <div className="journey-group-tree-popup-anchor">
@@ -245,7 +246,7 @@ const renderJourneyGroupTreeItems = (
                 >
                     <span className="journey-group-tree-row">
                         <span className="lgs--journey-tree-item-content">
-                            <WaIcon name="route" variant="regular"/>
+                            <WaIcon {...UI_ICONS.journey}/>
                             {renderJourneyIcons(journey)}
                             <span className="lgs--journey-tree-item-title">{journey.title}</span>
                         </span>
@@ -280,7 +281,7 @@ const renderUngroupedJourneyTreeItems = (journeys) => journeys.map(journey => (
     >
         <span className="journey-group-tree-row">
             <span className="lgs--journey-tree-item-content">
-                <WaIcon name="route" variant="regular"/>
+                <WaIcon {...UI_ICONS.journey}/>
                 {renderJourneyIcons(journey)}
                 <span className="lgs--journey-tree-item-title">{journey.title}</span>
             </span>
@@ -332,28 +333,28 @@ const JourneyGroupEditorPanel = ({
                     {'Details'}
                 </WaTab>
                 <div className="lgs--tabs-right-menu journey-group-tabs-actions" slot="nav">
-                    <WaTooltip for={addJourneyButtonId} placement="bottom">{'Add journey'}</WaTooltip>
+                    <WaTooltip for={addJourneyButtonId} placement="bottom">{UI_ACTIONS.addJourney.label}</WaTooltip>
                     <WaButton
                         id={addJourneyButtonId}
                         appearance="plain"
                         variant="neutral"
                         size="s"
-                        aria-label="Add journey"
+                        aria-label={UI_ACTIONS.addJourney.label}
                         disabled={availableJourneys.length === 0}
                         onClick={() => openAvailablePopup?.(actionsPopupAnchorId)}
                     >
-                        <WaIcon name="route" variant="regular"/>
+                        <WaIcon {...UI_ACTIONS.addJourney.icon}/>
                     </WaButton>
-                    <WaTooltip for={addGroupButtonId} placement="bottom">{'Add group'}</WaTooltip>
+                    <WaTooltip for={addGroupButtonId} placement="bottom">{UI_ACTIONS.addJourneyGroup.label}</WaTooltip>
                     <WaButton
                         id={addGroupButtonId}
                         appearance="plain"
                         variant="neutral"
                         size="s"
-                        aria-label="Add group"
+                        aria-label={UI_ACTIONS.addJourneyGroup.label}
                         onClick={() => onCreateChildGroup?.(group.id, actionsPopupAnchorId)}
                     >
-                        <WaIcon name="folder" variant="regular"/>
+                        <WaIcon {...UI_ACTIONS.addJourneyGroup.icon}/>
                     </WaButton>
                 </div>
 
@@ -368,11 +369,11 @@ const JourneyGroupEditorPanel = ({
                     >
                         {availableJourneys.length &&
                             <WaCard className="lgs--popup-in-drawer lgs-slide-down" appearance="filled">
-                            <WaButton appearance="plain" slot="header-actions" onClick={closeAvailablePopup}>
-                                <WaIcon size="s" name="xmark" variant="regular"/>
+                            <WaButton appearance="plain" slot="header-actions" aria-label={UI_ACTIONS.close.label} onClick={closeAvailablePopup}>
+                                <WaIcon size="s" {...UI_ACTIONS.close.icon}/>
                             </WaButton>
                                 <span slot="header" className="journey-group-create-popup-title">
-                                <WaIcon name="route" variant="regular"/>{'Add journeys'}
+                                <WaIcon {...UI_ACTIONS.addJourneys.icon}/>{UI_ACTIONS.addJourneys.label}
                                     <WaDivider/>
                             </span>
                             <div ref={availableListRef} className="details-sortable-list">
@@ -414,7 +415,7 @@ const JourneyGroupEditorPanel = ({
                             ))}
                             {groupJourneys.length === 0 && childGroups.length === 0 && (
                                 <WaCallout size="s" variant="warning" appearance="outlined">
-                                    <WaIcon slot="icon" name="warning" variant="regular"/>
+                                    <WaIcon slot="icon" {...UI_ICONS.warning}/>
                                     {'This group is empty.'}
                                 </WaCallout>
                             )}
@@ -468,8 +469,8 @@ const JourneyGroupEditorPanel = ({
                                 appearance="filled"
                                 onClick={closeEditPopup}
                             >
-                                <WaIcon name="xmark" variant="regular"/>
-                                {'Close'}
+                                <WaIcon {...UI_ACTIONS.close.icon}/>
+                                {UI_ACTIONS.close.label}
                             </WaButton>
                         </div>
                     </div>
@@ -947,7 +948,7 @@ export const JourneyGroupsDrawer = memo(() => {
                                      )
                                      : (
                                          <WaCallout size="s" variant="warning" appearance="outlined">
-                                             <WaIcon slot="icon" name="warning" variant="regular"/>
+                                             <WaIcon slot="icon" {...UI_ICONS.warning}/>
                                              {'No journey groups yet.'}
                                          </WaCallout>
                                      )}
@@ -964,8 +965,8 @@ export const JourneyGroupsDrawer = memo(() => {
                                         className="lgs--popup-in-drawer lgs-slide-down journey-group-edit-popup"
                                         appearance="filled"
                                     >
-                                        <WaButton appearance="plain" slot="header-actions" onClick={closeEditPopup}>
-                                            <WaIcon size="s" name="xmark" variant="regular"/>
+                                        <WaButton appearance="plain" slot="header-actions" aria-label={UI_ACTIONS.close.label} onClick={closeEditPopup}>
+                                            <WaIcon size="s" {...UI_ACTIONS.close.icon}/>
                                         </WaButton>
 
                                         <h3 slot="header" className="journey-group-create-popup-title">
@@ -1013,9 +1014,9 @@ export const JourneyGroupsDrawer = memo(() => {
                                 >
                                     <WaCard appearance="filled"
                                         className="lgs--popup-in-drawer lgs-slide-down journey-group-create-popup">
-                                        <WaButton appearance="plain" slot="header-actions"
+                                        <WaButton appearance="plain" slot="header-actions" aria-label={UI_ACTIONS.close.label}
                                                   onClick={closeCreatePopup}>
-                                            <WaIcon size="s" name="xmark" variant="regular"/>
+                                            <WaIcon size="s" {...UI_ACTIONS.close.icon}/>
                                         </WaButton>
 
                                         <span slot="header" className="journey-group-create-popup-title">
@@ -1070,8 +1071,8 @@ export const JourneyGroupsDrawer = memo(() => {
                                                     appearance="outlined"
                                                     onClick={closeCreatePopup}
                                                 >
-                                                    <WaIcon slot="start" size="s" name="xmark" variant="regular"/>
-                                                    {'Close'}
+                                                    <WaIcon slot="start" size="s" {...UI_ACTIONS.close.icon}/>
+                                                    {UI_ACTIONS.close.label}
                                                 </WaButton>
                                                 <WaButton
                                                     size="s"

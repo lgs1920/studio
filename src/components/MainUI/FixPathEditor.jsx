@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-19
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,7 @@ import {
 } from '@Utils/cesium/fixPathScreenSelection'
 import {ELEVATION_UNITS, INTERNATIONAL, UnitUtils} from '@Utils/UnitUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
+import {UI_ACTIONS} from '@Core/ui/metadata/uiActionCatalog'
 import { WaIcon } from '@awesome.me/webawesome/dist/react'
 import {Cartesian2, Cartesian3, Cartographic, Math as CesiumMath} from 'cesium'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -3096,7 +3097,7 @@ export const FixPathEditor = () => {
                     <li
                         className="fix-path-context-menu-item"
                         role="menuitem"
-                        aria-label="Add correction point"
+                        aria-label={`${UI_ACTIONS.add.label} correction point`}
                         aria-keyshortcuts="Enter Space"
                         tabIndex={0}
                         onClick={() => {
@@ -3105,8 +3106,8 @@ export const FixPathEditor = () => {
                         }}
                         onKeyDown={handleContextMenuItemKeyDown}
                     >
-                        <WaIcon name="plus" variant="regular" aria-hidden="true"/>
-                        {'Add correction point'}
+                        <WaIcon {...UI_ACTIONS.add.icon} aria-hidden="true"/>
+                        {`${UI_ACTIONS.add.label} correction point`}
                     </li>
                     {orderedCorrections.length > 0 && (
                         <li
@@ -3151,7 +3152,7 @@ export const FixPathEditor = () => {
                         <li
                             className="fix-path-context-menu-item"
                             role="menuitem"
-                            aria-label={contextMenuPointRemoved ? 'Restore' : 'Reset'}
+                            aria-label={contextMenuPointRemoved ? UI_ACTIONS.restore.label : UI_ACTIONS.reset.label}
                             aria-keyshortcuts="Enter Space"
                             tabIndex={0}
                             onClick={() => {
@@ -3160,15 +3161,15 @@ export const FixPathEditor = () => {
                             }}
                             onKeyDown={handleContextMenuItemKeyDown}
                         >
-                            <WaIcon name="arrow-rotate-left" variant="regular" aria-hidden="true"/>
-                            {contextMenuPointRemoved ? 'Restore' : 'Reset'}
+                            <WaIcon {...UI_ACTIONS.reset.icon} aria-hidden="true"/>
+                            {contextMenuPointRemoved ? UI_ACTIONS.restore.label : UI_ACTIONS.reset.label}
                         </li>
                     )}
                     {contextMenuCanRemove && (
                         <li
                             className="fix-path-context-menu-item"
                             role="menuitem"
-                            aria-label="Remove"
+                            aria-label={UI_ACTIONS.remove.label}
                             aria-keyshortcuts="Enter Space"
                             tabIndex={0}
                             onClick={() => removeControlPoint(
@@ -3178,8 +3179,8 @@ export const FixPathEditor = () => {
                             )}
                             onKeyDown={handleContextMenuItemKeyDown}
                         >
-                            <WaIcon name="trash-can" variant="regular" aria-hidden="true"/>
-                            {'Remove'}
+                            <WaIcon {...UI_ACTIONS.remove.icon} aria-hidden="true"/>
+                            {UI_ACTIONS.remove.label}
                         </li>
                     )}
                 </ul>

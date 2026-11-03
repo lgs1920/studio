@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-07
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
+import { UI_ICONS }      from '@Core/ui/metadata/uiActionCatalog'
 import { useConfirm }    from '@Components/Modals/ConfirmUI'
 import {
     ACCESS_ICONS, BASE_ENTITY, DEFAULT_LAYERS_COLOR_SETTINGS, FREE_ACCOUNT_ACCESS, FREE_ANONYMOUS_ACCESS, FREEMIUM_ACCESS,
@@ -316,7 +317,7 @@ export const SelectEntity = (props) => {
 
             {!fill &&
                 <WaCallout variant="warning" open>
-                    <WaIcon slot="icon" name="triangle-exclamation"/>
+                    <WaIcon slot="icon" {...UI_ICONS.warning}/>
                     <div id="filter-alert-content">
                         <strong>{'It looks empty over here!'}</strong>
                         <p>{`No ${props.type} entity found.`}</p>

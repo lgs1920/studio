@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-07
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ import {
     canAddJourneyReplayClip,
     normalizeJourneyReplayClips,
 }                                                                  from '@Core/ui/replay/JourneyReplayClips'
+import { UI_ACTIONS }                                               from '@Core/ui/metadata/uiActionCatalog'
 import { ELEVATION_UNITS, UnitUtils }                              from '@Utils/UnitUtils'
 import {
     WaButton,
@@ -289,14 +290,14 @@ const ClipAddPopup = ({clips, addState, setAddState, onAddClip}) => {
                 </>
             )}
             headerActions={(
-                <WaButton appearance="plain" slot="header-actions" onClick={close}>
-                    <WaIcon size="s" name="xmark" variant="regular"/>
+                <WaButton appearance="plain" slot="header-actions" aria-label={UI_ACTIONS.close.label} onClick={close}>
+                    <WaIcon size="s" {...UI_ACTIONS.close.icon}/>
                 </WaButton>
             )}
             footer={(
                 <WaButton size="s" variant="brand" appearance="outlined" onClick={close}>
-                    <WaIcon slot="start" size="s" name="xmark" variant="regular"/>
-                    {'Close'}
+                    <WaIcon slot="start" size="s" {...UI_ACTIONS.close.icon}/>
+                    {UI_ACTIONS.close.label}
                 </WaButton>
             )}
             className="replay-clips-popup-card"
@@ -397,8 +398,8 @@ const ClipDetails = ({
                         event.stopPropagation()
                         onRemove(slot, index)
                     }}
-                              aria-label="Remove clip">
-                        <WaIcon name="trash-can" variant="regular"/>
+                              aria-label={`${UI_ACTIONS.remove.label} clip`}>
+                        <WaIcon {...UI_ACTIONS.remove.icon}/>
                     </WaButton>
                 </span>
             </span>
@@ -503,8 +504,8 @@ const ClipList = ({
                             onAdd({slot, anchorId: addAnchorIdPrefix})
                         }}
                     >
-                        <WaIcon name="plus" variant="regular"/>
-                        {'Add clip'}
+                        <WaIcon {...UI_ACTIONS.add.icon}/>
+                        {`${UI_ACTIONS.add.label} clip`}
                     </WaButton>
                 </div>
                 <PopupAnchor id={addAnchorIdPrefix}/>

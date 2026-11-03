@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-06-26
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { INFO_DRAWER }                 from '@Core/constants'
+import { UI_ICONS }                    from '@Core/ui/metadata/uiActionCatalog'
 import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import React                           from 'react'
 import './style.css'
@@ -32,7 +33,7 @@ export const PanelButton = () => {
                   onClick={() => __.ui.drawerManager.toggle(INFO_DRAWER)}
                   variant={'brand'}
                   appearance="Filled">
-            <WaIcon name="circle-info" variant="regular"></WaIcon>
+            <WaIcon {...UI_ICONS.info}/>
         </WaButton>
 
 

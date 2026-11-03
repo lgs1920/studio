@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-30
- * Last modified: 2026-10-23
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,7 @@ export const VideoPresetToolbar = memo(({
     idPrefix = 'video-preset',
     inlineCustom = false,
     compactBasic = false,
+    basicDrawer = false,
     mainTheme = false,
 }) => {
     const $video = lgs.stores.ui.video
@@ -53,7 +54,7 @@ export const VideoPresetToolbar = memo(({
 
     const [preset, setPreset] = useState(null)
     const [open, setOpen] = useState(false)
-    const [popupDirection, setPopupDirection] = useState('right')
+    const [popupDirection, setPopupDirection] = useState(basicDrawer ? 'top' : 'right')
     const _toolbarRef = useRef(null)
     const themeClass = mainTheme ? 'wa-theme-lgs1920' : 'wa-theme-lgs1920-on-map'
 
@@ -172,12 +173,12 @@ export const VideoPresetToolbar = memo(({
                     anchor={`${idPrefix}-${key}`}
                     active={open}
                     onRequestClose={() => setOpen(false)}
-                    placement="right-start"
+                    placement={basicDrawer ? 'top-start' : 'right-start'}
                     strategy="fixed"
                     distance={4}
                     onWaReposition={handlePopupReposition}
                 >
-                    <div className={`video-preset-custom lgs-card ${compactBasic ? 'video-preset-custom--basic' : ''} ${themeClass}`}
+                    <div className={`video-preset-custom lgs-card ${compactBasic ? 'video-preset-custom--basic' : ''} ${basicDrawer ? 'video-preset-custom--basic-drawer' : ''} ${themeClass}`}
                          style={{opacity: mainTheme ? 1 : toolbars.opacity}}>
                         <VideoFPSToolbar choicesOnMap={!mainTheme}/>
                         <VideoQualityToolbar choicesOnMap={!mainTheme} compactBasic={compactBasic}/>

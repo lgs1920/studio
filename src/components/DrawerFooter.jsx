@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-06-04
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { INFO_CHANGELOG_TAB, INFO_DRAWER } from '@Core/constants'
+import { UI_ICONS }                         from '@Core/ui/metadata/uiActionCatalog'
 import { LogoSvg }                         from '@Components/MainUI/LogoSvg'
 import { WaButton, WaDivider, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import React                           from 'react'
@@ -49,7 +50,7 @@ const DrawerFooter = React.memo(() => {
                 <WaButton id={`${tooltipIdPrefix}-changelog`} appearance="plain" variant="brand"
                           onClick={openChangelog}
                           aria-label="Changelog">
-                    <WaIcon name="circle-info" variant="regular"/>
+                    <WaIcon {...UI_ICONS.info}/>
                 </WaButton>
                 <WaTooltip for={`${tooltipIdPrefix}-changelog`}>{'Changelog'}</WaTooltip>
 

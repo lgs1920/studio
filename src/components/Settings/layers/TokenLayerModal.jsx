@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-07
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { BASE3D_ENTITY, BASE_ENTITY, PERSONAL_ACCESS, TERRAIN_ENTITY, TILES3D_ENTITY, VAULT_STORE } from '@Core/constants'
+import { UI_ACTIONS }                                                                    from '@Core/ui/metadata/uiActionCatalog'
 import { UIToast }                                                                    from '@Utils/UIToast'
 import { IonLayerUtils }                                                               from '@Utils/cesium/IonLayerUtils'
 import { WaBadge, WaButton, WaDialog, WaIcon, WaInput }                               from '@awesome.me/webawesome/dist/react'
@@ -165,12 +166,12 @@ export const TokenLayerModal = () => {
                 <WaButton onClick={() => {
                     lgs.editorSettingsProxy.layer.tokenDialog = false
                 }} appearance="outlined">
-                    <WaIcon slot="start" name="xmark" variant="regular"/>
-                    {'Cancel'}
+                    <WaIcon slot="start" {...UI_ACTIONS.cancel.icon}/>
+                    {UI_ACTIONS.cancel.label}
                 </WaButton>
                 <WaButton variant="brand" onClick={validateToken} disabled={!canSave}>
-                    <WaIcon slot="start" name="check" variant="regular"/>
-                    {'Validate'}
+                    <WaIcon slot="start" {...UI_ACTIONS.validate.icon}/>
+                    {UI_ACTIONS.validate.label}
                 </WaButton>
             </div>
         </WaDialog>

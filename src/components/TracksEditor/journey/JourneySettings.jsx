@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-17
- * Last modified: 2026-10-25
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ import {
     ToggleStateIcon,
 }                                     from '@Components/ToggleStateIcon'
 import {
-    CURRENT_JOURNEY, DRAWING_FROM_UI, EDIT_JOURNEY_ICON, JOURNEY_EDITOR_DRAWER, NO_FOCUS, ORIGIN_STORE, REMOVE_JOURNEY_IN_EDIT, ROTATION_ICON,
+    CURRENT_JOURNEY, DRAWING_FROM_UI, EDIT_JOURNEY_ICON, JOURNEY_EDITOR_DRAWER, NO_FOCUS, ORIGIN_STORE, REMOVE_JOURNEY_IN_EDIT,
     SIMULATE_ALTITUDE,
     UPDATE_JOURNEY_SILENTLY,
 } from '@Core/constants'
@@ -40,6 +40,7 @@ import {
 }                                     from '@Core/Elevation/ElevationServer'
 import { Journey }                    from '@Core/Journey'
 import { Export }                     from '@Core/ui/Export'
+import { UI_ACTIONS, UI_ICONS, UI_LABELS } from '@Core/ui/metadata/uiActionCatalog'
 import {
     RemoveJourney,
 }                                     from '@Editor/journey/RemoveJourney'
@@ -805,7 +806,7 @@ export const JourneySettings = () => {
                                 <WaIcon name={EDIT_JOURNEY_ICON} variant="regular"/> Style
                             </WaTab>
                             <WaTab slot="nav" panel={POIS} active={__.ui.drawerManager.tabActive(POIS)}>
-                                <WaIcon name="location-dot" variant="regular"/> POIs
+                                <WaIcon {...UI_ICONS.pointOfInterest}/> {UI_LABELS.pois}
                             </WaTab>
 
                             {/* Data Panel */}
@@ -953,7 +954,7 @@ export const JourneySettings = () => {
                                             placement="bottom"
                                             for="rotation-in-settings"
                                         >
-                                            {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop orbit' : 'Start orbit'}
+                                            {running && target?.instanceOf?.(CURRENT_JOURNEY) ? UI_ACTIONS.stopOrbit.label : UI_ACTIONS.startOrbit.label}
                                         </WaTooltip>
                                         <WaButton
                                             size="s"
@@ -962,9 +963,7 @@ export const JourneySettings = () => {
                                             id="rotation-in-settings"
                                             variant="brand"
                                             appearance="plain">
-                                            <WaIcon name={ROTATION_ICON}
-                                                    variant="regular"
-                                                    animation={running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'spin' : 'none'}/>
+                                            <WaIcon {...(running && target?.instanceOf?.(CURRENT_JOURNEY) ? UI_ACTIONS.stopOrbit.icon : UI_ACTIONS.startOrbit.icon)}/>
                                         </WaButton>
 
                                         <WaTooltip
@@ -1035,8 +1034,8 @@ export const JourneySettings = () => {
                                             aria-label="Export as Route"
                                             onClick={openExportFileDialog}
                                         >
-                                            <WaIcon slot="start" name="route" variant="regular"/>
-                                            <span>Export as Route</span>
+                                            <WaIcon slot="start" {...UI_ACTIONS.exportRoute.icon}/>
+                                            <span>{UI_ACTIONS.exportRoute.label}</span>
                                         </WaButton>
                                         <WaTooltip placement="bottom"
                                                    for="export-journey-report-choice">{'Create report'}</WaTooltip>

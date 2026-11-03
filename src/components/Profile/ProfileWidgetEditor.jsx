@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-12-21
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,6 +31,7 @@ import {
     ensureJourneyReplaySettings,
     normalizeJourneyReplayProfileInfo,
 }                                                         from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import { UI_ACTIONS }                                    from '@Core/ui/metadata/uiActionCatalog'
 import {
     WaButton, WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect,
     WaSwitch,
@@ -806,8 +807,9 @@ export const ProfileWidgetEditor = ({entity}) => {
                                 {element.gradient?.color && (
                                     <WaButton onClick={() => updateValue('gradient.color', null)}
                                               className="reset-profile-widget-color"
+                                              aria-label={`${UI_ACTIONS.reset.label} gradient color`}
                                               variant="brand" appearance="plain">
-                                        <WaIcon name="arrow-rotate-left" variant="regular" size="s"/>
+                                        <WaIcon size="s" {...UI_ACTIONS.reset.icon}/>
                                     </WaButton>
                                 )}
                             </div>

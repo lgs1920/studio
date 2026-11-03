@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-20
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@
 import { MapPOIListItem }        from '@Components/MainUI/MapPOI/MapPOIListItem'
 import { filterAndSortPOIs }    from '@Components/MainUI/MapPOI/filterAndSortPOIs'
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
+import { UI_ICONS }           from '@Core/ui/metadata/uiActionCatalog'
 import { useProxyValue }         from '@Utils/ValtioUtils'
 import { WaCallout, WaIcon } from '@awesome.me/webawesome/dist/react'
 import { useEffect, useMemo }   from 'react'
@@ -90,7 +91,7 @@ export const MapPOIFilteredList = () => {
             variant="danger"
             className="map-poi-filter-count-info"
         >
-            <WaIcon slot="icon" size="s" name="warning"/>
+            <WaIcon slot="icon" size="s" {...UI_ICONS.warning}/>
             <span>{'No POIs match the current filter criteria.'}</span>
         </WaCallout>
     )

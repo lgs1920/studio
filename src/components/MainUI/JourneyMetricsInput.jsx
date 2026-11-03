@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-11
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,7 @@
  ******************************************************************************/
 
 import { UnitUtils }                 from '@Utils/UnitUtils'
+import { UI_ACTIONS }               from '@Core/ui/metadata/uiActionCatalog'
 import { WaButton, WaIcon, WaInput } from '@awesome.me/webawesome/dist/react'
 import React, { useMemo }            from 'react'
 import { useSnapshot }           from 'valtio'
@@ -137,7 +138,7 @@ export const JourneyMetricsInput = ({label, path, unit, precision = 2, dataSourc
                     slot="end"
                     style={{fontSize: '80%'}}
                 >
-                    <WaIcon name="arrow-rotate-left" variant="regular"/>
+                    <WaIcon {...UI_ACTIONS.reset.icon}/>
                 </WaButton>
             )}
         </WaInput>

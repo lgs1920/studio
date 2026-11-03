@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-06
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaButton, WaIcon, WaNumberInput, WaSlider } from '@awesome.me/webawesome/dist/react'
+import { UI_ACTIONS }                                from '@Core/ui/metadata/uiActionCatalog'
 import { useCallback, useMemo }                       from 'react'
 
 /**
@@ -76,9 +77,9 @@ export const RotationElement = ({
                     <span slot="label">
                         {label}
                         {isRotated && (
-                            <WaButton size="s" appearance="plain" aria-label="Reset rotation"
+                            <WaButton size="s" appearance="plain" aria-label={`${UI_ACTIONS.reset.label} rotation`}
                                       onClick={() => applyRotation(0)}>
-                                <WaIcon size="s" name="arrow-rotate-left" variant="regular"/>
+                                <WaIcon size="s" {...UI_ACTIONS.reset.icon}/>
                             </WaButton>
                         )}
                     </span>
@@ -106,10 +107,10 @@ export const RotationElement = ({
                                 className="square-button small"
                                 size="xs"
                                 appearance="plain"
-                                aria-label="Reset rotation"
+                                aria-label={`${UI_ACTIONS.reset.label} rotation`}
                                 onClick={() => applyRotation(0)}
                             >
-                                <WaIcon size="s" name="arrow-rotate-left" variant="regular"/>
+                                <WaIcon size="s" {...UI_ACTIONS.reset.icon}/>
                             </WaButton>
                         )}
                     </span>

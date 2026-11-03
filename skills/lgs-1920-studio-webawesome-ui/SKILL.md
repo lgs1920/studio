@@ -44,6 +44,8 @@ Use the shared `half-width` class for a control intended to take half of its ava
 
 ## Icons
 
+Every application button or action control must get its icon and visible or accessible action label from `src/core/ui/metadata/uiActionCatalog.js` (`UI_ACTIONS`). Add a missing semantic action there before using it; do not put its icon name or action label inline in a component. Reuse `UI_ICONS` for entity and status icons, `UI_LABELS` for shared entity labels, and `UI_ROTATION_DIRECTIONS` for rotation controls. Keep distinct actions under distinct semantic keys even when they share a glyph. Use `src/core/events/shortcutPresentation.js` for shortcut labels and icons. Dynamic domain data whose icon is supplied by its own records may keep that mapping in its domain catalog.
+
 Use the native Web Awesome icon component or its React wrapper for all UI icons. Use the
 Font Awesome `iconName` in kebab case as the public `name`, such as `camera-sliders`. Do not
 expose JavaScript export names such as `faCameraSliders` or Font Awesome definition prefixes

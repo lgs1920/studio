@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-24
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {WaIcon, WaNumberInput, WaOption, WaSelect, WaSwitch, WaTooltip} from '@awesome.me/webawesome/dist/react'
+import {UI_ICONS} from '@Core/ui/metadata/uiActionCatalog'
 import {normalizeReplayPOIBehavior, REPLAY_POI_VISIBILITY_MODES} from '@Core/ui/replay/JourneyReplayPOISettings'
 import {getBasicReplaySettings, writeBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
 import {currentReplayJourney} from '@Core/ui/replay/ReplayUserModeConstants'
@@ -83,59 +84,75 @@ export const BasicReplayPOISettings = () => {
     }
 
     return (
-        <div className="basic-replay-settings-row basic-replay-poi-settings" role="group" aria-label="Replay POIs">
-            <div className="basic-replay-poi-settings__visibility">
-                <WaIcon name="location-dot" variant="regular" label=""/>
-                <span>{'Show POIs'}</span>
-                <WaTooltip for="basic-replay-poi-visibility" placement="top">
-                    {'View POIs'}
-                </WaTooltip>
-                <WaSelect
-                    id="basic-replay-poi-visibility"
-                    className="basic-replay-poi-settings__select"
-                    aria-label="Show POIs"
-                    size="s"
-                    appearance="filled"
-                    value={behavior.poiVisibilityMode}
-                    onChange={changeVisibilityMode}
-                >
-                    {REPLAY_POI_VISIBILITY_MODES.map(mode => (
-                        <WaOption key={mode} value={mode}>
-                            {VISIBILITY_MODE_LABELS[mode]}
-                        </WaOption>
-                    ))}
-                </WaSelect>
+        <div className="basic-replay-poi-settings" role="group" aria-label="Replay POIs">
+            <div className="basic-replay-settings-row basic-replay-settings-row--split" role="group" aria-label="Show at start">
+                <div className="basic-replay-settings-row__legend">
+                    <WaIcon {...UI_ICONS.pointOfInterest} label=""/>
+                    <span>{'Show at start'}</span>
+                </div>
+                <div className="basic-replay-settings-row__value">
+                    <WaTooltip for="basic-replay-poi-visibility" placement="top">
+                        {'Choose which POIs are shown when Replay starts'}
+                    </WaTooltip>
+                    <WaSelect
+                        id="basic-replay-poi-visibility"
+                        className="basic-replay-poi-settings__select"
+                        aria-label="Show at start"
+                        size="s"
+                        appearance="filled"
+                        value={behavior.poiVisibilityMode}
+                        onChange={changeVisibilityMode}
+                    >
+                        {REPLAY_POI_VISIBILITY_MODES.map(mode => (
+                            <WaOption key={mode} value={mode}>
+                                {VISIBILITY_MODE_LABELS[mode]}
+                            </WaOption>
+                        ))}
+                    </WaSelect>
+                </div>
             </div>
-            <div className="basic-replay-poi-settings__animation">
-                <WaTooltip for="basic-replay-poi-animation" placement="top">
-                    {'With animation'}
-                </WaTooltip>
-                <WaSwitch
-                    id="basic-replay-poi-animation"
-                    className="basic-replay-poi-settings__switch"
-                    size="xs"
-                    label-at-start width-auto
-                    checked={behavior.animatePoisDuringJourneyReplay}
-                    onInput={changeAnimation}
-                >
-                    {'animation'}
-                </WaSwitch>
-                <WaTooltip for="basic-replay-poi-duration" placement="top">
-                    {'Duration'}
-                </WaTooltip>
-                <WaNumberInput
-                    id="basic-replay-poi-duration"
-                    className="basic-replay-poi-settings__duration lgs--short-input"
-                    aria-label="Animation duration in seconds"
-                    size="s"
-                    appearance="filled"
-                    min={1}
-                    max={3}
-                    step={1}
-                    value={behavior.poiAnimationDurationSeconds}
-                    disabled={!behavior.animatePoisDuringJourneyReplay}
-                    onInput={changeAnimationDuration}
-                />
+            <div className="basic-replay-settings-row basic-replay-settings-row--split" role="group" aria-label="Animation">
+                <div className="basic-replay-settings-row__legend">
+                    <span className="basic-replay-settings-row__legend-icon-spacer" aria-hidden="true"/>
+                    <span>{'Animation'}</span>
+                </div>
+                <div className="basic-replay-settings-row__value basic-replay-settings-row__value--poi-animation">
+                    <WaTooltip for="basic-replay-poi-animation" placement="top">
+                        {'With animation'}
+                    </WaTooltip>
+                    <WaSwitch
+                        id="basic-replay-poi-animation"
+                        className="basic-replay-poi-settings__switch"
+                        size="xs"
+                        aria-label="Animation"
+                        checked={behavior.animatePoisDuringJourneyReplay}
+                        onInput={changeAnimation}
+                    />
+                </div>
+            </div>
+            <div className="basic-replay-settings-row basic-replay-settings-row--split" role="group" aria-label="Duration">
+                <div className="basic-replay-settings-row__legend">
+                    <span className="basic-replay-settings-row__legend-icon-spacer" aria-hidden="true"/>
+                    <span>{'Duration'}</span>
+                </div>
+                <div className="basic-replay-settings-row__value">
+                    <WaTooltip for="basic-replay-poi-duration" placement="top">
+                        {'Duration'}
+                    </WaTooltip>
+                    <WaNumberInput
+                        id="basic-replay-poi-duration"
+                        className="basic-replay-poi-settings__duration lgs--short-input"
+                        aria-label="Animation duration in seconds"
+                        size="s"
+                        appearance="filled"
+                        min={1}
+                        max={3}
+                        step={1}
+                        value={behavior.poiAnimationDurationSeconds}
+                        disabled={!behavior.animatePoisDuringJourneyReplay}
+                        onInput={changeAnimationDuration}
+                    />
+                </div>
             </div>
         </div>
     )

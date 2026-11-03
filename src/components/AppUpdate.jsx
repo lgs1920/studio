@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-12
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,6 +19,7 @@
 import {
     APP_STUDIO, BANNER_HIDE_DELAY_INSTALL, NAVIGATOR, OS_ICONS, SECOND,
 }                              from '@Core/constants'
+import { UI_ACTIONS, UI_ICONS } from '@Core/ui/metadata/uiActionCatalog'
 import { ErrorDiagnosticDetails } from '@Components/Modals/ErrorDiagnosticDetails'
 import androidInstructions     from '@Locales/en/pwa-instructions/android.md?raw'
 import chromeEdgeInstructions  from '@Locales/en/pwa-instructions/chrome-edge.md?raw'
@@ -337,12 +338,12 @@ export const AppUpdate = ({mode = 'banner', updateDialogEnabled = true}) => {
                 ) : (
                     <>
                         <WaButton slot="footer" variant="brand" outline onClick={handleDismissUpdate}>
-                            <WaIcon slot="start" name="hourglass-half" variant="regular"/>
-                            {'Later'}
+                            <WaIcon slot="start" {...UI_ACTIONS.later.icon}/>
+                            {UI_ACTIONS.later.label}
                         </WaButton>
                         <WaButton slot="footer" variant="brand" onClick={handleApplyUpdate}>
-                            <WaIcon slot="start" name="arrows-rotate" variant="regular"/>
-                            {'Update'}
+                            <WaIcon slot="start" {...UI_ACTIONS.update.icon}/>
+                            {UI_ACTIONS.update.label}
                         </WaButton>
                     </>
                 )}
@@ -374,11 +375,11 @@ export const AppUpdate = ({mode = 'banner', updateDialogEnabled = true}) => {
                 <p>{`Install ${APP_STUDIO} as an application for a better experience.`}</p>
                 <p>{'You can close this dialog and install it later from your browser address bar or menu.'}</p>
                 <WaButton slot="footer" variant="brand" outline onClick={handleDismissInstall}>
-                    <WaIcon slot="start" name="hourglass-half" variant="regular"/>
-                    {'Later'}
+                    <WaIcon slot="start" {...UI_ACTIONS.later.icon}/>
+                    {UI_ACTIONS.later.label}
                 </WaButton>
                 <WaButton slot="footer" variant="brand" onClick={handleInstall}>
-                    <WaIcon slot="start" name="desktop-arrow-down" variant="regular"/>
+                    <WaIcon slot="start" {...UI_ACTIONS.install.icon}/>
                     {primaryActionText}
                 </WaButton>
             </WaDialog>
@@ -415,13 +416,13 @@ export const AppUpdate = ({mode = 'banner', updateDialogEnabled = true}) => {
                 role="status"
                 aria-live="polite"
             >
-                <WaIcon slot="icon" name={automaticUpdateError ? 'triangle-exclamation' : 'arrows-rotate'} variant="regular"/>
+                <WaIcon slot="icon" {...(automaticUpdateError ? UI_ICONS.warning : UI_ACTIONS.update.icon)}/>
                 <div className="lgs-webapp-update-callout-content">
                     <span dangerouslySetInnerHTML={{__html: sanitizeErrorHtml(message)}}/>
                     {automaticUpdateError && (
                         <WaButton size="s" variant="brand" onClick={handleRelaunchStudio}>
-                            <WaIcon slot="start" name="arrows-rotate" variant="regular"/>
-                            {'Relaunch Studio'}
+                            <WaIcon slot="start" {...UI_ACTIONS.relaunchStudio.icon}/>
+                            {UI_ACTIONS.relaunchStudio.label}
                         </WaButton>
                     )}
                 </div>
@@ -442,8 +443,7 @@ export const AppUpdate = ({mode = 'banner', updateDialogEnabled = true}) => {
                 {installError ? (
                     // Display error or success state
                     <>
-                        <WaIcon name={installError.includes('successful') ? 'check' : 'xmark'}
-                                variant="regular"
+                        <WaIcon {...(installError.includes('successful') ? UI_ICONS.success : UI_ICONS.error)}
                                 style={{
                                     color:    installError.includes('successful') ? 'green' : 'red',
                                     fontSize: '2em',
@@ -488,7 +488,7 @@ export const AppUpdate = ({mode = 'banner', updateDialogEnabled = true}) => {
                 variant="brand"
                 onClick={() => setShowInstructionsDialog(false)}
             >
-                <WaIcon slot="start" name="xmark" variant="regular"/>{'Close'}
+                <WaIcon slot="start" {...UI_ACTIONS.close.icon}/>{UI_ACTIONS.close.label}
             </WaButton>
         </WaDialog>
     )

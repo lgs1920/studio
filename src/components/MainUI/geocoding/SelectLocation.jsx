@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-21
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import {
     WaCallout, WaCard, WaIcon,
 }                                  from '@awesome.me/webawesome/dist/react'
+import { UI_ICONS }                from '@Core/ui/metadata/uiActionCatalog'
 import { useLayoutEffect, useRef } from 'react'
 import { useSnapshot }             from 'valtio/index'
 import { LGSScrollbars }           from '../LGSScrollbars'
@@ -56,7 +57,7 @@ export const SelectLocation = ({select}) => {
 
             {snap.dialog.visible && snap.dialog.noResults &&
                 <WaCallout variant="warning" appearance="filled-outlined" open>
-                    <WaIcon slot="icon" name="triangle-exclamation" variant="regular"/>
+                    <WaIcon slot="icon" {...UI_ICONS.warning}/>
                     {'There are no results matching your search!'}
                 </WaCallout>
             }

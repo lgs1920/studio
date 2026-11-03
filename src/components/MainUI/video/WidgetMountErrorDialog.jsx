@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-28
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { ErrorDiagnosticDetails } from '@Components/Modals/ErrorDiagnosticDetails'
+import { UI_ACTIONS, UI_ICONS } from '@Core/ui/metadata/uiActionCatalog'
 import { collectErrorDiagnostic, formatErrorDiagnostic } from '@Utils/ErrorDiagnosticUtils'
 import {
     WaButton, WaCallout, WaDialog, WaIcon,
@@ -45,7 +46,7 @@ export const WidgetMountErrorDialog = ({open, error, action, onConfirm, onCancel
             style={{pointerEvents: 'auto'}}
         >
             <WaCallout variant="warning" open>
-                <WaIcon slot="icon" name="triangle-exclamation" variant="regular"/>
+                <WaIcon slot="icon" {...UI_ICONS.warning}/>
                 <p>{`Some widgets could not be mounted in time for the ${action === 'record' ? 'record' : 'snapshot'}.`}</p>
                 {missing.length > 0 && (
                     <ul style={{listStyleType: '-', marginLeft: '0'}}>
@@ -63,8 +64,8 @@ export const WidgetMountErrorDialog = ({open, error, action, onConfirm, onCancel
 
             <div slot="footer" className="buttons-bar">
                 <WaButton variant="neutral" onClick={onCancel}>
-                    <WaIcon slot="start" name="xmark" variant="regular"/>
-                    {'Cancel'}
+                    <WaIcon slot="start" {...UI_ACTIONS.cancel.icon}/>
+                    {UI_ACTIONS.cancel.label}
                 </WaButton>
                 <WaButton variant="brand" onClick={onConfirm}>
                     <WaIcon slot="start" name={action === 'record' ? 'clapperboard-play' : 'image-polaroid'} variant="regular"/>

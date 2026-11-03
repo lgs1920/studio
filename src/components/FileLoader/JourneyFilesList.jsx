@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-19
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { LGSScrollbars }                               from '@Components/MainUI/LGSScrollbars'
 import { JOURNEY_EXISTS, JOURNEY_OK, JOURNEY_WAITING } from '@Utils/cesium/TrackUtils'
+import { UI_ICONS } from '@Core/ui/metadata/uiActionCatalog'
 import { WaCard, WaFormatBytes, WaIcon } from '@awesome.me/webawesome/dist/react'
 import { useSnapshot }                                         from 'valtio'
 
@@ -79,7 +80,7 @@ export const JourneyFilesList = () => {
                     return (
                         <WaCard key={item.uuid} appearance="outlined" className="lgs--card-hoverable"
                                 variant="success">
-                            <WaIcon name="route" variant="regular"/>
+                            <WaIcon {...UI_ICONS.journey}/>
 
                             <div className="journey-file-details">
                                 <span className="journey-file-name">{item.file.fullName}</span>

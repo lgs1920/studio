@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-06-17
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import DrawerFooter                                  from '@Components/DrawerFoo
 import PanelActions                        from '@Components/PanelsActions'
 import WaDrawer                                      from '@Components/WaDrawerNonModal'
 import { INFO_CHANGELOG_TAB, INFO_DRAWER } from '@Core/constants'
+import { UI_ICONS }                         from '@Core/ui/metadata/uiActionCatalog'
 import { WaIcon, WaScroller, WaTab, WaTabGroup, WaTabPanel } from '@awesome.me/webawesome/dist/react'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -109,7 +110,7 @@ export const Panel = () => {
                   lightDismiss
                   placement={useSnapshot(lgs.editorSettingsProxy.menu).drawer}
         >
-            <span slot="label"><WaIcon name="circle-info" variant="regular"/>{'Information'}</span>
+            <span slot="label"><WaIcon {...UI_ICONS.info}/>{'Information'}</span>
             <PanelActions stackedPanel={isStacked} onBack={isStacked ? closePanelWithManager : null}/>
             <WaTabGroup onWaTabShow={handleTabShow}>
                 <WaTab slot="nav" panel={INFO_CHANGELOG_TAB}>

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-18
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -270,6 +270,7 @@ export const POIS_EDITOR_DRAWER = 'pois-editor-drawer'
 export const WIDGETS_EDITOR_DRAWER = 'widgets-editor-drawer'
 export const WIDGET_MANAGEMENT_DRAWER = 'widget-management-drawer'
 export const REPLAY_DRAWER = 'replay-drawer'
+export const BASIC_REPLAY_SETTINGS_DRAWER = 'basic-replay-settings-drawer'
 
 /** Jaurney, Track, POI **/
 

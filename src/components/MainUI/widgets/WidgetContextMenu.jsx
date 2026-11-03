@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-10-21
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import {
     EDIT_WIDGET_ICON, REPLAY_RECORDING_MONITOR_WIDGET_ID, WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
 } from '@Core/constants'
 import {canDockWidget, dockWidget, undockWidget} from '@Core/ui/widget-manager/WidgetDockManager'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { useEffect, useMemo } from 'react'
 import { useSnapshot }           from 'valtio'
@@ -329,7 +330,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
 
                 {/* Remove action */}
                 {capabilities.canRemove && (
-                    <li onClick={removeWidget}><WaIcon name="trash-can" variant="regular"/>{'Remove'}</li>
+                    <li onClick={removeWidget}><WaIcon {...UI_ACTIONS.remove.icon}/>{UI_ACTIONS.remove.label}</li>
                 )}
 
                 {/* Positioning Grid */}

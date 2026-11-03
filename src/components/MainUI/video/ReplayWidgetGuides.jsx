@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-22
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {VIDEO_WIDGETS_BOARD, WIDGET_LAYER_START} from '@Core/constants'
+import {UI_ACTIONS} from '@Core/ui/metadata/uiActionCatalog'
 import {
     journeyReplayExpertWidgetGuides,
     normalizeReplayWidgetGuides,
@@ -507,8 +508,8 @@ export const ReplayWidgetGuides = () => {
                             tabIndex={0}
                             onClick={() => runGuideAction('remove')}
                         >
-                            <WaIcon name="trash-can" variant="solid" aria-hidden="true"/>
-                            <span>Remove</span>
+                            <WaIcon {...UI_ACTIONS.remove.icon} variant="solid" aria-hidden="true"/>
+                            <span>{UI_ACTIONS.remove.label}</span>
                         </li>
                     </ul>
                 </div>

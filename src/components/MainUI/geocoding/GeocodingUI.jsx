@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-21
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,6 +20,7 @@ import { POICreationToastContent }      from '@Components/MainUI/MapPOI/POICreat
 import { focusPOIInOpenList }           from '@Components/MainUI/MapPOI/focusPOIInOpenList'
 import WaDialogNonModal                from '@Components/WaDialogNonModal'
 import { POI_NEW_BADGE_DURATION, POI_STANDARD_TYPE, SECOND } from '@Core/constants'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import {
     WaButton, WaDivider, WaIcon, WaInput, WaSwitch, WaTooltip,
 }                                      from '@awesome.me/webawesome/dist/react'
@@ -403,8 +404,8 @@ export const GeocodingUI = () => {
             onWaAfterHide={handleAfterHide}
         >
             <div slot="label" className="geocoding-dialog-title">
-                <WaIcon name="map-location-dot" variant="regular"/>
-                <span>{'Search location'}</span>
+                <WaIcon {...UI_ACTIONS.searchLocation.icon}/>
+                <span>{UI_ACTIONS.searchLocation.label}</span>
                 <WaTooltip for="geocoder-use-current-location" placement="top">
                     {'Use my current location'}
                 </WaTooltip>
@@ -478,8 +479,8 @@ export const GeocodingUI = () => {
                 <WaDivider/>
                 <div className="buttons-bar">
                     <WaButton appearance="outlined" onClick={requestClose}>
-                        <WaIcon slot="start" name="xmark" variant="regular"/>
-                        {'Close'}
+                        <WaIcon slot="start" {...UI_ACTIONS.close.icon}/>
+                        {UI_ACTIONS.close.label}
                     </WaButton>
                     {geocoder.dialog.moreResults &&
                         <WaButton autofocus variant="brand" appearance="accent" onClick={handleSubmit}>

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-03-21
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import {
     ALL, LOCKED, UNLOCKED,
     BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY, TILES3D_ENTITY,
 }                                 from '@Core/constants'
+import { UI_ACTIONS }              from '@Core/ui/metadata/uiActionCatalog'
 import {
     WaButton, WaCallout, WaIcon, WaInput, WaOption, WaRadio, WaRadioGroup, WaSelect, WaTooltip,
 }                                 from '@awesome.me/webawesome/dist/react'
@@ -150,8 +151,9 @@ export const LayersFilterPopup = () => {
 
                     <WaButton appearance="plain"
                               slot="header-actions"
+                              aria-label={UI_ACTIONS.close.label}
                               onClick={close}>
-                        <WaIcon size="s" name="xmark" variant="regular"/>
+                        <WaIcon size="s" {...UI_ACTIONS.close.icon}/>
                     </WaButton>
 
                     <h3 slot="header">
@@ -219,7 +221,7 @@ export const LayersFilterPopup = () => {
                                 <WaButton id="lgs--reset-layers-filters-callout" size="x-small" onClick={disableFilter}
                                           appearance="outlined" variant="danger" disabled={!layers.filter.active}>
                                     <WaIcon slot="start" size="s" variant="regular"
-                                            name="filter-circle-xmark"/>{'Reset'}
+                                            {...UI_ACTIONS.resetFilter.icon}/>{UI_ACTIONS.resetFilter.label}
                                 </WaButton>
                             )}
                         </div>
@@ -234,7 +236,7 @@ export const LayersFilterPopup = () => {
                                       variant="brand"
                                       disabled={!layers.filter.active}
                             >
-                                <WaIcon slot="start" size="s" name="arrow-rotate-left"/>{'Reset'}
+                                <WaIcon slot="start" size="s" {...UI_ACTIONS.reset.icon}/>{UI_ACTIONS.reset.label}
                             </WaButton>
 
                             <WaTooltip for="lgs--close-layer-settings">"Close settings"</WaTooltip>
@@ -242,7 +244,7 @@ export const LayersFilterPopup = () => {
                                       size="s"
                                       variant="brand"
                                       onClick={close}>
-                                <WaIcon slot="start" size="s" name="xmark" variant="regular"/>{'Close'}
+                                <WaIcon slot="start" size="s" {...UI_ACTIONS.close.icon}/>{UI_ACTIONS.close.label}
                             </WaButton>
                         </div>
                     </div>

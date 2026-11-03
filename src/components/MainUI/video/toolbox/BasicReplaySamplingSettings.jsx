@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-23
- * Last modified: 2026-10-23
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -47,7 +47,7 @@ export const BasicReplaySamplingSettings = () => {
     return (
         <div className="basic-replay-sampling-control half-width">
             <WaSelect className="basic-replay-sampling__select"
-                      label="Sampling" label-at-start
+                      aria-label="Sampling"
                       size="s" appearance="filled"
                       value={String(selection)} onChange={changeSampleCount}>
                 <WaIcon id="basic-replay-sampling-selected-icon"

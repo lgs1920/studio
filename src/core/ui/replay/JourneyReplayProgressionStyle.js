@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-10-24
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,6 +50,17 @@ export const DEFAULT_BASIC_REPLAY_DURATION = 15
 export const BASIC_REPLAY_DURATIONS = Object.freeze([10, 15, 20, 30, 45, 60])
 /** Supported Basic Replay trace scale factors. */
 export const BASIC_REPLAY_SIZE_SCALES = Object.freeze([0.65, 1, 1.5, 2.3])
+/** Draw the first color inside a contrasting outline. */
+export const BASIC_REPLAY_COLOR_MODE_WITH_BORDER = 'with-border'
+/** Draw only the first color. */
+export const BASIC_REPLAY_COLOR_MODE_NO_BORDER = 'no-border'
+/** Draw both colors as contiguous halves across the trace width. */
+export const BASIC_REPLAY_COLOR_MODE_SIDE_BY_SIDE = 'side-by-side'
+const BASIC_REPLAY_COLOR_MODES = Object.freeze([
+    BASIC_REPLAY_COLOR_MODE_WITH_BORDER,
+    BASIC_REPLAY_COLOR_MODE_NO_BORDER,
+    BASIC_REPLAY_COLOR_MODE_SIDE_BY_SIDE,
+])
 /** Minimum rendered width in pixels for a Basic Replay trace. */
 export const REPLAY_MIN_TRACE_WIDTH = 3
 
@@ -516,13 +527,19 @@ export const resolveBasicReplayPresentation = (presentation = {}, defaults = def
     const baseline = normalizeJourneyReplayProgressionStyle(defaults?.progression)
     const sizeScale = normalizeBasicReplaySizeScale(presentation?.sizeScale)
     const markerSizeScale = normalizeBasicReplaySizeScale(presentation?.markerSizeScale ?? sizeScale)
-    const borderEnabled = presentation?.borderEnabled !== false
+    const colorMode = BASIC_REPLAY_COLOR_MODES.includes(presentation?.colorMode)
+        ? presentation.colorMode
+        : presentation?.borderEnabled === false
+            ? BASIC_REPLAY_COLOR_MODE_NO_BORDER
+            : BASIC_REPLAY_COLOR_MODE_WITH_BORDER
+    const borderEnabled = colorMode !== BASIC_REPLAY_COLOR_MODE_NO_BORDER
     const fillColor = presentation?.fillColor ?? presentation?.progression?.fill?.color ?? baseline.fill.color
     const borderColor = presentation?.borderColor ?? presentation?.progression?.border?.color ?? baseline.border.color
     return {
         sizeScale,
         markerSizeScale,
         borderEnabled,
+        colorMode,
         fillColor,
         borderColor,
         progression: normalizeJourneyReplayProgressionStyle({

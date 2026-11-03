@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-24
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaButton, WaCallout, WaDetails, WaDivider, WaIcon, WaInput } from '@awesome.me/webawesome/dist/react'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import { UIToast } from '@Utils/UIToast'
 import { useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
@@ -117,13 +118,13 @@ export const IonTokenSettings = () => {
 
                 <div className="ion-token-settings-actions">
                     <WaButton variant="brand" appearance="outlined" onClick={handleSave} disabled={!canSave}>
-                        <WaIcon slot="start" name="check" variant="regular"/>
-                        {'Save token'}
+                        <WaIcon slot="start" {...UI_ACTIONS.save.icon}/>
+                        {`${UI_ACTIONS.save.label} token`}
                     </WaButton>
 
                     <WaButton variant="neutral" appearance="outlined" onClick={handleClear} disabled={!hasToken}>
-                        <WaIcon slot="start" name="trash" variant="regular"/>
-                        {'Remove token'}
+                        <WaIcon slot="start" {...UI_ACTIONS.remove.icon}/>
+                        {`${UI_ACTIONS.remove.label} token`}
                     </WaButton>
                 </div>
             </div>

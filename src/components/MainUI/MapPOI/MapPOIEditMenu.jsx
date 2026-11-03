@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-22
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@
 import {
     CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE, SCENE_MODE_2D,
 }                                                      from '@Core/constants'
+import { UI_ACTIONS }                                  from '@Core/ui/metadata/uiActionCatalog'
 import {
     DEFAULT_PANORAMA_HEIGHT_OFFSET, DEFAULT_PANORAMA_PITCH, getOrbitSettings, setOrbitStoreSettings,
 }                                                       from '@Core/OrbitSettings'
@@ -154,25 +155,25 @@ export const MapPOIEditMenu = memo(({poiId}) => {
         if (pointSnap.type !== POI_STARTER_TYPE && pointSnap.type !== POI_FLAG_START && pointSnap.type !== POI_FLAG_STOP) {
             items.push(
                 <WaDropdownItem key="remove" onClick={remove}>
-                    <WaIcon slot="icon" name={'trash-can'}/>
-                    <span>{'Remove'}</span>
+                    <WaIcon slot="icon" {...UI_ACTIONS.remove.icon}/>
+                    <span>{UI_ACTIONS.remove.label}</span>
                 </WaDropdownItem>,
             )
         }
 
         items.push(
             <WaDropdownItem key="copy-coords" onClick={copyCoordinates}>
-                <WaIcon slot="icon" name={'copy'}/>
-                <span>{'Copy Coords'}</span>
+                <WaIcon slot="icon" {...UI_ACTIONS.copyCoordinates.icon}/>
+                <span>{UI_ACTIONS.copyCoordinates.label}</span>
             </WaDropdownItem>,
             <WaDropdownItem key="toggle-exp"
                         onClick={() => __.ui.poiManager.updatePOI(pointSnap.id, {expanded: !pointSnap.expanded})}>
-                <WaIcon slot="icon" name={pointSnap.expanded ? 'arrows-to-line' : 'arrows-from-line'}/>
-                <span>{pointSnap.expanded ? 'Reduce' : 'Expand'}</span>
+                <WaIcon slot="icon" {...(pointSnap.expanded ? UI_ACTIONS.reduce.icon : UI_ACTIONS.expand.icon)}/>
+                <span>{pointSnap.expanded ? UI_ACTIONS.reduce.label : UI_ACTIONS.expand.label}</span>
             </WaDropdownItem>,
             <WaDropdownItem key="hide" onClick={toggleVisibility}>
-                <WaIcon slot="icon" name={'eye-slash'}/>
-                <span>{'Hide'}</span>
+                <WaIcon slot="icon" {...UI_ACTIONS.hidePOIs.icon}/>
+                <span>{UI_ACTIONS.hidePOIs.label}</span>
             </WaDropdownItem>,
             <WaDivider key="div-1"/>,
         )
@@ -180,24 +181,24 @@ export const MapPOIEditMenu = memo(({poiId}) => {
         if (isPOIRotating || isPOIPanoramic) {
             items.push(
                 <WaDropdownItem key="stop-rot" onClick={isPOIPanoramic ? stopPanoramic : stopOrbit}>
-                    <WaIcon slot="icon" name={'arrow-rotate-right'} animation="spin"/>
-                    <span>{isPOIPanoramic ? 'Stop Panorama' : 'Stop Orbit'}</span>
+                    <WaIcon slot="icon" {...UI_ACTIONS.stopMotion.icon}/>
+                    <span>{`${UI_ACTIONS.stopMotion.label} ${isPOIPanoramic ? 'Panorama' : 'Orbit'}`}</span>
                 </WaDropdownItem>,
             )
         }
         else {
             items.push(
                 <WaDropdownItem key="rot-around" onClick={orbitAround}>
-                    <WaIcon slot="icon" name={'arrow-rotate-right'}/>
-                    <span>{'Orbit'}</span>
+                    <WaIcon slot="icon" {...UI_ACTIONS.orbit.icon}/>
+                    <span>{UI_ACTIONS.orbit.label}</span>
                 </WaDropdownItem>,
             )
 
             if (panoramaAllowed) {
                 items.push(
                     <WaDropdownItem key="rot-panorama" onClick={startPanoramic}>
-                        <WaIcon slot="icon" name={'panorama'}/>
-                        <span>{'Panoramic'}</span>
+                        <WaIcon slot="icon" {...UI_ACTIONS.panoramic.icon}/>
+                        <span>{UI_ACTIONS.panoramic.label}</span>
                     </WaDropdownItem>,
                 )
             }
@@ -219,12 +220,12 @@ export const MapPOIEditMenu = memo(({poiId}) => {
         <div className="poi-edit-menu-container">
             {!isVisible ? (
                 <WaButton size="s" onClick={toggleVisibility} variant="brand">
-                    <WaIcon slot="start" size={'small'} name={'eye'} variant="regular"/>{'Show'}
+                    <WaIcon slot="start" size={'small'} {...UI_ACTIONS.show.icon}/>{UI_ACTIONS.show.label}
                 </WaButton>
             ) : (
                  <WaDropdown className="edit-poi-menu" size="s" variant="brand">
                      <WaButton slot="trigger" withCaret size="s" variant="brand">
-                         <WaIcon slot="start" variant="regular" name="location-dot"/>{'Select an action'}
+                         <WaIcon slot="start" {...UI_ACTIONS.selectAction.icon}/>{UI_ACTIONS.selectAction.label}
                      </WaButton>
                      {menuItems}
                  </WaDropdown>

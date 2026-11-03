@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,10 +16,11 @@
 
 import {
     CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE, POI_TMP_TYPE,
-    ROTATION_ICON, SCENE_MODE_2D,
+    SCENE_MODE_2D,
 }                        from '@Core/constants'
 import { openPOIEditor } from '@Components/MainUI/MapPOI/openPOIEditor'
 import { DEFAULT_PANORAMA_HEIGHT_OFFSET, DEFAULT_PANORAMA_PITCH, getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import { ELEVATION_UNITS, UnitUtils }       from '@Utils/UnitUtils'
 import { UIToast }                                from '@Utils/UIToast'
 import { startPOIMove } from '@Components/MainUI/MapPOI/poiMoveStore'
@@ -259,62 +260,62 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
                 {/* Set as Starter */}
                 {canSetAsStarter && (
                     <li onClick={setAsStarter}>
-                        <WaIcon name="flag" variant="regular"/>{'Set as Starter'}
+                        <WaIcon {...UI_ACTIONS.setAsStarter.icon}/>{UI_ACTIONS.setAsStarter.label}
                     </li>
                 )}
 
                 {/* Remove POI */}
                 {canRemove && (
                     <li onClick={removePOI}>
-                        <WaIcon name="trash-can" variant="regular"/>{'Remove'}
+                        <WaIcon {...UI_ACTIONS.remove.icon}/>{UI_ACTIONS.remove.label}
                     </li>
                 )}
 
                 {/* Edit POI */}
                 {canEdit && (
                     <li onClick={openEditDrawer}>
-                        <WaIcon name="location-pen" variant="regular"/>{'Edit'}
+                        <WaIcon {...UI_ACTIONS.editPOI.icon}/>{UI_ACTIONS.editPOI.label}
                     </li>
                 )}
 
                 {canMove && (
                     <li onClick={startMovingPOI}>
-                        <WaIcon name="location-dot" variant="solid"/>{'Move'}
+                        <WaIcon {...UI_ACTIONS.movePOI.icon}/>{UI_ACTIONS.movePOI.label}
                     </li>
                 )}
 
                 {/* Expand / Reduce */}
                 <li onClick={toggleExpanded}>
-                    <WaIcon name={currentPoi.expanded ? 'arrows-to-line' : 'arrows-from-line'}/>
-                    {currentPoi.expanded ? 'Reduce' : 'Expand'}
+                    <WaIcon {...(currentPoi.expanded ? UI_ACTIONS.reduce.icon : UI_ACTIONS.expand.icon)}/>
+                    {currentPoi.expanded ? UI_ACTIONS.reduce.label : UI_ACTIONS.expand.label}
                 </li>
 
                 {/* Hide POI */}
                 <li onClick={hidePOI}>
-                    <WaIcon name="mask" variant="solid"/>{'Hide'}
+                    <WaIcon {...UI_ACTIONS.hidePOIs.icon}/>{UI_ACTIONS.hidePOIs.label}
                 </li>
 
                 <WaDivider/>
 
                 {/* Copy Coordinates */}
                 <li onClick={copyCoordinates}>
-                    <WaIcon name="copy" variant="regular"/>{'Copy Coords'}
+                    <WaIcon {...UI_ACTIONS.copyCoordinates.icon}/>{UI_ACTIONS.copyCoordinates.label}
                 </li>
 
                 {/* Orbit / Panoramic Options */}
                 {showOrbitItem ? (
                     <li onClick={isPOIPanoramic ? stopPanoramic : toggleOrbit}>
-                        <WaIcon name={ROTATION_ICON} animation="spin" variant="regular"/>
-                        {isPOIPanoramic ? 'Stop Panorama' : 'Stop Orbit'}
+                        <WaIcon {...UI_ACTIONS.stopMotion.icon}/>
+                        {`${UI_ACTIONS.stopMotion.label} ${isPOIPanoramic ? 'Panorama' : 'Orbit'}`}
                     </li>
                 ) : (
                      <>
                          <li onClick={toggleOrbit}>
-                             <WaIcon name={ROTATION_ICON} variant="regular"/>{'Orbit'}
+                             <WaIcon {...UI_ACTIONS.orbit.icon}/>{UI_ACTIONS.orbit.label}
                          </li>
                          {panoramaAllowed && (
                              <li onClick={startPanoramic}>
-                                 <WaIcon name="panorama" variant="regular"/>{'Panoramic'}
+                                 <WaIcon {...UI_ACTIONS.panoramic.icon}/>{UI_ACTIONS.panoramic.label}
                              </li>
                          )}
                      </>

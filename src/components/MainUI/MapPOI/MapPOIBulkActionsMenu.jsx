@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-25
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { JOURNEY_EDITOR_DRAWER, POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE } from '@Core/constants'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import {
     WaButton, WaDropdown, WaDropdownItem, WaIcon,
 }                                                                                 from '@awesome.me/webawesome/dist/react'
@@ -179,27 +180,27 @@ export const MapPOIBulkActionsMenu = React.memo((globals) => {
     return (
         <WaDropdown disabled={disabled} onSlAfterHide={handleAfterHide} size="s">
             <WaButton slot="trigger" size="s" disabled={disabled} variant="brand" withCaret>
-                <WaIcon slot="start" name="location-dot" variant="regular"/>{'Select an action'}
+                <WaIcon slot="start" {...UI_ACTIONS.selectAction.icon}/>{UI_ACTIONS.selectAction.label}
             </WaButton>
 
             <WaDropdownItem onClick={remove}>
-                <WaIcon slot="icon" variant="regular" name="trash-can"></WaIcon>{'Remove'}
+                <WaIcon slot="icon" {...UI_ACTIONS.remove.icon}/>{UI_ACTIONS.remove.label}
             </WaDropdownItem>
 
             <WaDropdownItem onClick={shrink}>
-                <WaIcon slot="icon" variant="regular" name="arrows-to-line"></WaIcon>{'Reduce'}
+                <WaIcon slot="icon" {...UI_ACTIONS.reduce.icon}/>{UI_ACTIONS.reduce.label}
             </WaDropdownItem>
 
             <WaDropdownItem onClick={expand}>
-                <WaIcon slot="icon" variant="regular" name="arrows-from-line"></WaIcon>{'Expand'}
+                <WaIcon slot="icon" {...UI_ACTIONS.expand.icon}/>{UI_ACTIONS.expand.label}
             </WaDropdownItem>
 
             <WaDropdownItem onClick={hide}>
-                <WaIcon slot="icon" variant="regular" name="mask"></WaIcon>{'Hide'}
+                <WaIcon slot="icon" {...UI_ACTIONS.hidePOIs.icon}/>{UI_ACTIONS.hidePOIs.label}
             </WaDropdownItem>
 
             <WaDropdownItem onClick={show}>
-                <WaIcon slot="icon" variant="regular" name="eye"></WaIcon>{'Show'}
+                <WaIcon slot="icon" {...UI_ACTIONS.show.icon}/>{UI_ACTIONS.show.label}
             </WaDropdownItem>
 
         </WaDropdown>

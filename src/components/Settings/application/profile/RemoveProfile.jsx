@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-17
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaButton, WaCallout, WaDetails, WaDivider, WaIcon } from '@awesome.me/webawesome/dist/react'
+import { UI_ACTIONS, UI_ICONS }                             from '@Core/ui/metadata/uiActionCatalog'
 import React                                                 from 'react'
 import { useSnapshot }                          from 'valtio/index'
 import { useConfirm }                           from '../../../Modals/ConfirmUI'
@@ -39,7 +40,7 @@ export const RemoveProfile = () => {
             <div className="manage-profile-ui">
                 {'Are you sure you want to remove your account?'}
                 <WaCallout open variant="danger">
-                    <WaIcon slot="icon" name="warning" variant="regular"/>
+                    <WaIcon slot="icon" {...UI_ICONS.warning}/>
                     {'If you confirm your action, you will be redirected to our site.'}<br/>
                     {'None of our data will be stored in your browser.'}<br/>
                 </WaCallout>
@@ -57,18 +58,18 @@ export const RemoveProfile = () => {
     return (
         <WaDetails small className={'lgs--details-hoverable'} name="profile-tools">
             <span slot="summary">
-                <WaIcon name="trash-alt" variant="regular"/> {'Remove Profile'}
+                <WaIcon {...UI_ACTIONS.remove.icon}/> {`${UI_ACTIONS.remove.label} Profile`}
             </span>
             <div className="manage-profile-ui">
                 <WaDivider/>
                 <WaCallout open variant="danger" appearance="filled-outlined">
-                    <WaIcon slot="icon" name="warning" variant="regular"/>
+                    <WaIcon slot="icon" {...UI_ICONS.warning}/>
                     {'You will delete all the data and databases that your browser has stored on your device in order to manage LGS1920 Studio application.'}<br/>
                     {'It includes journeys, POIS, settings, tokens ...'}<br/>
                 </WaCallout>
 
                 <WaButton variant="danger" onClick={remove}>
-                    <WaIcon slot="start" name="trash-alt" variant="regular"/>{'Remove Profile'}
+                    <WaIcon slot="start" {...UI_ACTIONS.remove.icon}/>{`${UI_ACTIONS.remove.label} Profile`}
                 </WaButton>
             </div>
             <ConfirmRemoveDialog/>

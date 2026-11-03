@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-18
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,6 +20,7 @@ import { MapPOIList }                                   from '@Components/MainUI
 import PanelActions                                     from '@Components/PanelsActions'
 import WaDrawer                                         from '@Components/WaDrawerNonModal'
 import { POIS_EDITOR_DRAWER } from '@Core/constants'
+import { UI_ICONS, UI_LABELS } from '@Core/ui/metadata/uiActionCatalog'
 import classNames                                       from 'classnames'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { createPortal }                                 from 'react-dom'
@@ -143,7 +144,7 @@ export const Panel = memo(() => {
                     className={classNames({'drawer-is-stacked': isStacked})}
                 >
                     <PanelActions stackedPanel={isStacked} onBack={isStacked ? closePanelWithManager : null}/>
-                    <span slot="label"><WaIcon name="location-dot" variant="regular"/>{'Points of Interest'}</span>
+                    <span slot="label"><WaIcon {...UI_ICONS.pointOfInterest}/>{UI_LABELS.pointsOfInterest}</span>
 
                     <MapPOIEditListActions/>
                     <LGSScrollbars>

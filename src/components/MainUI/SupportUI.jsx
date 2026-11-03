@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-06-04
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaButton, WaDialog, WaIcon } from '@awesome.me/webawesome/dist/react'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import { default as ReactMarkdown }   from 'react-markdown'
 import { useSnapshot }                from 'valtio'
 import { markdown as support } from '../../../src/assets/modals/support.md'
@@ -35,7 +36,7 @@ export const SupportUI = () => {
                 <div slot="footer">
                         <div className="buttons-bar">
                             <WaButton variant="brand" autofocus onClick={() => setSupport.visible = false}>
-                                <WaIcon slot="start" name="xmark" variant="regular"></WaIcon>{'Close'}</WaButton>
+                                <WaIcon slot="start" {...UI_ACTIONS.close.icon}/>{UI_ACTIONS.close.label}</WaButton>
                         </div>
                 </div>
 

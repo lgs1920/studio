@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { Track } from '@Core/Track'
 import { Utils } from '@Editor/Utils'
+import { UI_ACTIONS, UI_ICONS } from '@Core/ui/metadata/uiActionCatalog'
 import {
     WaButton, WaCallout, WaDivider, WaIcon, WaInput, WaOption, WaSelect, WaTooltip,
 }                            from '@awesome.me/webawesome/dist/react'
@@ -275,7 +276,7 @@ export const JourneyStatisticsSettings = () => {
                 <LGSScrollbars>
                     <div id="journey-statistics-settings">
                         <WaCallout open variant="neutral">
-                            <WaIcon slot="icon" name="circle-info" variant="regular"/>
+                            <WaIcon slot="icon" {...UI_ICONS.info}/>
                             {
                                 'Choose the activity profile to tune here. The activity used by a journey is selected in the journey editor; these thresholds only define how statistics are cleaned for that activity.'
                             }
@@ -302,7 +303,7 @@ export const JourneyStatisticsSettings = () => {
                                 disabled={!isModified}
                                 onClick={resetProfile}
                             >
-                                <WaIcon name="arrow-rotate-left" variant="regular"/>
+                                <WaIcon {...UI_ACTIONS.reset.icon}/>
                             </WaButton>
                         </div>
 
@@ -336,12 +337,12 @@ export const JourneyStatisticsSettings = () => {
                                             event.stopPropagation()
                                             resetThreshold(field.key)
                                         }}
-                                        aria-label={`Reset ${field.label}`}
+                                        aria-label={`${UI_ACTIONS.reset.label} ${field.label}`}
                                     >
-                                        <WaIcon name="arrow-rotate-left" variant="regular"/>
+                                        <WaIcon {...UI_ACTIONS.reset.icon}/>
                                     </WaButton>
                                     <WaTooltip for={`${resetTooltipIdPrefix}-${field.key}`} placement="top">
-                                        {`Reset ${field.label}`}
+                                        {`${UI_ACTIONS.reset.label} ${field.label}`}
                                     </WaTooltip>
                                 </div>
                             ))}

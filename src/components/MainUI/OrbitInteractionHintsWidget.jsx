@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-29
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,6 +20,7 @@ import {
   SCENE_WIDGETS,
   SCENE_WIDGETS_BOARD,
 } from "@Core/constants";
+import { UI_ICONS } from "@Core/ui/metadata/uiActionCatalog";
 import {
   WaButton,
   WaIcon,
@@ -162,7 +163,7 @@ export const OrbitInteractionHintsToggleButton = memo(
           onClick={toggle}
           onPointerDownCapture={onPointerDownCapture}
         >
-          <WaIcon name="circle-info" variant="regular" />
+          <WaIcon {...UI_ICONS.info}/>
         </WaButton>
       </>
     );

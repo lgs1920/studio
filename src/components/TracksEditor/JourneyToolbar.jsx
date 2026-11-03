@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-29
- * Last modified: 2026-10-17
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,8 +16,9 @@
 
 import { ToggleStateIcon }                                           from '@Components/ToggleStateIcon'
 import {
-    FOCUS_ICON, ROTATION_ICON, UPDATE_JOURNEY_SILENTLY,
+    FOCUS_ICON, UPDATE_JOURNEY_SILENTLY,
 } from '@Core/constants'
+import { UI_ACTIONS }                                              from '@Core/ui/metadata/uiActionCatalog'
 import { getGlobalHideOtherJourneys, refreshJourneyVisibility } from '@Core/ui/JourneyVisibility'
 import { useProxyValue }                                          from '@Utils/ValtioUtils'
 import {
@@ -261,11 +262,7 @@ export const JourneyToolbar = (props) => {
                     />
 
                     <WaTooltip for="rotate-journey-toolbar">
-                        {
-                            journeyOrbitActive
-                            ? 'Stop orbit'
-                            : 'Start orbit'
-                        }
+                        {journeyOrbitActive ? UI_ACTIONS.stopOrbit.label : UI_ACTIONS.startOrbit.label}
                     </WaTooltip>
 
                     <WaButton
@@ -277,11 +274,7 @@ export const JourneyToolbar = (props) => {
                         disabled={!rotationAllowedByJourneyReplay && !rotate.running}
                         size="s"
                     >
-                        <WaIcon
-                            name={ROTATION_ICON}
-                            variant="regular"
-                            animation={journeyOrbitActive ? 'spin' : 'none'}
-                        />
+                        <WaIcon {...(journeyOrbitActive ? UI_ACTIONS.stopOrbit.icon : UI_ACTIONS.startOrbit.icon)}/>
                     </WaButton>
 
                     <WaTooltip for="focus-journey-toolbar">{'Focus on journey'}</WaTooltip>

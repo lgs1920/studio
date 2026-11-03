@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-27
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import {
     CURRENT_MAP_POINT, JOURNEY_EDITOR_DRAWER, POI_NEW_BADGE_DURATION, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER,
-    ROTATION_ICON, SCENE_MODE_2D, SCENE_WIDGETS_BOARD,
+    SCENE_MODE_2D, SCENE_WIDGETS_BOARD,
     VIDEO_CROP_ZONE,
 } from '@Core/constants'
 import { openPOIEditor } from '@Components/MainUI/MapPOI/openPOIEditor'
@@ -27,6 +27,7 @@ import {
     openWidgetManagementDrawer,
 }                                                                                  from '@Components/MainUI/widgets/openWidgetManagementDrawer'
 import { getOrbitSettings, setOrbitStoreSettings }                                 from '@Core/OrbitSettings'
+import { UI_ACTIONS }                                                              from '@Core/ui/metadata/uiActionCatalog'
 import { ELEVATION_UNITS, UnitUtils }                                              from '@Utils/UnitUtils'
 import { POIUtils }                                                                from '@Utils/cesium/POIUtils'
 import { UIToast }                                                                 from '@Utils/UIToast'
@@ -305,26 +306,26 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
 
             <ul>
                 <li onClick={copyCoordinates}>
-                    <WaIcon name="copy" variant="regular"/>{'Copy Coords'}
+                    <WaIcon {...UI_ACTIONS.copyCoordinates.icon}/>{UI_ACTIONS.copyCoordinates.label}
                 </li>
                 {!hideVideoActions && (
                     <>
                         <li onClick={createPOI}>
-                            <WaIcon name="location-dot" variant="regular"/>{'Create POI'}
+                            <WaIcon {...UI_ACTIONS.createPOI.icon}/>{UI_ACTIONS.createPOI.label}
                         </li>
                         {isPointRotating || isPointPanoramic ? (
                             <li onClick={stopOrbit}>
-                                <WaIcon name={ROTATION_ICON} animation="spin" variant="regular"/>
-                                {isPointPanoramic ? 'Stop Panorama' : 'Stop Orbit'}
+                                <WaIcon {...UI_ACTIONS.stopMotion.icon}/>
+                                {`${UI_ACTIONS.stopMotion.label} ${isPointPanoramic ? 'Panorama' : 'Orbit'}`}
                             </li>
                         ) : (
                              <>
                                  <li onClick={rotateAroundPoint}>
-                                     <WaIcon name={ROTATION_ICON} variant="regular"/>{'Orbit'}
+                                     <WaIcon {...UI_ACTIONS.orbit.icon}/>{UI_ACTIONS.orbit.label}
                                  </li>
                                  {panoramaAllowed && (
                                      <li onClick={startPanoramic}>
-                                         <WaIcon name="panorama" variant="regular"/>{'Panoramic'}
+                                         <WaIcon {...UI_ACTIONS.panoramic.icon}/>{UI_ACTIONS.panoramic.label}
                                      </li>
                                  )}
                              </>

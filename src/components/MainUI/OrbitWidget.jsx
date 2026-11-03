@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-26
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,6 +33,7 @@ import {
   SCENE_WIDGETS,
   SCENE_WIDGETS_BOARD,
 } from "@Core/constants";
+import { UI_ACTIONS, UI_ROTATION_DIRECTIONS } from "@Core/ui/metadata/uiActionCatalog";
 import { foot, meter, UnitUtils } from "@Utils/UnitUtils";
 import { cameraViewToSlippyLevel } from "@Utils/cesium/CameraLevel";
 import {
@@ -813,13 +814,10 @@ export const OrbitWidget = memo(() => {
   );
 
   const directionIsAntiClockwise = rotate.direction > 0;
-  const directionTooltip = directionIsAntiClockwise
-    ? "Anti-clockwise"
-    : "Clockwise";
-  const directionIcon = directionIsAntiClockwise
-    ? "arrow-rotate-right"
-    : "arrow-rotate-left";
-  const directionAnimation = directionIsAntiClockwise ? "spin" : "spin-reverse";
+  const directionPresentation = directionIsAntiClockwise
+    ? UI_ROTATION_DIRECTIONS.antiClockwise
+    : UI_ROTATION_DIRECTIONS.clockwise;
+  const directionTooltip = directionPresentation.label;
   const directionAnimationStyle = {
     "--animation-duration": `${30 / normalizeOrbitRPM(rotate.rpm)}s`,
   };
@@ -855,12 +853,7 @@ export const OrbitWidget = memo(() => {
               onClick={toggleDirection}
               onPointerDownCapture={blockWidgetDrag}
             >
-              <WaIcon
-                name={directionIcon}
-                animation={directionAnimation}
-                variant="regular"
-                style={directionAnimationStyle}
-              />
+              <WaIcon {...directionPresentation.icon} style={directionAnimationStyle}/>
             </WaButton>
           </div>
 
@@ -892,7 +885,7 @@ export const OrbitWidget = memo(() => {
               onPointerDownCapture={blockWidgetDrag}
             />
             <WaButton
-              aria-label="Stop orbit"
+              aria-label={`${UI_ACTIONS.stop.label} orbit`}
               appearance="outlined"
               className="orbit-widget-footer-button orbit-widget-stop-button lgs-widget-no-drag"
               size="s"
@@ -900,7 +893,7 @@ export const OrbitWidget = memo(() => {
               onClick={stopOrbit}
               onPointerDownCapture={blockWidgetDrag}
             >
-              <WaIcon name="xmark" variant="regular" />
+              <WaIcon {...UI_ACTIONS.stop.icon}/>
             </WaButton>
           </div>
         </WaCard>

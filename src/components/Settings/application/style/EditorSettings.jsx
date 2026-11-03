@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-31
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { formatSliderPercent } from '@Components/MainUI/widgets/editor/elements/sliderUtils'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import { WaButton, WaDivider, WaIcon, WaSlider, WaSwitch, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { useSnapshot }                             from 'valtio'
 
@@ -51,11 +52,11 @@ export const EditorSettings = () => {
                 </WaSwitch>
                 <div id="toolbars-opacity">
                     {'Floating Toolbars Opacity'}
-                    <WaTooltip for="toolbars-opacity-reset">{'Reset to default'}</WaTooltip>
+                    <WaTooltip for="toolbars-opacity-reset">{UI_ACTIONS.restoreDefaults.label}</WaTooltip>
                     <WaButton onClick={resetToolbarOpacity}
                               size="s"
                               appearance="plain" variant="brand">
-                        <WaIcon slot="start" name="arrows-rotate" variant="regular" id={'toolbars-opacity-reset'}>
+                        <WaIcon slot="start" {...UI_ACTIONS.restoreDefaults.icon} id={'toolbars-opacity-reset'}>
                         </WaIcon>
                     </WaButton>
                     <WaSlider value={toolbars.opacity * 1.0}

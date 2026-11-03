@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,6 +28,7 @@ import {
 } from '@Core/ui/replay/ReplayRecordingMonitor'
 import {isDocumentPictureInPictureSupported} from '@Core/ui/widget-manager/WidgetWindowManager'
 import {LGS_TOOLBAR, REPLAY_RECORDING_MONITOR_WIDGET_ID} from '@Core/constants'
+import {UI_ICONS} from '@Core/ui/metadata/uiActionCatalog'
 import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAwesomeKits'
 import {WaButton, WaIcon, WaProgressBar, WaTooltip} from '@awesome.me/webawesome/dist/react'
 import {createPortal} from 'react-dom'
@@ -449,7 +450,7 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                             ? (
                                 <span id={`${metricTooltipIdPrefix}-frames`} className="replay-recording-monitor-metric-size">
                                     <WaTooltip for={`${metricTooltipIdPrefix}-frames`} placement="top">{'Frames checked'}</WaTooltip>
-                                    <WaIcon name="check" variant="regular" label="Frames checked"/>
+                                    <WaIcon {...UI_ICONS.success} label="Frames checked"/>
                                     {`${snapshot.processedFrames} / ${snapshot.frameCount ?? '--'}`}
                                 </span>
                             )

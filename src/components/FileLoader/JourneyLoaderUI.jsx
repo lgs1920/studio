@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,6 +20,7 @@ import {
     journeySampleUrl,
     normalizeJourneySamplesCatalog,
 }                                                             from '@Components/FileLoader/journeySamples'
+import { UI_ACTIONS, UI_ICONS }                               from '@Core/ui/metadata/uiActionCatalog'
 import {
     ALREADY_IMPORTED, IMPORT_FAILED, IMPORT_NOT_SUPPORTED, IMPORT_SUCCESS, JOURNEY_EXISTS, JOURNEY_KO, JOURNEY_OK,
     JOURNEY_WAITING, TrackUtils,
@@ -1014,7 +1015,7 @@ export const JourneyLoaderUI = (props) => {
                     />
 
                     <div className="drag-and-drop-trigger">
-                        <WaIcon className="dropzone-icon" name="route" variant="regular"/>
+                        <WaIcon className="dropzone-icon" {...UI_ICONS.journey}/>
                         <strong>Drop your files here</strong>
                         <span>or click to browse</span>
                     </div>
@@ -1096,8 +1097,7 @@ export const JourneyLoaderUI = (props) => {
                                         >
                                             <WaIcon
                                                 slot="start"
-                                                name={isLoaded ? 'xmark' : 'check'}
-                                                variant="regular"
+                                                {...(isLoaded ? UI_ICONS.alreadyImported : UI_ICONS.success)}
                                                 className={isLoaded ? 'status-error' : 'status-success'}
                                                 style={{color: isLoaded ? 'var(--lgs-error-color)' : 'var(--lgs-success-color)'}}
                                             />
@@ -1122,9 +1122,8 @@ export const JourneyLoaderUI = (props) => {
                 <div className="buttons-bar">
 
                     <WaButton variant="brand" onClick={close}>
-                        <WaIcon slot="start" variant="regular"
-                                name={fileList.size === 0 ? 'xmark' : 'play'}/>
-                        {fileList.size === 0 ? 'Close' : 'Continue'}
+                        <WaIcon slot="start" {...(fileList.size === 0 ? UI_ACTIONS.close.icon : UI_ACTIONS.continue.icon)}/>
+                        {fileList.size === 0 ? UI_ACTIONS.close.label : UI_ACTIONS.continue.label}
                     </WaButton>
                 </div>
             </div>

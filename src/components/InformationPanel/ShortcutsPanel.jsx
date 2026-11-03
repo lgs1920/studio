@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,37 +18,12 @@ import { LGSScrollbars }      from '@Components/MainUI/LGSScrollbars'
 import { LGSPopup }           from '@Components/LGSPopup'
 import { OS_ICONS }           from '@Core/constants'
 import { SHORTCUTS } from '@Core/events/appShortcuts'
+import {
+    SHORTCUT_KEY_LABELS, SHORTCUT_MOUSE_TOKEN_ICONS, SHORTCUT_PLATFORMS,
+} from '@Core/events/shortcutPresentation'
 import { UIToast }            from '@Utils/UIToast'
 import { WaButton, WaCard, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { Fragment, useCallback, useId, useRef, useState } from 'react'
-
-const MOUSE_TOKEN_ICONS = {
-    'Double click':     'computer-mouse-button-left',
-    'Double tap':       'hand-pointer',
-    'Left click':       'computer-mouse-button-left',
-    'Left drag':        'computer-mouse-button-left',
-    'Long tap':         'hand-pointer',
-    'Right click':      'computer-mouse-button-right',
-    'Middle drag':      'computer-mouse-scrollwheel',
-    Pinch:              'hand-pointer',
-    'Right drag':       'computer-mouse-button-right',
-    Tap:                'hand-pointer',
-    'Trackpad scroll':  'computer-mouse-scrollwheel',
-    Wheel:              'computer-mouse-scrollwheel',
-}
-const PLATFORM_ICONS = [
-    {key: 'macos', pattern: /mac/i, label: 'macOS'},
-    {key: 'windows', pattern: /windows/i, label: 'Windows'},
-    {key: 'linux', pattern: /linux/i, label: 'Linux'},
-]
-const KEY_TOKEN_LABELS = {
-    ArrowDown:  '↓',
-    ArrowLeft:  '←',
-    ArrowRight: '→',
-    ArrowUp:    '↑',
-    Minus:      '-',
-    Plus:       '+',
-}
 
 /**
  * Check whether an entry contains a composed key binding.
@@ -101,17 +76,17 @@ const shortcutSections = SHORTCUT_THEME_ORDER
 const cardAppearanceProps = index => index % 2 === 0 ? {appearance: 'filled-outlined'} : {}
 
 const ShortcutKey = ({token}) => {
-    const icon = MOUSE_TOKEN_ICONS[token]
+    const icon = SHORTCUT_MOUSE_TOKEN_ICONS[token]
 
     return (
         <kbd className={`lgs--shortcut-key${icon ? ' is-gesture' : ''}`}>
             {icon && <WaIcon aria-hidden="true" name={icon} variant="regular"/>}
-            <span>{KEY_TOKEN_LABELS[token] ?? token}</span>
+            <span>{SHORTCUT_KEY_LABELS.screen[token] ?? token}</span>
         </kbd>
     )
 }
 
-const platformIconsOf = (platform = '') => PLATFORM_ICONS
+const platformIconsOf = (platform = '') => SHORTCUT_PLATFORMS
     .filter(({pattern}) => pattern.test(platform))
     .map(({key, label}) => {
         const [name, family] = OS_ICONS[key] ?? OS_ICONS.unknown

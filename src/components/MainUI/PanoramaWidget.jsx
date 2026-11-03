@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-26
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ import {
   SCENE_WIDGETS,
   SCENE_WIDGETS_BOARD,
 } from "@Core/constants";
+import { UI_ACTIONS, UI_ROTATION_DIRECTIONS } from "@Core/ui/metadata/uiActionCatalog";
 import {
   ORBIT_RPM_MAX,
   ORBIT_RPM_MIN,
@@ -1165,11 +1166,10 @@ export const PanoramaWidget = memo(() => {
   ]);
 
   const directionIsAntiClockwise = panorama.direction < 0;
-  const directionTooltip = "Change direction";
-  const directionIcon = directionIsAntiClockwise
-    ? "arrow-rotate-right"
-    : "arrow-rotate-left";
-  const directionAnimation = directionIsAntiClockwise ? "spin" : "spin-reverse";
+  const directionPresentation = directionIsAntiClockwise
+    ? UI_ROTATION_DIRECTIONS.antiClockwise
+    : UI_ROTATION_DIRECTIONS.clockwise;
+  const directionTooltip = UI_ROTATION_DIRECTIONS.actionLabel;
   const directionAnimationStyle = {
     "--animation-duration": `${30 / normalizeOrbitRPM(panorama.rpm)}s`,
   };
@@ -1206,12 +1206,7 @@ export const PanoramaWidget = memo(() => {
               onClick={toggleDirection}
               onPointerDownCapture={blockWidgetDrag}
             >
-              <WaIcon
-                name={directionIcon}
-                animation={directionAnimation}
-                variant="regular"
-                style={directionAnimationStyle}
-              />
+              <WaIcon {...directionPresentation.icon} style={directionAnimationStyle}/>
             </WaButton>
             {!hasSingleSlider && (
               <>
@@ -1221,7 +1216,7 @@ export const PanoramaWidget = memo(() => {
                   onPointerDownCapture={blockWidgetDrag}
                 />
                 <WaButton
-                  aria-label="Stop panorama"
+                  aria-label={`${UI_ACTIONS.stop.label} panorama`}
                   appearance="outlined"
                   className="orbit-widget-header-button orbit-widget-stop-button lgs-widget-no-drag"
                   size="s"
@@ -1229,7 +1224,7 @@ export const PanoramaWidget = memo(() => {
                   onClick={closePanorama}
                   onPointerDownCapture={blockWidgetDrag}
                 >
-                  <WaIcon name="xmark" variant="regular" />
+                  <WaIcon {...UI_ACTIONS.stop.icon}/>
                 </WaButton>
               </>
             )}
@@ -1312,7 +1307,7 @@ export const PanoramaWidget = memo(() => {
                 onPointerDownCapture={blockWidgetDrag}
               />
               <WaButton
-                aria-label="Stop panorama"
+                aria-label={`${UI_ACTIONS.stop.label} panorama`}
                 appearance="outlined"
                 className="orbit-widget-footer-button orbit-widget-stop-button lgs-widget-no-drag"
                 size="s"
@@ -1320,7 +1315,7 @@ export const PanoramaWidget = memo(() => {
                 onClick={closePanorama}
                 onPointerDownCapture={blockWidgetDrag}
               >
-                <WaIcon name="xmark" variant="regular" />
+                <WaIcon {...UI_ACTIONS.stop.icon}/>
               </WaButton>
             </div>
           )}

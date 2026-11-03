@@ -10,6 +10,7 @@ Use for UI changes or accessibility regressions. Inspect the component, keyboard
 Check:
 
 - every interactive control has an accessible name and an appropriate role
+- visible and accessible action labels, including names for icon-only controls, come from `UI_ACTIONS` in `src/core/ui/metadata/uiActionCatalog.js`; add missing action metadata to that catalog before wiring it into a component
 - keyboard focus is visible, ordered, trapped, and restored in drawers or dialogs
 - disabled, selected, loading, and error states are conveyed without color alone
 - on-map controls remain usable with keyboard and pointer input

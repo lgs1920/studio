@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-13
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { ToggleStateIcon }                    from '@Components/ToggleStateIcon'
 import { EDIT_WIDGET_ICON }                   from '@Core/constants'
+import { UI_ACTIONS }                          from '@Core/ui/metadata/uiActionCatalog'
 import { WaButton, WaCard, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
 import { useMemo }                             from 'react'
 import { useSnapshot }    from 'valtio'
@@ -129,18 +130,18 @@ export const SortableWidgetRow = ({widget, draggable = true}) => {
                         />
                     </div>
                 )}
-                <WaTooltip placement="top" for={`center-widget-${widget.id}`}>{'Recenter'}</WaTooltip>
+                <WaTooltip placement="top" for={`center-widget-${widget.id}`}>{UI_ACTIONS.recenter.label}</WaTooltip>
                 <WaButton
                     id={`center-widget-${widget.id}`}
                     size="s"
                     appearance="plain"
                     variant="neutral"
                     className="widget-ordering-action-button"
-                    aria-label="Recenter"
+                    aria-label={UI_ACTIONS.recenter.label}
                     disabled={!__.ui.widgetManager.getElementById(widget.id)}
                     onClick={centerWidget}
                 >
-                    <WaIcon name="plus" variant="regular"/>
+                    <WaIcon {...UI_ACTIONS.recenter.icon}/>
                 </WaButton>
 
                 <WaTooltip placement="top" for={`edit-widget-${widget.id}`}>{'Edit'}</WaTooltip>
@@ -156,17 +157,17 @@ export const SortableWidgetRow = ({widget, draggable = true}) => {
                     <WaIcon name={EDIT_WIDGET_ICON} variant="regular"/>
                 </WaButton>
 
-                <WaTooltip placement="top" for={`remove-widget-${widget.id}`}>{'Remove'}</WaTooltip>
+                <WaTooltip placement="top" for={`remove-widget-${widget.id}`}>{UI_ACTIONS.remove.label}</WaTooltip>
                 <WaButton
                     id={`remove-widget-${widget.id}`}
                     appearance="plain"
                     variant="danger"
                     className="widget-ordering-action-button"
-                    aria-label="Remove"
+                    aria-label={UI_ACTIONS.remove.label}
                     onClick={removeWidget}
                     size="s"
                 >
-                    <WaIcon name="trash-can" variant="regular"/>
+                    <WaIcon {...UI_ACTIONS.remove.icon}/>
                 </WaButton>
             </div>
         </WaCard>

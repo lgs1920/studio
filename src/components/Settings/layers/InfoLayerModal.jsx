@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-07
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import { WaButton, WaDialog, WaIcon } from '@awesome.me/webawesome/dist/react'
 import React, { useEffect, useState }            from 'react'
 import { default as ReactMarkdown }   from 'react-markdown'
@@ -55,7 +56,7 @@ export const InfoLayerModal = () => {
                     <span>{'Scroll down'}</span>
                 </div>
                 <WaButton variant="brand" onClick={closeInfoModal}>
-                    <WaIcon slot="start" name="check" variant={'regular'}/>{'Close'}
+                    <WaIcon slot="start" {...UI_ACTIONS.acknowledgeClose.icon}/>{UI_ACTIONS.acknowledgeClose.label}
                 </WaButton>
             </div>
         </WaDialog>

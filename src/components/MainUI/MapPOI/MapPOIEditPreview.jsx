@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-27
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import { MapPOIContent } from '@Components/MainUI/MapPOI/MapPOIContent'
 import { getPOIBillboardDistanceScale } from '@Utils/cesium/POIBillboardScale'
 import { POIUtils } from '@Utils/cesium/POIUtils'
 import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
+import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { proxy, useSnapshot } from 'valtio'
 
@@ -513,10 +514,10 @@ export const MapPOIEditPreview = ({poi}) => {
                         size="s"
                         variant="brand"
                         appearance="filled-outlined"
-                        aria-label="Restore initial POI preview height"
+                        aria-label={`${UI_ACTIONS.restore.label} initial POI preview height`}
                         onClick={handleResetPreviewSize}
                     >
-                        <WaIcon name="arrow-rotate-left" variant="regular"/>
+                        <WaIcon {...UI_ACTIONS.restore.icon}/>
                     </WaButton>
                     <WaTooltip for={`${tooltipIdPrefix}-reset-height`} placement="top">
                         {'Restore initial POI preview height'}

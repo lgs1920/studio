@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-19
- * Last modified: 2026-09-13
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { useEffect, useId, useRef, useState } from 'react'
+import { UI_ICONS } from '@Core/ui/metadata/uiActionCatalog'
 import { CropZoneInfo } from './CropZoneInfo'
 
 /**
@@ -134,7 +135,7 @@ export const CropZoneInfoPopup = ({id, infoComponent, showDimensions = true}) =>
                         setActive(value => !value)
                     }}
                 >
-                    <wa-icon name="circle-info" variant="regular" label="Afficher les informations de la zone de recadrage"/>
+                    <wa-icon {...UI_ICONS.info} label="Afficher les informations de la zone de recadrage"/>
                 </wa-button>
                 {active && (
                     <div className="crop-info-popup-card lgs-card wa-theme-lgs1920-on-map small" role="dialog" aria-label="Informations de la zone de recadrage">

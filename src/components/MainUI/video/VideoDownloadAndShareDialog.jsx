@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-04
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,7 @@ import { LGSPopup }      from '@Components/LGSPopup'
 import {ReplayMediaCapture} from '@Core/ui/replay/ReplayMediaCapture'
 import { REPLAY_DEFERRED_EXPORT_READY_EVENT } from '@Core/ui/replay/ReplayRecordingMonitor'
 import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
+import { UI_ACTIONS, UI_ICONS } from '@Core/ui/metadata/uiActionCatalog'
 import {
     WaButton, WaDialog, WaIcon, WaInput, WaTooltip,
 }                        from '@awesome.me/webawesome/dist/react'
@@ -727,7 +728,7 @@ export const VideoDownloadAndShareDialog = () => {
                             setIsRecordingInfoOpen((open) => !open)
                         }}
                     >
-                        <WaIcon name="circle-info" variant="regular"/>
+                        <WaIcon {...UI_ICONS.info}/>
                     </WaButton>
                 </div>
                 <LGSPopup
@@ -751,15 +752,15 @@ export const VideoDownloadAndShareDialog = () => {
             <div slot="footer" id="video-preview-dialog-footer">
                 <div className="buttons-bar">
                     <div className="video-preview-close-action">
-                        <WaTooltip for="video-preview-close">{'Cancel'}</WaTooltip>
+                        <WaTooltip for="video-preview-close">{UI_ACTIONS.close.label}</WaTooltip>
                         <WaButton
                             id="video-preview-close"
                             className="video-preview-close-button"
                             appearance="outlined"
                             onClick={requestClose}
                         >
-                            <WaIcon slot="start" className="video-preview-action-icon" name="xmark" variant="regular"/>
-                            {'Close'}
+                            <WaIcon slot="start" className="video-preview-action-icon" {...UI_ACTIONS.close.icon}/>
+                            {UI_ACTIONS.close.label}
                         </WaButton>
                     </div>
                     {canShare && (
@@ -803,12 +804,12 @@ export const VideoDownloadAndShareDialog = () => {
                     <p>{'If you close this window, you will lose your video. Download it first if you want to keep it.'}</p>
                     <div slot="footer" className="video-preview-close-confirmation-actions">
                         <WaButton appearance="outlined" variant="danger" onClick={() => void handleCancel()}>
-                            <WaIcon slot="start" name="check" variant="regular"/>
+                            <WaIcon slot="start" {...UI_ACTIONS.confirm.icon}/>
                             {'Yes I confirm'}
                         </WaButton>
                         <WaButton autoFocus onClick={() => setCloseConfirmationOpen(false)}>
-                            <WaIcon slot="start" name="xmark" variant="regular"/>
-                            {'Cancel'}
+                            <WaIcon slot="start" {...UI_ACTIONS.cancel.icon}/>
+                            {UI_ACTIONS.cancel.label}
                         </WaButton>
                     </div>
                 </WaDialog>
