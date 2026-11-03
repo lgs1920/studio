@@ -4647,3 +4647,95 @@
 ## 2026-11-02 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/171527177b4bb15a2653e9b78b7539151e2981b8)
 
 - Recorded automatically from Git history.
+
+## 2026-11-02 — [`perf: add shared Cesium scene render scheduler`](https://github.com/lgs1920/studio/commit/0be1d28ef70503a2f6e43314fd5cbb3173212c10)
+
+- Recorded automatically from Git history.
+
+## 2026-11-02 — [`fix: request Cesium renders after POI mutations`](https://github.com/lgs1920/studio/commit/91495c428ce723f52f22d675620a00709a5da623)
+
+- Recorded automatically from Git history.
+
+## 2026-11-02 — [`fix: request renders after track updates`](https://github.com/lgs1920/studio/commit/c166b2322b9642562617cd90d4b70e4a94830227)
+
+- Recorded automatically from Git history.
+
+## 2026-11-02 — [`fix: align POI leaders with rendered outlines`](https://github.com/lgs1920/studio/commit/0c34227049f403279bcfc7e5be388f018497689e)
+
+- Recorded automatically from Git history.
+
+## 2026-11-02 — [`fix: correct Fix Path marker projection and layout`](https://github.com/lgs1920/studio/commit/46e4d7b91a4892e6a25c919b0c92857bd7af860b)
+
+- Recorded automatically from Git history.
+
+## 2026-11-02 — [`test: harden browser WebGL preflight`](https://github.com/lgs1920/studio/commit/c0db7324e76396dd1a371d6b2b215c71dd1e0ebb)
+
+- Recorded automatically from Git history.
+
+## 2026-11-02 — [`fix: align widget controls with widget host`](https://github.com/lgs1920/studio/commit/ec9fa5b1b158f6932351686136392cbea810a7e9)
+
+- Recorded automatically from Git history.
+
+## 2026-11-02 — [`fix: support Shift-drag across widget content`](https://github.com/lgs1920/studio/commit/cae6dbb7e93c1904a5e77f0e140c6dc6cdd9fc23)
+
+- Recorded automatically from Git history.
+
+## 2026-11-02 — [`style: refresh welcome splash branding`](https://github.com/lgs1920/studio/commit/cd65e1fe48ab82015598c8589e71e2c2e53bf3ab)
+
+- Recorded automatically from Git history.
+
+## 2026-11-02 — [`fix: format POI coordinates independently of unit settings`](https://github.com/lgs1920/studio/commit/dabbef553b203ef8a9bee0f6adc2f407f8260938)
+
+- Recorded automatically from Git history.
+
+## 2026-11-02 — [`feat: show journey and POI startup readiness`](https://github.com/lgs1920/studio/commit/7415f1087883cdbb0bb1c9f94327a3b06d2196b6)
+
+- Recorded automatically from Git history.
+
+## 2026-11-02 — [`style: improve toast content spacing`](https://github.com/lgs1920/studio/commit/977008e84b7a47997f889dc339438f6f49f58444)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`fix: render Cesium viewer at double resolution`](https://github.com/lgs1920/studio/commit/7c840149b37972bc5ce569604706149ccf02b9bf)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`fix: update journey loading toast message`](https://github.com/lgs1920/studio/commit/4cb7ae88798f82da03099fab336c0255bffdd720)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`feat: add Basic Replay drawer and trace modes`](https://github.com/lgs1920/studio/commit/ad0a3b39e8c0d826361b28a5b769517ac2402914)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`docs: require UI catalog usage`](https://github.com/lgs1920/studio/commit/3587557dd8686b294e694735f14a152c7733e84b)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`fix: separate Replay recording cancel and exit`](https://github.com/lgs1920/studio/commit/eeeb1356807a7c47bf7edcfedc39e7aa2e1cdb4a)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`fix: improve POI color swatches`](https://github.com/lgs1920/studio/commit/ce154ea5744c43cd9894ee6d36c8824ff3fe2155)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`feat: set POI creation defaults`](https://github.com/lgs1920/studio/commit/864265c7929780cc3ab231c1cfdc1aed87dd2fb4)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`fix: apply Basic Replay POI start visibility`](https://github.com/lgs1920/studio/commit/dac95da70be23ebaf0de7ce9f942a0d2842b5002)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`style: refine Basic Replay settings drawer`](https://github.com/lgs1920/studio/commit/6592d4059bd34ed7f81ca6be35cce394c684152d)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`fix: clarify journey selector options`](https://github.com/lgs1920/studio/commit/06f2b904628f4d49adbef76a1353d862ae362377)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/43ce09569798ec51a4b88c6f896f84f86b5bb7d2)
+
+- Recorded automatically from Git history.
