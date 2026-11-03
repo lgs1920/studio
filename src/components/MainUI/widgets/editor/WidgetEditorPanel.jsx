@@ -30,6 +30,8 @@ import {
 import {
     WidgetRegistry,
 }   from '@Core/ui/widget-manager/registry/WidgetRegistry'
+import {isReplayVideoWidgetAllowed} from '@Core/ui/replay/ReplayVideoWidgetPolicy'
+import {isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
 
 import WaDrawer from '@Components/WaDrawerNonModal'
 import {
@@ -86,7 +88,10 @@ export const WidgetEditorPanel = () => {
     const drawers = useSnapshot($drawers)
     const video = useSnapshot($video)
     const widget = useSnapshot($widget)
+    const replaySettings = useSnapshot(lgs.settings.ui.replay)
+    const replay = useSnapshot(lgs.stores.replay)
     const menuSettings = useSnapshot(lgs.editorSettingsProxy.menu)
+    const basicReplay = isJourneyReplayBasicMode({settings: replaySettings, replay})
 
     const [widgetPosition, setWidgetPosition] = useState(null)
     const [data, setData] = useState({name: '', description: '', icon: '', rawIcon: null, type: ''})
@@ -233,7 +238,11 @@ export const WidgetEditorPanel = () => {
             .filter(([id, entry]) => {
                 const _widgetType = id.split('#')[0]
                 // Safe comparison with the current board
-                return entry?.widgetsBoard === cached.widgetsBoard && _widgetType !== CREDITS_WIDGET && _widgetType !== LOGO_WIDGET
+                return entry?.widgetsBoard === cached.widgetsBoard
+                    && _widgetType !== CREDITS_WIDGET
+                    && _widgetType !== LOGO_WIDGET
+                    && (cached.widgetsBoard !== VIDEO_WIDGETS_BOARD
+                        || isReplayVideoWidgetAllowed(id, {basicReplay}))
             })
             .map(([id, entry], index) => {
                 const _widgetType = id.split('#')[0]
@@ -255,7 +264,7 @@ export const WidgetEditorPanel = () => {
             })
             .filter(Boolean)
             .sort((a, b) => b.zIndex - a.zIndex)
-    }, [widget.list, cached]) // Use 'cached' as a dependency to react to any change
+    }, [widget.list, cached, basicReplay]) // Use 'cached' as a dependency to react to any change
 
     const excludedOrderingWidgetTypes = useMemo(
         () => cached?.widgetsBoard === SCENE_WIDGETS_BOARD
@@ -346,6 +355,7 @@ export const WidgetEditorPanel = () => {
                                 <WidgetsOrderingPanelContent
                                     widgetsBoard={cached.widgetsBoard}
                                     excludedWidgetTypes={excludedOrderingWidgetTypes}
+                                    basicReplay={basicReplay}
                                 />
                             </section>
                         </WaTabPanel>

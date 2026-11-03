@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-26
- * Last modified: 2026-10-12
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -130,7 +130,7 @@ export class WidgetCoreControls {
             const bottom = 100 - top - height
             const fits = left >= 0 && top >= 0 && right >= 0 && bottom >= 0
             const widgetType = config.id.split('#')[0]
-            const forcedAnchor = widgetType === COMPASS_WIDGET
+            const forcedAnchor = widgetType === COMPASS_WIDGET && config.contextMenu?.canPosition !== true
                 ? 'top-left'
                 : widgetType === CREDITS_WIDGET
                     ? 'bottom-left'
@@ -146,15 +146,14 @@ export class WidgetCoreControls {
 
             const currentScaleX = Number.isFinite(Number(config.scale?.x)) && Number(config.scale.x) > 0 ? Number(config.scale.x) : 1
             const currentScaleY = Number.isFinite(Number(config.scale?.y)) && Number(config.scale.y) > 0 ? Number(config.scale.y) : 1
-            // Anchored widgets fit inside the crop while respecting their
-            // configured scale limits whenever the crop has enough room.
-            const fixedWidget = Boolean(forcedAnchor)
+            // Fixed-size overlays fit inside the crop while respecting their configured scale limits.
+            const fixedSizeWidget = Boolean(forcedAnchor) || widgetType === COMPASS_WIDGET
             const baseWidth = rect.width / currentScaleX
             const baseHeight = rect.height / currentScaleY
             const scaleFactor = clamp(Math.min(
                 1,
-                boardRect.width / (fixedWidget ? baseWidth : rect.width),
-                boardRect.height / (fixedWidget ? baseHeight : rect.height),
+                boardRect.width / (fixedSizeWidget ? baseWidth : rect.width),
+                boardRect.height / (fixedSizeWidget ? baseHeight : rect.height),
             ), 0, 1)
             const fitScale = Math.min(boardRect.width / baseWidth, boardRect.height / baseHeight)
             const minimumScale = Number.isFinite(Number(config.minScale)) ? Number(config.minScale) : 0
@@ -165,8 +164,8 @@ export class WidgetCoreControls {
                 Math.max(minimumScale, Math.min(currentScaleX, currentScaleY)),
             ))
             const nextScale = {
-                x: fixedWidget ? fixedScale : currentScaleX * scaleFactor,
-                y: fixedWidget ? fixedScale : currentScaleY * scaleFactor,
+                x: fixedSizeWidget ? fixedScale : currentScaleX * scaleFactor,
+                y: fixedSizeWidget ? fixedScale : currentScaleY * scaleFactor,
             }
             const scaleChanged = Number.isFinite(nextScale.x) && Number.isFinite(nextScale.y) &&
                 (nextScale.x !== currentScaleX || nextScale.y !== currentScaleY)

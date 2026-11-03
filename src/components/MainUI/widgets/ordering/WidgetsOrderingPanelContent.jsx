@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-13
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,8 +16,9 @@
 
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import {
-    CREDITS_WIDGET, LOGO_WIDGET, REPLAY_TIMELINE_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
+    CREDITS_WIDGET, LOGO_WIDGET, REPLAY_TIMELINE_WIDGET, VIDEO_WIDGETS_BOARD, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
 } from '@Core/constants'
+import {isReplayVideoWidgetAllowed} from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import { WaCard, WaDivider }                        from '@awesome.me/webawesome/dist/react'
 import classNames from 'classnames'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
@@ -33,6 +34,7 @@ const CORE_FIXED_WIDGET_TYPES = [CREDITS_WIDGET, LOGO_WIDGET, REPLAY_TIMELINE_WI
 export const WidgetsOrderingPanelContent = ({
     widgetsBoard,
     excludedWidgetTypes = NO_EXCLUDED_WIDGET_TYPES,
+    basicReplay = null,
     fillHeight = false,
 }) => {
     const _scroll = useRef(null)
@@ -53,7 +55,10 @@ export const WidgetsOrderingPanelContent = ({
                 const _widgetType = id.split('#')[0]
                 return entry?.widgetsBoard === widgetsBoard &&
                     !CORE_FIXED_WIDGET_TYPES.includes(_widgetType) &&
-                    !excludedWidgetTypeSet.has(_widgetType)
+                    !excludedWidgetTypeSet.has(_widgetType) &&
+                    (widgetsBoard !== VIDEO_WIDGETS_BOARD
+                        || typeof basicReplay !== 'boolean'
+                        || isReplayVideoWidgetAllowed(id, {basicReplay}))
             })
             .map(([id, entry], index) => {
                 const _widgetType = id.split('#')[0]
@@ -68,6 +73,10 @@ export const WidgetsOrderingPanelContent = ({
                 const _elementConfig = _instance.configuration?.elements?.[id]
                     ?? _instance.configuration?.user
                     ?? _instance.configuration?.default
+                const runtimeConfig = __.ui.widgetManager.getWidgetConfig(id)
+                const canHide = (runtimeConfig?.canHide ?? _instance.canHide) === true
+                    && runtimeConfig?.mandatory !== true
+                    && _instance.mandatory !== true
 
                 return {
                     id,
@@ -75,7 +84,8 @@ export const WidgetsOrderingPanelContent = ({
                     type:   _widgetType,
                     label:  _elementConfig?.text?.content ?? _instance.name ?? _widgetType,
                     fixed:  _instance.fixedPosition ?? false,
-                    canHide: _instance.canHide === true || __.ui.widgetManager.getWidgetConfig(id)?.canHide === true,
+                    canHide,
+                    canRemove: __.ui.widgetManager.canRemoveWidget(id),
                     visible: entry?.visible !== false,
                     widgetGroup: entry?.widgetGroup ?? null,
                     widgetGroupLabel: entry?.widgetGroupLabel ?? null,
@@ -83,7 +93,7 @@ export const WidgetsOrderingPanelContent = ({
             })
             .filter(Boolean)
             .sort((a, b) => b.zIndex - a.zIndex)
-    }, [widget.list, widgetsBoard, excludedWidgetTypeSet])
+    }, [widget.list, widgetsBoard, excludedWidgetTypeSet, basicReplay])
 
     const widgetRows = useMemo(() => groupWidgetEntries(activeWidgets), [activeWidgets])
 

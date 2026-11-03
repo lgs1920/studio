@@ -157,18 +157,22 @@ export const SortableWidgetRow = ({widget, draggable = true}) => {
                     <WaIcon name={EDIT_WIDGET_ICON} variant="regular"/>
                 </WaButton>
 
-                <WaTooltip placement="top" for={`remove-widget-${widget.id}`}>{UI_ACTIONS.remove.label}</WaTooltip>
-                <WaButton
-                    id={`remove-widget-${widget.id}`}
-                    appearance="plain"
-                    variant="danger"
-                    className="widget-ordering-action-button"
-                    aria-label={UI_ACTIONS.remove.label}
-                    onClick={removeWidget}
-                    size="s"
-                >
-                    <WaIcon {...UI_ACTIONS.remove.icon}/>
-                </WaButton>
+                {widget.canRemove && (
+                    <>
+                        <WaTooltip placement="top" for={`remove-widget-${widget.id}`}>{UI_ACTIONS.remove.label}</WaTooltip>
+                        <WaButton
+                            id={`remove-widget-${widget.id}`}
+                            appearance="plain"
+                            variant="danger"
+                            className="widget-ordering-action-button"
+                            aria-label={UI_ACTIONS.remove.label}
+                            onClick={removeWidget}
+                            size="s"
+                        >
+                            <WaIcon {...UI_ACTIONS.remove.icon}/>
+                        </WaButton>
+                    </>
+                )}
             </div>
         </WaCard>
     )
