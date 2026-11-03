@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -159,7 +159,7 @@ describe('Cesium viewer lifecycle', () => {
 
         expect(viewer).toBe(globalThis.lgs.viewer)
         expect(FakeViewer.instances).toHaveLength(1)
-        expect(viewer.resolutionScale).toBe(1)
+        expect(viewer.resolutionScale).toBe(2)
         expect(viewer.forceResize).toHaveBeenCalledOnce()
         expect(viewer.scene.requestRender).toHaveBeenCalledTimes(2)
         expect(fakeCanvasEventManager).toHaveBeenCalledOnce()

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-11
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -226,8 +226,8 @@ const getOrCreateViewer = () => {
                 baseLayer:             false,
                 baseLayerPicker:       false,
             })
-            // Keep the draw buffer at the browser's effective display resolution.
-            lgs.viewer.resolutionScale = 1
+            // Render the main map at twice its display resolution for sharper output.
+            lgs.viewer.resolutionScale = 2
         }
         catch (error) {
             console.error('[LGS1920][Cesium] Viewer construction failed.', {
