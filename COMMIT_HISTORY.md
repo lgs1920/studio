@@ -4631,3 +4631,19 @@
 ## 2026-11-01 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/2f183cde59ee054b8b375979cf4492e18acfa6a3)
 
 - Recorded automatically from Git history.
+
+## 2026-11-02 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/f29d9943198a76c97e56de3b9a978eabd21de466)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-11-02 — [`fix: keep POI title altitude together`](https://github.com/lgs1920/studio/commit/2f4ff1f79ede95465b3f2f04d3577b161386956d)
+
+- Recorded automatically from Git history.
+
+## 2026-11-02 — [`fix: align POI visibility and UI test contracts`](https://github.com/lgs1920/studio/commit/3d6da42a4214816e55c67cfbd32cd724d7325d91)
+
+- Recorded automatically from Git history.
+
+## 2026-11-02 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/171527177b4bb15a2653e9b78b7539151e2981b8)
+
+- Recorded automatically from Git history.
