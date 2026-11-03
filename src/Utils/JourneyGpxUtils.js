@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-03
- * Last modified: 2026-10-24
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -556,6 +556,10 @@ const poiToGpx = (journey, poi) => {
         lgsElement('countryCode', poi.countryCode),
         lgsElement('color', poi.color),
         lgsElement('bgColor', poi.bgColor),
+        lgsElement('borderColor', poi.borderColor),
+        lgsElement('background', poi.background),
+        lgsElement('textBorderColorsLinked', poi.textBorderColorsLinked),
+        lgsElement('display', toJson(poi.display)),
         lgsElement('visible', poi.visible),
         lgsElement('expanded', poi.expanded),
         lgsElement('animated', poi.animated),
@@ -593,6 +597,10 @@ const getPoiLgsProperties = (journey, poi) => lgsProperties({
     countryCode:      poi.countryCode,
     color:            poi.color,
     bgColor:          poi.bgColor,
+    borderColor:      poi.borderColor,
+    background:       poi.background,
+    textBorderColorsLinked: poi.textBorderColorsLinked,
+    display:          poi.display,
     visible:          poi.visible,
     expanded:         poi.expanded,
     animated:         poi.animated,
@@ -844,6 +852,10 @@ export const extractLgsPoiProperties = (properties = {}) => ({
     countryCode:      lgsProperty(properties, 'countryCode'),
     color:            lgsProperty(properties, 'color'),
     bgColor:          lgsProperty(properties, 'bgColor'),
+    borderColor:      lgsProperty(properties, 'borderColor'),
+    background:       parseBoolean(lgsProperty(properties, 'background')),
+    textBorderColorsLinked: parseBoolean(lgsProperty(properties, 'textBorderColorsLinked')),
+    display:          parseJson(lgsProperty(properties, 'display')),
     visible:          parseBoolean(lgsProperty(properties, 'visible')),
     expanded:         parseBoolean(lgsProperty(properties, 'expanded')),
     animated:         parseBoolean(lgsProperty(properties, 'animated')),

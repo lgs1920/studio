@@ -89,7 +89,7 @@ The repository already contains the main product surface used by the studio:
 
 ### Journey Reports
 
-- Export journeys as GPX or GeoJSON, including associated POIs while excluding generated start / end system markers
+- Export journeys as GPX or GeoJSON, including associated POIs and their LGS display settings while excluding generated start / end system markers
 - Export journeys as PDF reports or HTML reports packaged as ZIP archives
 - Include journey metadata, description, statistics, dates, elevation profile, POI tables, coordinates, and altitude data
 - Generate 2D overview maps and 3D Cesium map captures for the four cardinal orientations

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-10-24
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -89,6 +89,68 @@ describe('Journey POI category import', () => {
             'Unknown category':  'poi',
             'Generic category with symbol': 'summit',
             'LGS category':       'refuge',
+        })
+    })
+
+    it('restores exported POI decoration settings from GeoJSON properties', async () => {
+        const journey = new Journey()
+        Object.assign(journey, {
+            slug:    'poi-display-import-journey',
+            tracks:  new Map(),
+            geoJson: {
+                type:     'FeatureCollection',
+                features: [{
+                    type:       'Feature',
+                    properties: {
+                        name:                         'Styled POI',
+                        lgs_id:                       'styled-poi',
+                        lgs_borderColor:              '#ff6600',
+                        lgs_background:               false,
+                        lgs_textBorderColorsLinked:   true,
+                        lgs_display:                  {
+                            category: true,
+                            titleCategoryIcon: false,
+                            titleAltitude: true,
+                            location: true,
+                            altitude: false,
+                            coordinates: true,
+                            dateTime: true,
+                            maxWidth: 260,
+                            fontFamily: 'System',
+                            fontSize: 18,
+                            widgetRotation: 25,
+                            bold: true,
+                            italic: true,
+                            style: 'slanted-banner',
+                            stickAngle: '45',
+                            stickPosition: 'right',
+                            stickHorizontalPosition: 80,
+                            stickLength: 24,
+                            borderWidth: 5,
+                            borderRadius: 'large',
+                            schemaVersion: 5,
+                        },
+                    },
+                    geometry:   {type: 'Point', coordinates: [6.1, 45.1]},
+                }],
+            },
+        })
+
+        await journey.getPOIsFromGeoJson()
+
+        const [poi] = Array.from(globalThis.__.ui.poiManager.list.values())
+        expect(poi.borderColor).toBe('#ff6600')
+        expect(poi.background).toBe(false)
+        expect(poi.textBorderColorsLinked).toBe(true)
+        expect(poi.display).toMatchObject({
+            category: true,
+            titleCategoryIcon: false,
+            titleAltitude: true,
+            style: 'slanted-banner',
+            widgetRotation: 25,
+            stickHorizontalPosition: 80,
+            borderWidth: 5,
+            borderRadius: 'large',
         })
     })
 })

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-03
- * Last modified: 2026-10-24
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,29 @@ import {
 }                               from '@Utils/JourneyGpxUtils'
 
 const trackSlug = 'track#round-trip#gpx#main-track'
+const poiDisplaySettings = {
+    category:                 true,
+    titleCategoryIcon:        false,
+    titleAltitude:            true,
+    location:                 true,
+    altitude:                 false,
+    coordinates:               true,
+    dateTime:                  true,
+    maxWidth:                  260,
+    fontFamily:                'System',
+    fontSize:                  18,
+    widgetRotation:            25,
+    bold:                      true,
+    italic:                    true,
+    style:                     'slanted-banner',
+    stickAngle:                '45',
+    stickPosition:             'right',
+    stickHorizontalPosition:   80,
+    stickLength:               24,
+    borderWidth:               5,
+    borderRadius:              'large',
+    schemaVersion:             5,
+}
 
 const makeJourney = () => ({
     slug:             'round-trip#gpx',
@@ -104,6 +127,10 @@ const makePois = () => [
         simulatedHeight: 113,
         color:           '#ffffff',
         bgColor:         '#111111',
+        borderColor:     '#ff6600',
+        background:      false,
+        textBorderColorsLinked: true,
+        display:         poiDisplaySettings,
         visible:         false,
     },
     {
@@ -153,6 +180,10 @@ describe('journey GPX export', () => {
         expect(gpxContent).toContain('<lgs:id>poi-1</lgs:id>')
         expect(gpxContent).toContain('<lgs:location>Annecy</lgs:location>')
         expect(gpxContent).toContain('<lgs:countryCode>FR</lgs:countryCode>')
+        expect(gpxContent).toContain('<lgs:borderColor>#ff6600</lgs:borderColor>')
+        expect(gpxContent).toContain('<lgs:background>false</lgs:background>')
+        expect(gpxContent).toContain('<lgs:textBorderColorsLinked>true</lgs:textBorderColorsLinked>')
+        expect(gpxContent).toContain('&quot;style&quot;:&quot;slanted-banner&quot;')
         expect(gpxContent).toContain('<lgs:countryCodes>[&quot;FR&quot;,&quot;IT&quot;]</lgs:countryCodes>')
         expect(gpxContent).toContain('<lgs:renderSmoothing>{&quot;enabled&quot;:true,&quot;step&quot;:2}</lgs:renderSmoothing>')
         expect(gpxContent).toContain('<lgs:parentKind>track</lgs:parentKind>')
@@ -192,6 +223,10 @@ describe('journey GPX export', () => {
         expect(poiMetadata.countryCode).toBe('FR')
         expect(poiMetadata.visible).toBe(false)
         expect(poiMetadata.height).toBe(112)
+        expect(poiMetadata.borderColor).toBe('#ff6600')
+        expect(poiMetadata.background).toBe(false)
+        expect(poiMetadata.textBorderColorsLinked).toBe(true)
+        expect(poiMetadata.display).toEqual(poiDisplaySettings)
     })
 
     it('maps standard GPX waypoint type and symbol labels to Studio categories', () => {
@@ -269,6 +304,10 @@ describe('journey GeoJSON export', () => {
         expect(pointFeatures[0].properties.lgs_category).toBe('summit')
         expect(pointFeatures[0].properties.lgs_location).toBe('Annecy')
         expect(pointFeatures[0].properties.lgs_countryCode).toBe('FR')
+        expect(pointFeatures[0].properties.lgs_borderColor).toBe('#ff6600')
+        expect(pointFeatures[0].properties.lgs_background).toBe(false)
+        expect(pointFeatures[0].properties.lgs_textBorderColorsLinked).toBe(true)
+        expect(pointFeatures[0].properties.lgs_display).toEqual(poiDisplaySettings)
         expect(geoJson.properties.lgs_countryCodes).toEqual(['FR', 'IT'])
         expect(pointFeatures[0].geometry.coordinates).toEqual([6.15, 45.15, 112])
         expect(lineFeatures[0].properties.lgs_color).toBe('#ffcc00')

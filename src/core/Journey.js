@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-08
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,6 +20,7 @@ import {
     UPDATE_JOURNEY_SILENTLY,
 }                                        from '@Core/constants'
 import { MapPOI }                        from '@Core/MapPOI'
+import { normalizePOIDisplaySettings }   from '@Core/POIDisplaySettings'
 import { gpx, kml }                      from '@tmcw/togeojson'
 import { getGeom }                       from '@turf/invariant'
 import { normalizeFixPathCorrectionData } from '@Utils/cesium/fixPathCorrections'
@@ -717,6 +718,10 @@ export class Journey extends MapElement {
                         simulatedHeight: clampedHeight,
                         color:   lgsPoi.color ?? lgs.colors.dark,
                         bgColor: lgsPoi.bgColor ?? lgs.colors.light,
+                        ...(lgsPoi.borderColor !== undefined ? {borderColor: lgsPoi.borderColor} : {}),
+                        ...(lgsPoi.background !== undefined ? {background: lgsPoi.background} : {}),
+                        ...(lgsPoi.textBorderColorsLinked !== undefined ? {textBorderColorsLinked: lgsPoi.textBorderColorsLinked} : {}),
+                        ...(lgsPoi.display !== undefined ? {display: normalizePOIDisplaySettings(lgsPoi.display)} : {}),
                         visible:         lgsPoi.visible ?? true,
                         expanded:        lgsPoi.expanded ?? false,
                         animated:        lgsPoi.animated ?? false,
