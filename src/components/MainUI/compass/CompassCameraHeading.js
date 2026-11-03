@@ -31,6 +31,9 @@ export const resolveCompassCameraHeading = ({replayFrame = null, fallbackHeading
     ]
 
     for (const candidate of candidates) {
+        if (candidate === null || candidate === undefined || candidate === '') {
+            continue
+        }
         const heading = Number(candidate)
         if (Number.isFinite(heading)) {
             return heading

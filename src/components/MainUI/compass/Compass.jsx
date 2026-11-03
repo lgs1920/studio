@@ -121,7 +121,7 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true, syn
         }
 
         const heading = resolveCompassCameraHeading({
-            replayFrame,
+            replayFrame: isExporting ? replayFrame : null,
             fallbackHeading: isExporting ? null : lgs.camera?.heading,
         })
         if (heading === null) {
