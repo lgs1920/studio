@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,7 +28,7 @@ import { proxyMap } from 'valtio/utils'
 import {readFileSync} from 'node:fs'
 import {parse} from 'yaml'
 
-const settings = parse(readFileSync(new URL('../../../../public/settings.yaml', import.meta.url), 'utf8'))
+const settings = parse(readFileSync('public/settings.yaml', 'utf8'))
 const legacyDisplayDefaults = {
     category:          false,
     titleCategoryIcon: true,

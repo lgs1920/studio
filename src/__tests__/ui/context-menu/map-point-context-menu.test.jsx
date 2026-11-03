@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-10-21
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -48,6 +48,7 @@ vi.mock('@Utils/UnitUtils', () => ({
     ELEVATION_UNITS: {metric: 'm'},
     UnitUtils: {
         convert: vi.fn(() => ({to: vi.fn(() => 0)})),
+        formatCoordinate: vi.fn(value => `${value}`),
     },
 }))
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-05-04
- * Last modified: 2026-09-13
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,9 @@ const domUnitTestFiles = [
     'src/__tests__/unit/widgets/camera-adjustment-widget-position.test.js',
     'src/__tests__/unit/widgets/widget-preview-rotation.test.js',
     'src/__tests__/unit/journey/journey-gpx.test.js',
+    'src/__tests__/unit/core/poi-display-settings.test.js',
+    'src/__tests__/unit/core/poi-manager-creation.test.js',
+    'src/__tests__/unit/core/poi-manager-replay-pois.test.js',
     'src/core/ui/panels/drawerResize.test.js',
 ]
 
