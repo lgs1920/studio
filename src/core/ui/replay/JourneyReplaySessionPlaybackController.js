@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -588,10 +588,14 @@ export const enterReplayPreparation = async (mode, {
 
     const basicPreparation = isJourneyReplayBasicMode()
     if (basicPreparation) {
+        const replayPOIPreparation = call.applyJourneyReplayPOIPreparationVisibility()
         call.hideOtherJourneysVisibility()
+        await replayPOIPreparation
+        await call.applyJourneyReplayPOIPreparationVisibility()
     }
-
-    JourneyReplayVisibilityController.hideJourneyReplayPOIsForPreparation(mode)
+    else {
+        JourneyReplayVisibilityController.hideJourneyReplayPOIsForPreparation(mode)
+    }
 
     const prepared = await prepareReplayCamera(mode, {journey})
     const preparationSucceeded = prepared === true && isCurrentTransition()
@@ -640,6 +644,16 @@ export const leaveReplayPreparation = (mode) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     state.preparationTransitionToken = (state.preparationTransitionToken ?? 0) + 1
     call.cancelPreparationCameraGesture?.()
+
+    if (state.replayPOIPreparationActive === true) {
+        state.replayPOIPreparationActive = false
+        if (replayStore()) {
+            replayStore().poiPresentationPreparationActive = false
+        }
+        void call.restoreNearbyPOIsAfterPlayback().catch(error => {
+            console.error('[Replay POI] Failed to restore POI expansion after preparation.', error)
+        })
+    }
 
     if (state.controller?.running || state.controller?.paused) {
         state.controller.stop({emit: false, clearProgress: true})
@@ -769,7 +783,9 @@ export const start = (mode, options = {}) => {
         void globalThis.__?.ui?.cameraManager?.stopRotate?.()
         call.setJourneyReplayOrbitAllowed(false)
         call.restoreOtherJourneysVisibility({respectReplaySetting: false})
-        call.restoreJourneyReplayPOIVisibility()
+        if (state.replayPOIPreparationActive !== true) {
+            call.restoreJourneyReplayPOIVisibility()
+        }
         call.hideCurrentJourneyVisibility()
         if (shouldHideOtherJourneys) {
             call.hideOtherJourneysVisibility()
@@ -832,6 +848,7 @@ export const start = (mode, options = {}) => {
         if (runtimeStore) {
             runtimeStore.toolbarVisible = true
             runtimeStore.mainUiHidden = videoReplayLinked
+            runtimeStore.poiPresentationPreparationActive = false
             runtimeStore.clipSequenceActive = true
         }
         if (videoReplayLinked) {

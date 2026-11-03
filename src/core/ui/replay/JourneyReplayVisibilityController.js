@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -202,7 +202,13 @@ export const restoreCurrentJourneyVisibility = (mode, {restorePOIs = true} = {})
         journey.updateVisibility?.(true)
         call.restoreCurrentJourneyPolylineVisibility()
         if (!restorePOIs) {
-            call.applyJourneyReplayPOIVisibility()
+            if (isReplayPOIPresentationActive()
+                || replayStore()?.poiPresentationPreparationActive === true) {
+                call.applyJourneyReplayPOIVisibility()
+            }
+            else {
+                call.restoreJourneyReplayPOIVisibility()
+            }
         }
         if (restorePOIs && globalThis.lgs?.viewer?.dataSources) {
             TrackUtils.updatePOIsVisibility(journey, true)
@@ -222,11 +228,17 @@ export const poiEntities = (mode, poi) => {
     return replayPOIEntityLookup(mode)?.get(poi) ?? []
 }
 
-export const setPOIEntityVisibility = (mode, poi, visible, {allowReplayAnimation = false} = {}) => {
+export const setPOIEntityVisibility = (mode, poi, visible, {
+    allowReplayAnimation = false,
+    allowReplayPreparation = false,
+} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const effectiveVisibility = POIUtils.setPOIVisibility(poi, visible, {allowReplayAnimation})
+        const effectiveVisibility = POIUtils.setPOIVisibility(poi, visible, {
+            allowReplayAnimation,
+            allowReplayPreparation,
+        })
         call.poiEntities(poi).forEach(entity => {
             const entityVisibilityMatches = isVisibleProperty(mode, entity.show) === effectiveVisibility
             const billboardVisibilityMatches = !entity.billboard
@@ -338,7 +350,8 @@ export const applyJourneyReplayPOIVisibility = (
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const store = replayStore()
-        const {poiVisibilityMode} = currentJourneyReplayPoiBehavior()
+        const behavior = currentJourneyReplayPoiBehavior()
+        const {poiVisibilityMode, basicMode} = behavior
         const runtimeNearbyPois = Array.isArray(nearbyPois)
             ? nearbyPois
             : Array.isArray(store?.nearbyPois)
@@ -361,10 +374,11 @@ export const applyJourneyReplayPOIVisibility = (
 
             const settings = normalizeJourneyReplayPOISettings(poi.replay)
             const isEndpoint = isReplayPOIEndpoint(poi)
-            const visibilityMode = isEndpoint ? 'user' : poiVisibilityMode
+            const visibilityMode = isEndpoint && !basicMode ? 'user' : poiVisibilityMode
             const animationActive = state.replayPoiTriggered.has(poi.id)
             const shouldApplyVisibility = animationActive
                 || nearbyPOIIds.has(poi.id)
+                || state.replayPOIVisibilityState.has(poi.id)
                 || visibilityMode !== 'user'
                 || settings.visible === false
                 || poi.visible === false
@@ -374,11 +388,9 @@ export const applyJourneyReplayPOIVisibility = (
 
             const visibleBeforePlayback = state.replayPOIVisibilityState.get(poi.id)?.visible
                 ?? call.isPOIVisibleBeforePlayback(poi)
-            const visibleByUser = isEndpoint
-                ? settings.visible !== false
-                : visibleBeforePlayback && settings.visible !== false
+            const visibleByUser = visibleBeforePlayback && settings.visible !== false
             const visibleDuringPlayback = animationActive
-                || (visibilityMode === 'yes' && !isEndpoint)
+                || (visibilityMode === 'yes' && (basicMode || !isEndpoint))
                 || (poi.visible !== false
                 && (visibilityMode === 'yes'
                     || (visibilityMode === 'user' && visibleByUser))
@@ -393,10 +405,62 @@ export const applyJourneyReplayPOIVisibility = (
             call.setPOIEntityVisibility(
                 poi,
                 visibleDuringPlayback,
-                {allowReplayAnimation: animationActive},
+                {
+                    allowReplayAnimation: animationActive,
+                    allowReplayPreparation: state.replayPOIPreparationActive === true
+                        || replayStore()?.poiPresentationPreparationActive === true,
+                },
             )
         }
     }
+
+/**
+ * Apply the Basic Replay visibility policy while capturing user POI state.
+ * @param {object} mode - Replay session mode.
+ * @returns {Promise<void>} Completion of requested POI collapses.
+ */
+export const applyJourneyReplayPOIPreparationVisibility = mode => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const {poiVisibilityMode} = currentJourneyReplayPoiBehavior()
+    const candidates = call.replayPOICandidates?.() ?? []
+    const collapsePromises = []
+    state.replayPOIPreparationActive = true
+    const store = replayStore()
+    if (store) {
+        store.poiPresentationPreparationActive = true
+    }
+
+    for (const poi of candidates) {
+        if (!poi?.id) {
+            continue
+        }
+
+        if (!state.replayPOIVisibilityState.has(poi.id)) {
+            state.replayPOIVisibilityState.set(poi.id, {
+                visible: call.isPOIVisibleBeforePlayback?.(poi) ?? poi.visible !== false,
+            })
+        }
+
+        const poiSettings = normalizeJourneyReplayPOISettings(poi.replay)
+        const originalVisibility = state.replayPOIVisibilityState.get(poi.id)?.visible === true
+        const visible = poiVisibilityMode === 'yes'
+            || (poiVisibilityMode === 'user' && originalVisibility && poi.visible !== false && poiSettings.visible)
+        call.setPOIEntityVisibility(poi, visible, {allowReplayPreparation: true})
+
+        if (poiVisibilityMode !== 'no') {
+            if (!state.replayPoiExpandedState.has(poi.id)) {
+                state.replayPoiExpandedState.set(poi.id, poi.expanded === true)
+            }
+            if (poi.expanded === true) {
+                collapsePromises.push(call.updatePOIExpandedState(poi.id, false))
+            }
+        }
+    }
+
+    globalThis.lgs?.scene?.requestRender?.()
+    return Promise.all(collapsePromises).then(() => undefined)
+}
 
 /** Reapply current policy to cached candidates after another POI writer changes visibility. */
 export const enforceStopClipPOIVisibility = mode => {

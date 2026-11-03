@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -638,6 +638,10 @@ export const restoreJourneyReplayDrawerAfterPlayback = (mode, ) => {
 export const restorePlaybackSceneInternal = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        state.replayPOIPreparationActive = false
+        if (replayStore()) {
+            replayStore().poiPresentationPreparationActive = false
+        }
         if (state.sceneRestorePromise) {
             return state.sceneRestorePromise
         }
@@ -1170,6 +1174,10 @@ export const bindRenderer = (mode, ) => {
             }),
             state.controller.on(REPLAY_EVENT_STOP, () => {
                 state.lastPlaybackUpdateProgressKey = null
+                state.replayPOIPreparationActive = false
+                if (replayStore()) {
+                    replayStore().poiPresentationPreparationActive = false
+                }
                 call.stopReplayCameraAltitudeTracking()
                 state.clipSequenceToken++
                 call.stopStopClipPOIMaskLoop()

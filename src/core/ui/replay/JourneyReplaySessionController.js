@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -277,6 +277,7 @@ export class JourneyReplaySessionController {
     #lastReplayPOIProgress = null
     #replayPOIAnimationOccurred = false
     #replayPOIVisibilityState = new Map()
+    #replayPOIPreparationActive = false
     #stopClipPOIMaskFrame = null
     #stopClipPOIMaskActive = false
     #stopClipPOINearbyPois = null
@@ -935,6 +936,13 @@ export class JourneyReplaySessionController {
                 this.#replayPOIVisibilityState = value
             },
         })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayPOIPreparationActive', {
+            configurable: true,
+            get: () => this.#replayPOIPreparationActive,
+            set: value => {
+                this.#replayPOIPreparationActive = value === true
+            },
+        })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'stopClipPOIMaskFrame', {
             configurable: true,
             get: () => this.#stopClipPOIMaskFrame,
@@ -1005,6 +1013,7 @@ export class JourneyReplaySessionController {
             isVisibleProperty: (...args) => JourneyReplayVisibilityController.isVisibleProperty(this, ...args),
             isPOIVisibleBeforePlayback: (...args) => JourneyReplayVisibilityController.isPOIVisibleBeforePlayback(this, ...args),
             applyJourneyReplayPOIVisibility: (...args) => JourneyReplayVisibilityController.applyJourneyReplayPOIVisibility(this, ...args),
+            applyJourneyReplayPOIPreparationVisibility: (...args) => JourneyReplayVisibilityController.applyJourneyReplayPOIPreparationVisibility(this, ...args),
             reapplyHideAllPOIVisibilityAfterAnimations: (...args) => JourneyReplayVisibilityController.reapplyHideAllPOIVisibilityAfterAnimations(this, ...args),
             restoreJourneyReplayPOIVisibility: (...args) => JourneyReplayVisibilityController.restoreJourneyReplayPOIVisibility(this, ...args),
             hideGloballyHiddenPOIs: (...args) => JourneyReplayVisibilityController.hideGloballyHiddenPOIs(this, ...args),
@@ -1178,6 +1187,7 @@ export class JourneyReplaySessionController {
             replayPOICandidates: (...args) => JourneyReplayVisibilityController.replayPOICandidates(this, ...args),
             isVisibleProperty: (...args) => JourneyReplayVisibilityController.isVisibleProperty(this, ...args),
             applyJourneyReplayPOIVisibility: (...args) => JourneyReplayVisibilityController.applyJourneyReplayPOIVisibility(this, ...args),
+            applyJourneyReplayPOIPreparationVisibility: (...args) => JourneyReplayVisibilityController.applyJourneyReplayPOIPreparationVisibility(this, ...args),
             reapplyHideAllPOIVisibilityAfterAnimations: (...args) => JourneyReplayVisibilityController.reapplyHideAllPOIVisibilityAfterAnimations(this, ...args),
             restoreJourneyReplayPOIVisibility: (...args) => JourneyReplayVisibilityController.restoreJourneyReplayPOIVisibility(this, ...args),
             hideGloballyHiddenPOIs: (...args) => JourneyReplayVisibilityController.hideGloballyHiddenPOIs(this, ...args),
@@ -1325,6 +1335,19 @@ export class JourneyReplaySessionController {
     toggle = (...args) => JourneyReplaySessionPlaybackController.toggle(this, ...args)
     seek = (...args) => JourneyReplaySessionPlaybackController.seek(this, ...args)
     refresh = (...args) => JourneyReplaySessionPlaybackController.refresh(this, ...args)
+    /** Reapply the selected POI policy during preparation or playback. */
+    refreshPOIPresentation = () => {
+        const state = this[JOURNEY_REPLAY_INTERNAL_STATE]
+        const replay = globalThis.lgs?.stores?.replay
+        const replayActive = replay?.active || replay?.playing || replay?.paused || replay?.clipSequenceActive
+        if (state.replayPOIPreparationActive === true
+            || replay?.poiPresentationPreparationActive === true
+            || (replay?.basicPreparationActive === true && !replayActive)) {
+            return JourneyReplayVisibilityController.applyJourneyReplayPOIPreparationVisibility(this)
+        }
+
+        return JourneyReplayVisibilityController.applyJourneyReplayPOIVisibility(this)
+    }
     refreshCamera = (...args) => JourneyReplaySessionPlaybackController.refreshCamera(this, ...args)
     /** Apply explicit camera edits from the preparation joystick. */
     updatePreparationCamera = (...args) => JourneyReplaySessionPlaybackController.updatePreparationCamera(this, ...args)

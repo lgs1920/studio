@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-11
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -207,28 +207,33 @@ export const isReplayPOIPresentationActive = (replay = globalThis.lgs?.stores?.r
 /**
  * Resolve the same transient POI mask for React content and Cesium billboard commits.
  * @param {object|null} poi - Source POI, whose persisted visibility stays unchanged.
- * @param {object} options - Optional runtime state and explicit animation permission.
+ * @param {object} options - Optional runtime state and presentation permissions.
+ * @param {boolean} options.allowReplayPreparation - Apply Replay visibility during preparation.
+ * @param {boolean} options.allowReplayAnimation - Explicit permission for a Replay animation.
  * @returns {{active: boolean, animationActive: boolean, visible: boolean}} Current presentation.
  */
 export const resolveReplayPOIPresentation = (poi, {
     replay = globalThis.lgs?.stores?.replay,
     settings = globalThis.lgs?.settings?.ui?.replay ?? replay,
     allowReplayAnimation = false,
+    allowReplayPreparation = false,
     animatedPOI = undefined,
 } = {}) => {
     const active = isReplayPOIPresentationActive(replay)
+    const basicMode = isJourneyReplayBasicMode({settings, replay})
+    const preparationActive = basicMode && (allowReplayPreparation || replay?.poiPresentationPreparationActive === true)
+    const policyActive = active || preparationActive
     const endpoint = isReplayPOIEndpoint(poi)
     const animationActive = active && (allowReplayAnimation
         || (typeof animatedPOI === 'boolean'
             ? animatedPOI
             : isReplayPOIInAnimatedSnapshot(replay?.animatedPOIIds, poi?.id)))
-    const basicMode = isJourneyReplayBasicMode({settings, replay})
     const behavior = normalizeReplayPOIBehavior(settings?.basic)
-    const forceShow = active && basicMode && !endpoint && behavior.poiVisibilityMode === 'yes'
-    const hiddenByReplay = active && !animationActive && (
+    const forceShow = policyActive && basicMode && behavior.poiVisibilityMode === 'yes'
+    const hiddenByReplay = policyActive && !animationActive && (
         basicMode
-            ? (!endpoint && behavior.poiVisibilityMode === 'no')
-                || ((endpoint || behavior.poiVisibilityMode === 'user')
+            ? behavior.poiVisibilityMode === 'no'
+                || (behavior.poiVisibilityMode === 'user'
                     && normalizeJourneyReplayPOISettings(poi?.replay).visible === false)
             : (!endpoint && (settings?.hideAllPoisDuringJourneyReplay === true
                 || replay?.hideAllPoisDuringJourneyReplay === true))

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -340,11 +340,13 @@ export const updatePOIExpandedState = async (mode, poiId, expanded) => {
     }
 
 /** Restore the POI expansion and appearance state saved before Replay playback. */
-export const restoreNearbyPOIsAfterPlayback = async (mode, ) => {
+export const restoreNearbyPOIsAfterPlayback = async (mode, {restoreExpanded = true} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        const restoreEntries = Array.from(state.replayPoiExpandedState.entries())
-        state.replayPoiExpandedState.clear()
+        const restoreEntries = restoreExpanded ? Array.from(state.replayPoiExpandedState.entries()) : []
+        if (restoreExpanded) {
+            state.replayPoiExpandedState.clear()
+        }
         state.replayPoiTriggered.clear()
         state.replayPOIAppearanceState?.clear()
         state.lastReplayPOIProgress = null
@@ -391,6 +393,7 @@ export const prepareNearbyPOIsForPlayback = async mode => {
         const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
         const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         state.replayPOIAppearanceState ??= new Map()
+        const preparationPOIsWereApplied = state.replayPOIPreparationActive === true
         const {poiVisibilityMode: initialVisibilityMode} = currentJourneyReplayPoiBehavior()
         if (initialVisibilityMode === 'no') {
             state.replayPoiTriggered.clear()
@@ -399,7 +402,14 @@ export const prepareNearbyPOIsForPlayback = async mode => {
         // Both the replay state reset and POI expansion restoration are applied
         // synchronously before the returned promise settles. Keep setup in this
         // same turn so the controller's immediate Start event cannot overtake it.
-        const restorationPromise = call.restoreNearbyPOIsAfterPlayback()
+        const restorationPromise = call.restoreNearbyPOIsAfterPlayback({
+            restoreExpanded: !preparationPOIsWereApplied,
+        })
+        state.replayPOIPreparationActive = true
+        const replayRuntime = replayStore()
+        if (replayRuntime) {
+            replayRuntime.poiPresentationPreparationActive = true
+        }
         state.replayPOIAnimationOccurred = false
 
         const journey = currentReplayJourney()
@@ -471,6 +481,10 @@ export const prepareNearbyPOIsForPlayback = async mode => {
         state.lastReplayPOIProgress = null
 
         call.applyJourneyReplayPOIVisibility(sortedNearbyPois)
+        state.replayPOIPreparationActive = false
+        if (replayRuntime) {
+            replayRuntime.poiPresentationPreparationActive = false
+        }
 
         const poisToCollapse = poiVisibilityMode === 'yes'
             ? call.replayPOICandidates(sortedNearbyPois)
@@ -489,7 +503,9 @@ export const prepareNearbyPOIsForPlayback = async mode => {
                 continue
             }
 
-            state.replayPoiExpandedState.set(poiId, poi.expanded === true)
+            if (!state.replayPoiExpandedState.has(poiId)) {
+                state.replayPoiExpandedState.set(poiId, poi.expanded === true)
+            }
             collapsePromises.push(call.updatePOIExpandedState(poiId, false))
         }
 

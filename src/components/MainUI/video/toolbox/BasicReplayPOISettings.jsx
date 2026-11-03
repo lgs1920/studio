@@ -53,6 +53,9 @@ export const BasicReplayPOISettings = () => {
         })
         syncJourneyBasicReplayPOIBehavior(nextBehavior, currentReplayJourney())
         __.ui.replay?.refresh?.({camera: false})
+        void Promise.resolve(__.ui.replay?.refreshPOIPresentation?.()).catch(error => {
+            console.error('[Replay POI] Failed to apply the selected starting visibility.', error)
+        })
     }
 
     /** Apply the global visibility policy to both preparation and active Replay. */

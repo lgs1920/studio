@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-03-01
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -649,11 +649,12 @@ export class POIUtils {
      *
      * @param {POI} poi
      * @param {boolean} visibility
+     * @param {{allowReplayAnimation?: boolean, allowReplayPreparation?: boolean}} [options]
      *
      * @returns {boolean}
      *
      */
-    static setPOIVisibility = (poi, visibility, {allowReplayAnimation = false} = {}) => {
+    static setPOIVisibility = (poi, visibility, {allowReplayAnimation = false, allowReplayPreparation = false} = {}) => {
         if (poi?.tooClose === true) {
             return false
         }
@@ -667,7 +668,10 @@ export class POIUtils {
             return false
         }
 
-        return Boolean(visibility) && resolveReplayPOIPresentation(poi, {allowReplayAnimation}).visible
+        return Boolean(visibility) && resolveReplayPOIPresentation(poi, {
+            allowReplayAnimation,
+            allowReplayPreparation,
+        }).visible
     }
 
     /** Return whether a POI can contribute pixels to the normal map view. */
