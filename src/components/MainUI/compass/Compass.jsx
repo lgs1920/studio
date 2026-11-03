@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-20
- * Last modified: 2026-10-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,9 +19,15 @@ import { CompassLight } from '@Components/MainUI/compass/CompassLight'
 import { CompassFlat }  from '@Components/MainUI/compass/CompassFlat'
 import { CompassModern }                            from '@Components/MainUI/compass/CompassModern'
 import { resolveCompassWidgetDimensions }            from '@Components/MainUI/compass/CompassWidgetBounds'
-import { resolveCompassCameraHeading }               from '@Components/MainUI/compass/CompassCameraHeading'
+import {
+    isReplayPOICameraFrozen,
+    resolveCompassCameraHeading,
+} from '@Components/MainUI/compass/CompassCameraHeading'
 import { COMPASS_FLAT, COMPASS_FULL, COMPASS_LIGHT, COMPASS_MODERN } from '@Core/constants'
-import { resolvePublishedReplayExportFrame }         from '@Core/ui/replay/ReplayFramePublisher'
+import {
+    resolvePublishedReplayExportFrame,
+    resolvePublishedReplayFrame,
+} from '@Core/ui/replay/ReplayFramePublisher'
 import { registerReplayWidgetFrameRenderer } from '@Core/ui/replay/ReplayWidgetFrameRenderers'
 import { Math as CMath }               from 'cesium'
 import classNames                      from 'classnames'
@@ -32,8 +38,11 @@ import { useSnapshot }                 from 'valtio'
 /**
  * Compass component.
  * Synchronizes with the camera heading and resolves theme colors via global __ utility.
+ *
+ * @param {Object} props - Compass rendering options.
+ * @param {boolean} [props.syncGlobalCompass=false] - Use the global user compass settings.
  */
-export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) => {
+export const Compass = ({fixed, inWidget = false, entity, syncBounds = true, syncGlobalCompass = false}) => {
     const _rotatingPart = useRef(null)
     const _compass = useRef(null)
     const _doubleTapTimeout = useRef(null)
@@ -57,7 +66,7 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
         return widgetConfig.elements?.[entity] ?? widgetConfig.user ?? widgetConfig.default
     }, [entity, widgetConfig])
 
-    const activeConfig = inWidget ? element : globalCompass
+    const activeConfig = inWidget && !syncGlobalCompass ? element : globalCompass
     const currentMode = activeConfig?.mode
     const baseTransform = useMemo(
         () => currentMode?.toString() === COMPASS_LIGHT.toString() ? 'scale(1.2)' : '',
@@ -97,7 +106,21 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
         }
 
         const isExporting = lgs.stores.ui.video?.exporting === true
-        const exportFrame = isExporting ? resolvePublishedReplayExportFrame() : null
+        const replay = lgs.stores.replay
+        const replayActive = replay?.active === true
+            || replay?.playing === true
+            || replay?.paused === true
+            || replay?.clipSequenceActive === true
+        const replayFrame = isExporting
+            ? resolvePublishedReplayExportFrame()
+            : replayActive
+                ? resolvePublishedReplayFrame()
+                : null
+        if (replayFrame && isReplayPOICameraFrozen(replayFrame)) {
+            return
+        }
+
+        const exportFrame = isExporting ? replayFrame : null
         const heading = resolveCompassCameraHeading({
             exportFrame,
             fallbackHeading: isExporting ? null : lgs.camera?.heading,

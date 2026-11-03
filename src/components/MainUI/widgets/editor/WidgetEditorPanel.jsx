@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-12-20
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,7 +25,7 @@ import PanelActions
     from '@Components/PanelsActions'
 import {
     COMPASS_WIDGET, CREDITS_WIDGET, LOGO_WIDGET, REPLAY_TIMELINE_WIDGET, SCENE_WIDGETS_BOARD, SETTINGS_EDITOR_DRAWER,
-    WIDGET_LAYER_START, WIDGET_LAYER_STEP, WIDGETS_EDITOR_DRAWER,
+    VIDEO_WIDGETS_BOARD, WIDGET_LAYER_START, WIDGET_LAYER_STEP, WIDGETS_EDITOR_DRAWER,
 }   from '@Core/constants'
 import {
     WidgetRegistry,
@@ -107,7 +107,9 @@ export const WidgetEditorPanel = () => {
 
     // Check stacked state via manager instead of snapshot property
     const isStacked = __.ui.drawerManager.isStacked(WIDGETS_EDITOR_DRAWER)
-    const syncGlobalCompass = drawers.action === 'edit-global-compass'
+    const editGlobalCompass = drawers.action === 'edit-global-compass'
+    const syncGlobalCompass = editGlobalCompass
+        || (widgetType === COMPASS_WIDGET && cached?.widgetsBoard === VIDEO_WIDGETS_BOARD)
     const drawerPlacement = menuSettings.drawer
     const currentSnapshotImage = widget.currentSnapshot?.entity === drawers.entity ? widget.currentSnapshot.image : null
     const previewRotation = Number.isFinite(Number(widgetPosition?.rotate)) ? Number(widgetPosition.rotate) : 0
@@ -131,7 +133,7 @@ export const WidgetEditorPanel = () => {
      * Closes the editor and handles the stack via the manager.
      */
     const closeEditorWithManager = useCallback(() => {
-        if (syncGlobalCompass) {
+        if (editGlobalCompass) {
             __.ui.drawerManager.open(SETTINGS_EDITOR_DRAWER, {
                 action: OPEN_COMPASS_SETTINGS_ACTION,
                 tab:    'tab-ui',
@@ -148,7 +150,7 @@ export const WidgetEditorPanel = () => {
         }
 
         window.dispatchEvent(new Event('resize'))
-    }, [isStacked, $drawers, syncGlobalCompass])
+    }, [isStacked, $drawers, editGlobalCompass])
 
     const closeEditor = useCallback((event) => {
         if (event && event.target.tagName !== 'WA-DRAWER') {

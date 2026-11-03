@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-10-17
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -49,7 +49,7 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             container,
             contextMenu:  {
                 canReset:    !basicReplay,
-                canPosition: !fixedVideoCompass && !basicReplay,
+                canPosition: !fixedVideoCompass || basicReplay,
                 canRemove:   !basicReplay,
                 canEdit:     true,
                 canDetach:   !fixedVideoCompass,
@@ -62,12 +62,12 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             group:        MULTI_PURPOSE_WIDGETS,
             attachTo:     fixedVideoCompass ? 'top-left' : 'right',
             positionKey:  fixedVideoCompass ? 'video-crop-top-left-v2' : undefined,
-            draggable:    !fixedVideoCompass && !basicReplay,
-            resizable:    !fixedVideoCompass && !basicReplay,
+            draggable:    !fixedVideoCompass || basicReplay,
+            resizable:    !fixedVideoCompass || basicReplay,
             scalable:     !fixedVideoCompass && !basicReplay,
             rotatable:    !fixedVideoCompass && !basicReplay,
             snappable:    !basicReplay,
-            showControlBox: !fixedVideoCompass && !basicReplay,
+            showControlBox: !fixedVideoCompass || basicReplay,
             id,
             persist:      true,
             transient:    true,
@@ -93,7 +93,7 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
 
     return (
         <Widget isVisible={true} className="lgs-compass-widget" config={config}>
-            <Compass inWidget entity={id}/>
+            <Compass inWidget entity={id} syncGlobalCompass={fixedVideoCompass}/>
         </Widget>
     )
 }

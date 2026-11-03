@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-22
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -630,14 +630,15 @@ export class CanvasEventManager {
                 return
             }
 
-            const position = event?.position ?? event?.endPosition
-            const picked = position ? this.#viewer.scene.pick(position) : undefined
-            const entityId = pickedObjectEntityId(picked)
             const eventName = modifier ? `${modifier.name}${MODIFIER_SEPARATOR}${eventType}` : eventType
 
             if (!this.#handlers.has(eventName)) {
                 return
             }
+
+            const position = event?.position ?? event?.endPosition
+            const picked = position ? this.#viewer.scene.pick(position) : undefined
+            const entityId = pickedObjectEntityId(picked)
 
             if (entityId === null && !this.#handlers.get(eventName)?.some(h => h.options.entity === false)) {
                 return

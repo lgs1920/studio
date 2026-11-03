@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -2138,9 +2138,16 @@ hr {
     touchAction: 'pan-x pan-y'
 }
 
-.lgs-widget.lgs-compass-widget {
-    align-items: center;
-    justify-content: center;
+.lgs-widget {
+    &.lgs-compass-widget {
+        align-items: center;
+        justify-content: center;
+
+        & > .lgs-compass {
+            width: 100%;
+            height: 100%;
+        }
+    }
 }
 
 .lgs-widget.lgs-widget-hidden {

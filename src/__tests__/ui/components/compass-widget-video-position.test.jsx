@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-27
- * Last modified: 2026-10-17
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -101,21 +101,21 @@ describe('CompassWidget video placement', () => {
         expect(widget.getAttribute('data-can-edit')).toBe('true')
         expect(widget.getAttribute('data-can-hide')).toBe('false')
         expect(widget.getAttribute('data-can-lock')).toBe('false')
-        expect(widget.getAttribute('data-can-position')).toBe('false')
+        expect(widget.getAttribute('data-can-position')).toBe('true')
         expect(widget.getAttribute('data-can-remove')).toBe('false')
         expect(widget.getAttribute('data-can-reset')).toBe('false')
-        expect(widget.getAttribute('data-draggable')).toBe('false')
+        expect(widget.getAttribute('data-draggable')).toBe('true')
         expect(widget.getAttribute('data-margin')).toBe('8')
         expect(widget.getAttribute('data-min-scale')).toBe('1')
         expect(widget.getAttribute('data-max-scale')).toBe('1')
         expect(widget.getAttribute('data-position-key')).toBe('video-crop-top-left-v2')
-        expect(widget.getAttribute('data-resizable')).toBe('false')
+        expect(widget.getAttribute('data-resizable')).toBe('true')
         expect(widget.getAttribute('data-scalable')).toBe('false')
         expect(widget.getAttribute('data-snappable')).toBe('false')
-        expect(widget.getAttribute('data-show-control-box')).toBe('false')
+        expect(widget.getAttribute('data-show-control-box')).toBe('true')
     })
 
-    it('disables Compass interactions on the scene board during Basic Replay', () => {
+    it('allows moving and resizing the Compass during Basic Replay', () => {
         render(
             <CompassWidget
                 context={{widgetEditor: true, widgetsBoard: 'scene-widgets'}}
@@ -127,13 +127,14 @@ describe('CompassWidget video placement', () => {
         expect(widget.getAttribute('data-can-edit')).toBe('true')
         expect(widget.getAttribute('data-can-hide')).toBe('false')
         expect(widget.getAttribute('data-can-lock')).toBe('false')
-        expect(widget.getAttribute('data-can-position')).toBe('false')
+        expect(widget.getAttribute('data-can-position')).toBe('true')
         expect(widget.getAttribute('data-can-remove')).toBe('false')
         expect(widget.getAttribute('data-can-reset')).toBe('false')
-        expect(widget.getAttribute('data-draggable')).toBe('false')
-        expect(widget.getAttribute('data-resizable')).toBe('false')
+        expect(widget.getAttribute('data-draggable')).toBe('true')
+        expect(widget.getAttribute('data-resizable')).toBe('true')
         expect(widget.getAttribute('data-scalable')).toBe('false')
         expect(widget.getAttribute('data-snappable')).toBe('false')
+        expect(widget.getAttribute('data-show-control-box')).toBe('true')
     })
 
     it('allows removing the optional Compass in Expert Replay', () => {
