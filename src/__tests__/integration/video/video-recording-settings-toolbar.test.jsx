@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,15 @@ vi.mock('@Components/LGSPopup', () => ({
     LGSPopup: ({active, children, placement}) => active ? <div data-testid="settings-popup" data-placement={placement}>{children}</div> : null,
 }))
 
+vi.mock('@Components/WaDrawerNonModal', () => ({
+    default: ({children, className, placement}) => (
+        <div className={className} data-placement={placement}>{children}</div>
+    ),
+}))
+
+vi.mock('@Components/PanelsActions', () => ({default: () => null}))
+vi.mock('@Components/DrawerFooter', () => ({default: () => null}))
+
 vi.mock('@Components/ToolsUI/cropper/widgets/CropRatioEditorToolbar', () => ({
     CropRatioEditorToolbar: ({mainTheme, unifiedChoices}) => <div data-testid="ratio-popup-content" data-main-theme={mainTheme} data-unified-choices={unifiedChoices}>Ratio choices</div>,
 }))
@@ -33,11 +42,14 @@ vi.mock('@Components/MainUI/video/toolbox/VideoPresetToolbar', () => ({
 
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
+    WaDivider: props => <hr {...props}/>,
+    WaDropdown: ({children, className}) => <div className={className}>{children}</div>,
+    WaDropdownItem: ({children, value}) => <div data-value={value}>{children}</div>,
     WaIcon: ({name, variant, id}) => <span id={id} data-icon={name} data-variant={variant}/>,
     WaColorPicker: ({id, value, onInput, disabled, 'aria-label': ariaLabel}) => (
         <input id={id} aria-label={ariaLabel} value={value} onInput={onInput} disabled={disabled} readOnly/>
     ),
-    WaSelect: ({children, className, value, onChange, label, 'label-at-start': labelAtStart}) => {
+    WaSelect: ({children, className, value, onChange, 'aria-label': ariaLabel, label, 'label-at-start': labelAtStart}) => {
         const items = Children.toArray(children)
         const startItems = items.filter(item => item.props?.slot === 'start')
         const options = items.filter(item => item.props?.value !== undefined)
@@ -45,7 +57,7 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
         return (
             <div className={className} data-label-at-start={labelAtStart ? 'true' : undefined}>
                 {startItems}
-                <select aria-label={label} value={value} onChange={onChange}>{options}</select>
+                <select aria-label={ariaLabel ?? label} value={value} onChange={onChange}>{options}</select>
             </div>
         )
     },
@@ -70,11 +82,11 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
             {children}
         </label>
     ),
-    WaSwitch: ({children, checked, className, onChange, 'label-at-start': labelAtStart, 'width-auto': widthAuto}) => (
+    WaSwitch: ({children, checked, className, onChange, 'aria-label': ariaLabel, 'label-at-start': labelAtStart, 'width-auto': widthAuto}) => (
         <label className={className}
                data-label-at-start={labelAtStart ? 'true' : undefined}
                data-width-auto={widthAuto ? 'true' : undefined}>
-            <input type="checkbox" checked={checked} onChange={onChange}/>
+            <input type="checkbox" aria-label={ariaLabel} checked={checked} onChange={onChange}/>
             {children}
         </label>
     ),
@@ -104,13 +116,14 @@ import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/toolbox/
 describe('VideoRecordingSettingsToolbar', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        const $drawers = proxy({open: null})
         globalThis.__ = {
             ui: {
                 drawerManager: {
-                    close: vi.fn(),
-                    isCurrent: vi.fn(() => false),
-                    open: vi.fn(),
-                    toggle: vi.fn(),
+                    close: vi.fn(() => { $drawers.open = null }),
+                    isCurrent: vi.fn(id => $drawers.open === id),
+                    open: vi.fn(id => { $drawers.open = id }),
+                    toggle: vi.fn(id => { $drawers.open = $drawers.open === id ? null : id }),
                 },
                 cameraManager: {stopRotate: vi.fn(async () => {})},
                 replay: {
@@ -142,6 +155,8 @@ describe('VideoRecordingSettingsToolbar', () => {
             },
             stores: {
                 ui: proxy({
+                    drawers: $drawers,
+                    device: proxy({mobile: false, tablet: false}),
                     video: proxy({
                         editing: true,
                         recording: false,
@@ -163,6 +178,9 @@ describe('VideoRecordingSettingsToolbar', () => {
                     paused: false,
                     duration: 60,
                 }),
+            },
+            editorSettingsProxy: {
+                menu: proxy({drawer: 'right'}),
             },
         }
     })
@@ -244,28 +262,30 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(document.querySelector('.video-recording-settings-popup')?.classList).not.toContain('wa-theme-lgs1920-on-map')
     })
 
-    it('opens the Basic Replay settings above the widget and applies its selected duration', () => {
+    it('opens the Basic Replay settings drawer and applies its selected duration', async () => {
         globalThis.lgs.stores.replay.basicPreparationActive = true
         render(<VideoRecordingSettingsToolbar/>)
 
         expect(screen.getByText('16:9')).not.toBeNull()
         expect(screen.getByText('High · 30 FPS')).not.toBeNull()
         expect(screen.getByText('18s')).not.toBeNull()
-        expect(screen.getByRole('button', {name: 'Video Settings'}).querySelector('[data-icon="gear"]')).not.toBeNull()
-        expect(document.querySelector(`[data-tooltip-for="${screen.getByRole('button', {name: 'Video Settings'}).id}"]`)?.textContent).toBe('Video Settings')
+        expect(screen.getByRole('button', {name: 'Replay settings'}).querySelector('[data-icon="sliders"]')).not.toBeNull()
+        expect(document.querySelector('[data-tooltip-for="basic-replay-open-settings-toolbar"]')?.textContent).toBe('Replay settings')
         expect(document.querySelector('[data-tooltip-for="video-start-recording"]')?.textContent).toBe('Start Record')
         expect(document.querySelector('[data-tooltip-for="video-cancel-editing"]')?.textContent).toBe('Cancel')
-        expect(document.querySelector('.basic-replay-settings-summary__separator')).not.toBeNull()
         expect(document.querySelector('.basic-replay-settings-summary')?.nextElementSibling?.classList).toContain('video-recording-settings-separator')
         expect(screen.queryByRole('button', {name: 'Journey Replay Settings'})).toBeNull()
         expect(screen.queryByRole('button', {name: 'Ratio: 16:9'})).toBeNull()
 
-        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
-        expect(screen.getByTestId('settings-popup').dataset.placement).toBe('bottom')
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Replay settings'}))
+            await Promise.resolve()
+        })
+        expect(document.querySelector('.basic-replay-settings-drawer')?.dataset.placement).toBe('right')
         expect(screen.getByTestId('ratio-popup-content').dataset.unifiedChoices).toBe('true')
         expect(screen.getByText('Ratio')).not.toBeNull()
         expect(screen.getByText('Quality')).not.toBeNull()
-        expect(screen.getByRole('group', {name: 'Duration'})).not.toBeNull()
+        expect(screen.getAllByRole('group', {name: 'Duration'})).not.toHaveLength(0)
         expect(screen.getByRole('button', {name: '15s'}).getAttribute('aria-pressed')).toBe('true')
         expect(screen.getByTestId('preset-popup-content').dataset.inlineCustom).toBe('false')
         expect(screen.getByTestId('preset-popup-content').dataset.compactBasic).toBe('true')
@@ -311,29 +331,31 @@ describe('VideoRecordingSettingsToolbar', () => {
         globalThis.lgs.theJourney.persistToDatabase = persistToDatabase
         globalThis.lgs.stores.main = proxy({theJourney: globalThis.lgs.theJourney})
         render(<VideoRecordingSettingsToolbar mainTheme/>)
-        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Replay settings'}))
+            await Promise.resolve()
+        })
+        expect(globalThis.__.ui.drawerManager.toggle).toHaveBeenCalledWith('basic-replay-settings-drawer')
+        expect(globalThis.lgs.stores.ui.drawers.open).toBe('basic-replay-settings-drawer')
 
         const select = screen.getByRole('combobox', {name: 'Sampling'})
         expect(select.value).toBe('1024')
         const samplingControl = document.querySelector('.basic-replay-sampling__select')
-        expect(samplingControl?.getAttribute('data-label-at-start')).toBe('true')
+        expect(samplingControl).not.toBeNull()
         expect(document.querySelector('.basic-replay-sampling-control')?.classList).toContain('half-width')
-        expect(document.querySelector('.video-recording-settings-popup')?.classList).toContain('wa-theme-lgs1920')
-        const preparationRow = document.querySelector('.basic-replay-settings-row--preparation')
+        expect(document.querySelector('.basic-replay-settings-drawer')?.classList).toContain('wa-theme-lgs1920')
+        const preparationRow = document.querySelector('.basic-replay-settings-row[aria-label="Dry Run"]')
         expect(preparationRow?.children).toHaveLength(2)
-        expect(preparationRow?.children[0].classList).toContain('half-width')
-        expect(preparationRow?.children[0].querySelector('.basic-replay-dry-run-switch')?.getAttribute('data-label-at-start')).toBe('true')
-        expect(preparationRow?.children[0].querySelector('.basic-replay-dry-run-switch')?.getAttribute('data-width-auto')).toBe('true')
-        expect(preparationRow?.children[0].querySelector('.basic-replay-dry-run-switch')?.textContent).toContain('\u00a0')
-        expect(preparationRow?.classList).not.toContain('basic-replay-settings-row--label-and-controls')
-        for (const label of ['Aspect ratio', 'Duration']) {
+        expect(preparationRow?.classList).toContain('basic-replay-settings-row--split')
+        expect(preparationRow?.querySelector('.basic-replay-dry-run-switch')).not.toBeNull()
+        for (const label of ['Ratio', 'Duration']) {
             const settingsRow = document.querySelector(`.video-recording-settings-popup [role="group"][aria-label="${label}"]`)
-            expect(settingsRow?.classList).toContain('basic-replay-settings-row--label-and-controls')
+            expect(settingsRow?.classList).toContain('basic-replay-settings-row--split')
             expect(settingsRow?.classList).not.toContain('half-width')
         }
-        const presetRow = document.querySelector('.video-recording-settings-popup [role="group"][aria-label="Video quality"]')
+        const presetRow = document.querySelector('.video-recording-settings-popup [role="group"][aria-label="Quality"]')
         if (presetRow) {
-            expect(presetRow.classList).toContain('basic-replay-settings-row--label-and-controls')
+            expect(presetRow.classList).toContain('basic-replay-settings-row--split')
             expect(presetRow.classList).not.toContain('half-width')
         }
         expect(document.querySelector('.basic-replay-sampling__select > [data-icon]')?.getAttribute('data-icon')).toBe('square-b')
@@ -387,7 +409,10 @@ describe('VideoRecordingSettingsToolbar', () => {
     it('selects 45-second and one-minute durations for Basic playback and recording', async () => {
         globalThis.lgs.stores.replay.basicPreparationActive = true
         render(<VideoRecordingSettingsToolbar/>)
-        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Replay settings'}))
+            await Promise.resolve()
+        })
         for (const [label, duration] of [['45s', 45], ['1 min', 60]]) {
             await act(async () => fireEvent.click(screen.getByRole('button', {name: label})))
             expect(globalThis.lgs.settings.ui.replay.basic.duration).toBe(duration)
@@ -409,7 +434,10 @@ describe('VideoRecordingSettingsToolbar', () => {
         globalThis.lgs.theJourney.persistToDatabase = persistToDatabase
         globalThis.lgs.stores.main = proxy({theJourney: globalThis.lgs.theJourney})
         render(<VideoRecordingSettingsToolbar/>)
-        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Replay settings'}))
+            await Promise.resolve()
+        })
 
         expect(screen.getByRole('button', {name: '30s'}).getAttribute('aria-pressed')).toBe('true')
         expect(screen.getByRole('button', {name: '15s'}).getAttribute('aria-pressed')).toBe('false')
@@ -432,22 +460,25 @@ describe('VideoRecordingSettingsToolbar', () => {
         globalThis.lgs.theJourney.persistToDatabase = vi.fn()
         globalThis.__.ui.replay.refresh = vi.fn()
         render(<VideoRecordingSettingsToolbar/>)
-        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Replay settings'}))
+            await Promise.resolve()
+        })
         expect(screen.queryByText('Border')).toBeNull()
         expect(screen.queryByText('Fill')).toBeNull()
         expect(screen.queryByText(/\d+(?:\.\d+)?\s*px/i)).toBeNull()
         const appearance = document.querySelector('.basic-replay-appearance')
-        expect(appearance.children[0].getAttribute('data-icon')).toBe('paintbrush')
-        expect(appearance.children[1].classList).toContain('basic-replay-appearance__colors')
-        expect(appearance.children[2].classList).toContain('basic-replay-appearance__border-mode')
-        expect(appearance.children[3].classList).toContain('basic-replay-appearance__reset')
+        expect(appearance.querySelector('.basic-replay-settings-row__legend [data-icon]')?.getAttribute('data-icon')).toBe('paintbrush')
+        expect(appearance.querySelector('.basic-replay-appearance__colors')).not.toBeNull()
+        expect(appearance.querySelector('.basic-replay-appearance__border-mode')).not.toBeNull()
+        expect(appearance.querySelector('.basic-replay-appearance__reset')).not.toBeNull()
         expect(appearance.querySelectorAll('[title]')).toHaveLength(0)
         for (const [targetId, text] of [
-            ['basic-replay-border-color', 'Border color'],
-            ['basic-replay-fill-color', 'Fill color'],
+            ['basic-replay-border-color', 'Border Color'],
+            ['basic-replay-fill-color', 'Fill Color'],
             ['basic-replay-with-border', 'With border'],
             ['basic-replay-without-border', 'No border'],
-            ['basic-replay-appearance-reset', 'Reset'],
+            ['basic-replay-appearance-reset', 'Reset Replay appearance to defaults'],
             ['basic-replay-size-thin', 'Thin'],
             ['basic-replay-size-small', 'Small'],
             ['basic-replay-size-medium', 'Medium'],
@@ -455,15 +486,11 @@ describe('VideoRecordingSettingsToolbar', () => {
         ]) {
             expect(document.querySelector(`[data-tooltip-for="${targetId}"]`)?.textContent).toBe(text)
         }
-        const borderMarkers = appearance.querySelectorAll('.basic-replay-appearance__border-mode .basic-replay-appearance__marker circle')
-        expect(borderMarkers).toHaveLength(2)
-        expect(borderMarkers[0].getAttribute('r')).toBe('8')
-        expect(borderMarkers[0].getAttribute('stroke-width')).toBe('2')
-        expect(borderMarkers[1].getAttribute('r')).toBe('7')
-        expect(Number(borderMarkers[1].getAttribute('r'))).toBe(
-            Number(borderMarkers[0].getAttribute('r')) - Number(borderMarkers[0].getAttribute('stroke-width')) / 2,
-        )
-        expect(appearance.querySelectorAll('.basic-replay-appearance__border-mode .basic-replay-appearance__marker path')).toHaveLength(0)
+        const colorModePreviews = appearance.querySelectorAll('.basic-replay-appearance__color-mode-preview')
+        expect(colorModePreviews).toHaveLength(2)
+        expect(colorModePreviews[0].querySelectorAll('rect')).toHaveLength(3)
+        expect(colorModePreviews[1].querySelectorAll('rect')).toHaveLength(1)
+        expect(appearance.querySelectorAll('.basic-replay-appearance__side-by-side-preview rect')).toHaveLength(2)
         const baselineRadius = Number(document.querySelector('.basic-replay-appearance__preview circle').getAttribute('r'))
         await act(async () => fireEvent.input(screen.getByLabelText('Replay fill color'), {target: {value: '#008000'}}))
         await act(async () => fireEvent.input(screen.getByLabelText('Replay border color'), {target: {value: '#0000ff'}}))
@@ -525,11 +552,14 @@ describe('VideoRecordingSettingsToolbar', () => {
         render(<><VideoRecordingSettingsToolbar/><VideoSettingsInfo/></>)
 
         expect(screen.getByText('High · 30 FPS')).not.toBeNull()
-        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Replay settings'}))
+            await Promise.resolve()
+        })
         expect(screen.getByText('Quality')).not.toBeNull()
 
         await act(async () => {
-            fireEvent.click(screen.getByRole('checkbox', {name: 'Dry run'}))
+            fireEvent.click(screen.getByRole('checkbox', {name: 'Dry Run'}))
             await Promise.resolve()
         })
 
@@ -539,11 +569,11 @@ describe('VideoRecordingSettingsToolbar', () => {
             expect(document.querySelector('.basic-replay-settings-summary')?.textContent).toContain('Dry run')
             expect(document.querySelector('.video-settings-info')?.textContent).toContain('Mode : Dry run')
         })
-        expect(screen.getByTestId('settings-popup')).not.toBeNull()
+        expect(document.querySelector('.basic-replay-settings-drawer')).not.toBeNull()
         expect(document.querySelector('.basic-replay-settings-summary')?.textContent).not.toContain('FPS')
         expect(document.querySelector('.basic-replay-settings-summary [data-icon="bolt"]')?.getAttribute('data-variant')).toBe('regular')
-        expect(document.querySelector('.basic-replay-settings-row--preparation [data-icon="bolt"]')?.getAttribute('data-variant')).toBe('regular')
-        expect(document.querySelector('[aria-label="Video quality"]')).toBeNull()
+        expect(document.querySelector('.basic-replay-settings-row[aria-label="Dry Run"] [data-icon="bolt"]')?.getAttribute('data-variant')).toBe('regular')
+        expect(document.querySelector('[role="group"][aria-label="Quality"]')).toBeNull()
         expect(screen.queryByTestId('preset-popup-content')).toBeNull()
         expect(screen.getAllByText('Dry run')).not.toHaveLength(0)
         expect(screen.getByRole('button', {name: 'Run Dry run'})).not.toBeNull()
@@ -558,21 +588,21 @@ describe('VideoRecordingSettingsToolbar', () => {
         globalThis.lgs.theJourney.persistToDatabase = persistToDatabase
         globalThis.lgs.stores.main = proxy({theJourney: globalThis.lgs.theJourney})
         render(<VideoRecordingSettingsToolbar/>)
-        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Replay settings'}))
+            await Promise.resolve()
+        })
 
         const focusSwitch = screen.getByRole('checkbox', {name: 'End Focus'})
-        const durationInput = screen.getByRole('spinbutton', {name: 'Duration (s)'})
-        const focusControls = document.querySelector('.basic-replay-end-focus-controls')
+        const durationInput = screen.getByRole('spinbutton', {name: 'End Focus duration in seconds'})
+        const focusControls = durationInput.closest('.basic-replay-settings-row')
         expect(focusSwitch.checked).toBe(true)
         expect(durationInput.value).toBe('3')
         expect(durationInput.min).toBe('1')
         expect(durationInput.max).toBe('5')
-        expect(durationInput.dataset.labelAtStart).toBe('true')
-        expect(durationInput.parentElement).toBe(focusControls)
-        expect(focusSwitch.closest('.basic-replay-end-focus-controls')).toBe(focusControls)
         expect(durationInput.classList).toContain('lgs--short-input')
-        expect(durationInput.closest('.basic-replay-end-focus-row')).not.toBeNull()
-        expect(screen.getByRole('spinbutton', {name: 'Duration (s)'})).toBe(durationInput)
+        expect(focusControls?.getAttribute('aria-label')).toBe('Duration')
+        expect(screen.getByRole('spinbutton', {name: 'End Focus duration in seconds'})).toBe(durationInput)
         expect(document.querySelector('.basic-replay-settings-summary')?.textContent).toContain('18s')
 
         await act(async () => fireEvent.input(durationInput, {target: {value: '5'}}))
@@ -583,12 +613,12 @@ describe('VideoRecordingSettingsToolbar', () => {
         await act(async () => fireEvent.click(focusSwitch))
         expect(globalThis.lgs.settings.ui.replay.basic.endFocus.enabled).toBe(false)
         expect(globalThis.lgs.theJourney.replay.basic.endFocus.enabled).toBe(false)
-        expect(screen.queryByRole('spinbutton', {name: 'Duration (s)'})).toBeNull()
+        expect(screen.queryByRole('spinbutton', {name: 'End Focus duration in seconds'})).toBeNull()
         expect(document.querySelector('.basic-replay-settings-summary')?.textContent).toContain('15s')
         expect(globalThis.__.ui.replay.refresh).toHaveBeenCalledWith({camera: false})
 
         await act(async () => fireEvent.click(focusSwitch))
-        const restoredDurationInput = screen.getByRole('spinbutton', {name: 'Duration (s)'})
+        const restoredDurationInput = screen.getByRole('spinbutton', {name: 'End Focus duration in seconds'})
         expect(restoredDurationInput.value).toBe('5')
         expect(globalThis.lgs.settings.ui.replay.basic.endFocus.enabled).toBe(true)
         expect(globalThis.lgs.theJourney.replay.basic.endFocus.enabled).toBe(true)
@@ -621,7 +651,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(summary.querySelector('button')?.getAttribute('aria-label')).toBe('Video Settings')
         expect(screen.getByText('16:9')).not.toBeNull()
         expect(screen.getByText('High · 30 FPS')).not.toBeNull()
-        expect(screen.getByRole('button', {name: 'Video Settings'}).querySelector('[data-icon="gear"]')).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Video Settings'}).querySelector('[data-icon="sliders"]')).not.toBeNull()
         expect(document.querySelector('[data-tooltip-for="open-replay-settings-from-timeline"]')?.textContent).toBe('Replay Settings')
         expect(document.querySelector('.basic-replay-settings-summary__separator')).not.toBeNull()
         expect(document.querySelector('.basic-replay-settings-summary')?.nextElementSibling?.classList).toContain('video-recording-settings-separator')

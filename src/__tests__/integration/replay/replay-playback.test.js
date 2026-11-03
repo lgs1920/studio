@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,11 +38,13 @@ import {
     toGlobalReplayCameraSettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { REPLAY_USER_MODE_EXPERT }                                    from '@Core/ui/replay/ReplayUserModeConstants'
+import {JOURNEY_REPLAY_INTERNAL_CALL}                                   from '@Core/ui/replay/JourneyReplayInternal'
 import { gpx }                                                         from '@tmcw/togeojson'
 import { JSDOM }                                                       from 'jsdom'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
 import { Cartesian3, Cartographic, Matrix4, Math as CesiumMath, Transforms } from 'cesium'
 import { proxy }                                                       from 'valtio'
+import { proxyMap }                                                    from 'valtio/utils'
 import { describe, expect, it, vi }                                    from 'vitest'
 
 if (typeof globalThis.document === 'undefined') {
@@ -1795,7 +1797,10 @@ describe('replay phase 1 playback controller', () => {
                                     ])
         const previousLgs = globalThis.lgs
         const previousDoubleUnderscore = globalThis.__
-        const replay = defaultJourneyReplaySettings()
+        const replay = {
+            ...defaultJourneyReplaySettings(),
+            userMode: REPLAY_USER_MODE_EXPERT,
+        }
         const focusDefinition = {
             id:           'focus',
             label:        'Focus',
@@ -1826,9 +1831,9 @@ describe('replay phase 1 playback controller', () => {
             start: [],
             stop:  [focusClip],
         }
-        const poiRestored = {id: 'poi-restore', visible: true, replay: {visible: false}}
-        const poiStillHidden = {id: 'poi-still-hidden', visible: false, replay: {visible: false}}
-        const poiList = new Map([
+        const poiRestored = {id: 'poi-restore', longitude: 2.0002, latitude: 48.0002, visible: true, replay: {visible: false}}
+        const poiStillHidden = {id: 'poi-still-hidden', longitude: 2.0004, latitude: 48.0004, visible: false, replay: {visible: false}}
+        const poiList = proxyMap([
             [poiRestored.id, poiRestored],
             [poiStillHidden.id, poiStillHidden],
         ])
@@ -1902,6 +1907,7 @@ describe('replay phase 1 playback controller', () => {
             },
             stores:     {
                 main:       {
+                    theJourney: journey,
                     components: {
                         pois: {
                             list: poiList,
@@ -1963,6 +1969,7 @@ describe('replay phase 1 playback controller', () => {
             },
         }
 
+        let finishStopClips
         try {
             const mode = new JourneyReplayMode({
                 controller,
@@ -1972,11 +1979,23 @@ describe('replay phase 1 playback controller', () => {
                     update: () => {},
                 },
             })
+            const stopClipsPromise = new Promise(resolve => {
+                finishStopClips = resolve
+            })
+            const replayCall = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+            const playStopClips = vi.spyOn(replayCall, 'playJourneyReplayClips')
+                .mockReturnValue(stopClipsPromise)
+            const clipListForSlot = vi.spyOn(replayCall, 'clipListForSlot')
 
+            expect(replayCall.clipListForSlot('post-replay')).toMatchObject([
+                {params: {duration: 2}},
+            ])
             mode.start()
             await Promise.resolve()
             await Promise.resolve()
 
+            expect(controller.configure).toHaveBeenCalledOnce()
+            expect(replayCall.clipListForSlot('post-replay')).toHaveLength(1)
             expect(poiRestoredEntity.show).toBe(false)
             expect(poiRestoredEntity.billboard.show).toBe(false)
             expect(poiStillHiddenEntity.show).toBe(false)
@@ -1990,9 +2009,13 @@ describe('replay phase 1 playback controller', () => {
             })
             await Promise.resolve()
 
+            expect(clipListForSlot).toHaveBeenCalledWith('post-replay')
+            expect(clipListForSlot.mock.results.at(-1).value).toHaveLength(1)
+            expect(playStopClips).toHaveBeenCalledWith('post-replay', expect.any(Object))
             expect(poiRestoredEntity.show).toBe(false)
             expect(poiStillHiddenEntity.show).toBe(false)
 
+            finishStopClips()
             await vi.advanceTimersByTimeAsync(2000)
 
             expect(journey.focus).not.toHaveBeenCalled()
@@ -2007,6 +2030,7 @@ describe('replay phase 1 playback controller', () => {
             expect(poiStillHiddenEntity.show).toBe(false)
         }
         finally {
+            finishStopClips?.()
             vi.useRealTimers()
             globalThis.__ = previousDoubleUnderscore
             globalThis.lgs = previousLgs
