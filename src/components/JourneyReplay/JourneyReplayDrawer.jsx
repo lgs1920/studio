@@ -23,7 +23,7 @@ import PanelActions from '@Components/PanelsActions'
 import { PopupAnchor } from '@Components/PopupAnchor'
 import { PopupDrawer } from '@Components/PopupDrawer'
 import WaDrawer     from '@Components/WaDrawerNonModal'
-import { REPLAY_DRAWER } from '@Core/constants'
+import { ADD_POI_EVENT, REPLAY_DRAWER } from '@Core/constants'
 import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import classNames from 'classnames'
 import {
@@ -664,15 +664,41 @@ export const JourneyReplayDrawer = memo(() => {
         }
     }, [drawerOpen])
 
+    const refreshNearbyReplayPOIs = useCallback(() => {
+        if (!hasJourney) {
+            if (Array.isArray(lgs.stores.replay.nearbyPois) && lgs.stores.replay.nearbyPois.length > 0) {
+                lgs.stores.replay.nearbyPois = []
+            }
+            return []
+        }
+
+        const nextNearbyPois = __.ui.poiManager?.getJourneyReplayPOIsForJourney?.(
+            currentJourney,
+            replaySettings.poiDistance,
+        ) ?? []
+        const currentNearbyPois = Array.isArray(lgs.stores.replay.nearbyPois) ? lgs.stores.replay.nearbyPois : []
+        const sameLength = currentNearbyPois.length === nextNearbyPois.length
+        const sameEntries = sameLength && currentNearbyPois.every((entry, index) => {
+            const nextEntry = nextNearbyPois[index]
+            return entry?.poi?.id === nextEntry?.poi?.id
+                && entry?.projectedAbscissa === nextEntry?.projectedAbscissa
+                && entry?.distanceToJourneyMeters === nextEntry?.distanceToJourneyMeters
+                && entry?.source === nextEntry?.source
+        })
+
+        if (!sameEntries) {
+            lgs.stores.replay.nearbyPois = nextNearbyPois
+        }
+        return nextNearbyPois
+    }, [currentJourney, hasJourney, replaySettings.poiDistance])
+
     useEffect(() => {
         if (drawerOpen !== REPLAY_DRAWER || activeTab !== REPLAY_TAB_POIS) {
             return
         }
 
         if (!hasJourney) {
-            if (Array.isArray(lgs.stores.replay.nearbyPois) && lgs.stores.replay.nearbyPois.length > 0) {
-                lgs.stores.replay.nearbyPois = []
-            }
+            refreshNearbyReplayPOIs()
             return
         }
 
@@ -687,25 +713,25 @@ export const JourneyReplayDrawer = memo(() => {
                 return
             }
 
-            const nextNearbyPois = __.ui.poiManager?.getJourneyReplayPOIsForJourney?.(
-                currentJourney,
-                replaySettings.poiDistance,
-            ) ?? []
-            const currentNearbyPois = Array.isArray(lgs.stores.replay.nearbyPois) ? lgs.stores.replay.nearbyPois : []
-            const sameLength = currentNearbyPois.length === nextNearbyPois.length
-            const sameEntries = sameLength && currentNearbyPois.every((entry, index) => {
-                const nextEntry = nextNearbyPois[index]
-                return entry?.poi?.id === nextEntry?.poi?.id
-                    && entry?.projectedAbscissa === nextEntry?.projectedAbscissa
-                    && entry?.distanceToJourneyMeters === nextEntry?.distanceToJourneyMeters
-                    && entry?.source === nextEntry?.source
-            })
-
-            if (!sameEntries) {
-                lgs.stores.replay.nearbyPois = nextNearbyPois
-            }
+            refreshNearbyReplayPOIs()
         }, 0)
-    }, [activeTab, currentJourney, drawerOpen, replaySettings.poiDistance, hasJourney, journeySlug])
+    }, [activeTab, currentJourney, drawerOpen, replaySettings.poiDistance, hasJourney, journeySlug, refreshNearbyReplayPOIs])
+
+    useEffect(() => {
+        const handlePOIAdded = () => {
+            if (nearbyPoisRefreshTimer.current !== null) {
+                clearTimeout(nearbyPoisRefreshTimer.current)
+            }
+
+            nearbyPoisRefreshTimer.current = setTimeout(() => {
+                nearbyPoisRefreshTimer.current = null
+                refreshNearbyReplayPOIs()
+            }, 0)
+        }
+
+        window.addEventListener(ADD_POI_EVENT, handlePOIAdded)
+        return () => window.removeEventListener(ADD_POI_EVENT, handlePOIAdded)
+    }, [refreshNearbyReplayPOIs])
 
     const refreshJourneyReplay = useCallback((camera = true, rebuildSampler = false) => {
         const replayRuntime = lgs.stores.replay

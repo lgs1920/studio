@@ -34,6 +34,7 @@ import {MapPOI} from '@Core/MapPOI'
 import {
     normalizePOIDisplaySettings, POI_DISPLAY_DEFAULT_BORDER_RADIUS, shouldDisplayPOIField,
 } from '@Core/POIDisplaySettings'
+import {ADD_POI_EVENT} from '@Core/constants'
 import {POIUtils} from '@Utils/cesium/POIUtils'
 import {useCallback, useEffect} from 'react'
 import {subscribe, useSnapshot} from 'valtio'
@@ -400,6 +401,7 @@ export const MapPOIMonitor = () => {
         }
         synchronizePOIListeners()
         const removeSubscription = subscribeKey($pois.list, 'epoch', synchronizePOIListeners, true)
+        window.addEventListener(ADD_POI_EVENT, synchronizePOIListeners)
 
         // Resolve double-clicks against the current POI store so global POIs remain editable across list updates.
         __.canvasEvents.onDoubleClick(handleEditor, {
@@ -532,6 +534,7 @@ export const MapPOIMonitor = () => {
         return () => {
             poiTerrainOcclusionController.dispose()
             removeSubscription()
+            window.removeEventListener(ADD_POI_EVENT, synchronizePOIListeners)
             __.canvasEvents.offDoubleClick?.(handleEditor)
             replaySubscriptions.forEach(remove => remove())
             removeReplayRuntimeSubscription?.()
