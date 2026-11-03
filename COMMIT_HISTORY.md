@@ -4739,3 +4739,35 @@
 ## 2026-11-03 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/43ce09569798ec51a4b88c6f896f84f86b5bb7d2)
 
 - Recorded automatically from Git history.
+
+## 2026-11-03 — [`feat: preserve POI display settings in journey exports`](https://github.com/lgs1920/studio/commit/00696bc8eba17417d810c49d67436f8be7d9d548)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`fix: keep newly created POIs editable`](https://github.com/lgs1920/studio/commit/13d8eec01d48268c751a3bcffbc3366ee9966532)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`fix: refresh and bind newly created POIs`](https://github.com/lgs1920/studio/commit/bb3ca0394c007cb097681a8acd55c666701daac7)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`fix: allow editing Compass placement in Basic Replay`](https://github.com/lgs1920/studio/commit/2e5f6fccd0f85cf1bf0d49b122d8c895b8e38bdc)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`test: repair Replay and video integration fixtures`](https://github.com/lgs1920/studio/commit/e6008c0fe3bd53a8431ffc0268b4c96c345cb298)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`chore: update Replay and widget follow-up notes`](https://github.com/lgs1920/studio/commit/ce118a98c196d299154004c8ab044de39e36602a)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/314491cde789af4c890d6b3e44417024c231a757)
+
+- Recorded automatically from Git history.
+
+## 2026-11-03 — [`fix: follow Replay camera focus with compass`](https://github.com/lgs1920/studio/commit/28e1e3f0d34efb8dc36bd3a2aeee4638a2f88302)
+
+- Recorded automatically from Git history.
