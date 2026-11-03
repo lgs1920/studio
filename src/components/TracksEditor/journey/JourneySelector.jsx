@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-20
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { LGSPopup }                                                       from '@Components/LGSPopup'
 import { Journey }                                                        from '@Core/Journey'
+import { UI_ICONS }                                                       from '@Core/ui/metadata/uiActionCatalog'
 import {
     WaCard, WaIcon, WaOption, WaSelect, WaTooltip, WaTree, WaTreeItem,
 }                                                                         from '@awesome.me/webawesome/dist/react'
@@ -31,8 +32,8 @@ const GROUPS_EXPANDED_KEY = 'lgs1920-journey-selector-groups-expanded'
 const naturalSortJourneys = (a, b) =>
     a.title.localeCompare(b.title, undefined, {numeric: true, sensitivity: 'base'})
 
-/** Render a journey activity icon with its full activity label available as a tooltip. */
-const JourneyActivityIcon = ({journey}) => {
+/** Render a journey activity icon with an optional tooltip for the selected journey. */
+const JourneyActivityIcon = ({journey, showTooltip = true}) => {
     const activity = Journey.activityProfile(journey?.activity, journey?.activitySettings)
     const rawTooltipId = useId()
     const tooltipId = `journey-selector-activity-${rawTooltipId.replace(/:/g, '')}`
@@ -40,12 +41,12 @@ const JourneyActivityIcon = ({journey}) => {
     return (
         <>
             <WaIcon
-                id={tooltipId}
+                id={showTooltip ? tooltipId : undefined}
                 className="lgs--journey-activity-icon"
                 name={activity.icon ?? 'person-hiking'}
                 variant="regular"
             />
-            <WaTooltip for={tooltipId}>{activity.label}</WaTooltip>
+            {showTooltip && <WaTooltip for={tooltipId}>{activity.label}</WaTooltip>}
         </>
     )
 }
@@ -277,8 +278,9 @@ export const JourneySelector = memo(({
         return () => document.removeEventListener('pointerdown', handlePointerDownOutside, true)
     }, [closeOnOutsidePointerDown])
 
-    const renderActivityIcon = useCallback((journey = currentJourney) => {
-        return <JourneyActivityIcon journey={journey}/>
+    /** Render one activity icon, optionally with its label tooltip. */
+    const renderActivityIcon = useCallback((journey = currentJourney, showTooltip = true) => {
+        return <JourneyActivityIcon journey={journey} showTooltip={showTooltip}/>
     }, [currentJourney])
 
     const renderTrackPreview = useCallback((journey, track) => (
@@ -289,13 +291,14 @@ export const JourneySelector = memo(({
         />
     ), [])
 
-    const renderJourneyIcons = useCallback((journey = currentJourney) => {
+    /** Render the track previews and activity icon associated with one journey. */
+    const renderJourneyIcons = useCallback((journey = currentJourney, showActivityTooltip = true) => {
         const tracks = Array.from(journey.tracks.values())
         if (tracks.length === 1) {
             return (
                 <span className="lgs--journey-icons-in-settings">
                     {renderTrackPreview(journey, tracks[0])}
-                    {renderActivityIcon(journey)}
+                    {renderActivityIcon(journey, showActivityTooltip)}
                 </span>
             )
         }
@@ -312,7 +315,7 @@ export const JourneySelector = memo(({
                         />
                     ))}
                 </span>
-                {renderActivityIcon(journey)}
+                {renderActivityIcon(journey, showActivityTooltip)}
             </span>
         )
     }, [currentJourney, renderActivityIcon, renderTrackPreview])
@@ -331,8 +334,8 @@ export const JourneySelector = memo(({
             >
                 <span className="journey-group-tree-row">
                     <span className="lgs--journey-tree-item-content">
-                        <WaIcon name="route" variant="regular"/>
-                        {renderJourneyIcons(rj)}
+                        <WaIcon {...UI_ICONS.journey}/>
+                        {renderJourneyIcons(rj, false)}
                         <span className="lgs--journey-tree-item-title">{rj.title}</span>
                     </span>
                 </span>
@@ -412,7 +415,7 @@ export const JourneySelector = memo(({
                         <div className="lgs--journey-selector-start">
                             {selectedJourney
                              ? renderJourneyIcons(selectedJourney)
-                             : <WaIcon name="route" variant="regular"/>}
+                             : <WaIcon {...UI_ICONS.journey}/>}
                         </div>
                         <span className="journey-selector-label">
                             {selectedJourney?.title ?? label ?? ''}
@@ -479,10 +482,11 @@ export const JourneySelector = memo(({
                             <WaOption
                                 key={journey.slug}
                                 value={journey.slug}
+                                label={reactiveJourney.title}
                                 className={classNames('journey-title', {masked: !reactiveJourney.visible})}
                             >
                                 <div slot="start" className="lgs--journey-selector-start">
-                                    {renderJourneyIcons(reactiveJourney)}
+                                    {renderJourneyIcons(reactiveJourney, false)}
                                 </div>
                                 <div>{reactiveJourney.title}</div>
                             </WaOption>
