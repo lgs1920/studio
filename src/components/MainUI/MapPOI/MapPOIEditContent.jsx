@@ -34,7 +34,6 @@ import { normalizePOIDisplaySettings } from '@Core/POIDisplaySettings'
 import { UI_ACTIONS, UI_ICONS } from '@Core/ui/metadata/uiActionCatalog'
 
 import {hasVisibleColorAlpha} from '@Utils/ColorUtils'
-import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAwesomeKits'
 import { UIToast } from '@Utils/UIToast'
 import {
     ELEVATION_UNITS, UnitUtils,
@@ -79,6 +78,8 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               __.ui.poiManager.updatePOI(poi, updates, {...options, markAsEdited: true})
                                           ), [poi])
                                           const _colorPickerShift = useRef({})
+                                          const [textBorderLinkState, setTextBorderLinkState] = useState({poi, linked: false})
+                                          const textBorderColorsLinked = textBorderLinkState.poi === poi && textBorderLinkState.linked
 
                                           /**
                                            * Persist a changed display flag while retaining the other POI choices.
@@ -200,9 +201,14 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                     time,
                                                     visible     = true,
                                                 } = point
+                                          const currentTextColor = color ?? lgs.colors.poiDefault
                                           const currentBorderColor = borderColor ?? color ?? lgs.colors.poiDefault
+                                          const colorLinkAction = textBorderColorsLinked
+                                              ? UI_ACTIONS.unlinkPOITextAndBorderColors
+                                              : UI_ACTIONS.linkPOITextAndBorderColors
+                                          const currentBackgroundColor = bgColor ?? lgs.colors.poiDefaultBackground
                                           const canSwapColors = background
-                                              && hasVisibleColorAlpha(bgColor ?? lgs.colors.poiDefaultBackground)
+                                              && hasVisibleColorAlpha(currentBackgroundColor)
                                               && hasVisibleColorAlpha(currentBorderColor)
 
                                           const [coordinateDraft, setCoordinateDraft] = useState({
@@ -304,23 +310,21 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               const update = {}
                                               const selectedColor = event.target.value
                                               const currentPoint = lgs.stores.main.components.pois.list.get(poi)
+                                              const shiftLinked = _colorPickerShift.current[field] === true
                                               if (field === 'text') {
                                                   update.color = selectedColor
-                                                  if (_colorPickerShift.current[field] === true) {
+                                                  if (textBorderColorsLinked || shiftLinked) {
                                                       update.borderColor = selectedColor
                                                   }
                                                   else if (currentPoint?.borderColor == null) {
                                                       update.borderColor = currentBorderColor
                                                   }
                                               }
-                                              else if (_colorPickerShift.current[field] === true) {
-                                                  if (field === 'colour') {
-                                                      update.bgColor = selectedColor
-                                                      update.borderColor = selectedColor
-                                                  }
-                                                  else {
+                                              else if (field === 'colour' && shiftLinked) {
+                                                  update.bgColor = selectedColor
+                                                  update.borderColor = selectedColor
+                                                  if (textBorderColorsLinked) {
                                                       update.color = selectedColor
-                                                      update.borderColor = selectedColor
                                                   }
                                               }
                                               else if (field === 'colour') {
@@ -329,6 +333,10 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                       update.borderColor = currentBorderColor
                                                   }
                                               }
+                                              else if (textBorderColorsLinked || shiftLinked) {
+                                                  update.color = selectedColor
+                                                  update.borderColor = selectedColor
+                                              }
                                               else if (field === 'border') {
                                                   update.borderColor = selectedColor
                                               }
@@ -336,16 +344,16 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               if (Object.keys(update).length > 0) {
                                                   await updateEditedPOI(update)
                                               }
-                                          }, [poi, currentBorderColor, updateEditedPOI])
+                                          }, [poi, currentBorderColor, textBorderColorsLinked, updateEditedPOI])
 
-                                          /** Swap the POI background and border colors when both remain visible. */
+                                          /** Reverse the background with the border and keep the linked Text color in sync. */
                                           const handleSwapColors = async () => {
                                               if (!window.isOK) {
                                                   return
                                               }
 
                                               const currentPoint = lgs.stores.main.components.pois.list.get(poi)
-                                              if (!currentPoint || currentPoint.background === false) {
+                                              if (!currentPoint) {
                                                   return
                                               }
 
@@ -353,14 +361,54 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               const borderColor = currentPoint.borderColor
                                                   ?? currentPoint.color
                                                   ?? lgs.colors.poiDefault
-                                              if (!hasVisibleColorAlpha(backgroundColor) || !hasVisibleColorAlpha(borderColor)) {
+                                              if (currentPoint.background === false
+                                                  || !hasVisibleColorAlpha(backgroundColor)
+                                                  || !hasVisibleColorAlpha(borderColor)) {
                                                   return
                                               }
 
-                                              await updateEditedPOI({
+                                              const updates = {
                                                   bgColor:     borderColor,
                                                   borderColor: backgroundColor,
-                                              })
+                                              }
+
+                                              if (textBorderColorsLinked) {
+                                                  updates.color = backgroundColor
+                                              }
+
+                                              await updateEditedPOI(updates)
+                                          }
+
+                                          /** Link Text and Border after making Text match the current Border color. */
+                                          const handleToggleTextBorderLink = async () => {
+                                              if (!window.isOK) {
+                                                  return
+                                              }
+
+                                              if (textBorderColorsLinked) {
+                                                  setTextBorderLinkState({poi, linked: false})
+                                                  return
+                                              }
+
+                                              const currentPoint = lgs.stores.main.components.pois.list.get(poi)
+                                              if (!currentPoint) {
+                                                  return
+                                              }
+
+                                              const borderColor = currentPoint.borderColor
+                                                  ?? currentPoint.color
+                                                  ?? lgs.colors.poiDefault
+                                              const textColor = currentPoint.color ?? lgs.colors.poiDefault
+
+                                              try {
+                                                  if (textColor !== borderColor) {
+                                                      await updateEditedPOI({color: borderColor})
+                                                  }
+                                                  setTextBorderLinkState({poi, linked: true})
+                                              }
+                                              catch (error) {
+                                                  console.error('[MapPOIEditContent] Failed to link Text and Border colors:', error)
+                                              }
                                           }
 
                                           /**
@@ -600,22 +648,78 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                   <div className="map-poi-edit-wrapper" id={`edit-map-poi-content-${id}`}>
                                                       <div className="map-poi-edit-toolbar">
                                                           <div className="map-poi-edit-swatches">
-                                                              <WaColorPicker
-                                                                  id={`map-poi-text-${id}`}
-                                                                  className="wa-visually-hidden-label"
-                                                                  label="Text"
-                                                                  size="s"
-                                                                  value={color ?? lgs.colors.poiDefault}
-                                                                  swatches={swatches}
-                                                                  onClickCapture={event => captureColorPickerShift('text', event)}
-                                                                  onChange={event => handleChangeColor('text', event)}
-                                                                  disabled={!visible}
-                                                                  noFormatToggle
-                                                              />
+                                                              <div className={classNames('map-poi-edit-color-link-group', {
+                                                                  'is-linked': textBorderColorsLinked,
+                                                              })}>
+                                                                  <WaColorPicker
+                                                                      id={`map-poi-text-${id}`}
+                                                                      className="wa-visually-hidden-label"
+                                                                      label="Text"
+                                                                      size="s"
+                                                                      value={currentTextColor}
+                                                                      swatches={swatches}
+                                                                      onClickCapture={event => captureColorPickerShift('text', event)}
+                                                                      onChange={event => handleChangeColor('text', event)}
+                                                                      disabled={!visible}
+                                                                      noFormatToggle
+                                                                  />
+                                                                  <WaTooltip for={`map-poi-text-${id}`} placement="top">
+                                                                      Text
+                                                                  </WaTooltip>
+                                                                  <WaButton
+                                                                      id={`${tooltipIdPrefix}-link-text-border-colors`}
+                                                                      className="square-button small map-poi-edit-color-link"
+                                                                      size="xs"
+                                                                      variant="brand"
+                                                                      appearance="plain"
+                                                                      aria-label={colorLinkAction.label}
+                                                                      aria-pressed={textBorderColorsLinked}
+                                                                      disabled={!visible}
+                                                                      onClick={handleToggleTextBorderLink}
+                                                                  >
+                                                                      <WaIcon {...colorLinkAction.icon} label=""/>
+                                                                  </WaButton>
+                                                                  <WaTooltip for={`${tooltipIdPrefix}-link-text-border-colors`} placement="top">
+                                                                      {colorLinkAction.label}
+                                                                  </WaTooltip>
+                                                                  <WaColorPicker
+                                                                      id={`map-poi-border-${id}`}
+                                                                      className="wa-visually-hidden-label"
+                                                                      label="Border"
+                                                                      size="s"
+                                                                      value={currentBorderColor}
+                                                                      swatches={swatches}
+                                                                      onClickCapture={event => captureColorPickerShift('border', event)}
+                                                                      onChange={event => handleChangeColor('border', event)}
+                                                                      disabled={!visible}
+                                                                      noFormatToggle
+                                                                  />
+                                                                  <WaTooltip for={`map-poi-border-${id}`} placement="top">
+                                                                      Border
+                                                                  </WaTooltip>
+                                                              </div>
+                                                              {canSwapColors && (
+                                                                  <WaButton
+                                                                      id={`${tooltipIdPrefix}-swap-colors`}
+                                                                      className="square-button small map-poi-edit-color-swap"
+                                                                      size="s"
+                                                                      appearance="plain"
+                                                                      aria-label={UI_ACTIONS.reversePOIColors.label}
+                                                                      disabled={!visible}
+                                                                      onClick={handleSwapColors}
+                                                                  >
+                                                                      <WaIcon size="s" {...UI_ACTIONS.reversePOIColors.icon} label=""/>
+                                                                  </WaButton>
+                                                              )}
+                                                              {canSwapColors && (
+                                                                  <WaTooltip for={`${tooltipIdPrefix}-swap-colors`} placement="top">
+                                                                      {UI_ACTIONS.reversePOIColors.label}
+                                                                  </WaTooltip>
+                                                              )}
                                                               <WaColorPicker
                                                                   id={`map-poi-bg-${id}`}
                                                                   className="wa-visually-hidden-label"
-                                                                  label="Colour"
+                                                                  label="Background"
                                                                   size="s"
                                                                   value={bgColor ?? lgs.colors.poiDefaultBackground}
                                                                   swatches={swatches}
@@ -624,36 +728,9 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                                   disabled={!visible || !background}
                                                                   noFormatToggle
                                                               />
-                                                              <WaColorPicker
-                                                                  id={`map-poi-border-${id}`}
-                                                                  className="wa-visually-hidden-label"
-                                                                  label="Border"
-                                                                  size="s"
-                                                                  value={currentBorderColor}
-                                                                  swatches={swatches}
-                                                                  onClickCapture={event => captureColorPickerShift('border', event)}
-                                                                  onChange={event => handleChangeColor('border', event)}
-                                                                  disabled={!visible}
-                                                                  noFormatToggle
-                                                              />
-                                                              {canSwapColors && (
-                                                                  <WaButton
-                                                                      id={`${tooltipIdPrefix}-swap-colors`}
-                                                                      className="square-button small map-poi-edit-color-swap"
-                                                                      size="s"
-                                                                      appearance="plain"
-                                                                      aria-label="Reverse color"
-                                                                      disabled={!visible}
-                                                                      onClick={handleSwapColors}
-                                                                  >
-                                                                      <WaIcon name="arrow-right-arrow-left" variant="regular" library={LGS1920_ICON_LIBRARY} size="s" aria-hidden="true"/>
-                                                                  </WaButton>
-                                                              )}
-                                                              {canSwapColors && (
-                                                                  <WaTooltip for={`${tooltipIdPrefix}-swap-colors`} placement="top">
-                                                                      {'Reverse color'}
-                                                                  </WaTooltip>
-                                                              )}
+                                                              <WaTooltip for={`map-poi-bg-${id}`} placement="top">
+                                                                  Background
+                                                              </WaTooltip>
                                                           </div>
                                                           <MapPOIEditMenu poiId={id}/>
                                                       </div>

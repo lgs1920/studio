@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,8 +36,9 @@ vi.mock('@Components/MainUI/MapPOI/usePOIJourneyAssociation', () => ({
 vi.mock('@Editor/journey/JourneySelector', () => ({JourneySelector: () => null}))
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
-    WaColorPicker: ({label, value, className, onClickCapture, onChange, disabled}) => (
+    WaColorPicker: ({id, label, value, className, onClickCapture, onChange, disabled}) => (
         <input
+            id={id}
             type="text"
             aria-label={label}
             value={value ?? ''}
@@ -66,7 +67,7 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaTabGroup: ({children, className}) => <div className={className}>{children}</div>,
     WaTabPanel: ({children}) => <div>{children}</div>,
     WaTextarea: () => null,
-    WaTooltip: () => null,
+    WaTooltip: ({children, for: targetId}) => <span data-tooltip-for={targetId}>{children}</span>,
 }))
 
 import {MapPOIEditContent} from '@Components/MainUI/MapPOI/MapPOIEditContent'
@@ -167,13 +168,16 @@ describe('MapPOIEditContent settings', () => {
         })
     })
 
-    it('shows Text, Colour, and Border swatches in that order with the legacy text color preserved', () => {
-        render(<MapPOIEditContent poi="poi-1"/>)
+    it('shows Text, Border, and Background swatches with matching tooltips and the legacy text color preserved', () => {
+        const {container} = render(<MapPOIEditContent poi="poi-1"/>)
 
-        const swatches = [...document.querySelector('.map-poi-edit-swatches').querySelectorAll('input[aria-label]')]
-        expect(swatches.map(swatch => swatch.getAttribute('aria-label'))).toEqual(['Text', 'Colour', 'Border'])
-        expect(swatches.map(swatch => swatch.value)).toEqual(['#112233', '#445566', '#112233'])
+        const swatches = [...container.querySelector('.map-poi-edit-swatches').querySelectorAll('input[aria-label]')]
+        expect(swatches.map(swatch => swatch.getAttribute('aria-label'))).toEqual(['Text', 'Border', 'Background'])
+        expect(swatches.map(swatch => swatch.value)).toEqual(['#112233', '#112233', '#445566'])
         expect(swatches.every(swatch => swatch.classList.contains('wa-visually-hidden-label'))).toBe(true)
+        expect(container.querySelector('[data-tooltip-for="map-poi-text-poi-1"]').textContent).toBe('Text')
+        expect(container.querySelector('[data-tooltip-for="map-poi-border-poi-1"]').textContent).toBe('Border')
+        expect(container.querySelector('[data-tooltip-for="map-poi-bg-poi-1"]').textContent).toBe('Background')
     })
 
     it('changes Text independently and preserves the legacy Border color', async () => {
@@ -191,9 +195,9 @@ describe('MapPOIEditContent settings', () => {
         expect(poi.borderColor).toBe('#112233')
     })
 
-    it('keeps Border at its initial Text color when Colour changes normally', async () => {
+    it('keeps Border at its initial Text color when Background changes normally', async () => {
         render(<MapPOIEditContent poi="poi-1"/>)
-        const colourPicker = screen.getByLabelText('Colour')
+        const colourPicker = screen.getByLabelText('Background')
 
         fireEvent.click(colourPicker)
         fireEvent.change(colourPicker, {target: {value: '#aabbcc'}})
@@ -220,9 +224,9 @@ describe('MapPOIEditContent settings', () => {
         expect(poi.color).toBe('#112233')
     })
 
-    it('applies Shift captured on the Colour picker open to both frame colors after Shift is released', async () => {
+    it('applies Shift captured on the Background picker open to both frame colors after Shift is released', async () => {
         render(<MapPOIEditContent poi="poi-1"/>)
-        const picker = screen.getByLabelText('Colour')
+        const picker = screen.getByLabelText('Background')
 
         fireEvent.click(picker, {shiftKey: true})
         fireEvent.change(picker, {target: {value: '#123456'}})
@@ -248,7 +252,7 @@ describe('MapPOIEditContent settings', () => {
         expect(poi.bgColor).toBe('#445566')
     })
 
-    it('reverses only Colour and Border', async () => {
+    it('reverses only Background and Border', async () => {
         poi.borderColor = '#778899'
         render(<MapPOIEditContent poi="poi-1"/>)
 
@@ -259,5 +263,50 @@ describe('MapPOIEditContent settings', () => {
             borderColor: '#445566',
         }, {markAsEdited: true}))
         expect(poi.color).toBe('#112233')
+    })
+
+    it('sets Text to Border when linking the swatches and keeps them linked during edits', async () => {
+        poi.borderColor = '#778899'
+        render(<MapPOIEditContent poi="poi-1"/>)
+
+        fireEvent.click(screen.getByRole('button', {name: 'Link Text and Border colors'}))
+
+        await waitFor(() => {
+            expect(updatePOI).toHaveBeenCalledWith('poi-1', {
+                color: '#778899',
+            }, {markAsEdited: true})
+            expect(poi.color).toBe('#778899')
+            expect(screen.getByRole('button', {name: 'Unlink Text and Border colors'}).getAttribute('aria-pressed'))
+                .toBe('true')
+        })
+
+        updatePOI.mockClear()
+        const borderPicker = screen.getByLabelText('Border')
+        fireEvent.click(borderPicker)
+        fireEvent.change(borderPicker, {target: {value: '#aabbcc'}})
+
+        await waitFor(() => expect(updatePOI).toHaveBeenCalledWith('poi-1', {
+            color: '#aabbcc',
+            borderColor: '#aabbcc',
+        }, {markAsEdited: true}))
+    })
+
+    it('reverses Background with linked Text and Border while preserving their link', async () => {
+        poi.borderColor = '#778899'
+        poi.bgColor = '#aabbcc'
+        render(<MapPOIEditContent poi="poi-1"/>)
+
+        fireEvent.click(screen.getByRole('button', {name: 'Link Text and Border colors'}))
+        await waitFor(() => expect(poi.color).toBe('#778899'))
+        updatePOI.mockClear()
+
+        fireEvent.click(screen.getByRole('button', {name: 'Reverse color'}))
+
+        await waitFor(() => expect(updatePOI).toHaveBeenCalledWith('poi-1', {
+            bgColor: '#778899',
+            borderColor: '#aabbcc',
+            color: '#aabbcc',
+        }, {markAsEdited: true}))
+        expect(poi.color).toBe(poi.borderColor)
     })
 })

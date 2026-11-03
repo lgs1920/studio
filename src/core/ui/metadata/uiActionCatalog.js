@@ -181,6 +181,18 @@ export const UI_ACTIONS = Object.freeze({
         label: 'Reset',
         icon: UI_ICONS.reset,
     },
+    linkPOITextAndBorderColors: {
+        label: 'Link Text and Border colors',
+        icon: iconProps('link-simple'),
+    },
+    unlinkPOITextAndBorderColors: {
+        label: 'Unlink Text and Border colors',
+        icon: iconProps('link-simple-slash'),
+    },
+    reversePOIColors: {
+        label: 'Reverse color',
+        icon: iconProps('arrow-right-arrow-left'),
+    },
     resetReplayAppearance: {
         label: 'Reset Replay appearance to defaults',
         icon: UI_ICONS.reset,

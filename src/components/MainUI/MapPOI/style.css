@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -1065,6 +1065,32 @@
     align-items: center;
     flex: 0 0 auto;
     gap: var(--lgs-gutter-xs);
+}
+
+.map-poi-edit-color-link-group {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: var(--lgs-gutter-xxs);
+    border-radius: var(--wa-border-radius-m);
+
+    &.is-linked {
+        outline: 2px solid var(--wa-color-brand-border-normal);
+        outline-offset: 2px;
+    }
+}
+
+.map-poi-edit-swatches wa-color-picker[size="s"]::part(trigger) {
+    margin-top: 0;
+}
+
+.map-poi-edit-swatches .square-button.small.map-poi-edit-color-link {
+    /* Keep the link toggle smaller than the adjacent color-picker swatches. */
+    --lgs-square-dimension: calc(var(--lgs-dimension-s) - var(--lgs-gutter-xs));
+}
+
+.map-poi-edit-swatches .map-poi-edit-color-link wa-icon::part(svg) {
+    height: var(--lgs-font-size-s);
 }
 
 .map-poi-edit-preview {
