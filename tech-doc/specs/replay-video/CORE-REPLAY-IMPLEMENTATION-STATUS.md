@@ -2,7 +2,7 @@
 
 Status: current implementation inventory
 
-Date: 2026-10-22
+Date: 2026-11-04
 
 ## Purpose
 
@@ -118,8 +118,12 @@ the production controller, renderer, and a real Cesium Camera reduced the
 profiled Dry-run frame-work interval from 22.9 s to 2.0 s. This excludes WebGL
 rendering, tile loading, bitmap capture, and encoding; it is not an end-to-end
 recording benchmark or visual validation.
-The Basic settings popup also exposes border/fill colors, a border toggle, and
-four fixed trace/marker presets, with reactive previews and Journey persistence.
+The Basic settings popup also exposes border/fill colors, a border toggle, four
+fixed trace/marker presets, and a global POI inclusion switch with a 50–500 metre
+distance slider. Global POI settings default to included at 500 metres and
+persist with application defaults and Journey settings. Changing the filter
+refreshes nearby POIs and recomputes the Replay timing profile and duration.
+These controls have reactive previews and Journey persistence.
 The thin preset reduces the trace scale to 0.65 while keeping the marker at the
 small preset's baseline. Its duration choices include 45 seconds and one minute.
 

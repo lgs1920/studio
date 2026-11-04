@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-11
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,10 @@ import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
 
 export const DEFAULT_REPLAY_POI_DISPLAY_DURATION_SECONDS = 3
 export const DEFAULT_REPLAY_POI_ANIMATION_DURATION_SECONDS = 2
+export const DEFAULT_REPLAY_GLOBAL_POI_DISTANCE_METERS = 500
+export const MIN_REPLAY_GLOBAL_POI_DISTANCE_METERS = 50
+export const MAX_REPLAY_GLOBAL_POI_DISTANCE_METERS = 500
+export const REPLAY_GLOBAL_POI_DISTANCE_STEP_METERS = 50
 /** Upper bound used to index Replay POI presentation windows. */
 export const MAX_REPLAY_POI_DISPLAY_DURATION_SECONDS = 60
 const replayAnimatedPOIIndexes = new WeakMap()
@@ -57,9 +61,27 @@ export const normalizeReplayPOIBehavior = settings => {
         ? savedMode
         : settings?.hideAllPoisDuringJourneyReplay === true ? 'no' : 'user'
     const rawDuration = Number(settings?.poiAnimationDurationSeconds)
+    const savedGlobalPOIDistance = settings?.globalPoiDistanceMeters
+    const requestedGlobalPOIDistance = savedGlobalPOIDistance === null
+        || savedGlobalPOIDistance === undefined
+        || savedGlobalPOIDistance === ''
+        ? Number.NaN
+        : Number(savedGlobalPOIDistance)
+    const rawGlobalPOIDistance = Number.isFinite(requestedGlobalPOIDistance)
+        ? requestedGlobalPOIDistance
+        : DEFAULT_REPLAY_GLOBAL_POI_DISTANCE_METERS
+    const clampedGlobalPOIDistance = Math.max(
+        MIN_REPLAY_GLOBAL_POI_DISTANCE_METERS,
+        Math.min(MAX_REPLAY_GLOBAL_POI_DISTANCE_METERS, rawGlobalPOIDistance),
+    )
+    const globalPoiDistanceMeters = MIN_REPLAY_GLOBAL_POI_DISTANCE_METERS
+        + Math.round((clampedGlobalPOIDistance - MIN_REPLAY_GLOBAL_POI_DISTANCE_METERS)
+        / REPLAY_GLOBAL_POI_DISTANCE_STEP_METERS) * REPLAY_GLOBAL_POI_DISTANCE_STEP_METERS
 
     return {
         poiVisibilityMode,
+        includeGlobalPois: settings?.includeGlobalPois !== false,
+        globalPoiDistanceMeters,
         animatePoisDuringJourneyReplay: settings?.animatePoisDuringJourneyReplay === true
             || (settings?.animatePoisDuringJourneyReplay === undefined
                 && settings?.animateAllPoisDuringJourneyReplay === true),

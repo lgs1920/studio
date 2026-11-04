@@ -8,15 +8,21 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-04
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {WaIcon, WaNumberInput, WaOption, WaSelect, WaSwitch, WaTooltip} from '@awesome.me/webawesome/dist/react'
+import {WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTooltip} from '@awesome.me/webawesome/dist/react'
 import {UI_ICONS} from '@Core/ui/metadata/uiActionCatalog'
-import {normalizeReplayPOIBehavior, REPLAY_POI_VISIBILITY_MODES} from '@Core/ui/replay/JourneyReplayPOISettings'
+import {
+    MAX_REPLAY_GLOBAL_POI_DISTANCE_METERS,
+    MIN_REPLAY_GLOBAL_POI_DISTANCE_METERS,
+    REPLAY_GLOBAL_POI_DISTANCE_STEP_METERS,
+    normalizeReplayPOIBehavior,
+    REPLAY_POI_VISIBILITY_MODES,
+} from '@Core/ui/replay/JourneyReplayPOISettings'
 import {getBasicReplaySettings, writeBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
 import {currentReplayJourney} from '@Core/ui/replay/ReplayUserModeConstants'
 import {resolveBasicReplaySettings, syncJourneyBasicReplayPOIBehavior} from '@Core/ui/replay/ReplayUserModes'
@@ -52,7 +58,7 @@ export const BasicReplayPOISettings = () => {
             ...nextBehavior,
         })
         syncJourneyBasicReplayPOIBehavior(nextBehavior, currentReplayJourney())
-        __.ui.replay?.refresh?.({camera: false})
+        __.ui.replay?.refresh?.({camera: false, rebuildSampler: true})
         void Promise.resolve(__.ui.replay?.refreshPOIPresentation?.()).catch(error => {
             console.error('[Replay POI] Failed to apply the selected starting visibility.', error)
         })
@@ -74,6 +80,24 @@ export const BasicReplayPOISettings = () => {
         saveBehavior({animatePoisDuringJourneyReplay: enabled === true})
     }
 
+    /** Include or exclude global POIs from the Replay route. */
+    const changeGlobalPOIInclusion = event => {
+        const enabled = event.currentTarget?.checked ?? event.target?.checked
+        saveBehavior({includeGlobalPois: enabled === true})
+    }
+
+    /** Save the committed global POI proximity threshold. */
+    const changeGlobalPOIDistance = event => {
+        const value = event.currentTarget?.value ?? event.target?.value
+        if (`${value ?? ''}`.trim() === '') {
+            return
+        }
+
+        const globalPoiDistanceMeters = normalizeReplayPOIBehavior({globalPoiDistanceMeters: value})
+            .globalPoiDistanceMeters
+        saveBehavior({globalPoiDistanceMeters})
+    }
+
     /** Keep the duration inside the supported one to three second range. */
     const changeAnimationDuration = event => {
         const value = event.currentTarget?.value ?? event.target?.value
@@ -88,6 +112,38 @@ export const BasicReplayPOISettings = () => {
 
     return (
         <div className="basic-replay-poi-settings" role="group" aria-label="Replay POIs">
+            <div className="basic-replay-poi-settings__global-filter" role="group" aria-label="Global POI filter">
+                <div className="basic-replay-poi-settings__global-toggle">
+                    <WaIcon {...UI_ICONS.pointOfInterestMarker} label=""/>
+                    <span>{'Accept global POIs'}</span>
+                    <WaSwitch
+                        id="basic-replay-global-poi-inclusion"
+                        className="basic-replay-poi-settings__global-switch"
+                        size="xs"
+                        aria-label="Accept global POIs"
+                        checked={behavior.includeGlobalPois}
+                        onInput={changeGlobalPOIInclusion}
+                    />
+                </div>
+                <WaSlider
+                    id="basic-replay-global-poi-distance"
+                    className="basic-replay-poi-settings__global-distance"
+                    aria-label="Global POI distance in meters"
+                    label="Global POI distance in meters"
+                    size="s"
+                    min={MIN_REPLAY_GLOBAL_POI_DISTANCE_METERS}
+                    max={MAX_REPLAY_GLOBAL_POI_DISTANCE_METERS}
+                    step={REPLAY_GLOBAL_POI_DISTANCE_STEP_METERS}
+                    value={behavior.globalPoiDistanceMeters}
+                    valueFormatter={value => `${Math.round(Number(value) || 0)} m`}
+                    disabled={!behavior.includeGlobalPois}
+                    withMarkers
+                    withTooltip
+                    tooltipPlacement="top"
+                    label-at-start
+                    onChange={changeGlobalPOIDistance}
+                />
+            </div>
             <div className="basic-replay-settings-row basic-replay-settings-row--split" role="group" aria-label="Show at start">
                 <div className="basic-replay-settings-row__legend">
                     <WaIcon {...UI_ICONS.pointOfInterest} label=""/>

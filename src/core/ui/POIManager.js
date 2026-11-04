@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-13
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -896,8 +896,27 @@ export class POIManager {
         return lgs.getJourneyByTrackSlug?.(poi.parent)?.slug === journey.slug
     }
 
-    getJourneyReplayPOIsForJourney = (journey, maxDistanceMeters = this.journeyAssociationDistance, {includeHidden = false} = {}) => {
+    /**
+     * Select Journey POIs and global POIs within the configured Replay radius.
+     * @param {Object} journey - Journey whose route is used for POI projection.
+     * @param {number} maxDistanceMeters - Search radius for legacy and associated candidates.
+     * @param {Object} [options] - Hidden and global POI selection settings.
+     * @param {boolean} [options.includeHidden=false] - Include hidden POIs in the results.
+     * @param {boolean} [options.includeGlobalPois=true] - Include global POIs in the results.
+     * @param {number} [options.globalPoiDistanceMeters=maxDistanceMeters] - Maximum global POI distance from the route.
+     * @returns {Array<Object>} POIs sorted by their projected route position.
+     */
+    getJourneyReplayPOIsForJourney = (
+        journey,
+        maxDistanceMeters = this.journeyAssociationDistance,
+        {
+            includeHidden = false,
+            includeGlobalPois = true,
+            globalPoiDistanceMeters = maxDistanceMeters,
+        } = {},
+    ) => {
         const maxDistance = finiteNumber(maxDistanceMeters) ?? POI_JOURNEY_ASSOCIATION_DISTANCE
+        const globalPoiDistance = Math.max(0, finiteNumber(globalPoiDistanceMeters) ?? maxDistance)
         if (!journey?.slug || maxDistance <= 0) {
             return []
         }
@@ -908,6 +927,7 @@ export class POIManager {
         }
 
         const candidateBounds = createExpandedBounds(segmentData.bounds, maxDistance)
+        const globalCandidateBounds = createExpandedBounds(segmentData.bounds, globalPoiDistance)
         const allPois = Array.from(this.list.values())
         const matches = new Map()
 
@@ -923,16 +943,22 @@ export class POIManager {
                 continue
             }
 
-            if (!associated && !isPointInsideBoundingBox(normalizedPoi, candidateBounds)) {
+            if (isGlobal && !includeGlobalPois) {
+                continue
+            }
+
+            const poiCandidateBounds = isGlobal ? globalCandidateBounds : candidateBounds
+            const poiMaxDistance = isGlobal ? globalPoiDistance : maxDistance
+            if (!associated && !isPointInsideBoundingBox(normalizedPoi, poiCandidateBounds)) {
                 continue
             }
 
             const projection = findNearestJourneyProjection({
                 poi,
                 journey,
-                maxDistanceMeters: maxDistance,
+                maxDistanceMeters: poiMaxDistance,
                 segments:          segmentData.segments,
-                referenceBounds:   candidateBounds,
+                referenceBounds:   poiCandidateBounds,
             })
 
             const effectiveProjection = associated && !projection

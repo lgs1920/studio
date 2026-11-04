@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -141,6 +141,21 @@ const buildReplayPreviewBackground = () => {
 const finiteNumber = value => {
     const number = Number(value)
     return Number.isFinite(number) ? number : null
+}
+
+/** Keep cached Replay POI lists aligned with the active global POI filter. */
+const isReplayGlobalPOIIncluded = (entry, {includeGlobalPois = true, globalPoiDistanceMeters = null} = {}) => {
+    if (entry?.source !== 'global-near-journey') {
+        return true
+    }
+
+    if (!includeGlobalPois) {
+        return false
+    }
+
+    const poiDistance = finiteNumber(entry?.distanceToJourneyMeters)
+    const maximumDistance = finiteNumber(globalPoiDistanceMeters)
+    return poiDistance === null || maximumDistance === null || poiDistance <= maximumDistance
 }
 
 const formatSeconds = value => {
@@ -468,6 +483,21 @@ export const JourneyReplayDrawer = memo(() => {
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
     const isExpertMode = effectiveReplaySettings.userMode === REPLAY_USER_MODE_EXPERT
+    const basicReplayPOIBehavior = normalizeReplayPOIBehavior(effectiveReplaySettings.basic)
+    const replayGlobalPOIFilter = useMemo(() => isExpertMode
+        ? {
+            includeGlobalPois: true,
+            globalPoiDistanceMeters: effectiveReplaySettings.poiDistance,
+        }
+        : {
+            includeGlobalPois: basicReplayPOIBehavior.includeGlobalPois,
+            globalPoiDistanceMeters: basicReplayPOIBehavior.globalPoiDistanceMeters,
+        }, [
+        isExpertMode,
+        effectiveReplaySettings.poiDistance,
+        basicReplayPOIBehavior.includeGlobalPois,
+        basicReplayPOIBehavior.globalPoiDistanceMeters,
+    ])
     const preparedBasicCamera = replayState.basicPreparationActive === true
         && previousJourneySlug.current === journeySlug
         ? replayState.camera
@@ -486,7 +516,7 @@ export const JourneyReplayDrawer = memo(() => {
         const entries = Array.isArray(replayState.nearbyPois)
             ? replayState.nearbyPois.filter(entry => {
                 const poi = poiList.get(entry?.poi?.id) ?? entry?.poi
-                return poi?.tooClose !== true
+                return poi?.tooClose !== true && isReplayGlobalPOIIncluded(entry, replayGlobalPOIFilter)
             })
             : []
         return entries.sort((left, right) => {
@@ -503,7 +533,7 @@ export const JourneyReplayDrawer = memo(() => {
             }
             return leftDistance - rightDistance
         })
-    }, [activeTab, replayState.nearbyPois, poiList])
+    }, [activeTab, replayState.nearbyPois, poiList, replayGlobalPOIFilter.includeGlobalPois, replayGlobalPOIFilter.globalPoiDistanceMeters])
     const hideAllPoisDuringJourneyReplay = effectiveReplaySettings.hideAllPoisDuringJourneyReplay === true
     const animateAllPoisDuringJourneyReplay = effectiveReplaySettings.animateAllPoisDuringJourneyReplay === true
     const animatePOIsInBasicMode = normalizeReplayPOIBehavior(effectiveReplaySettings.basic).animatePoisDuringJourneyReplay
@@ -675,6 +705,7 @@ export const JourneyReplayDrawer = memo(() => {
         const nextNearbyPois = __.ui.poiManager?.getJourneyReplayPOIsForJourney?.(
             currentJourney,
             replaySettings.poiDistance,
+            replayGlobalPOIFilter,
         ) ?? []
         const currentNearbyPois = Array.isArray(lgs.stores.replay.nearbyPois) ? lgs.stores.replay.nearbyPois : []
         const sameLength = currentNearbyPois.length === nextNearbyPois.length
@@ -690,7 +721,7 @@ export const JourneyReplayDrawer = memo(() => {
             lgs.stores.replay.nearbyPois = nextNearbyPois
         }
         return nextNearbyPois
-    }, [currentJourney, hasJourney, replaySettings.poiDistance])
+    }, [currentJourney, hasJourney, replaySettings.poiDistance, replayGlobalPOIFilter.includeGlobalPois, replayGlobalPOIFilter.globalPoiDistanceMeters])
 
     useEffect(() => {
         if (drawerOpen !== REPLAY_DRAWER || activeTab !== REPLAY_TAB_POIS) {
@@ -715,7 +746,7 @@ export const JourneyReplayDrawer = memo(() => {
 
             refreshNearbyReplayPOIs()
         }, 0)
-    }, [activeTab, currentJourney, drawerOpen, replaySettings.poiDistance, hasJourney, journeySlug, refreshNearbyReplayPOIs])
+    }, [activeTab, currentJourney, drawerOpen, replaySettings.poiDistance, replayGlobalPOIFilter.includeGlobalPois, replayGlobalPOIFilter.globalPoiDistanceMeters, hasJourney, journeySlug, refreshNearbyReplayPOIs])
 
     useEffect(() => {
         const handlePOIAdded = () => {
@@ -1075,9 +1106,10 @@ export const JourneyReplayDrawer = memo(() => {
             lgs.stores.replay.nearbyPois = __.ui.poiManager?.getJourneyReplayPOIsForJourney?.(
                 currentJourney,
                 replaySettings.poiDistance,
+                replayGlobalPOIFilter,
             ) ?? []
         }
-    }, [currentJourney, drawerOpen, replaySettings.poiDistance, hasJourney])
+    }, [currentJourney, drawerOpen, replaySettings.poiDistance, replayGlobalPOIFilter.includeGlobalPois, replayGlobalPOIFilter.globalPoiDistanceMeters, hasJourney])
 
     const updatePOIJourneyReplayVisibility = useCallback((poiId, event) => {
         const visible = getChecked(event)
@@ -1114,15 +1146,16 @@ export const JourneyReplayDrawer = memo(() => {
         if (cachedNearbyPois.length > 0) {
             return cachedNearbyPois.filter(entry => {
                 const poi = poiList.get(entry?.poi?.id) ?? entry?.poi
-                return poi?.tooClose !== true
+                return poi?.tooClose !== true && isReplayGlobalPOIIncluded(entry, replayGlobalPOIFilter)
             })
         }
 
         return __.ui.poiManager?.getJourneyReplayPOIsForJourney?.(
             currentJourney,
             replaySettings.poiDistance,
+            replayGlobalPOIFilter,
         ) ?? []
-    }, [currentJourney, hasJourney, replaySettings.poiDistance, replayState.nearbyPois, poiList])
+    }, [currentJourney, hasJourney, replaySettings.poiDistance, replayState.nearbyPois, poiList, replayGlobalPOIFilter.includeGlobalPois, replayGlobalPOIFilter.globalPoiDistanceMeters])
 
     const visibleOrAnimatedNearbyPOICount = useMemo(() => nearbyPOIsForBadge.reduce((count, entry) => {
         const poi = poiList.get(entry?.poi?.id) ?? entry?.poi

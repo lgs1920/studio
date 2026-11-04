@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -312,9 +312,15 @@ export const syncRuntimeNearbyPOIs = (_mode, journey = currentReplayJourney()) =
     }
 
     const poiDistance = globalThis.lgs?.settings?.ui?.replay?.poiDistance ?? store.poiDistance ?? null
-    const {poiVisibilityMode} = currentJourneyReplayPoiBehavior()
+    const {
+        poiVisibilityMode,
+        includeGlobalPois,
+        globalPoiDistanceMeters,
+    } = currentJourneyReplayPoiBehavior()
     const nearbyPois = poiManager.getJourneyReplayPOIsForJourney(journey, poiDistance, {
-        includeHidden: poiVisibilityMode === 'yes',
+        includeHidden:            poiVisibilityMode === 'yes',
+        includeGlobalPois,
+        globalPoiDistanceMeters:   globalPoiDistanceMeters ?? poiDistance,
     })
     store.nearbyPois = nearbyPois
     return nearbyPois

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-03
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,11 +17,13 @@
 const iconProps = (name, variant = 'regular', extraProps = {}) => Object.freeze({name, variant, ...extraProps})
 const JOURNEY_ICON = iconProps('route')
 const POINT_OF_INTEREST_ICON = iconProps('location-dot')
+const POINT_OF_INTEREST_MARKER_ICON = iconProps('location-pin')
 
 /** Reused entity icons that appear across navigation, lists, and detail panels. */
 export const UI_ICONS = Object.freeze({
     journey: JOURNEY_ICON,
     pointOfInterest: POINT_OF_INTEREST_ICON,
+    pointOfInterestMarker: POINT_OF_INTEREST_MARKER_ICON,
     location: POINT_OF_INTEREST_ICON,
     journeyGroup: iconProps('folder'),
     mapLocation: iconProps('map-location-dot'),

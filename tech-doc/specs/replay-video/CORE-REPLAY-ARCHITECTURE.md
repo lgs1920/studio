@@ -2,7 +2,7 @@
 
 Status: current implementation inventory; see the implementation status for known gaps
 
-Date: 2026-11-03
+Date: 2026-11-04
 
 ## Purpose
 
@@ -51,6 +51,11 @@ write stores `basic` and removes `simple`.
 
 The Basic settings popup offers 10, 15, 20, 30, 45, and 60-second durations,
 border/fill color swatches, a border toggle, and four trace/marker size choices.
+It includes global POIs by default and lets the user select a 50–500 metre
+route distance in 50 metre steps. Disabling the switch excludes global POIs;
+Journey-owned POIs remain included. The selected global POI filter is stored in
+the Basic settings on application defaults and the Journey, and changing it
+rebuilds the active POI timing profile and dependent Replay duration.
 The thin preset scales the trace to 0.65 while keeping the marker at the small
 preset's baseline; small, medium, and large use factors 1, 1.5, and 2.3 for
 both. Explicit appearance choices are stored in

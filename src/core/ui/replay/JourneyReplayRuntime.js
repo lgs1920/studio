@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -433,6 +433,8 @@ export const currentJourneyReplayPoiBehavior = () => {
         || store?.animateAllPoisDuringJourneyReplay === true
     return {
         poiVisibilityMode: hideAllPoisDuringJourneyReplay ? 'no' : 'user',
+        includeGlobalPois: true,
+        globalPoiDistanceMeters: finiteNumber(settings.poiDistance) ?? finiteNumber(store?.poiDistance),
         showAllPoisDuringJourneyReplay: false,
         hideAllPoisDuringJourneyReplay,
         animatePoisDuringJourneyReplay: animateAllPoisDuringJourneyReplay,
