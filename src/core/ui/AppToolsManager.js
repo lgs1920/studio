@@ -7,12 +7,14 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-03-08
- * Last modified: 2026-03-07
+ * Created on: 2024-02-05
+ * Last modified: 2026-11-04
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
+import {UIUtils}      from '@Utils/UIUtils'
 import { encodeSync } from 'png-chunk-itxt'
 import encode         from 'png-chunks-encode'
 import extract        from 'png-chunks-extract'
@@ -83,15 +85,13 @@ export class AppToolsManager {
         }
     }
 
-    RGB2RGBA = (rgbString, alpha = 1) => {
-        if (rgbString === 'transparent') {
-            return `rgba(255,255,255,${alpha})`
-        }
-        let rgbValues = rgbString.match(/\d+/g)
-        let r = rgbValues[0]
-        let g = rgbValues[1]
-        let b = rgbValues[2]
-        return `rgba(${r},${g},${b},${alpha})`
+    /** Convert a CSS color to rgba using the shared color parser.
+     * @param {string} colorString - CSS color value to convert.
+     * @param {number} [alpha=1] - Output alpha from zero to one.
+     * @returns {string} A valid rgba color string.
+     */
+    RGB2RGBA = (colorString, alpha = 1) => {
+        return UIUtils.RGB2RGBA(colorString, alpha)
     }
 
     initDetailsGroup = (detailsGroupElement) => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-05
- * Last modified: 2026-10-23
+ * Last modified: 2026-11-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -110,15 +110,24 @@ export class UIUtils {
         return false
     }
 
-    static RGB2RGBA = (rgbString, alpha = 1) => {
-        if (rgbString === 'transparent') {
-            return `rgba(255,255,255,${alpha})`
+    /** Convert any color accepted by colord to an rgba string with the requested alpha.
+     * @param {string} colorString - CSS color value to convert.
+     * @param {number} [alpha=1] - Output alpha from zero to one.
+     * @returns {string} A valid rgba color string.
+     */
+    static RGB2RGBA = (colorString, alpha = 1) => {
+        const requestedAlpha = Number(alpha)
+        const safeAlpha = Number.isFinite(requestedAlpha)
+            ? Math.min(1, Math.max(0, requestedAlpha))
+            : 1
+        const color = colord(colorString ?? '')
+
+        if (colorString === 'transparent' || !color.isValid()) {
+            return `rgba(255,255,255,${safeAlpha})`
         }
-        let rgbValues = rgbString.match(/\d+/g)
-        let r = rgbValues[0]
-        let g = rgbValues[1]
-        let b = rgbValues[2]
-        return `rgba(${r},${g},${b},${alpha})`
+
+        const {r, g, b} = color.toRgb()
+        return `rgba(${r},${g},${b},${safeAlpha})`
     }
 
     static initDetailsGroup = (detailsGroupElement) => {
