@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-27
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-04
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    CURRENT_MAP_POINT, JOURNEY_EDITOR_DRAWER, POI_NEW_BADGE_DURATION, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER,
+    CURRENT_MAP_POINT, JOURNEY_EDITOR_DRAWER, POI_NEW_BADGE_DURATION, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER, SECOND,
     SCENE_MODE_2D, SCENE_WIDGETS_BOARD,
     VIDEO_CROP_ZONE,
 } from '@Core/constants'
@@ -90,10 +90,23 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
 
         const createdPoi = await __.ui.poiManager.add(poi)
         if (!createdPoi) {
+            const nearbyPOI = __.ui.poiManager.findNearestPOIWithinDistance(poi)
             UIToast.warning({
-                                caption: 'POI not created !',
-                                text:    'This location is too close to an existing POI!',
-                            })
+                                caption: 'POI not created.',
+                                text:    nearbyPOI
+                                    ? <POICreationToastContent
+                                          poi={nearbyPOI}
+                                          canEdit
+                                          action={UI_ACTIONS.editNearbyPOI}
+                                          message="A POI is already near this location."
+                                          onEdit={() => {
+                                              hideMenu()
+                                              void openEditDrawer(nearbyPOI.id)
+                                          }}
+                                      />
+                                    : 'This location is too close to an existing POI.',
+                            }, 8 * SECOND)
+            hideMenu()
             return
         }
 

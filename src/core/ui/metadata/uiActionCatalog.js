@@ -147,6 +147,10 @@ export const UI_ACTIONS = Object.freeze({
         label: 'Edit',
         icon: {name: 'location-pen', variant: 'regular'},
     },
+    editNearbyPOI: {
+        label: 'Edit nearby POI',
+        icon: UI_ICONS.edit,
+    },
     poiDetails: {
         label: 'Details',
         icon: UI_ICONS.edit,

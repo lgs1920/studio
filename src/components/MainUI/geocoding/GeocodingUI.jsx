@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-21
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -179,10 +179,22 @@ export const GeocodingUI = () => {
                 return rejectedPOI
             }
 
+            const nearbyPOI = __.ui.poiManager.findNearestPOIWithinDistance(point)
             UIToast.warning({
-                                caption: 'POI not created !',
-                                text:    'This location is too closed to an existing POI!',
-                            })
+                                caption: 'POI not created.',
+                                text:    nearbyPOI
+                                    ? <POICreationToastContent
+                                          poi={nearbyPOI}
+                                          canEdit
+                                          action={UI_ACTIONS.editNearbyPOI}
+                                          message="A POI is already near this location."
+                                          onEdit={() => {
+                                              requestClose()
+                                              void openPOIEditor(nearbyPOI.id)
+                                          }}
+                                      />
+                                    : 'This location is too close to an existing POI.',
+                            }, 8 * SECOND)
             return null
         }
 

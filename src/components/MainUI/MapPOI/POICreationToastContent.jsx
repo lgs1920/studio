@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-28
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,17 +20,18 @@ import {useSnapshot, proxy} from 'valtio'
 
 const EMPTY_POI_PROXY = proxy({})
 
-/** Render the POI title and the shared edit action inside a creation toast.
- * @param {{poi: {id: string, title?: string}, canEdit: boolean, onEdit: () => void}} props - Toast content props.
- * @returns {JSX.Element} POI title and edit action.
+/** Render a POI title, optional message, and shared edit action inside a toast.
+ * @param {{poi: {id: string, title?: string}, canEdit: boolean, onEdit: () => void, message?: string, action?: {label: string, icon: Object}}} props - Toast content props.
+ * @returns {JSX.Element} POI message, title, and optional edit action.
  */
-export const POICreationToastContent = ({poi, canEdit, onEdit}) => {
+export const POICreationToastContent = ({poi, canEdit, onEdit, message, action = UI_ACTIONS.edit}) => {
     const $poi = lgs.stores.main.components.pois.list.get(poi?.id)
     const currentPOI = useSnapshot($poi ?? EMPTY_POI_PROXY)
     const title = currentPOI.title || poi?.title || ''
 
     return (
         <div className="toast-action-stack">
+            {message && <div>{message}</div>}
             <div>{title}</div>
             {canEdit && (
                 <WaButton
@@ -40,7 +41,7 @@ export const POICreationToastContent = ({poi, canEdit, onEdit}) => {
                     variant="brand"
                     onClick={onEdit}
                 >
-                    <WaIcon slot="start" size="s" {...UI_ACTIONS.edit.icon}/>{UI_ACTIONS.edit.label}
+                    <WaIcon slot="start" size="s" {...action.icon}/>{action.label}
                 </WaButton>
             )}
         </div>

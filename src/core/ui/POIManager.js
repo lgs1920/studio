@@ -1098,17 +1098,50 @@ export class POIManager {
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) / KM
     }
 
+    /** Find the closest existing POI within the interactive creation threshold.
+     * @param {Object} newPoi - POI coordinates to compare against the current POI list.
+     * @param {number} [threshold=this.threshold] - Maximum distance in metres.
+     * @param {Map|Object} [tempList] - Optional POI collection to inspect.
+     * @returns {Object|null} The nearest matching POI, or null when none is close enough.
+     */
+    findNearestPOIWithinDistance = (newPoi, threshold = this.threshold, tempList = null) => {
+        if (!newPoi || newPoi.type === POI_STARTER_TYPE) {
+            return null
+        }
+
+        const list = tempList ?? this.list
+        let nearestPOI = null
+        let nearestDistance = Number.POSITIVE_INFINITY
+
+        for (const poi of list.values()) {
+            const distance = this.haversineDistance(newPoi, poi)
+            if (Number.isFinite(distance) && distance <= threshold && distance < nearestDistance) {
+                nearestPOI = poi
+                nearestDistance = distance
+            }
+        }
+
+        return nearestPOI
+    }
+
+    /** Check whether an existing POI lies within the configured distance threshold.
+     * @param {Object} newPoi - POI coordinates to compare against the current POI list.
+     * @param {number} [threshold=this.threshold] - Maximum distance in metres.
+     * @param {Map|Object} [tempList] - Optional POI collection to inspect.
+     * @returns {boolean} Whether a POI lies at or inside the distance threshold.
+     */
     isTooCloseThanExistingPoints = (newPoi, threshold = this.threshold, tempList = null) => {
         const list = tempList ?? this.list
         if (newPoi.type === POI_STARTER_TYPE) {
             return false
         }
-        for (let p of list.values()) {
-            const dist = this.haversineDistance(newPoi, p)
-            if (dist <= threshold) {
+
+        for (const poi of list.values()) {
+            if (this.haversineDistance(newPoi, poi) <= threshold) {
                 return true
             }
         }
+
         return false
     }
 
