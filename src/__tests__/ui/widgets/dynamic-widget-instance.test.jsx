@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -99,6 +99,33 @@ describe('DynamicWidget instance identity', () => {
         expect(screen.getByTestId('loaded-widget').dataset.widgetId).toBe('text-widget#title')
         expect(screen.getByTestId('loaded-widget').dataset.zIndex).toBe('4500')
         expect(rendererMock.renderWidget).toHaveBeenCalledTimes(1)
+    })
+
+    it('reports the widget name while a video-board component is loading', async () => {
+        let completeLoad
+        const onLoadingChange = vi.fn()
+        rendererMock.renderWidget.mockImplementation(() => new Promise(resolve => {
+            completeLoad = resolve
+        }))
+        __.widgets = new Map([
+            ['multi-purpose-widgets', {widgets: new Map([
+                ['text-widget', {name: 'Text'}],
+            ])}],
+        ])
+
+        render(<DynamicWidget id="text-widget#title"
+            props={{group: 'multi-purpose-widgets', widgetsBoard: 'video-crop-zone'}}
+            onLoadingChange={onLoadingChange}/>)
+
+        await waitFor(() => expect(onLoadingChange).toHaveBeenCalledWith('text-widget#title', 'Text'))
+        expect(screen.queryByTestId('widget-spinner')).toBeNull()
+
+        await act(async () => {
+            completeLoad(({id}) => <div data-testid="loaded-video-widget" data-widget-id={id}/>)
+        })
+
+        await waitFor(() => expect(onLoadingChange).toHaveBeenLastCalledWith('text-widget#title', null))
+        expect(screen.getByTestId('loaded-video-widget').dataset.widgetId).toBe('text-widget#title')
     })
 
     it('reselects a reattached widget after the concrete instance is mounted', async () => {

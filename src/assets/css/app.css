@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -515,6 +515,95 @@ body.lgs-app-booting #cesium-viewer {
     &.video-scene-widgets-portal-resizing {
         opacity: 0;
         pointer-events: none;
+    }
+}
+
+.video-widget-loading-indicator.lgs-map-overlay-surface {
+    position: fixed;
+    z-index: var(--lgs-widget-ui-zindex);
+    display: inline-flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--lgs-gutter-s);
+    max-width: min(90vw, 36rem);
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+
+    & wa-spinner {
+        flex: 0 0 auto;
+        font-size: 1.25rem;
+    }
+}
+
+.video-widget-loading-message {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xxs);
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.video-widget-loading-name-roller {
+    position: relative;
+    display: inline-grid;
+    overflow: hidden;
+    min-width: 8ch;
+    max-width: 32ch;
+    height: 1.3em;
+    vertical-align: bottom;
+}
+
+.video-widget-loading-name-roller__label {
+    grid-area: 1 / 1;
+    display: block;
+    overflow: hidden;
+    max-width: 32ch;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.video-widget-loading-name-roller__label-in {
+    position: relative;
+    animation: video-widget-name-roll-in 240ms cubic-bezier(0.22, 0.68, 0, 1) both;
+}
+
+.video-widget-loading-name-roller__label-out {
+    position: absolute;
+    inset: 0 auto auto 0;
+    animation: video-widget-name-roll-out 240ms cubic-bezier(0.22, 0.68, 0, 1) both;
+}
+
+@keyframes video-widget-name-roll-in {
+    from {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes video-widget-name-roll-out {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-100%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .video-widget-loading-name-roller__label-in,
+    .video-widget-loading-name-roller__label-out {
+        animation-duration: 1ms;
+        animation-timing-function: linear;
     }
 }
 

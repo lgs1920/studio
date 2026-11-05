@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-07
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { WidgetDynamicRenderer }         from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import {resolveWidgetCatalogGroup} from '@Core/ui/widget-manager/resolveWidgetCatalogGroup'
+import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { WidgetContentOnlyContext } from '@Components/MainUI/widgets/WidgetContexts'
 import { WaSpinner } from '@awesome.me/webawesome/dist/react'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
@@ -41,26 +42,92 @@ const resolveWidgetInstanceId = (id, widgetsBoard = null) => {
 }
 
 /**
+ * Resolve a localized catalogue label for a loading widget.
+ *
+ * @param {string} widgetId - Base or concrete widget identifier.
+ * @param {string|null} group - Preferred catalogue group.
+ * @returns {string} Widget label or its base identifier.
+ */
+const resolveWidgetName = (widgetId, group = null) => {
+    const baseId = String(widgetId ?? '').split('#')[0]
+    const catalog = globalThis.__?.widgets
+    const preferred = group ? catalog?.get?.(group)?.widgets?.get?.(baseId) : null
+    if (preferred?.name) {
+        return preferred.name
+    }
+
+    const definition = Array.from(catalog?.values?.() ?? [])
+        .map(entry => entry?.widgets?.get?.(baseId))
+        .find(candidate => candidate?.name)
+    return definition?.name ?? baseId
+}
+
+/**
+ * Report a pending widget component to its board or render the legacy inline spinner.
+ *
+ * @param {Object} props - Loading widget and board callback inputs.
+ * @returns {import('react').ReactElement|null} Loading fallback for the active board.
+ */
+const WidgetLoadingFallback = ({id, props, onLoadingChange}) => {
+    const isVideoBoard = props.widgetsBoard === VIDEO_WIDGETS_BOARD
+                          && typeof onLoadingChange === 'function'
+    const group = props.group ?? lgs.stores.ui.widget.list.get(id)?.group ?? null
+    const widgetName = resolveWidgetName(id, group)
+
+    useEffect(() => {
+        if (!isVideoBoard) {
+            return undefined
+        }
+
+        onLoadingChange(id, widgetName)
+        return () => onLoadingChange(id, null)
+    }, [id, isVideoBoard, onLoadingChange, widgetName])
+
+    if (isVideoBoard) {
+        return null
+    }
+
+    return <WaSpinner style={{fontSize: '2rem'}}/>
+}
+
+/**
+ * Clear the board loading status after the lazy widget has committed successfully.
+ *
+ * @param {Object} props - Loaded widget and callback inputs.
+ * @returns {import('react').ReactNode} Loaded widget content.
+ */
+const WidgetLoadingResolved = ({id, props, onLoadingChange, children}) => {
+    useEffect(() => {
+        if (props.widgetsBoard === VIDEO_WIDGETS_BOARD) {
+            onLoadingChange?.(id, null)
+        }
+    }, [id, onLoadingChange, props.widgetsBoard])
+
+    return children
+}
+
+/**
  * Dynamically renders a registered widget using React Suspense for lazy loading.
- * Displays a spinner during load and returns false if the widget is not found in cache.
+ * Displays a loading fallback while the registered widget component resolves.
  *
  * @param {Object} props
  * @param {string} props.id - Unique widget identifier (key in __.ui.widgetCache)
  * @param {Object} [props.context] - Contextual data passed down to the widget
  * @param {Object} [props.props={}] - Additional props forwarded to the widget
- * @returns {JSX.Element|null} Suspense-wrapped widget or null if not registered
+ * @param {Function|null} [props.onLoadingChange] - Reports loading video-board widgets to their portal.
+ * @returns {import('react').ReactElement|null} Suspense-wrapped widget or null if not registered
  */
-export const DynamicWidget = ({id, context, props = {}}) => (
+export const DynamicWidget = ({id, context, props = {}, onLoadingChange = null}) => (
     <DynamicWidgetInstance key={`${id}:${props.widgetsBoard ?? ''}`}
-        id={id} context={context} props={props}/>
+        id={id} context={context} props={props} onLoadingChange={onLoadingChange}/>
 )
 
 /**
  * Load one widget identity while allowing its presentation props to keep changing.
  * @param {Object} options - Widget identity, context, and current presentation props.
- * @returns {JSX.Element|null} Resolved widget instance.
+ * @returns {import('react').ReactElement|null} Resolved widget instance.
  */
-const DynamicWidgetInstance = ({id, context, props}) => {
+const DynamicWidgetInstance = ({id, context, props, onLoadingChange}) => {
     const widgetStore = useOptionalSnapshot(lgs.stores.ui.widget)
     const _loadOptions = useRef(props)
     _loadOptions.current = props
@@ -68,6 +135,7 @@ const DynamicWidgetInstance = ({id, context, props}) => {
     const [widgetState, setWidgetState] = useState(() => ({
         component: __.ui.widgetCache.get(id)?.component ?? null,
         widgetId:  resolvedWidgetId,
+        resolved:  Boolean(__.ui.widgetCache.get(id)?.component),
     }))
     const LazyWidget = widgetState.component
     const reattachSelection = widgetStore.reattachSelection
@@ -79,13 +147,14 @@ const DynamicWidgetInstance = ({id, context, props}) => {
             ensureWidget(id, _loadOptions.current)
                 .then(result => {
                     if (!cancelled) {
-                        setWidgetState(result)
+                        setWidgetState({...result, resolved: true})
                     }
                 })
                 .catch(error => {
                     if (!cancelled) {
                         console.error(`[DynamicWidget] Failed to render widget "${id}":`, error)
-                        setWidgetState({component: null, widgetId: id})
+                        onLoadingChange?.(id, null)
+                        setWidgetState({component: null, widgetId: id, resolved: true})
                     }
                 })
         }
@@ -93,7 +162,7 @@ const DynamicWidgetInstance = ({id, context, props}) => {
         return () => {
             cancelled = true
         }
-    }, [id, LazyWidget])
+    }, [id, LazyWidget, onLoadingChange])
 
     useEffect(() => {
         const requestMatches = reattachSelection?.id === widgetState.widgetId
@@ -130,7 +199,15 @@ const DynamicWidgetInstance = ({id, context, props}) => {
     }
 
     if (!LazyWidget) {
-        return null
+        if (widgetState.resolved) {
+            return null
+        }
+
+        if (props.widgetsBoard !== VIDEO_WIDGETS_BOARD || typeof onLoadingChange !== 'function') {
+            return null
+        }
+
+        return <WidgetLoadingFallback id={id} props={props} onLoadingChange={onLoadingChange}/>
     }
 
     // Explicit component reference for clarity and potential future debugging/hooks
@@ -138,8 +215,10 @@ const DynamicWidgetInstance = ({id, context, props}) => {
 
     return (
         <WidgetContentOnlyContext.Provider value={{detached: Boolean(props.detached)}}>
-            <Suspense fallback={<WaSpinner style={{fontSize: '2rem'}}/>}>
-                <Component id={widgetState.widgetId} {...props} context={context || props}/>
+            <Suspense fallback={<WidgetLoadingFallback id={id} props={props} onLoadingChange={onLoadingChange}/> }>
+                <WidgetLoadingResolved id={id} props={props} onLoadingChange={onLoadingChange}>
+                    <Component id={widgetState.widgetId} {...props} context={context || props}/>
+                </WidgetLoadingResolved>
             </Suspense>
         </WidgetContentOnlyContext.Provider>
     )

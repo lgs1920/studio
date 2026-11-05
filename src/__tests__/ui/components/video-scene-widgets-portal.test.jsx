@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-27
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,10 +22,19 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 const portalHarness = vi.hoisted(() => ({
     renderWidget: vi.fn(),
+    loadingCallbacks: new Map(),
 }))
 
 vi.mock('@Components/MainUI/widgets/DynamicWidget', () => ({
-    DynamicWidget: ({id}) => <div data-testid="dynamic-widget" data-widget-id={id}/>,
+    DynamicWidget: ({id, onLoadingChange}) => {
+        portalHarness.loadingCallbacks.set(id, onLoadingChange)
+        return <div data-testid="dynamic-widget" data-widget-id={id}/>
+    },
+}))
+
+vi.mock('@awesome.me/webawesome/dist/react', () => ({
+    WaCard: ({children, ...props}) => <div {...props}>{children}</div>,
+    WaSpinner: () => <span data-testid="widget-loading-spinner"/>,
 }))
 
 vi.mock('@Components/MainUI/widgets/WidgetContexts', () => ({
@@ -62,6 +71,16 @@ describe('VideoSceneWidgetsPortal', () => {
         document.body.append(board)
 
         globalThis.__ = {
+            widgets: new Map([
+                ['multi-purpose-widgets', {widgets: new Map([
+                    ['compass-widget', {name: 'Compass'}],
+                    ['credits-widget', {name: 'Credits'}],
+                    ['logo-widget', {name: 'Logo'}],
+                ])}],
+                ['journey-widgets', {widgets: new Map([
+                    ['profile-widget', {name: 'Elevation Profile'}],
+                ])}],
+            ]),
             ui: {
                 widgetManager: {
                     invalidateRuntimeByBoard:         vi.fn(),
@@ -102,6 +121,7 @@ describe('VideoSceneWidgetsPortal', () => {
         }
         portalHarness.renderWidget.mockReset()
         portalHarness.renderWidget.mockResolvedValue(null)
+        portalHarness.loadingCallbacks.clear()
     })
 
     afterEach(() => {
@@ -204,6 +224,48 @@ describe('VideoSceneWidgetsPortal', () => {
         await waitFor(() => {
             expect(document.querySelector('.video-scene-widgets-portal-resizing')).toBeNull()
         })
+    })
+
+    it('centers a loading label and rolls it between widgets as they arrive', async () => {
+        render(<VideoSceneWidgetsPortal context={proxy({})}/>)
+
+        await waitFor(() => expect(portalHarness.loadingCallbacks.has('text-widget#title')).toBe(true))
+        const loadTextWidget = portalHarness.loadingCallbacks.get('text-widget#title')
+        const loadCreditsWidget = portalHarness.loadingCallbacks.get('credits-widget#video')
+
+        await act(async () => loadTextWidget('text-widget#title', 'Text'))
+
+        await waitFor(() => {
+            expect(document.querySelector('.video-widget-loading-indicator')?.getAttribute('aria-label'))
+                .toBe('Loading Text ...')
+        })
+        expect(document.querySelector('.video-widget-loading-indicator')?.style.left).toBe('320px')
+        expect(document.querySelector('.video-widget-loading-indicator')?.style.top).toBe('180px')
+
+        await act(async () => loadCreditsWidget('credits-widget#video', 'Credits'))
+
+        await waitFor(() => {
+            expect(document.querySelector('.video-widget-loading-indicator')?.getAttribute('aria-label'))
+                .toBe('Loading Credits ...')
+            expect(document.querySelector('.video-widget-loading-name-roller__label-out')?.textContent)
+                .toBe('Text')
+            expect(document.querySelector('.video-widget-loading-name-roller__label-in')?.textContent)
+                .toBe('Credits')
+        })
+
+        await act(async () => loadCreditsWidget('credits-widget#video', null))
+
+        await waitFor(() => {
+            expect(document.querySelector('.video-widget-loading-indicator')?.getAttribute('aria-label'))
+                .toBe('Loading Text ...')
+            expect(document.querySelector('.video-widget-loading-name-roller__label-out')?.textContent)
+                .toBe('Credits')
+            expect(document.querySelector('.video-widget-loading-name-roller__label-in')?.textContent)
+                .toBe('Text')
+        })
+
+        await act(async () => loadTextWidget('text-widget#title', null))
+        await waitFor(() => expect(document.querySelector('.video-widget-loading-indicator')).toBeNull())
     })
 
     it('renders Compass in Expert Replay when it is already on the video board', async () => {

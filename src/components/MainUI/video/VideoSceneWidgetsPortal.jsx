@@ -16,6 +16,8 @@
 
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
 import { WidgetPreviewContext } from '@Components/MainUI/widgets/WidgetContexts'
+import { MapOverlaySurface } from '@Components/MainUI/MapOverlaySurface'
+import { WaSpinner } from '@awesome.me/webawesome/dist/react'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { resolveWidgetCatalogGroup } from '@Core/ui/widget-manager/resolveWidgetCatalogGroup'
@@ -28,11 +30,27 @@ import {
 import {isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
 import {resolveReplayTimelineWidgetIds} from '@Core/ui/replay/ReplayTimelinePersistence'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSnapshot } from 'valtio'
 
 const VIDEO_WIDGETS_CONTEXT_FALLBACK = {resizing: false}
+
+/** Roll the previous widget label away as the next loading widget arrives. */
+const RollingWidgetName = ({current, previous, revision}) => (
+    <span className="video-widget-loading-name-roller" aria-hidden="true">
+        {previous !== null && (
+            <span key={`previous-${revision}`}
+                  className="video-widget-loading-name-roller__label video-widget-loading-name-roller__label-out">
+                {previous}
+            </span>
+        )}
+        <span key={`current-${revision}`}
+              className="video-widget-loading-name-roller__label video-widget-loading-name-roller__label-in">
+            {current}
+        </span>
+    </span>
+)
 
 export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     const list = useSnapshot(lgs.stores.ui.widget.list)
@@ -71,6 +89,65 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
 
     const [boardElement, setBoardElement] = useState(null)
     const [boardReady, setBoardReady] = useState(false)
+    const [loadingState, setLoadingState] = useState(() => ({widgets: new Map(), current: null, previous: null, revision: 0}))
+    const [boardCenter, setBoardCenter] = useState(null)
+    /** Keep a single centered status while handing off between pending widgets. */
+    const handleWidgetLoadingChange = useCallback((widgetId, widgetName) => {
+        setLoadingState(current => {
+            const widgets = new Map(current.widgets)
+            widgets.delete(widgetId)
+            if (widgetName) {
+                widgets.set(widgetId, widgetName)
+            }
+            const nextName = Array.from(widgets.values()).at(-1) ?? null
+            const changed = nextName !== current.current
+            return {
+                widgets,
+                current: nextName,
+                previous: changed ? current.current : current.previous,
+                revision: changed ? current.revision + 1 : current.revision,
+            }
+        })
+    }, [])
+    const {widgets: pendingWidgetLoads, current: activeLoadingWidget, previous: previousLoadingWidget, revision: loadingRevision} = loadingState
+
+    useEffect(() => {
+        if (!boardElement || pendingWidgetLoads.size === 0) {
+            return undefined
+        }
+
+        /** Keep the status overlay centered on the live crop bounds. */
+        const updateBoardCenter = () => {
+            const rect = boardElement.getBoundingClientRect?.()
+            if (!rect || rect.width <= 0 || rect.height <= 0) {
+                setBoardCenter(null)
+                return
+            }
+
+            const nextCenter = {left: rect.left + rect.width / 2, top: rect.top + rect.height / 2}
+            setBoardCenter(current => current?.left === nextCenter.left && current?.top === nextCenter.top
+                ? current
+                : nextCenter)
+        }
+
+        const initialFrame = requestAnimationFrame(updateBoardCenter)
+
+        const resizeObserver = typeof ResizeObserver !== 'undefined'
+            ? new ResizeObserver(updateBoardCenter)
+            : null
+        resizeObserver?.observe(boardElement)
+        document.addEventListener('onCropUpdate', updateBoardCenter)
+        window.addEventListener('resize', updateBoardCenter)
+        window.addEventListener('scroll', updateBoardCenter, true)
+
+        return () => {
+            resizeObserver?.disconnect()
+            cancelAnimationFrame(initialFrame)
+            document.removeEventListener('onCropUpdate', updateBoardCenter)
+            window.removeEventListener('resize', updateBoardCenter)
+            window.removeEventListener('scroll', updateBoardCenter, true)
+        }
+    }, [boardElement, pendingWidgetLoads.size])
 
     useEffect(() => {
         if (hidden || typeof document === 'undefined') {
@@ -232,9 +309,27 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                         id={key}
                         props={props}
                         context={context}
+                        onLoadingChange={handleWidgetLoadingChange}
                     />
                 </div>
             ))}
+            {activeLoadingWidget && boardCenter && (
+                <MapOverlaySurface className="video-widget-loading-indicator lgs-on-map-theme-vars"
+                     style={{left: `${boardCenter.left}px`, top: `${boardCenter.top}px`}}
+                     role="status"
+                     aria-live="polite"
+                     aria-busy="true"
+                     aria-label={`Loading ${String(activeLoadingWidget)} ...`}>
+                    <WaSpinner aria-hidden="true"/>
+                    <span className="video-widget-loading-message" aria-hidden="true">
+                        <span>{'Loading '}</span>
+                        <RollingWidgetName current={String(activeLoadingWidget)}
+                            previous={previousLoadingWidget}
+                            revision={loadingRevision}/>
+                        <span>{' ...'}</span>
+                    </span>
+                </MapOverlaySurface>
+            )}
             </div>
         </WidgetPreviewContext.Provider>,
         document.body,
