@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-17
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {ReplayMediaCapture} from '@Core/ui/replay/ReplayMediaCapture'
 import { REPLAY_DEFERRED_EXPORT_READY_EVENT } from '@Core/ui/replay/ReplayRecordingMonitor'
 
 vi.mock('@Components/MainUI/video/RecordingInfo', () => ({
@@ -454,6 +455,54 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(anchorClick.mock.instances[0]?.download).toBe('recording.mp4')
     })
 
+    it('prevents tab closure until the Replay video download action succeeds', async () => {
+        await openDialog()
+
+        const beforeDownload = new Event('beforeunload', {cancelable: true})
+        window.dispatchEvent(beforeDownload)
+        expect(beforeDownload.defaultPrevented).toBe(true)
+
+        vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+        await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Download'})))
+
+        const afterDownload = new Event('beforeunload', {cancelable: true})
+        window.dispatchEvent(afterDownload)
+        expect(afterDownload.defaultPrevented).toBe(false)
+    })
+
+    it('keeps tab closure guarded while a screenshot download is pending', async () => {
+        recorder.isVideo.mockReturnValue(false)
+        let resolveDownload
+        recorder.download.mockImplementation(() => new Promise(resolve => {
+            resolveDownload = resolve
+        }))
+        render(<VideoDownloadAndShareDialog/>)
+        await act(async () => {
+            recorder.dispatchEvent(new CustomEvent(ReplayMediaCapture.events.CAPTURED, {
+                detail: {blob: new Blob(['screenshot'], {type: 'image/png'})},
+            }))
+        })
+
+        const beforeDownload = new Event('beforeunload', {cancelable: true})
+        window.dispatchEvent(beforeDownload)
+        expect(beforeDownload.defaultPrevented).toBe(true)
+
+        fireEvent.click(screen.getByRole('button', {name: 'Download'}))
+        expect(recorder.download).toHaveBeenCalledOnce()
+        const whilePending = new Event('beforeunload', {cancelable: true})
+        window.dispatchEvent(whilePending)
+        expect(whilePending.defaultPrevented).toBe(true)
+
+        await act(async () => {
+            resolveDownload()
+            await Promise.resolve()
+        })
+
+        const afterDownload = new Event('beforeunload', {cancelable: true})
+        window.dispatchEvent(afterDownload)
+        expect(afterDownload.defaultPrevented).toBe(false)
+    })
+
     it.each(['Close', 'Native dialog close', 'Escape dialog close'])(
         'closes without confirmation through %s after the video has been downloaded', async (action) => {
             await openDialog()
@@ -474,6 +523,9 @@ describe('VideoDownloadAndShareDialog', () => {
             throw new Error('Download failed')
         })
         await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Download'})))
+        const afterFailedDownload = new Event('beforeunload', {cancelable: true})
+        window.dispatchEvent(afterFailedDownload)
+        expect(afterFailedDownload.defaultPrevented).toBe(true)
         fireEvent.click(screen.getByRole('button', {name: 'Close'}))
 
         await expectDialogCleanup()
@@ -483,11 +535,18 @@ describe('VideoDownloadAndShareDialog', () => {
         await openDialog()
         vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
         await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Download'})))
+        const afterFirstDownload = new Event('beforeunload', {cancelable: true})
+        window.dispatchEvent(afterFirstDownload)
+        expect(afterFirstDownload.defaultPrevented).toBe(false)
+
         await act(async () => {
             window.dispatchEvent(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
                 detail: {blob: new Blob(['new video'], {type: 'video/mp4'}), filename: 'new-video.mp4'},
             }))
         })
+        const afterReplacementReplay = new Event('beforeunload', {cancelable: true})
+        window.dispatchEvent(afterReplacementReplay)
+        expect(afterReplacementReplay.defaultPrevented).toBe(true)
         fireEvent.click(screen.getByRole('button', {name: 'Close'}))
 
         expect(screen.getByTestId('video-preview-close-confirmation')).toBeTruthy()

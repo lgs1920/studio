@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-04
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -98,7 +98,7 @@ export const VideoDownloadAndShareDialog = () => {
     const _dialogCleanupDone = useRef(true)
     const _replayScenePreFocused = useRef(false)
     const _mediaRequestToken = useRef(0)
-    /** Release the previous preview URL and reset its download status. */
+    /** Release the previous preview URL and reset download completion for replacement media. */
     const releaseMediaUrl = useCallback(() => {
         _mediaDownloaded.current = false
         const url = _mediaBlob.current.url
@@ -335,10 +335,9 @@ export const VideoDownloadAndShareDialog = () => {
             return
         }
 
-        /** Protect an undownloaded video when the user leaves the page or closes its tab. */
+        /** Protect the current media until its download action completes successfully. */
         const handleBeforeUnload = (event) => {
             if (_dialogCleanupDone.current
-                || _mediaBlob.current.type !== ReplayMediaCapture.VIDEO
                 || _mediaDownloaded.current) {
                 return
             }
@@ -540,9 +539,13 @@ export const VideoDownloadAndShareDialog = () => {
      * Download the available Replay video or screenshot.
      */
     const handleDownload = useCallback(async () => {
+        const requestToken = _mediaRequestToken.current
         try {
             if (__.mediaCapture.isVideo()) {
                 const media = await resolveSmartVideoBlob()
+                if (requestToken !== _mediaRequestToken.current) {
+                    return
+                }
                 const blob = media.blob
                 if (!blob || blob.size === 0) {
                     return
@@ -557,12 +560,14 @@ export const VideoDownloadAndShareDialog = () => {
                 else {
                     await __.mediaCapture.download({filename: downloadFilename})
                 }
-                _mediaDownloaded.current = true
             }
             else {
                 await __.mediaCapture.download({
                                                filename: buildMediaFilename(_mediaBlob.current.filename, lgs.settings.ui.video.image, DEFAULT_IMAGE_FILENAME),
                                            })
+            }
+            if (requestToken === _mediaRequestToken.current) {
+                _mediaDownloaded.current = true
             }
         }
         catch (error) {
