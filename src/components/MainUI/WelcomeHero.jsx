@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -137,6 +137,37 @@ const INITIALIZATION_MESSAGES = {
 }
 
 /**
+ * Render a startup message that rolls the previous label away.
+ * @param {Object} options - Current and previous startup messages.
+ * @param {string} options.current - Current status message.
+ * @param {string|null} options.previous - Previous status message, if any.
+ * @param {number} options.revision - Message change counter used for animation keys.
+ * @param {boolean} [options.callout=false] - Whether to position the roller in the welcome callout.
+ * @returns {JSX.Element} Decorative visual rolling status label.
+ */
+const RollingInitializationMessage = ({current, previous, revision, callout = false}) => (
+    <p
+        className={`welcome-initialization-message welcome-initialization-roller${callout ? ' welcome-initialization-callout' : ''}`}
+        aria-hidden="true"
+    >
+        {previous !== null && (
+            <span
+                key={`previous-${revision}`}
+                className="welcome-initialization-roller__label welcome-initialization-roller__label-out"
+            >
+                {previous}
+            </span>
+        )}
+        <span
+            key={`current-${revision}`}
+            className="welcome-initialization-roller__label welcome-initialization-roller__label-in"
+        >
+            {current}
+        </span>
+    </p>
+)
+
+/**
  * Renders the persistent Studio welcome hero.
  *
  * @param {{initComplete?: boolean, appReady?: boolean, initializationStep?: string, updateInProgress?: boolean, onEnter?: () => void, backgroundMedia?: object, showMedia?: boolean}} props - Hero state, startup progress, entry callback, resolved background media, and media visibility.
@@ -176,6 +207,21 @@ export const WelcomeHero = ({
     const initializationMessage = updateInProgress
         ? 'Applying the Studio update…'
         : INITIALIZATION_MESSAGES[initializationStep] ?? INITIALIZATION_MESSAGES.application
+    const currentStatusMessage = readyToEnter ? WELCOME_READY_MESSAGE : initializationMessage
+    const showInitializationMessage = !readyToEnter || showReadyMessage
+    const [rollingStatus, setRollingStatus] = useState(() => ({
+        current: currentStatusMessage,
+        previous: null,
+        revision: 0,
+    }))
+    if (showInitializationMessage && rollingStatus.current !== currentStatusMessage) {
+        setRollingStatus({
+            current: currentStatusMessage,
+            previous: rollingStatus.current,
+            revision: rollingStatus.revision + 1,
+        })
+    }
+    const splashInitializationMessage = useRef(INITIALIZATION_MESSAGES.application)
     const videoReady = showMedia && videoState === 'ready'
     const imageVisible = showMedia && !videoReady && imageState === 'ready'
     const studioVersion = lgs.versions?.studio ?? 'Unknown version'
@@ -328,6 +374,25 @@ export const WelcomeHero = ({
         const splashStatusElement = document.querySelector('#lgs-boot-splash-status')
         if (splashStatusElement) {
             splashStatusElement.textContent = initializationMessage
+        }
+
+        if (splashInitializationMessage.current !== initializationMessage) {
+            const splashRoller = document.querySelector('#lgs-boot-splash-status-roller')
+            const previous = splashInitializationMessage.current
+
+            if (splashRoller) {
+                const previousLabel = document.createElement('span')
+                previousLabel.className = 'welcome-initialization-roller__label welcome-initialization-roller__label-out'
+                previousLabel.textContent = previous
+
+                const currentLabel = document.createElement('span')
+                currentLabel.className = 'welcome-initialization-roller__label welcome-initialization-roller__label-in'
+                currentLabel.textContent = initializationMessage
+
+                splashRoller.replaceChildren(previousLabel, currentLabel)
+            }
+
+            splashInitializationMessage.current = initializationMessage
         }
     }, [initializationMessage])
 
@@ -585,10 +650,21 @@ export const WelcomeHero = ({
                             {callToActionButtons}
                         </WaAnimation>
                     )}
-                    {(!readyToEnter || showReadyMessage) && (
-                        <p className="welcome-initialization-message welcome-initialization-callout" role="status">
-                            {readyToEnter ? WELCOME_READY_MESSAGE : initializationMessage}
-                        </p>
+                    {showInitializationMessage && (
+                        <>
+                            <p
+                                className="welcome-initialization-message welcome-initialization-callout welcome-initialization-message-live"
+                                role="status"
+                            >
+                                {currentStatusMessage}
+                            </p>
+                            <RollingInitializationMessage
+                                current={rollingStatus.current}
+                                previous={rollingStatus.previous}
+                                revision={rollingStatus.revision}
+                                callout
+                            />
+                        </>
                     )}
                 </section>
             </div>

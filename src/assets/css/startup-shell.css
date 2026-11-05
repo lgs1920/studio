@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-29
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -77,6 +77,75 @@ body:not(.lgs-app-booting) {
     line-height: 1.35;
     text-align: center;
     text-shadow: 0 1px .35rem rgba(0, 0, 0, .68);
+}
+
+.welcome-initialization-message-live {
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.welcome-initialization-roller {
+    display: grid;
+    overflow: hidden;
+    height: 1.35em;
+}
+
+.welcome-initialization-roller__label {
+    grid-area: 1 / 1;
+    display: block;
+    overflow: hidden;
+    width: 100%;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.welcome-initialization-roller__label-in {
+    position: relative;
+    animation: welcome-initialization-roll-in 500ms cubic-bezier(0.22, 0.68, 0, 1) both;
+}
+
+.welcome-initialization-roller__label-out {
+    position: absolute;
+    inset: 0 auto auto 0;
+    animation: welcome-initialization-roll-out 500ms cubic-bezier(0.22, 0.68, 0, 1) both;
+}
+
+@keyframes welcome-initialization-roll-in {
+    from {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes welcome-initialization-roll-out {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-100%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .welcome-initialization-roller__label-in,
+    .welcome-initialization-roller__label-out {
+        animation-duration: 1ms;
+        animation-timing-function: linear;
+    }
 }
 
 #lgs-boot-splash {
@@ -198,13 +267,15 @@ body:not(.lgs-app-booting) {
         opacity: 0;
     }
 
-    & #lgs-boot-splash-status {
+    & #lgs-boot-splash-status,
+    & #lgs-boot-splash-status-roller {
         position: absolute;
         z-index: 4;
         top: calc(42% + 15.5rem);
     }
 
-    &.lgs-boot-splash-cta-ready #lgs-boot-splash-status {
+    &.lgs-boot-splash-cta-ready #lgs-boot-splash-status,
+    &.lgs-boot-splash-cta-ready #lgs-boot-splash-status-roller {
         visibility: hidden;
         opacity: 0;
     }
@@ -345,7 +416,8 @@ body:not(.lgs-app-booting) {
 
 @media (max-width: 700px) {
     #lgs-boot-splash {
-        & #lgs-boot-splash-status {
+        & #lgs-boot-splash-status,
+        & #lgs-boot-splash-status-roller {
             top: calc(42% + 12.5rem);
         }
     }
