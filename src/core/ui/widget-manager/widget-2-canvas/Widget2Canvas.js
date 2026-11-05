@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-14
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { DYNAMIC_WIDGET_PART, STATIC_WIDGET_PART } from '@Core/constants'
+import { DYNAMIC_WIDGET_PART, LGS_WIDGET_SCALE_BASE, STATIC_WIDGET_PART } from '@Core/constants'
 import { snapdom }                                 from '@zumer/snapdom'
 
 /**
@@ -60,6 +60,7 @@ export class Widget2Canvas {
     #frameDriven = false
     #refreshError = null
     #layoutSize = null
+    #recordingPixelRatio = null
 
     #timingLabel = 'Widget2Canvas'
 
@@ -70,7 +71,8 @@ export class Widget2Canvas {
 
         this.#original = target
         this.#options = {
-            scale: window.devicePixelRatio || 1,
+            scale: 1,
+            dpr: Number(window.devicePixelRatio) > 0 ? Number(window.devicePixelRatio) : 1,
             ...options,
         }
         this.#widgetId = this.#options.widgetId ?? this.#original?.id ?? null
@@ -165,7 +167,7 @@ export class Widget2Canvas {
         this.#tickFrame = requestAnimationFrame(tick)
     }
 
-    /** Let deterministic export own refreshes and restore the original policy on release. */
+    /** Let deterministic export own refreshes and restore the default capture density on release. */
     setFrameDriven = (enabled = true) => {
         this.#frameDriven = enabled
         if (enabled) {
@@ -175,8 +177,11 @@ export class Widget2Canvas {
                 this.#tickFrame = null
             }
         }
-        else if (this.#shouldUseLiveLoop()) {
-            this.#startLiveLoop()
+        else {
+            this.setCapturePixelRatio(null)
+            if (this.#shouldUseLiveLoop()) {
+                this.#startLiveLoop()
+            }
         }
     }
 
@@ -297,7 +302,7 @@ export class Widget2Canvas {
         }
     }
 
-    /** Reuse the widget composition surface until its physical dimensions change. */
+    /** Resize and prepare the reusable composition buffer before drawing into it. */
     #getBuffer = (width, height) => {
         this.#buffer ??= document.createElement('canvas')
         if (this.#buffer.width !== width) {
@@ -306,8 +311,49 @@ export class Widget2Canvas {
         if (this.#buffer.height !== height) {
             this.#buffer.height = height
         }
-        this.#buffer.getContext('2d')?.clearRect(0, 0, width, height)
+        const context = this.#buffer.getContext('2d')
+        if (context) {
+            context.imageSmoothingEnabled = true
+            context.imageSmoothingQuality = 'high'
+            context.clearRect(0, 0, width, height)
+        }
         return this.#buffer
+    }
+
+    /** Resolve the physical pixel density used by SnapDOM and intermediate buffers. */
+    #getCapturePixelRatio = () => {
+        if (this.#recordingPixelRatio) {
+            return this.#recordingPixelRatio
+        }
+
+        const scale = Number(this.#options.scale) > 0 ? Number(this.#options.scale) : 1
+        const dpr = Number(this.#options.dpr) > 0 ? Number(this.#options.dpr) : 1
+        return scale * dpr
+    }
+
+    /**
+     * Select a temporary raster density for deterministic video capture.
+     * @param {number|null} pixelRatio - Physical capture pixels per logical CSS pixel, or null to restore the base density.
+     * @returns {boolean} Whether the active capture density changed.
+     */
+    setCapturePixelRatio = (pixelRatio = null) => {
+        const baseRatio = (Number(this.#options.scale) > 0 ? Number(this.#options.scale) : 1)
+                          * (Number(this.#options.dpr) > 0 ? Number(this.#options.dpr) : 1)
+        const requestedRatio = Number(pixelRatio)
+        const nextRatio = Number.isFinite(requestedRatio) && requestedRatio > 0
+                          ? Math.min(LGS_WIDGET_SCALE_BASE, requestedRatio)
+                          : null
+        const normalizedRatio = nextRatio && Math.abs(nextRatio - baseRatio) > 0.0001 ? nextRatio : null
+
+        if (this.#recordingPixelRatio === normalizedRatio) {
+            return false
+        }
+
+        this.#recordingPixelRatio = normalizedRatio
+        this.#markAllPartsDirty()
+        this.#dirty = true
+        this.#revision += 1
+        return true
     }
 
     waitForIdle = () => {
@@ -444,7 +490,7 @@ export class Widget2Canvas {
             return null
         }
 
-        const scale = this.#options.scale
+        const scale = this.#getCapturePixelRatio()
         const {width: logicalW, height: logicalH} = this.#readLogicalSize()
 
         if (logicalW <= 0 || logicalH <= 0) {
@@ -565,7 +611,7 @@ export class Widget2Canvas {
         }
 
         const style = getComputedStyle(this.#original)
-        const scale = this.#options.scale
+        const scale = this.#getCapturePixelRatio()
         const backgroundColor = style.backgroundColor
         const borderWidth = Math.max(
             0,
@@ -637,7 +683,7 @@ export class Widget2Canvas {
             return false
         }
 
-        const scale = this.#options.scale
+        const scale = this.#getCapturePixelRatio()
         const {width: logicalW, height: logicalH} = this.#readLogicalSize()
         if (logicalW <= 0 || logicalH <= 0) {
             return false
@@ -743,7 +789,7 @@ export class Widget2Canvas {
             const $clone = el.cloneNode(true)
             const style = getComputedStyle(el)
 
-            const scale = this.#options.scale
+            const scale = this.#getCapturePixelRatio()
 
             // Get original bounding box dimensions
             const bbox = el.getBBox?.()
@@ -809,15 +855,20 @@ export class Widget2Canvas {
 
         let capture = null
         let canvas = null
+        const snapdomOptions = {
+            ...options,
+            scale: this.#getCapturePixelRatio(),
+            dpr:   1,
+        }
         if (typeof snapdom === 'function') {
-            capture = await snapdom(el, options)
+            capture = await snapdom(el, snapdomOptions)
             const cached = this.#rasterCache.get(el)
             // SnapDOM's unchanged result can also reuse its already rasterized pixels.
             canvas = cached?.capture === capture ? cached.canvas : await capture.toCanvas()
             this.#rasterCache.set(el, {capture, canvas})
         }
         else {
-            canvas = await snapdom.toCanvas(el, options)
+            canvas = await snapdom.toCanvas(el, snapdomOptions)
         }
 
         const viewBoxWidth = Number(capture?.meta?.vbW)
@@ -881,7 +932,7 @@ export class Widget2Canvas {
         if (this.#destroyed || !this.#original || !source) {
             return
         }
-        const scale = Number(this.#options.scale) > 0 ? Number(this.#options.scale) : 1
+        const scale = this.#getCapturePixelRatio()
         const sourceWidth = Number(source?.width) || 0
         const sourceHeight = Number(source?.height) || 0
         const metadataWidth = Number(dimensions?.width)

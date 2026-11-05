@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { LGS_WIDGET_SCALE_BASE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { resolveVideoOverlayVisibility } from '@Core/ui/replay/ReplayOverlayResolver'
 import { getReplayVideoWidgetKeys } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import { normalizeReplayVideoCropRect } from '@Core/ui/replay/ReplayVideoRenderSpec'
@@ -142,6 +142,14 @@ export const resolveReplayVideoWidgetScale = (el, configScale) => {
     return {x: matrixScaleX || baseScaleX, y: matrixScaleY || baseScaleY}
 }
 
+/** Resolve widget raster density from the encoded output and its active transform. */
+export const resolveReplayVideoWidgetCapturePixelRatio = ({outputDpr = 1, widgetScale = null} = {}) => {
+    const safeOutputDpr = Number(outputDpr) > 0 ? Number(outputDpr) : 1
+    const scaleX = Math.abs(Number(widgetScale?.x)) || 1
+    const scaleY = Math.abs(Number(widgetScale?.y)) || 1
+    return Math.min(LGS_WIDGET_SCALE_BASE, safeOutputDpr * Math.max(1, scaleX, scaleY))
+}
+
 const getSortedVideoWidgetKeys = ({widgetKeys = null, widgetsBoard = VIDEO_WIDGETS_BOARD} = {}) => {
     return getReplayVideoWidgetKeys({
         widgetKeys: Array.isArray(widgetKeys) ? widgetKeys : null,
@@ -167,6 +175,7 @@ export const getVisibleReplayVideoWidgetKeys = ({
  * @param {string[]|null} [options.widgetKeys=null] - Optional widget IDs to flush.
  * @param {string} [options.widgetsBoard='video'] - Board containing the overlays.
  * @param {number} [options.timeoutMs=1000] - Maximum wait per overlay mirror.
+ * @param {number|null} [options.outputDpr=null] - Logical-to-physical scale of the encoded output.
  * @param {object|null} [options.frameState=null] - Canonical frame supplied to widget renderers.
  * @param {Set|null} [options.captureMirrors=null] - Mirrors owned by this export session.
  * @param {boolean} [options.strict=false] - Reject incomplete captures rather than reuse stale pixels.
@@ -177,6 +186,7 @@ export const flushReplayVideoOverlayCanvases = async ({
                                                          widgetKeys = null,
                                                          widgetsBoard = VIDEO_WIDGETS_BOARD,
                                                          timeoutMs = OVERLAY_FLUSH_TIMEOUT_MS,
+                                                         outputDpr = null,
                                                          replay = globalThis.lgs?.stores?.replay ?? null,
                                                          controller = globalThis.__?.ui?.replay?.controller ?? null,
                                                          frameState = null,
@@ -192,13 +202,24 @@ export const flushReplayVideoOverlayCanvases = async ({
         const startedAt = Date.now()
         let captureCancelled = false
         let mirror = Widget2Canvas.get(widgetId)
-        const prepareMirror = currentMirror => {
-            if (captureMirrors && currentMirror) {
+        /** Prepare this mirror for the selected output density and deterministic frame lifecycle. */
+        const prepareMirror = (currentMirror, widgetElement) => {
+            if (!currentMirror) {
+                return
+            }
+            if (Number(outputDpr) > 0) {
+                const config = globalThis.__?.ui?.widgetManager?.getWidgetConfig?.(widgetId) ?? {}
+                const widgetScale = resolveReplayVideoWidgetScale(widgetElement, config.scale)
+                currentMirror.setCapturePixelRatio?.(
+                    resolveReplayVideoWidgetCapturePixelRatio({outputDpr, widgetScale}),
+                )
+            }
+            if (captureMirrors) {
                 currentMirror.setFrameDriven(true)
                 captureMirrors.add(currentMirror)
             }
         }
-        prepareMirror(mirror)
+        prepareMirror(mirror, globalThis.__?.ui?.widgetManager?.getElementById?.(widgetId))
         try {
             const outcome = await Promise.race([
                 (async () => {
@@ -217,7 +238,7 @@ export const flushReplayVideoOverlayCanvases = async ({
                             mirror = Widget2Canvas.get(widgetId)
                         }
                         if (mirror && !captureCancelled) {
-                            prepareMirror(mirror)
+                            prepareMirror(mirror, globalThis.__?.ui?.widgetManager?.getElementById?.(widgetId))
                             flushed = await Widget2Canvas.flush(widgetId, {onlyIfDirty: true})
                         }
                     }

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,7 @@ const resources = []
 const createWidgetFixture = () => {
     const element = document.createElement('div')
     element.style.cssText = 'width:240px;padding:12px;font:24px sans-serif;color:white;background:rgba(0,0,0,0.7);border:2px solid white;border-radius:12px'
-    element.innerHTML = '<div>Distance</div><strong>120 m</strong>'
+    element.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" aria-label="Distance icon"><path fill="currentColor" d="M12 2 2 22h20L12 2Zm0 5 5.6 11.2H6.4L12 7Z"/></svg><div>Distance</div><strong>120 m</strong>'
     document.body.append(element)
     resources.push(() => element.remove())
     return element
@@ -88,6 +88,33 @@ test('captures real widget changes and reuses unchanged or hidden frames', async
         }
         console.info('Replay widget benchmark (30 unchanged frames, warm SnapDOM)', JSON.stringify(samples))
     }
+}, 60000)
+
+test('captures vector and text at the requested recording density and restores the base bitmap', async () => {
+    const element = createWidgetFixture()
+    const mirror = new Widget2Canvas(element, {
+        refreshMode: 'manual',
+        captureWholeWidget: true,
+        scale: 1,
+        dpr: 1,
+        embedFonts: true,
+    })
+    resources.push(() => mirror.destroy())
+    await mirror.init()
+    const baseDimensions = {width: mirror.getCanvas().width, height: mirror.getCanvas().height}
+    const logicalDimensions = mirror.getCaptureGeometry()
+
+    mirror.setFrameDriven(true)
+    expect(mirror.setCapturePixelRatio(2)).toBe(true)
+    expect(await mirror.flush({onlyIfDirty: true})).toBe(true)
+    const recordingCanvas = mirror.getCanvas()
+    expect(recordingCanvas.width).toBe(Math.ceil(logicalDimensions.width * 2))
+    expect(recordingCanvas.height).toBe(Math.ceil(logicalDimensions.height * 2))
+    expect(readPixels(recordingCanvas).some((channel, index) => index % 4 === 3 && channel > 0)).toBe(true)
+
+    mirror.setFrameDriven(false)
+    expect(await mirror.flush({onlyIfDirty: true})).toBe(true)
+    expect(mirror.getCanvas()).toMatchObject(baseDimensions)
 }, 60000)
 
 test('preserves Cesium crop pixels with direct composition', async ({skip}) => {

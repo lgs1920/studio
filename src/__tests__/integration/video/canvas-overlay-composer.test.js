@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-13
- * Last modified: 2026-10-14
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -97,6 +97,103 @@ describe('CanvasOverlayComposer recording path', () => {
         composer.dispose()
         expect(outputCanvas.width).toBe(320)
         expect(outputCanvas.height).toBe(180)
+    })
+
+    test('restores output smoothing after resizing and keeps the same-size blur buffer unfiltered', () => {
+        const sourceCanvas = document.createElement('canvas')
+        sourceCanvas.width = 320
+        sourceCanvas.height = 180
+        const originalCreateElement = document.createElement.bind(document)
+        const createdCanvases = []
+        const canvasContexts = new WeakMap()
+        vi.spyOn(document, 'createElement').mockImplementation((tagName, ...args) => {
+            const element = originalCreateElement(tagName, ...args)
+            if (tagName !== 'canvas') {
+                return element
+            }
+
+            const context = {setTransform: vi.fn(), fillStyle: '#000000'}
+            let imageSmoothingEnabled = false
+            let imageSmoothingQuality = 'low'
+            Object.defineProperties(context, {
+                imageSmoothingEnabled: {
+                    get: () => imageSmoothingEnabled,
+                    set: value => { imageSmoothingEnabled = value },
+                },
+                imageSmoothingQuality: {
+                    get: () => imageSmoothingQuality,
+                    set: value => { imageSmoothingQuality = value },
+                },
+            })
+            canvasContexts.set(element, context)
+            createdCanvases.push(element)
+            element.getContext = () => context
+            for (const dimension of ['width', 'height']) {
+                let value = element[dimension]
+                Object.defineProperty(element, dimension, {
+                    configurable: true,
+                    get: () => value,
+                    set: nextValue => {
+                        value = nextValue
+                        context.imageSmoothingEnabled = false
+                        context.imageSmoothingQuality = 'low'
+                    },
+                })
+            }
+            return element
+        })
+
+        composer = new CanvasOverlayComposer(sourceCanvas, {
+            width: 320,
+            height: 180,
+            outputDpr: 2,
+            continuousRendering: false,
+        })
+
+        const outputContext = canvasContexts.get(composer.getCanvas())
+        const blurContext = canvasContexts.get(createdCanvases.find(canvas => canvas !== composer.getCanvas()))
+        expect(composer.getCanvas().width).toBe(640)
+        expect(composer.getCanvas().height).toBe(360)
+        expect(outputContext.imageSmoothingEnabled).toBe(true)
+        expect(outputContext.imageSmoothingQuality).toBe('high')
+        expect(blurContext.imageSmoothingEnabled).toBe(false)
+    })
+
+    test('uses the overlay canvas CSS box instead of assuming a fixed bitmap DPR', async () => {
+        const sourceCanvas = document.createElement('canvas')
+        sourceCanvas.width = 320
+        sourceCanvas.height = 180
+        sourceCanvas.getBoundingClientRect = () => ({left: 0, top: 0, width: 320, height: 180})
+        const overlayCanvas = document.createElement('canvas')
+        overlayCanvas.width = 400
+        overlayCanvas.height = 200
+        overlayCanvas.getBoundingClientRect = () => ({left: 10, top: 20, width: 100, height: 50})
+        const context = {
+            imageSmoothingEnabled: false,
+            imageSmoothingQuality: 'low',
+            drawImage: vi.fn(),
+            fillRect: vi.fn(),
+            setTransform: vi.fn(),
+            save: vi.fn(),
+            restore: vi.fn(),
+            translate: vi.fn(),
+            rotate: vi.fn(),
+            scale: vi.fn(),
+        }
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context)
+        composer = new CanvasOverlayComposer(sourceCanvas, {
+            width: 320,
+            height: 180,
+            outputDpr: 1,
+            continuousRendering: false,
+        })
+        composer.addOverlay(overlayCanvas)
+
+        await composer.renderFrame()
+
+        const overlayDraw = context.drawImage.mock.calls.find(call => call[0] === overlayCanvas)
+        expect(overlayDraw[7]).toBe(100)
+        expect(overlayDraw[8]).toBe(50)
     })
 
     test('excludes the scene flush from composition timings and reports the nested blur cost', async () => {

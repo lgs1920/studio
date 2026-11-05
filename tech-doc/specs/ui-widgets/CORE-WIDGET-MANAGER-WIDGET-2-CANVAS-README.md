@@ -2,7 +2,7 @@ Here is the complete Markdown code for the `tech-doc/specs/CORE-WIDGET-MANAGER-W
 
 # Widget2Canvas — High-Performance DOM-to-Canvas Mirroring
 
-The implementation uses `@zumer/snapdom` `3.0.0`.
+The implementation uses `@zumer/snapdom` `3.7.0`.
 
 A lightweight, production-ready class that replaces a DOM widget with a perfectly synced canvas
 using [@zumer/snapdom](https://github.com/zumer/snapdom).
@@ -69,6 +69,20 @@ The application also follows the v3 migration rules:
   not used;
 - `capture.meta` geometry is retained when the canvas mirror is positioned, so
   viewBox size and content offsets do not distort the widget during composition.
+
+`Widget2Canvas` pins SnapDOM `dpr` to `1` and expresses physical raster density
+through `scale`. Its composition buffers use the same physical pixels-per-CSS-
+pixel ratio as the SnapDOM bitmap. The widget host keeps its normal 4× capture
+density; Replay temporarily selects `min(4, outputDpr × widgetTransformScale)`
+for each visible widget, then restores the normal density when deterministic
+capture ends. `outputDpr` comes from the encoded dimensions and crop size, not
+from the display DPR. A density change invalidates the cached parts once, while
+unchanged static parts remain cached across subsequent Replay frames.
+
+Nested `<canvas>` sources remain raster inputs. Raising the surrounding
+`Widget2Canvas` density does not add detail that is absent from a nested canvas
+bitmap; a widget renderer must redraw that bitmap at a higher density to improve
+its source detail.
 
 For Replay recording, a static widget zone should be captured once per layout
 revision. A dynamic zone should be refreshed only after its canonical Replay

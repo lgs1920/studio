@@ -34,6 +34,23 @@ The output canvas is passed to `ReplayMediaCapture.captureScreenshot()` for a
 PNG snapshot. Replay MP4 video uses the deterministic frame renderer and does
 not pass through this compositor's former real-time recorder input path.
 
+## Output Pixel Density
+
+The output canvas backing dimensions are `width × outputDpr` by
+`height × outputDpr`. The Replay export path derives `outputDpr` from the
+encoded dimensions and crop dimensions, then supplies that same value to widget
+capture. `Widget2Canvas` captures DOM and SVG content at the resulting physical
+pixel density, adjusted for the widget transform and capped at its existing 4×
+budget. This keeps logical widget geometry independent from encoded pixel size
+and display DPR.
+
+Canvas dimension assignments reset 2D context state. The compositor therefore
+sets high-quality image smoothing after resizing its output canvas. The blur
+buffer is copied at matching physical dimensions, so its copy path keeps image
+smoothing disabled and avoids an unnecessary resampling pass. Existing nested
+canvas content remains limited by the resolution at which its widget renderer
+created it.
+
 ## Key Concepts
 
 ### 1) Output Canvas vs. Source Canvas

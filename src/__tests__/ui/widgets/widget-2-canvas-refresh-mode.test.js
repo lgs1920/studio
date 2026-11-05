@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-09
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,18 +17,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {snapdomMock, snapdomToCanvasMock} = vi.hoisted(() => {
-    const snapdomToCanvasMock = vi.fn(async (element) => {
+    const snapdomToCanvasMock = vi.fn(async (element, options = {}) => {
         const canvas = document.createElement('canvas')
         const rect = element?.getBoundingClientRect?.()
-        const width = Math.max(1, Math.ceil(rect?.width ?? element?.offsetWidth ?? 1))
-        const height = Math.max(1, Math.ceil(rect?.height ?? element?.offsetHeight ?? 1))
+        const scale = (Number(options.scale) > 0 ? Number(options.scale) : 1)
+                     * (Number(options.dpr) > 0 ? Number(options.dpr) : window.devicePixelRatio || 1)
+        const width = Math.max(1, Math.ceil((rect?.width ?? element?.offsetWidth ?? 1) * scale))
+        const height = Math.max(1, Math.ceil((rect?.height ?? element?.offsetHeight ?? 1) * scale))
 
         canvas.width = width
         canvas.height = height
         return canvas
     })
 
-    const snapdomMock = vi.fn(async (element, options) => {
+    const snapdomMock = vi.fn(async (element, options = {}) => {
         const rect = element?.getBoundingClientRect?.()
         const width = Math.max(1, Math.ceil(rect?.width ?? element?.offsetWidth ?? 1))
         const height = Math.max(1, Math.ceil(rect?.height ?? element?.offsetHeight ?? 1))
@@ -335,6 +337,54 @@ describe('Widget2Canvas refresh modes', () => {
         expect(canvas.style.width).toBe('140px')
         expect(canvas.style.height).toBe('60px')
         expect(mirror.getCaptureGeometry()).toEqual({width: 140, height: 60, offsetX: 4, offsetY: 6})
+    })
+
+    it('keeps SnapDOM raster density and marked-part buffers at the same physical pixel ratio', async () => {
+        target?.remove?.()
+        target = document.createElement('div')
+        target.classList.add('static-widget-part')
+        Object.defineProperties(target, {
+            offsetWidth:  {configurable: true, value: 100},
+            offsetHeight: {configurable: true, value: 50},
+        })
+        target.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 50})
+        document.body.appendChild(target)
+
+        mirror = new Widget2Canvas(target, {scale: 2, dpr: 2, refreshMode: 'manual'})
+        await mirror.init()
+
+        expect(snapdomMock).toHaveBeenCalledWith(target, expect.objectContaining({scale: 4, dpr: 1}))
+        expect(mirror.getCanvas().width).toBe(400)
+        expect(mirror.getCanvas().height).toBe(200)
+        expect(canvasContext.drawImage).toHaveBeenCalledWith(expect.objectContaining({width: 400, height: 200}), 0, 0, 400, 200)
+    })
+
+    it('uses the recording output density temporarily and restores its base density afterward', async () => {
+        target?.remove?.()
+        target = document.createElement('div')
+        Object.defineProperties(target, {
+            offsetWidth:  {configurable: true, value: 100},
+            offsetHeight: {configurable: true, value: 50},
+        })
+        target.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 50})
+        document.body.appendChild(target)
+
+        mirror = new Widget2Canvas(target, {scale: 4, dpr: 1, refreshMode: 'manual', captureWholeWidget: true})
+        await mirror.init()
+        mirror.setFrameDriven(true)
+        expect(mirror.setCapturePixelRatio(2)).toBe(true)
+        await mirror.flush({onlyIfDirty: true})
+
+        expect(snapdomMock.mock.calls.at(-1)[1]).toMatchObject({scale: 2, dpr: 1})
+        expect(mirror.getCanvas().width).toBe(200)
+        expect(mirror.getCanvas().height).toBe(100)
+
+        mirror.setFrameDriven(false)
+        await mirror.flush({onlyIfDirty: true})
+
+        expect(snapdomMock.mock.calls.at(-1)[1]).toMatchObject({scale: 4, dpr: 1})
+        expect(mirror.getCanvas().width).toBe(400)
+        expect(mirror.getCanvas().height).toBe(200)
     })
 
     it('keeps overflowing widget content in the visible canvas dimensions', async () => {

@@ -8,13 +8,11 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-18
- * Last modified: 2026-10-14
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-
-import { LGS_WIDGET_SCALE_EFFECTIVE } from '@Core/constants'
 
 /**
  * CanvasOverlayComposer
@@ -101,14 +99,14 @@ export class CanvasOverlayComposer {
         this.#blurCanvas = document.createElement('canvas')
         this.#blurCtx = this.#blurCanvas.getContext('2d', {alpha: false, desynchronized: true})
 
-        this.#ctx.imageSmoothingEnabled = true
-        this.#ctx.imageSmoothingQuality = 'high'
-        this.#ctx.fillStyle = '#000000'
-        this.#ctx.fillStyle = '#000000'
-
         this.#updateSourceDpr()
         this.#computeSourceRect()
         this.#resizeOutputCanvas()
+        // Assigning canvas dimensions resets context state, so sampling is configured afterward.
+        this.#ctx.fillStyle = '#000000'
+        this.#ctx.imageSmoothingEnabled = true
+        this.#ctx.imageSmoothingQuality = 'high'
+        this.#blurCtx.imageSmoothingEnabled = false
         this.#running = true
         this.#loop()
     }
@@ -133,6 +131,7 @@ export class CanvasOverlayComposer {
         }
     }
 
+    /** Resize both backing stores and restore the logical output transform. */
     #resizeOutputCanvas = () => {
         const physicalW = Math.round(this.#outW * this.#dpr)
         const physicalH = Math.round(this.#outH * this.#dpr)
@@ -279,6 +278,9 @@ export class CanvasOverlayComposer {
 
         const elDpr = elRect && elRect.width > 0 && hasNumericWidth ? (initialEl.width / elRect.width) : 1
         const elLogicalWidth = hasNumericWidth ? (initialEl.width / elDpr) : (elRect?.width ?? 0)
+        const elLogicalHeight = typeof initialEl.height === 'number' && elDpr > 0
+                               ? initialEl.height / elDpr
+                               : (elRect?.height ?? 0)
 
         let posX, posY, rawWidth, rawHeight
 
@@ -286,7 +288,7 @@ export class CanvasOverlayComposer {
             posX = x
             posY = y
             rawWidth = w ?? elLogicalWidth
-            rawHeight = h ?? (elRect?.height ?? 0)
+            rawHeight = h ?? elLogicalHeight
         }
         else {
             const sourceRect = this.#sourceCanvas.getBoundingClientRect()
@@ -300,12 +302,11 @@ export class CanvasOverlayComposer {
             rawHeight = elRect.height
         }
 
-        const scaleFactor = LGS_WIDGET_SCALE_EFFECTIVE
         const imgAspectRatio = initialEl.height / initialEl.width
         const cssScale = typeof scale === 'object' ? (scale.x ?? 1) : scale
 
-        const logicalContentW = typeof contentWidth === 'number' ? contentWidth : (rawWidth / scaleFactor)
-        const logicalContentH = typeof contentHeight === 'number' ? contentHeight : ((rawHeight ?? (logicalContentW * imgAspectRatio)) / scaleFactor)
+        const logicalContentW = typeof contentWidth === 'number' ? contentWidth : rawWidth
+        const logicalContentH = typeof contentHeight === 'number' ? contentHeight : (rawHeight || (logicalContentW * imgAspectRatio))
 
         const totalW = logicalContentW + (shadowMargins.left + shadowMargins.right)
         const totalH = logicalContentH + (shadowMargins.top + shadowMargins.bottom)

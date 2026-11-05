@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -1341,6 +1341,7 @@ describe('ReplayDeferredExporter', () => {
     })
 
     it('keeps the export composer canvas at the exact MP4 dimensions when crop and output ratios differ', async () => {
+        const flushOverlayCapture = vi.spyOn(replayOverlayComposer, 'flushReplayVideoOverlayCanvases')
         const sourceCanvas = document.createElement('canvas')
         sourceCanvas.width = 1280
         sourceCanvas.height = 800
@@ -1438,6 +1439,8 @@ describe('ReplayDeferredExporter', () => {
         expect(composerOptions.outputDpr).toBeCloseTo(1.8, 5)
         expect(composerOptions.width).toBeCloseTo(1280 / 1.8, 5)
         expect(composerOptions.height).toBe(400)
+        const captureOptions = flushOverlayCapture.mock.calls.at(-1)?.[0]
+        expect(captureOptions.outputDpr).toBeCloseTo(composerOptions.outputDpr, 5)
         expect(CanvasOverlayComposer.instances[0].canvas).toMatchObject({
             width:  1280,
             height: 720,

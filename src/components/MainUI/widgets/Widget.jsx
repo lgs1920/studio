@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { usePointerInteractions } from '@Components/MainUI/context-menu/usePointerInteractions'
 import {
     LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_VISUAL_WIDGET, LGS_WIDGET,
-    LGS_WIDGET_SCALE_EFFECTIVE,
+    LGS_WIDGET_SCALE_BASE,
     REPLAY_RECORDING_MONITOR_WIDGET_ID,
     SCENE_WIDGETS_BOARD,
     VIDEO_WIDGETS_BOARD,
@@ -1855,7 +1855,9 @@ const WidgetHost = ({
                 exclude:         config.captureExclude ?? [],
                 excludeMode:     'remove',
                 captureWholeWidget: config.captureWholeWidget ?? false,
-                scale:           LGS_WIDGET_SCALE_EFFECTIVE,
+                // Pin SnapDOM's DPR so its scale is the physical capture density.
+                scale:           LGS_WIDGET_SCALE_BASE,
+                dpr:             1,
                 type:            config.snap ?? false,
                 outerTransforms: true,
                 outerShadows:    true,
