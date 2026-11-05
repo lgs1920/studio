@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,9 @@ import {POIUtils} from '@Utils/cesium/POIUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {getJourneyReplayHideOtherJourneys} from '@Core/ui/JourneyVisibility'
 import {
+    isGlobalPOI,
     isReplayPOIEndpoint,
+    isReplayGlobalPOIEligibleForJourney,
     isReplayPOIPresentationActive,
     normalizeJourneyReplayPOISettings,
 } from './JourneyReplayPOISettings'
@@ -376,7 +378,12 @@ export const applyJourneyReplayPOIVisibility = (
             const isEndpoint = isReplayPOIEndpoint(poi)
             const visibilityMode = isEndpoint && !basicMode ? 'user' : poiVisibilityMode
             const animationActive = state.replayPoiTriggered.has(poi.id)
+            const replayPresentationActive = isReplayPOIPresentationActive(store)
+            const ineligibleGlobalPOI = replayPresentationActive
+                && isGlobalPOI(poi)
+                && !isReplayGlobalPOIEligibleForJourney(poi, store)
             const shouldApplyVisibility = animationActive
+                || ineligibleGlobalPOI
                 || nearbyPOIIds.has(poi.id)
                 || state.replayPOIVisibilityState.has(poi.id)
                 || visibilityMode !== 'user'
@@ -389,14 +396,17 @@ export const applyJourneyReplayPOIVisibility = (
             const visibleBeforePlayback = state.replayPOIVisibilityState.get(poi.id)?.visible
                 ?? call.isPOIVisibleBeforePlayback(poi)
             const visibleByUser = visibleBeforePlayback && settings.visible !== false
-            const visibleDuringPlayback = animationActive
+            const visibleDuringPlayback = !ineligibleGlobalPOI && (
+                animationActive
                 || (visibilityMode === 'yes' && (basicMode || !isEndpoint))
                 || (poi.visible !== false
                 && (visibilityMode === 'yes'
                     || (visibilityMode === 'user' && visibleByUser))
                 )
+            )
 
-            if ((visibilityMode !== 'user' || settings.visible === false) && !state.replayPOIVisibilityState.has(poi.id)) {
+            if ((ineligibleGlobalPOI || visibilityMode !== 'user' || settings.visible === false)
+                && !state.replayPOIVisibilityState.has(poi.id)) {
                 state.replayPOIVisibilityState.set(poi.id, {
                     visible: visibleBeforePlayback,
                 })

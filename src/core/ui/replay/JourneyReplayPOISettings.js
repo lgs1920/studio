@@ -8,12 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-11
- * Last modified: 2026-11-04
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import {GLOBAL_PARENT} from '@Core/constants'
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
 
 export const DEFAULT_REPLAY_POI_DISPLAY_DURATION_SECONDS = 3
@@ -25,6 +26,7 @@ export const REPLAY_GLOBAL_POI_DISTANCE_STEP_METERS = 50
 /** Upper bound used to index Replay POI presentation windows. */
 export const MAX_REPLAY_POI_DISPLAY_DURATION_SECONDS = 60
 const replayAnimatedPOIIndexes = new WeakMap()
+const replayNearbyPOIIndexes = new WeakMap()
 /** Keep enabled endpoint POI animations on screen for a short framing pause. */
 export const REPLAY_ENDPOINT_POI_PAUSE_MILLIS = 1000
 export const REPLAY_POI_VISIBILITY_MODES = Object.freeze(['yes', 'no', 'user'])
@@ -41,6 +43,20 @@ const isReplayPOIInAnimatedSnapshot = (animatedPOIIds, poiId) => {
     }
 
     return animatedPOIIdSet.has(poiId)
+}
+
+/** Check nearby POI membership with a Set cached by Replay snapshot array identity. */
+const isReplayPOIInNearbySnapshot = (nearbyPois, poiId) => {
+    if (!Array.isArray(nearbyPois) || !poiId) {
+        return false
+    }
+    let nearbyPOIIdSet = replayNearbyPOIIndexes.get(nearbyPois)
+    if (!nearbyPOIIdSet) {
+        nearbyPOIIdSet = new Set(nearbyPois.map(entry => entry?.poi?.id).filter(Boolean))
+        replayNearbyPOIIndexes.set(nearbyPois, nearbyPOIIdSet)
+    }
+
+    return nearbyPOIIdSet.has(poiId)
 }
 
 /** Let a POI-level opt-out override Replay-wide animation switches. */
@@ -226,6 +242,19 @@ export const isReplayPOIPresentationActive = (replay = globalThis.lgs?.stores?.r
     || replay?.deferredExportPlan?.runtime?.status === 'exporting',
 )
 
+/** Identify a POI that is global rather than owned by a Journey or track. */
+export const isGlobalPOI = poi => !poi?.parent || poi.parent === GLOBAL_PARENT
+
+/**
+ * Check whether a global POI is part of the active Journey's Replay selection.
+ * @param {object|null} poi - Global POI record.
+ * @param {object|null} replay - Replay state containing the selected POI entries.
+ * @returns {boolean} Whether the global POI is eligible for this Journey Replay.
+ */
+export const isReplayGlobalPOIEligibleForJourney = (poi, replay = globalThis.lgs?.stores?.replay) => Boolean(
+    isGlobalPOI(poi) && isReplayPOIInNearbySnapshot(replay?.nearbyPois, poi?.id),
+)
+
 /**
  * Resolve the same transient POI mask for React content and Cesium billboard commits.
  * @param {object|null} poi - Source POI, whose persisted visibility stays unchanged.
@@ -250,9 +279,12 @@ export const resolveReplayPOIPresentation = (poi, {
         || (typeof animatedPOI === 'boolean'
             ? animatedPOI
             : isReplayPOIInAnimatedSnapshot(replay?.animatedPOIIds, poi?.id)))
+    const ineligibleGlobalPOI = policyActive
+        && isGlobalPOI(poi)
+        && !isReplayGlobalPOIEligibleForJourney(poi, replay)
     const behavior = normalizeReplayPOIBehavior(settings?.basic)
     const forceShow = policyActive && basicMode && behavior.poiVisibilityMode === 'yes'
-    const hiddenByReplay = policyActive && !animationActive && (
+    const hiddenByReplay = ineligibleGlobalPOI || (policyActive && !animationActive && (
         basicMode
             ? endpoint
                 ? normalizeJourneyReplayPOISettings(poi?.replay).visible === false
@@ -262,7 +294,7 @@ export const resolveReplayPOIPresentation = (poi, {
             : (!endpoint && (settings?.hideAllPoisDuringJourneyReplay === true
                 || replay?.hideAllPoisDuringJourneyReplay === true))
                 || normalizeJourneyReplayPOISettings(poi?.replay).visible === false
-    )
+    ))
 
     return {
         active,

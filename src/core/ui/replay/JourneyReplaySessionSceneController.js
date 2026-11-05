@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -1020,20 +1020,12 @@ export const bindRenderer = (mode, ) => {
                         state.lastPlaybackUpdateProgressKey = Math.round((startProgress ?? 0) / CAMERA_UPDATE_MIN_PROGRESS_DELTA)
                     }
                     traceStep('sync-nearby-pois.begin')
-                    const firstTrack = Array.from(state.sampler?.journey?.tracks?.values?.() ?? [])[0]
-                    const startPOIId = firstTrack?.flags?.start?.id
-                        ?? firstTrack?.flags?.start
-                        ?? state.sortedNearbyPois?.find?.(entry => entry?.poi?.type === 'start')?.poi?.id
                     void call.syncNearbyPOIsForSample(startSample ?? detail.sample ?? null, {isReplayStart: true})
-                        .then(async () => {
-                            if (startPOIId) {
-                                await call.openNearbyPOIForPlayback?.(startPOIId)
-                            }
-                            call.applyJourneyReplayPOIVisibility?.()
+                        .then(() => {
                             globalThis.lgs?.scene?.requestRender?.()
                         })
                         .catch(error => {
-                            console.error(`[Replay POI] Failed to open Start POI ${startPOIId} at playback start.`, error)
+                            console.error('[Replay POI] Failed to synchronize POIs at playback start.', error)
                         })
                     traceStep('sync-nearby-pois.end')
                 }

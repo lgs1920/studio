@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-04
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -122,6 +122,27 @@ import {
     safeCartesian3Normalize,
     safeCartesian3Lerp,
 } from './JourneyReplaySessionShared'
+
+const replayPOISyncRevisionByState = new WeakMap()
+
+/**
+ * Advance the Replay POI revision so older asynchronous updates cannot commit.
+ * @param {object} state - Replay session internal state.
+ * @returns {number} Current synchronization revision.
+ */
+const advanceReplayPOISyncRevision = state => {
+    const revision = (replayPOISyncRevisionByState.get(state) ?? 0) + 1
+    replayPOISyncRevisionByState.set(state, revision)
+    return revision
+}
+
+/**
+ * Check whether an asynchronous Replay POI update still belongs to the latest sample.
+ * @param {object} state - Replay session internal state.
+ * @param {number} revision - Revision captured by the asynchronous update.
+ * @returns {boolean} Whether the update is still current.
+ */
+const isCurrentReplayPOISyncRevision = (state, revision) => replayPOISyncRevisionByState.get(state) === revision
 
 /** Resolve the selected Journey's Start and Stop POIs for Replay presentation. */
 const replayJourneyEndpoints = (journey, poiList) => {
@@ -349,6 +370,7 @@ export const updatePOIExpandedState = async (mode, poiId, expanded) => {
 export const restoreNearbyPOIsAfterPlayback = async (mode, {restoreExpanded = true} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        advanceReplayPOISyncRevision(state)
         const restoreEntries = restoreExpanded ? Array.from(state.replayPoiExpandedState.entries()) : []
         if (restoreExpanded) {
             state.replayPoiExpandedState.clear()
@@ -369,6 +391,7 @@ export const restoreNearbyPOIsAfterPlayback = async (mode, {restoreExpanded = tr
 export const closeJourneyReplayOpenedPOIsBeforeStopClips = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        advanceReplayPOISyncRevision(state)
         const openedPOIIds = Array.from(state.replayPoiTriggered)
         state.replayPoiTriggered.clear()
         publishAnimatedPOIs(state.replayPoiTriggered)
@@ -566,8 +589,10 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
         state.replayPOIAppearanceState ??= new Map()
         const progress = finiteNumber(sample?.progress)
         if (progress === null) {
+            advanceReplayPOISyncRevision(state)
             return
         }
+        const syncRevision = advanceReplayPOISyncRevision(state)
 
         const nearbyPois = state.sortedNearbyPois.length > 0
             ? state.sortedNearbyPois
@@ -706,13 +731,20 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                     const passageCropVisibility = passage.key === 'arrival'
                         ? undefined
                         : replay?.poiCropPassageVisibility?.[poiId]?.[passageIndex]
+                    // Prefer the route-projected crop decision when available. A live camera pose can
+                    // change between runs and make the same passage animate inconsistently.
+                    const hasAggregateCropDecision = passageCropVisibility === undefined
+                        && (isEndpoint || projectedPassages.length <= 1)
+                        && typeof replay?.poiCropVisibility?.[poiId] === 'boolean'
                     const projectedCropVisible = passageCropVisibility === true
-                        || (passageCropVisibility === undefined
-                            && (isEndpoint || projectedPassages.length <= 1)
-                            && replay?.poiCropVisibility?.[poiId] === true)
+                        || (hasAggregateCropDecision && replay.poiCropVisibility[poiId] === true)
+                    const hasProjectedCropDecision = typeof passageCropVisibility === 'boolean'
+                        || hasAggregateCropDecision
+                    const cropVisible = hasProjectedCropDecision
+                        ? projectedCropVisible
+                        : isPOIInsideVideoCrop(mode, poi) !== false
                     const insideCrop = atEndpointEvent
-                        || (nearPassage
-                            && (projectedCropVisible || isPOIInsideVideoCrop(mode, poi) !== false))
+                        || (nearPassage && cropVisible)
                     const appearanceKey = isEndpoint
                         ? `${poiId}:endpoint:${passage.key}`
                         : poiId
@@ -772,6 +804,9 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
             ...collapsedIds.map(poiId => call.updatePOIExpandedState(poiId, false)),
             ...newlyExpandedIds.map(poiId => call.updatePOIExpandedState(poiId, true)),
         ])
+        if (!isCurrentReplayPOISyncRevision(state, syncRevision)) {
+            return
+        }
         for (const poiId of expandedIds) {
             const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
             if (poi) {
