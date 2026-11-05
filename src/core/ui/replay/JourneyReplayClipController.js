@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-24
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -828,6 +828,14 @@ export const isReplayVideoLinked = () => {
     return replay?.recordingSync === true || replaySetting === true
 }
 
+/**
+ * Apply one clip pose and attach it to the canonical export frame consumed by widgets.
+ *
+ * @param {Object} mode - Replay session facade.
+ * @param {Object} options - Clip, phase, and local timeline inputs.
+ * @param {Object|null} [options.logicalFrame=null] - Current frame receiving the applied camera pose.
+ * @returns {Promise<Object|null>} Camera target sample for this clip frame.
+ */
 export const renderReplayExportClipFrame = async (mode, {
                                               phase = null,
                                               clip = null,
@@ -837,6 +845,7 @@ export const renderReplayExportClipFrame = async (mode, {
                                               localMillis = 0,
                                               nextClip = null,
                                               nextElement = null,
+                                              logicalFrame = null,
                                           } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -896,6 +905,12 @@ export const renderReplayExportClipFrame = async (mode, {
             deterministic:  true,
             logicalNow:     finiteNumber(localMillis) ?? 0,
         })
+
+        if (logicalFrame) {
+            logicalFrame.cameraPose = frameView
+            logicalFrame.cameraCommand = frameView.cameraCommand
+            logicalFrame.cameraFrame = call.currentCameraFrame?.(null) ?? null
+        }
 
         if (localProgress >= 1) {
             state.clipCameraContinuity = {

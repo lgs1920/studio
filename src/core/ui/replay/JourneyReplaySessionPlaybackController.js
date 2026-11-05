@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -1559,6 +1559,16 @@ export const renderReplayExportFrame = async (mode, {
                 completedTraceMode:    staticCompletedTrace ? 'static' : (stopClip ? 'stop-dynamic' : 'dynamic'),
             })
         }
+        const durationSeconds = finiteNumber(activeController?.duration ?? state.controller?.duration)
+        const logicalFrame = createJourneyReplayLogicalFrame({
+            sample,
+            progress,
+            durationMillis: durationSeconds === null ? null : durationSeconds * 1000,
+            frameTimeMs: finiteNumber(frame?.frameTimeMs) ?? finiteNumber(phase?.frameTimeMs) ?? 0,
+            frameIntervalMs: finiteNumber(frame?.frameIntervalMs) ?? finiteNumber(phase?.frameIntervalMs),
+            phase,
+            source: 'replay-export',
+        })
         const frameSample = await call.renderReplayExportClipFrame({
             phase,
             clip: phase.clip,
@@ -1566,7 +1576,11 @@ export const renderReplayExportFrame = async (mode, {
             sample,
             localProgress: phase.localProgress,
             localMillis: phase.localMillis,
+            logicalFrame,
         })
+        // Clips own their camera pose too. Keeping the previous route frame here
+        // would freeze camera-driven overlays throughout the rotating focus.
+        state.lastReplayLogicalFrame = logicalFrame
         if (staticCompletedTrace) {
             replayVideoTraceDebug('mode.export-frame.stop.after-camera', {
                 clipId: phase?.clip?.clipId ?? null,
