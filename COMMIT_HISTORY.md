@@ -4851,3 +4851,35 @@
 ## 2026-11-05 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/fbd7022f1fc6578a207290c00dc52cc8e8823658)
 
 - Recorded automatically from Git history.
+
+## 2026-11-05 — [`feat: improve POI presentation tools`](https://github.com/lgs1920/studio/commit/0c0c61424739b2151a0135e602175a3afe108c17)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`feat: organize Basic Replay settings`](https://github.com/lgs1920/studio/commit/29ebd8a2872eabfdd638caaed11f97621481e398)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`feat: add crop-zone widget loading overlay`](https://github.com/lgs1920/studio/commit/9a6d87ca005c4c4e8267b83af9e1cfe883fc08d2)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`test: remove Replay focus compass integration test`](https://github.com/lgs1920/studio/commit/540018ca9c49f4c58c6c650106ec4341b6b84fba)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`docs: track accented character display issue`](https://github.com/lgs1920/studio/commit/6ab7c44ebd86e18b194f7e4eb6310fb70bf36fd7)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`docs: track Replay stop issue with expanded POI`](https://github.com/lgs1920/studio/commit/1dc2abf008e7513f628d5284bbf68f7d78dbc405)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/c7801030ad8e432e177e125ee6c2b107dfda8310)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`fix: preserve Unicode video filenames`](https://github.com/lgs1920/studio/commit/ef9373fb567c07685b484b247d807b7543670828)
+
+- Recorded automatically from Git history.
