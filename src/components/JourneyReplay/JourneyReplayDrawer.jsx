@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-11-04
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -1628,7 +1628,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                                 onInput={updateCameraAngle}
                                                             />
                                                         </JourneyReplayStyleField>
-                                                        <small className="replay-camera-angle-hint">{'0° along trace · +90° right · −90° left · ±180° opposite'}</small>
+                                                        <small className="replay-camera-angle-hint">{'Relative to route: 0° ahead · +90° right · −90° left · ±180° behind'}</small>
                                                         </div>
                                                     </section>
                                                 )}

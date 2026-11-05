@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -600,7 +600,7 @@ describe('JourneyReplayDrawer', () => {
         expect(view.queryByLabelText('Camera position')).toBeNull()
         expect(view.getByLabelText('Camera angle')).toBeTruthy()
         expect(view.getByLabelText('Camera angle').value).toBe('-165')
-        expect(view.getByText('0° along trace · +90° right · −90° left · ±180° opposite')).toBeTruthy()
+        expect(view.getByText('Relative to route: 0° ahead · +90° right · −90° left · ±180° behind')).toBeTruthy()
         expect(view.getByLabelText('Camera altitude')).toBeTruthy()
         expect(view.getByLabelText('Altitude (m)')).toBeTruthy()
         expect(view.getByLabelText('Pitch (deg)')).toBeTruthy()

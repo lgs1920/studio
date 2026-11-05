@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-10
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -1230,6 +1230,41 @@ describe('Replay with the real Cesium camera', () => {
             const expectedHeading = replayCameraHeadingForAngle({axisHeading: routeHeading, cameraAngle: 0})
             const headingDifference = replayAngularDelta(expectedHeading, directionHeadingAt(camera, target))
             expect(Math.abs(headingDifference)).toBeLessThan(1e-6)
+        }
+        finally {
+            mode.dispose()
+        }
+    })
+
+    it('treats a 180 degree camera angle as opposite the route, independent of compass heading', () => {
+        const {camera, mode, controller, journey} = installScene({
+            userMode: 'expert',
+            terrainHeight: 120,
+            altitude: 3515,
+            pitch: -30,
+            cameraAngle: 180,
+        })
+        const coordinates = [[2.12345, 48.23456, 120], [2.1222, 48.23456, 130]]
+        journey.tracks = new Map([[
+            'track#journey#gpx#main',
+            makeTrack({slug: 'track#journey#gpx#main', coordinates}),
+        ]])
+        const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+
+        try {
+            mode.start({journey})
+
+            const startSample = controller.currentSample()
+            const target = Cartesian3.fromDegrees(startSample.longitude, startSample.latitude, 120)
+            const local = Matrix4.inverseTransformation(Transforms.eastNorthUpToFixedFrame(target), new Matrix4())
+            const localPosition = Matrix4.multiplyByPoint(local, camera.positionWC, new Cartesian3())
+            const cameraPositionHeading = Math.atan2(localPosition.x, localPosition.y)
+            const routeHeading = call.headingFromPositionProperty(0, {
+                easing: journey.replay.expert.camera.hysteresis.easing,
+            })
+
+            expect(Math.abs(replayAngularDelta(routeHeading + Math.PI, cameraPositionHeading))).toBeLessThan(1e-6)
+            expect(cameraPositionHeading).toBeCloseTo(Math.PI / 2, 2)
         }
         finally {
             mode.dispose()
