@@ -8,16 +8,18 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react'
+import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
 import {proxyMap} from 'valtio/utils'
+import {normalizePOIDisplaySettings} from '@Core/POIDisplaySettings'
+import {poiPresentationClipboardStore, copyPOIPresentation} from '@Components/MainUI/MapPOI/poiPresentationClipboard'
 
 vi.mock('@Components/DateTimeDisplay', () => ({DateTimeDisplay: () => null}))
 vi.mock('@Components/MainUI/LGSScrollbars', () => ({
@@ -78,6 +80,7 @@ describe('MapPOIEditContent settings', () => {
     let updatePOI
 
     beforeEach(() => {
+        poiPresentationClipboardStore.entry = null
         poi = proxy({
             id: 'poi-1',
             type: 'poi',
@@ -130,6 +133,7 @@ describe('MapPOIEditContent settings', () => {
 
     afterEach(() => {
         cleanup()
+        poiPresentationClipboardStore.entry = null
         vi.restoreAllMocks()
         globalThis.lgs = undefined
         globalThis.__ = undefined
@@ -195,6 +199,98 @@ describe('MapPOIEditContent settings', () => {
             textBorderColorsLinked: false,
         }, {markAsEdited: true}))
         expect(poi.textBorderColorsLinked).toBe(false)
+    })
+
+    it('copies every Content and Decoration setting, shows hidden targets, and keeps paste available until replaced', async () => {
+        poi.borderColor = '#778899'
+        poi.textBorderColorsLinked = true
+        poi.display = {
+            category: true,
+            titleCategoryIcon: false,
+            titleAltitude: true,
+            location: true,
+            altitude: true,
+            coordinates: true,
+            dateTime: true,
+            maxWidth: 320,
+            fontFamily: 'System',
+            fontSize: 22,
+            widgetRotation: -25,
+            bold: true,
+            italic: true,
+            stickAngle: '45',
+            stickPosition: 'right',
+            stickHorizontalPosition: 80,
+            stickLength: 77,
+            style: 'rounded',
+            borderWidth: 4,
+            borderRadius: 'large',
+            schemaVersion: 5,
+        }
+        const expectedDisplay = normalizePOIDisplaySettings(poi.display)
+        render(<MapPOIEditContent poi="poi-1"/>)
+
+        const copyButton = screen.getByRole('button', {name: 'Copy POI style'})
+        const pasteButton = screen.getByRole('button', {name: 'Paste POI style'})
+        expect(copyButton.disabled).toBe(false)
+        expect(pasteButton.disabled).toBe(true)
+        await act(async () => {
+            fireEvent.click(copyButton)
+            await Promise.resolve()
+        })
+
+        expect(poiPresentationClipboardStore.entry.updates).toEqual({
+            color: '#112233',
+            bgColor: '#445566',
+            borderColor: '#778899',
+            textBorderColorsLinked: true,
+            background: true,
+            display: expectedDisplay,
+        })
+        expect(Object.keys(poiPresentationClipboardStore.entry.updates).sort()).toEqual([
+            'background', 'bgColor', 'borderColor', 'color', 'display', 'textBorderColorsLinked',
+        ])
+        await waitFor(() => expect(pasteButton.disabled).toBe(false))
+
+        act(() => {
+            poi.color = '#000000'
+            poi.bgColor = '#ffffff'
+            poi.borderColor = '#000000'
+            poi.display = {}
+            poi.visible = false
+        })
+
+        await act(async () => {
+            fireEvent.click(pasteButton)
+            await Promise.resolve()
+        })
+
+        expect(updatePOI).toHaveBeenLastCalledWith('poi-1', {
+            ...poiPresentationClipboardStore.entry.updates,
+            visible: true,
+        }, {markAsEdited: true})
+        expect(poi.visible).toBe(true)
+        expect(poi.color).toBe('#112233')
+        expect(poi.bgColor).toBe('#445566')
+        expect(poi.borderColor).toBe('#778899')
+        expect(poi.display).toEqual(expectedDisplay)
+        expect(pasteButton.disabled).toBe(false)
+
+        act(() => {
+            poi.color = '#abcdef'
+        })
+        await act(async () => {
+            fireEvent.click(pasteButton)
+            await Promise.resolve()
+        })
+        expect(poi.color).toBe('#112233')
+        expect(poiPresentationClipboardStore.entry.sourcePoiId).toBe('poi-1')
+
+        const replacementPOI = proxy({id: 'poi-2', color: '#aabbcc', display: {style: 'label'}})
+        poiList.set(replacementPOI.id, replacementPOI)
+        act(() => expect(copyPOIPresentation(poiList.get('poi-2'))).toBe(true))
+        expect(poiPresentationClipboardStore.entry.sourcePoiId).toBe('poi-2')
+        expect(poiPresentationClipboardStore.entry.updates.color).toBe('#aabbcc')
     })
 
     it('changes Text independently and preserves the legacy Border color', async () => {

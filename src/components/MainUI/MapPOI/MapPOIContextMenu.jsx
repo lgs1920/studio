@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import { ELEVATION_UNITS, UnitUtils }       from '@Utils/UnitUtils'
 import { UIToast }                                from '@Utils/UIToast'
 import { startPOIMove } from '@Components/MainUI/MapPOI/poiMoveStore'
+import { usePOIPresentationClipboard } from '@Components/MainUI/MapPOI/poiPresentationClipboard'
 import { WaDivider, WaIcon } from '@awesome.me/webawesome/dist/react'
 import { useCallback, useEffect, useMemo } from 'react'
 import { proxy, useSnapshot } from 'valtio'
@@ -59,6 +60,7 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
     // POI Data Access
     const $targetPoi = thePOI ? $pois.list.get(thePOI) : null
     const currentPoi = useSnapshot($targetPoi ?? EMPTY_POI_PROXY)
+    const {canPaste, copy: copyPresentation, paste: pastePresentation} = usePOIPresentationClipboard(thePOI)
 
     const $contextMenu = lgs.stores.ui.contextMenu
     const contextMenu = useSnapshot($contextMenu)
@@ -123,6 +125,23 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
             hideMenu()
         })
     }, [currentPoi, hideMenu])
+
+    /** Copies visual settings for use on another POI. */
+    const copyPOIPresentation = useCallback(() => {
+        copyPresentation()
+        hideMenu()
+    }, [copyPresentation, hideMenu])
+
+    /** Pastes the buffered visual settings and shows the target POI. */
+    const pastePOIPresentation = useCallback(async () => {
+        try {
+            await pastePresentation()
+        }
+        catch (error) {
+            console.error('[MapPOIContextMenu] Failed to paste POI style:', error)
+        }
+        hideMenu()
+    }, [hideMenu, pastePresentation])
 
     /** Toggles camera orbit around the current POI. */
     const toggleOrbit = useCallback(async () => {
@@ -301,6 +320,16 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
                 <li onClick={copyCoordinates}>
                     <WaIcon {...UI_ACTIONS.copyCoordinates.icon}/>{UI_ACTIONS.copyCoordinates.label}
                 </li>
+
+                {/* Copy and reusable paste of POI presentation settings */}
+                <li onClick={copyPOIPresentation}>
+                    <WaIcon {...UI_ACTIONS.copyPOIStyle.icon}/>{UI_ACTIONS.copyPOIStyle.label}
+                </li>
+                {canEdit && canPaste && (
+                    <li onClick={pastePOIPresentation}>
+                        <WaIcon {...UI_ACTIONS.pastePOIStyle.icon}/>{UI_ACTIONS.pastePOIStyle.label}
+                    </li>
+                )}
 
                 {/* Orbit / Panoramic Options */}
                 {showOrbitItem ? (

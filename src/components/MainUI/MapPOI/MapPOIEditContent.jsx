@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-25
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { MapPOICategorySelector } from '@Components/MainUI/MapPOI/MapPOICategorySelector'
 import { MapPOIDisplaySettings }  from '@Components/MainUI/MapPOI/MapPOIDisplaySettings'
 import { MapPOIEditPreview }      from '@Components/MainUI/MapPOI/MapPOIEditPreview'
+import { usePOIPresentationClipboard } from '@Components/MainUI/MapPOI/poiPresentationClipboard'
 import {
     getPOIEditorPanelName, getPOIEditorTabFromPanelName, poiEditorTabSessionStore, setPOIEditorActiveTab,
 }                                 from '@Components/MainUI/MapPOI/poiEditorTabSessionStore'
@@ -77,6 +78,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                           const updateEditedPOI = useCallback((updates, options = {}) => (
                                               __.ui.poiManager.updatePOI(poi, updates, {...options, markAsEdited: true})
                                           ), [poi])
+                                          const {canPaste, copy: copyPresentation, paste: pastePresentation} = usePOIPresentationClipboard(poi)
                                           const _colorPickerShift = useRef({})
                                           const textBorderColorsLinked = point.textBorderColorsLinked === true
 
@@ -179,6 +181,11 @@ export const MapPOIEditContent = memo(({poi}) => {
                                               }, {immediate: true})
                                                   .catch(error => console.error('[MapPOIEditContent] Failed to save Replay animation preference:', error))
                                           }, [poi, updateEditedPOI])
+
+                                          const handlePastePresentation = useCallback(() => {
+                                              void pastePresentation()
+                                                  .catch(error => console.error('[MapPOIEditContent] Failed to paste POI style:', error))
+                                          }, [pastePresentation])
 
                                           if (!point.id) {
                                               return null
@@ -734,17 +741,47 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                       </div>
 
                                                       <MapPOIEditPreview poi={id}/>
-                                                      <div className="map-poi-display-controls">
+                                                      <div className="map-poi-display-controls map-poi-replay-actions-row">
                                                           <WaSwitch
-                                                              className="map-poi-style-switch"
+                                                              className="map-poi-style-switch map-poi-replay-switch"
                                                               size="xs"
                                                               label-at-start
+                                                              width-auto
                                                               checked={point.replay?.animated !== false}
                                                               disabled={!visible}
                                                               onInput={handleReplayAnimationChange}
                                                           >
                                                               {'Animate during Replay'}
                                                           </WaSwitch>
+                                                          <div className="map-poi-replay-style-actions">
+                                                              <WaButton
+                                                                  id={`${tooltipIdPrefix}-copy-style`}
+                                                                  size="s"
+                                                                  appearance="plain"
+                                                                  variant="brand"
+                                                                  aria-label={UI_ACTIONS.copyPOIStyle.label}
+                                                                  onClick={copyPresentation}
+                                                              >
+                                                                  <WaIcon size="s" {...UI_ACTIONS.copyPOIStyle.icon} label=""/>
+                                                              </WaButton>
+                                                              <WaTooltip for={`${tooltipIdPrefix}-copy-style`} placement="top">
+                                                                  {UI_ACTIONS.copyPOIStyle.label}
+                                                              </WaTooltip>
+                                                              <WaButton
+                                                                  id={`${tooltipIdPrefix}-paste-style`}
+                                                                  size="s"
+                                                                  appearance="plain"
+                                                                  variant="brand"
+                                                                  aria-label={UI_ACTIONS.pastePOIStyle.label}
+                                                                  disabled={!canPaste}
+                                                                  onClick={handlePastePresentation}
+                                                              >
+                                                                  <WaIcon size="s" {...UI_ACTIONS.pastePOIStyle.icon} label=""/>
+                                                              </WaButton>
+                                                              <WaTooltip for={`${tooltipIdPrefix}-paste-style`} placement="top">
+                                                                  {UI_ACTIONS.pastePOIStyle.label}
+                                                              </WaTooltip>
+                                                          </div>
                                                       </div>
 
                                                       <WaTabGroup

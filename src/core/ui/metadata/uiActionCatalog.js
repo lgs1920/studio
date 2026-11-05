@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-03
- * Last modified: 2026-11-04
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,6 +37,9 @@ export const UI_ICONS = Object.freeze({
     reset: iconProps('arrow-rotate-left'),
     edit: iconProps('pen-to-square'),
     copyCoordinates: iconProps('copy'),
+    paste: iconProps('paste'),
+    compass: iconProps('compass'),
+    elevationProfile: iconProps('chart-fft'),
     add: iconProps('plus'),
     orbit: iconProps('arrows-rotate'),
     panoramic: iconProps('panorama'),
@@ -55,6 +58,8 @@ export const UI_ICONS = Object.freeze({
 export const UI_LABELS = Object.freeze({
     pointsOfInterest: 'Points of Interest',
     pois: 'POIs',
+    widgets: 'Widgets',
+    clips: 'Clips',
 })
 
 /** Shared semantic labels and Web Awesome icon props for user actions and controls. */
@@ -130,6 +135,14 @@ export const UI_ACTIONS = Object.freeze({
     hidePOIs: {
         label: 'Hide',
         icon: UI_ICONS.hidePOIs,
+    },
+    showCompassWidget: {
+        label: 'Show Compass',
+        icon: UI_ICONS.compass,
+    },
+    showProfileWidget: {
+        label: 'Show Profile',
+        icon: UI_ICONS.elevationProfile,
     },
     expand: {
         label: 'Expand',
@@ -286,6 +299,14 @@ export const UI_ACTIONS = Object.freeze({
     copyCoordinates: {
         label: 'Copy Coords',
         icon: UI_ICONS.copyCoordinates,
+    },
+    copyPOIStyle: {
+        label: 'Copy POI style',
+        icon: UI_ICONS.copyCoordinates,
+    },
+    pastePOIStyle: {
+        label: 'Paste POI style',
+        icon: UI_ICONS.paste,
     },
 })
 

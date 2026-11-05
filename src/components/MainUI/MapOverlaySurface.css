@@ -1,0 +1,36 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: MapOverlaySurface.css
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-11-05
+ * Last modified: 2026-11-05
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+.lgs-map-overlay-surface {
+    font-size: var(--lgs-font-size-s);
+    font-weight: normal;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--lgs-gutter-xs) var(--lgs-gutter-s);
+    max-width: calc(100% - 2 * var(--lgs-gutter-s));
+    flex-wrap: wrap;
+    white-space: normal;
+    text-align: center;
+    color: var(--wa-color-brand-on-quiet);
+    border: 0;
+    border-radius: var(--lgs-border-radius-s);
+    background: color-mix(in oklab, var(--wa-color-brand-fill-quiet) 15%, transparent);
+    text-shadow: 0 1px 4px color-mix(in oklab, black 34%, transparent);
+    backdrop-filter: blur(var(--lgs-blur));
+    pointer-events: none;
+    gap: var(--lgs-gutter-xs);
+}

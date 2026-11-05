@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-23
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { MapPOIContent }                   from '@Components/MainUI/MapPOI/MapPOIContent'
+import { MapOverlaySurface }                from '@Components/MainUI/MapOverlaySurface'
 import {
     normalizeJourneyReplayPOISettings, resolveReplayPOIPresentation,
 } from '@Core/ui/replay/JourneyReplayPOISettings'
@@ -207,7 +208,7 @@ export const MapPOI = memo(({point}) => {
                 </div>
             }
             {pixels && hoverTitleActive && !thePOI.expanded && !tooFar && presentation.visible &&
-                <div
+                <MapOverlaySurface
                     className="poi-map-overlay-details"
                     role="tooltip"
                     style={{
@@ -219,7 +220,7 @@ export const MapPOI = memo(({point}) => {
                     }}
                 >
                     {thePOI.title?.trim() || 'Point Of Interest'}
-                </div>
+                </MapOverlaySurface>
             }
         </>
     )

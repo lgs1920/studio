@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ import {calculatePOIReducedPinAnchor} from '@Components/MainUI/MapPOI/poiCanvasG
 import { $poiMove, getPOIMoveSession, startPOIMove, subscribeToPOIMove } from '@Components/MainUI/MapPOI/poiMoveStore'
 import { stylePOIDuotoneIcon } from '@Components/MainUI/MapPOI/duotoneIconUtils'
 import {poiCaptureSurfaceStore, usePOICaptureSurface} from '@Components/MainUI/MapPOI/poiCaptureSurfaceStore'
+import { MapOverlaySurface } from '@Components/MainUI/MapOverlaySurface'
 import { POI_TMP_TYPE } from '@Core/constants'
 import { isCesiumInputBlocked } from '@Core/events/CesiumInputGate'
 import { POIUtils } from '@Utils/cesium/POIUtils'
@@ -869,7 +870,7 @@ export const MapPOIMoveOverlay = () => {
                 </WaButton>
             )}
             {candidate && anchor && (
-                <div
+                <MapOverlaySurface
                     className="poi-move-details poi-map-overlay-details"
                     ref={_details}
                     style={{
@@ -882,7 +883,7 @@ export const MapPOIMoveOverlay = () => {
                     <span>{latitudeLabel}, {longitudeLabel}</span>
                     <span aria-hidden="true">-</span>
                     <span>{elevationLabel}</span>
-                </div>
+                </MapOverlaySurface>
             )}
         </div>,
         container,

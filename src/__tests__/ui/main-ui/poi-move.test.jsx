@@ -102,6 +102,7 @@ import { MapPOIMoveOverlay } from '@Components/MainUI/MapPOI/MapPOIMoveOverlay'
 import { MapPOIContent } from '@Components/MainUI/MapPOI/MapPOIContent'
 import { MapPOIContextMenu } from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { $poiMove } from '@Components/MainUI/MapPOI/poiMoveStore'
+import { poiPresentationClipboardStore } from '@Components/MainUI/MapPOI/poiPresentationClipboard'
 import { POIUtils } from '@Utils/cesium/POIUtils'
 import { UIToast } from '@Utils/UIToast'
 import { POI_TMP_TYPE } from '@Core/constants'
@@ -285,6 +286,7 @@ describe('POI move interaction', () => {
             }
         })
         $poiMove.session = null
+        poiPresentationClipboardStore.entry = null
         mocks.entityContainer = null
         mocks.poiManager = null
     })
@@ -295,6 +297,7 @@ describe('POI move interaction', () => {
         vi.restoreAllMocks()
         vi.unstubAllGlobals()
         $poiMove.session = null
+        poiPresentationClipboardStore.entry = null
         globalThis.lgs = undefined
         globalThis.__ = undefined
     })
@@ -319,6 +322,57 @@ describe('POI move interaction', () => {
             },
         })
         expect(__.ui.contextMenu.hide).toHaveBeenCalledOnce()
+    })
+
+    it('pastes copied presentation settings from the POI context menu and keeps them reusable', async () => {
+        const source = createPOI({
+            color: '#112233',
+            bgColor: '#445566',
+            borderColor: '#778899',
+            display: {style: 'rounded', fontSize: 20},
+        })
+        createMapFixture(source)
+        const poiList = lgs.stores.main.components.pois.list
+        const target = createPOI({id: 'poi-2', title: 'Hidden stop', visible: false, color: '#000000'})
+        poiList.set(target.id, target)
+        mocks.poiManager.updatePOI = vi.fn(async (id, updates) => {
+            const point = poiList.get(id)
+            Object.assign(point, updates)
+            return point
+        })
+        const menuRef = {current: null}
+
+        const sourceMenu = render(<MapPOIContextMenu targetId={{id: source.id}} menuRef={menuRef}/>)
+        fireEvent.click(screen.getByText('Copy POI style'))
+        sourceMenu.unmount()
+
+        render(<MapPOIContextMenu targetId={{id: target.id}} menuRef={menuRef}/>)
+        const pasteItem = screen.getByText('Paste POI style')
+        await act(async () => {
+            fireEvent.click(pasteItem)
+            await Promise.resolve()
+        })
+
+        expect(mocks.poiManager.updatePOI).toHaveBeenCalledWith(target.id, {
+            color: '#112233',
+            bgColor: '#445566',
+            borderColor: '#778899',
+            textBorderColorsLinked: false,
+            background: true,
+            display: expect.objectContaining({style: 'rounded', fontSize: 20}),
+            visible: true,
+        }, {markAsEdited: true})
+        expect(target.visible).toBe(true)
+        expect(poiPresentationClipboardStore.entry.sourcePoiId).toBe(source.id)
+        expect(screen.getByText('Paste POI style')).toBeTruthy()
+
+        target.color = '#abcdef'
+        await act(async () => {
+            fireEvent.click(screen.getByText('Paste POI style'))
+            await Promise.resolve()
+        })
+        expect(target.color).toBe('#112233')
+        expect(mocks.poiManager.updatePOI).toHaveBeenCalledTimes(2)
     })
 
     it.each([false, true])('moves a POI in one Shift-drag gesture, expanded=%s', async expanded => {
