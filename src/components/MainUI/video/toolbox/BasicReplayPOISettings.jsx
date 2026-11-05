@@ -8,14 +8,15 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-11-04
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTooltip} from '@awesome.me/webawesome/dist/react'
-import {UI_ICONS} from '@Core/ui/metadata/uiActionCatalog'
+import {WaButton, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch, WaTooltip} from '@awesome.me/webawesome/dist/react'
+import {POIS_EDITOR_DRAWER} from '@Core/constants'
+import {UI_ACTIONS, UI_ICONS} from '@Core/ui/metadata/uiActionCatalog'
 import {
     MAX_REPLAY_GLOBAL_POI_DISTANCE_METERS,
     MIN_REPLAY_GLOBAL_POI_DISTANCE_METERS,
@@ -27,6 +28,7 @@ import {getBasicReplaySettings, writeBasicReplaySettings} from '@Core/ui/replay/
 import {currentReplayJourney} from '@Core/ui/replay/ReplayUserModeConstants'
 import {resolveBasicReplaySettings, syncJourneyBasicReplayPOIBehavior} from '@Core/ui/replay/ReplayUserModes'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
+import {useMemo} from 'react'
 import {useSnapshot} from 'valtio'
 
 const VISIBILITY_MODE_LABELS = {
@@ -39,11 +41,25 @@ const VISIBILITY_MODE_LABELS = {
 export const BasicReplayPOISettings = () => {
     const settings = useSnapshot(lgs.settings.ui.replay)
     const main = useOptionalSnapshot(lgs.stores.main)
+    const pois = useOptionalSnapshot(lgs.stores.main?.components?.pois)
     const journey = main?.theJourney ?? currentReplayJourney()
     const behavior = resolveBasicReplaySettings({
         user: getBasicReplaySettings(settings),
         journey: getBasicReplaySettings(journey?.replay),
     })
+    const globalPOICount = useMemo(() => {
+        if (!journey?.slug || !pois.list) {
+            return 0
+        }
+
+        const entries = __.ui.poiManager?.getJourneyReplayPOIsForJourney?.(journey, settings.poiDistance, {
+            includeGlobalPois: behavior.includeGlobalPois,
+            globalPoiDistanceMeters: behavior.globalPoiDistanceMeters,
+            includeHidden: behavior.poiVisibilityMode === 'yes',
+        }) ?? []
+
+        return entries.reduce((count, entry) => count + (entry?.source === 'global-near-journey' ? 1 : 0), 0)
+    }, [journey, settings.poiDistance, pois.list, behavior.includeGlobalPois, behavior.globalPoiDistanceMeters, behavior.poiVisibilityMode])
 
     /** Save a global Basic default and the active Journey's Replay override. */
     const saveBehavior = updates => {
@@ -98,6 +114,14 @@ export const BasicReplayPOISettings = () => {
         saveBehavior({globalPoiDistanceMeters})
     }
 
+    /** Open the POI editor above the current Replay drawer. */
+    const openPOIEditor = () => {
+        __.ui.drawerManager.open(POIS_EDITOR_DRAWER, {
+            stacked: true,
+            suppressFocusOnOpen: lgs.stores.main.components.pois.current || false,
+        })
+    }
+
     /** Keep the duration inside the supported one to three second range. */
     const changeAnimationDuration = event => {
         const value = event.currentTarget?.value ?? event.target?.value
@@ -143,6 +167,21 @@ export const BasicReplayPOISettings = () => {
                     label-at-start
                     onChange={changeGlobalPOIDistance}
                 />
+            </div>
+            <div className="basic-replay-poi-settings__global-summary">
+                <span aria-live="polite">
+                    {`${globalPOICount} ${globalPOICount === 1 ? 'POI' : 'POIs'}`}
+                </span>
+                <WaButton
+                    className="basic-replay-poi-settings__global-editor"
+                    size="s"
+                    appearance="plain"
+                    variant="brand"
+                    onClick={openPOIEditor}
+                >
+                    <WaIcon {...UI_ACTIONS.managePOIs.icon} size="s"/>
+                    {UI_ACTIONS.managePOIs.label}
+                </WaButton>
             </div>
             <div className="basic-replay-settings-row basic-replay-settings-row--split" role="group" aria-label="Show at start">
                 <div className="basic-replay-settings-row__legend">

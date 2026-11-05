@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -56,6 +56,7 @@ vi.mock('@Components/MainUI/MapPOI/duotoneIconUtils', () => ({
 vi.mock('@Utils/cesium/POIUtils', () => ({
     POIUtils: {
         getEntityContainer: vi.fn(() => mocks.entityContainer),
+        requestRender: vi.fn(scene => scene?.requestRender?.()),
         updatePosition: vi.fn(),
         updateVisibility: vi.fn((poi, visible = poi?.visible) => {
             const entity = mocks.entityContainer?.getById?.(poi?.id)

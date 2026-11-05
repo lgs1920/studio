@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-30
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,7 +45,10 @@ vi.mock('@Components/MainUI/MapPOI/MapPOIContent', () => ({
 }))
 
 vi.mock('@Utils/cesium/POIUtils', () => ({
-    POIUtils: {getEntityContainer: vi.fn(() => null)},
+    POIUtils: {
+        getEntityContainer: vi.fn(() => null),
+        requestRender: vi.fn(scene => scene?.requestRender?.()),
+    },
 }))
 
 vi.mock('@awesome.me/webawesome/dist/react', () => ({

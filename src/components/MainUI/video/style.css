@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-10
- * Last modified: 2026-11-04
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -427,6 +427,19 @@
     & > span {
         min-width: 0;
     }
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-poi-settings__global-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    gap: var(--lgs-gutter-s);
+    font-size: var(--lgs-font-size-s);
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-poi-settings__global-editor {
+    flex: 0 0 auto;
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-poi-settings__global-switch {
