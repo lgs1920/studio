@@ -4795,3 +4795,59 @@
 ## 2026-11-03 — [`docs: update Replay and download backlog`](https://github.com/lgs1920/studio/commit/bf403e9bd7f30f4f0e2911ea7c91b18bc1d31760)
 
 - Recorded automatically from Git history.
+
+## 2026-11-04 — [`feat: filter global POIs in Basic Replay`](https://github.com/lgs1920/studio/commit/7c175f18107567e500645ef5211cfa4505c0b0c0)
+
+- Recorded automatically from Git history.
+
+## 2026-11-04 — [`fix: offer editing nearby POIs from duplicate toast`](https://github.com/lgs1920/studio/commit/e72946f4657016e78a1a4a9ec2059f3ebc40eaa3)
+
+- Recorded automatically from Git history.
+
+## 2026-11-04 — [`fix: handle hex colors in RGB to RGBA conversion`](https://github.com/lgs1920/studio/commit/ce88db2b6019e8140fe2aaa0413ce997cd7a1819)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`feat: improve Basic Replay profile rendering`](https://github.com/lgs1920/studio/commit/187ea897ec191991f20d84d294de3b0794f5fb6f)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`fix: stabilize journey POI visibility during replay`](https://github.com/lgs1920/studio/commit/9f70cc274050bf1ea6b5d768533a50859a0bd566)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`fix: retain profile colors after replay`](https://github.com/lgs1920/studio/commit/4b2c0ec202b5d7dabe424254cdc87f7983de7167)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`fix: publish Replay focus camera poses`](https://github.com/lgs1920/studio/commit/dcf404d425d60702944600f9af33090f09e03d31)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`fix: keep compass synchronized during Replay export`](https://github.com/lgs1920/studio/commit/bab82cfc35e7614215a860395ef7a1a85b335e88)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`test: cover Replay focus compass rotation`](https://github.com/lgs1920/studio/commit/037c99e647b332318b65c5173fb897978d8bcbc8)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`feat: include profile in Basic Replay video`](https://github.com/lgs1920/studio/commit/8b69bebc495debe05b4feee46992f60348effdac)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`feat: manage global POIs from Basic Replay settings`](https://github.com/lgs1920/studio/commit/bf7ecf40fc29e550d9159003f93835dfbf7c392b)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`fix: clarify replay camera angle relative to route`](https://github.com/lgs1920/studio/commit/bffbd0a78432c780ebe6f13513c5ad08ca91a05d)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`fix: guard tab closure until media downloads`](https://github.com/lgs1920/studio/commit/5270e04df50f064f2d0a27bf86644b361bc1ba20)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/fbd7022f1fc6578a207290c00dc52cc8e8823658)
+
+- Recorded automatically from Git history.
