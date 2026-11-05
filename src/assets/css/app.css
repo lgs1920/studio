@@ -566,13 +566,13 @@ body.lgs-app-booting #cesium-viewer {
 
 .video-widget-loading-name-roller__label-in {
     position: relative;
-    animation: video-widget-name-roll-in 240ms cubic-bezier(0.22, 0.68, 0, 1) both;
+    animation: video-widget-name-roll-in 500ms cubic-bezier(0.22, 0.68, 0, 1) both;
 }
 
 .video-widget-loading-name-roller__label-out {
     position: absolute;
     inset: 0 auto auto 0;
-    animation: video-widget-name-roll-out 240ms cubic-bezier(0.22, 0.68, 0, 1) both;
+    animation: video-widget-name-roll-out 500ms cubic-bezier(0.22, 0.68, 0, 1) both;
 }
 
 @keyframes video-widget-name-roll-in {
