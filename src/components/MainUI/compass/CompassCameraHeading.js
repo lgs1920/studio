@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,18 +41,4 @@ export const resolveCompassCameraHeading = ({replayFrame = null, fallbackHeading
     }
 
     return null
-}
-
-/**
- * Return whether a published Replay frame holds the map camera at a POI.
- *
- * @param {Object|null} frame - Published interactive or export frame.
- * @returns {boolean} Whether Replay is holding the camera at a POI.
- */
-export const isReplayPOICameraFrozen = frame => {
-    const logicalFrame = frame?.renderContract?.logicalFrame ?? frame?.logicalFrame
-    const phase = logicalFrame?.phase ?? frame?.phase ?? frame?.intent?.timeline?.phase
-    return logicalFrame?.poiCameraFreeze === true
-        || frame?.poiCameraFreeze === true
-        || phase?.poiCameraFreeze === true
 }

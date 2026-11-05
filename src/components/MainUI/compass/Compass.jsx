@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-20
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,15 +19,9 @@ import { CompassLight } from '@Components/MainUI/compass/CompassLight'
 import { CompassFlat }  from '@Components/MainUI/compass/CompassFlat'
 import { CompassModern }                            from '@Components/MainUI/compass/CompassModern'
 import { resolveCompassWidgetDimensions }            from '@Components/MainUI/compass/CompassWidgetBounds'
-import {
-    isReplayPOICameraFrozen,
-    resolveCompassCameraHeading,
-} from '@Components/MainUI/compass/CompassCameraHeading'
+import { resolveCompassCameraHeading }               from '@Components/MainUI/compass/CompassCameraHeading'
 import { COMPASS_FLAT, COMPASS_FULL, COMPASS_LIGHT, COMPASS_MODERN } from '@Core/constants'
-import {
-    resolvePublishedReplayExportFrame,
-    resolvePublishedReplayFrame,
-} from '@Core/ui/replay/ReplayFramePublisher'
+import { resolvePublishedReplayExportFrame }          from '@Core/ui/replay/ReplayFramePublisher'
 import { registerReplayWidgetFrameRenderer } from '@Core/ui/replay/ReplayWidgetFrameRenderers'
 import { Math as CMath }               from 'cesium'
 import classNames                      from 'classnames'
@@ -98,30 +92,22 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true, syn
 
     /**
      * Updates the rotation of the referenced element based on camera heading.
+     *
+     * @param {Object|null} [frameState=null] - Replay frame supplied for deterministic capture.
      */
-    const updateRotation = useCallback(() => {
+    const updateRotation = useCallback((frameState = null) => {
         const rotatingPart = _rotatingPart.current
         if (!rotatingPart) {
             return
         }
 
         const isExporting = lgs.stores.ui.video?.exporting === true
-        const replay = lgs.stores.replay
-        const replayActive = replay?.active === true
-            || replay?.playing === true
-            || replay?.paused === true
-            || replay?.clipSequenceActive === true
         const replayFrame = isExporting
-            ? resolvePublishedReplayExportFrame()
-            : replayActive
-                ? resolvePublishedReplayFrame()
-                : null
-        if (replayFrame && isReplayPOICameraFrozen(replayFrame)) {
-            return
-        }
+            ? frameState ?? resolvePublishedReplayExportFrame()
+            : null
 
         const heading = resolveCompassCameraHeading({
-            replayFrame: isExporting ? replayFrame : null,
+            replayFrame,
             fallbackHeading: isExporting ? null : lgs.camera?.heading,
         })
         if (heading === null) {
@@ -336,9 +322,9 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true, syn
 
         if (!fixed) {
             const tick = () => {
-                if (!lgs.stores.ui.video?.exporting) {
-                    updateRotation()
-                }
+                // Dry run publishes export frames without invoking widget capture.
+                // Keep the visible SVG synchronized with those same published poses.
+                updateRotation()
                 _animationFrame.current = window.requestAnimationFrame(tick)
             }
 
