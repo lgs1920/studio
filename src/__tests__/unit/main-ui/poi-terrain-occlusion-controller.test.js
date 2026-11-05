@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-01
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {createPOITerrainOcclusionController} from '@Components/MainUI/MapPOI/poiTerrainOcclusionController'
+import {isReplayPOIPresentationActive} from '@Core/ui/replay/JourneyReplayPOISettings'
 import {POIUtils} from '@Utils/cesium/POIUtils'
 import {Cartesian3} from 'cesium'
 import {afterEach, describe, expect, it, vi} from 'vitest'
@@ -127,5 +128,64 @@ describe('POI terrain occlusion controller', () => {
         expect(scene.camera.changed.numberOfListeners).toBe(0)
         expect(scene.globe.terrainProviderChanged.numberOfListeners).toBe(0)
         expect(scene.postRender.numberOfListeners).toBe(0)
+    })
+
+    it('masks Replay-visible POIs even when their persisted map visibility is disabled', () => {
+        const {scene, setTerrainHeight} = createTerrainScene()
+        const entity = {
+            id: 'poi-replay-visible',
+            show: true,
+            billboard: {show: true, image: {}},
+        }
+        const poi = {id: entity.id, longitude: 2, latitude: 48, height: 0, visible: false}
+        const entities = new Map([[entity.id, entity]])
+        const replay = {active: true}
+        globalThis.lgs = {
+            settings: {ui: {replay: {userMode: 'basic'}}},
+            stores: {replay},
+            viewer: {entities: {getById: id => entities.get(id)}},
+        }
+        const controller = createPOITerrainOcclusionController({
+            scene,
+            poiList: new Map([[poi.id, poi]]),
+            isReplayActive: () => isReplayPOIPresentationActive(replay),
+        })
+
+        scene.postRender.raiseEvent()
+        expect(entity.billboard.show).toBe(false)
+
+        setTerrainHeight(-10)
+        scene.camera.changed.raiseEvent(0.25)
+        scene.postRender.raiseEvent()
+        expect(entity.billboard.show).toBe(true)
+
+        controller.dispose()
+    })
+
+    it('preserves Replay-hidden POIs when restoring a terrain mask', () => {
+        const {scene} = createTerrainScene()
+        const entity = {
+            id: 'poi-replay-hidden',
+            show: true,
+            billboard: {show: true, image: {}},
+        }
+        const poi = {id: entity.id, longitude: 2, latitude: 48, height: 0, visible: true}
+        const entities = new Map([[entity.id, entity]])
+        globalThis.lgs = {viewer: {entities: {getById: id => entities.get(id)}}}
+        const controller = createPOITerrainOcclusionController({
+            scene,
+            poiList: new Map([[poi.id, poi]]),
+            isReplayActive: () => true,
+        })
+
+        scene.postRender.raiseEvent()
+        expect(entity.billboard.show).toBe(false)
+
+        entity.show = false
+        entity.billboard.show = false
+        controller.dispose()
+
+        expect(entity.show).toBe(false)
+        expect(entity.billboard.show).toBe(false)
     })
 })

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-01
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -89,6 +89,10 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
     let checkAllRequested = true
     let disposed = false
 
+    /** Resolve visibility from Replay's runtime entity state or the persisted map state. */
+    const isPOIEffectivelyVisible = (poi, entity) => entity?.show === true
+        && (isReplayActive?.() || poi?.visible !== false)
+
     /** Request an individual focus check or a full pass after scene changes. */
     const requestCheck = poiId => {
         if (disposed) {
@@ -152,7 +156,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
             const cachedContainer = occludedEntityContainers.get(poiId)
             const entity = currentContainer?.getById(poiId) ?? cachedContainer?.getById(poiId)
             if (entity?.billboard) {
-                changed = setBillboardVisibility(poiId, entity, entity.show === true && poi?.visible !== false, time) || changed
+                changed = setBillboardVisibility(poiId, entity, isPOIEffectivelyVisible(poi, entity), time) || changed
             }
             entitySubscriptions.get(poiId)?.remove?.()
             entitySubscriptions.delete(poiId)
@@ -167,7 +171,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
         if (disposed) {
             return
         }
-        if (isReplayActive?.() || scene.globe?.show === false) {
+        if (scene.globe?.show === false) {
             const changed = restoreOccludedPOIs()
             checkAllRequested = true
             if (changed) {
@@ -212,7 +216,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
         if (disposed || (!checkAllRequested && requestedPOIIds.size === 0)) {
             return
         }
-        if (isReplayActive?.() || scene.globe?.show === false) {
+        if (scene.globe?.show === false) {
             restoreOccludedPOIs()
             checkAllRequested = true
             return
@@ -228,9 +232,6 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
         for (const poiId of candidatePOIIds) {
             const poi = poiList.get(poiId)
             const wasOccluded = occludedPOIIds.has(poiId)
-            if (poi?.visible === false) {
-                continue
-            }
             const container = poi ? POIUtils.getEntityContainer(poi) : null
             const entity = container?.getById(poiId)
             if (!entity?.billboard) {
@@ -241,7 +242,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
                 continue
             }
 
-            if (entity.show !== true) {
+            if (!isPOIEffectivelyVisible(poi, entity)) {
                 if (wasOccluded) {
                     observeEntityVisibility(poiId, entity)
                 }
@@ -263,7 +264,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
                 occludedEntityContainers.delete(poiId)
                 entitySubscriptions.get(poiId)?.remove?.()
                 entitySubscriptions.delete(poiId)
-                changed = setBillboardVisibility(poiId, entity, entity.show === true && poi?.visible !== false, time) || changed
+                changed = setBillboardVisibility(poiId, entity, isPOIEffectivelyVisible(poi, entity), time) || changed
             }
         }
 
