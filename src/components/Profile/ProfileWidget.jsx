@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-12-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,8 +16,9 @@
 
 import { Widget }                                                                       from '@Components/MainUI/widgets/Widget'
 import {
-    HOUR, JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD,
+    HOUR, JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD,
 } from '@Core/constants'
+import { isJourneyReplayBasicMode } from '@Core/ui/replay/ReplayUserModeConstants'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { useEffect, useMemo, useState } from 'react'
 import { useSnapshot }                                                                  from 'valtio'
@@ -27,6 +28,9 @@ import './style.css'
 const PROFILE_WIDGET_CONTEXT_FALLBACK = {widgetEditor: false, widgetsBoard: ''}
 const PROFILE_WIDGET_FREE_RATIO = {value: '0x0', aspectRatio: 0, locked: false}
 const PROFILE_WIDGET_DEFAULT_DIMENSIONS = {width: 500, height: 200}
+const PROFILE_WIDGET_DEFAULT_ASPECT_RATIO = PROFILE_WIDGET_DEFAULT_DIMENSIONS.width / PROFILE_WIDGET_DEFAULT_DIMENSIONS.height
+const BASIC_REPLAY_PROFILE_MAX_WIDTH = 200
+const BASIC_REPLAY_PROFILE_CROP_WIDTH_RATIO = 0.7
 
 /**
  * The Profile Widget component displays the elevation profile chart and handles widget configuration.
@@ -41,6 +45,10 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
     const journey = lgs.theJourney
     const journeySlug = journey?.slug ?? null
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
+    const replay = useSnapshot(lgs.stores.replay)
+    const replaySettings = useSnapshot(lgs.settings.ui.replay)
+    const basicReplayProfile = widgetsBoard === VIDEO_WIDGETS_BOARD
+        && isJourneyReplayBasicMode({replay, settings: replaySettings})
     const [lastValidData, setLastValidData] = useState({journeySlug: null, data: null})
 
     /**
@@ -60,6 +68,23 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
      * State for the container element where the widget should attach.
      */
     const container = useMemo(() => __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard) ?? lgs.canvas, [widgetsBoard])
+    const profileDimensions = useMemo(() => {
+        if (!basicReplayProfile) {
+            return PROFILE_WIDGET_DEFAULT_DIMENSIONS
+        }
+
+        const boundsWidth = Number(container?.getBoundingClientRect?.().width)
+        const layoutWidth = Number(container?.clientWidth)
+        const cropWidth = layoutWidth > 0 ? layoutWidth : boundsWidth
+        const width = cropWidth > 0
+            ? Math.min(BASIC_REPLAY_PROFILE_MAX_WIDTH, cropWidth * BASIC_REPLAY_PROFILE_CROP_WIDTH_RATIO)
+            : BASIC_REPLAY_PROFILE_MAX_WIDTH
+
+        return {
+            width,
+            height: width / PROFILE_WIDGET_DEFAULT_ASPECT_RATIO,
+        }
+    }, [basicReplayProfile, container])
 
     /**
      * Sets the visibility state within the global profiler utility once on mount.
@@ -124,37 +149,41 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
         return {
             container:   container,
             contextMenu: {
-                canReset:    true,
-                canEdit:     true,
-                canRemove:   true,
+                canReset:    !basicReplayProfile,
+                canEdit:     !basicReplayProfile,
+                canRemove:   !basicReplayProfile,
                 canPosition: true,
                 canSnapshot: true,
-                canDetach:   true,
+                canDetach:   !basicReplayProfile,
             },
-            top:         '100%',
-            left:        '0px',
+            top:         basicReplayProfile ? '0px' : '100%',
+            left:        basicReplayProfile ? '100%' : '0px',
             type:        LGS_VISUAL_WIDGET,
             group:        widgetsBoard === SCENE_WIDGETS_BOARD ? SCENE_WIDGETS : JOURNEY_WIDGETS,
-            attachTo:    'bottom',
-            width:       PROFILE_WIDGET_DEFAULT_DIMENSIONS.width,
-            height:      PROFILE_WIDGET_DEFAULT_DIMENSIONS.height,
+            attachTo:    basicReplayProfile ? 'top-right' : 'bottom',
+            positionKey: basicReplayProfile ? 'video-basic-profile-top-right-v2' : undefined,
+            margin:      basicReplayProfile ? (lgs.gutter?.s ?? 8) : undefined,
+            width:       profileDimensions.width,
+            height:      profileDimensions.height,
             ratio:       PROFILE_WIDGET_FREE_RATIO,
             constrainResizeToContent: false,
             resizable:   true,
             scalable:    false,
             id,
-            min:         {width: 150},
+            min:         {width: Math.min(150, profileDimensions.width)},
             max:         {width: 900},
             persist:         true,
             transient:       true,
             ttl:             HOUR,
-            mandatory:       false,
+            mandatory:       basicReplayProfile,
+            canHide:         !basicReplayProfile,
+            canLock:         !basicReplayProfile,
             stopPropagation: false,
             snap:        false,
             widgetsBoard: widgetsBoard,
             zIndex:      zIndex,
         }
-    }, [container, id, widgetsBoard, zIndex])
+    }, [basicReplayProfile, container, id, profileDimensions, widgetsBoard, zIndex])
 
     if (!journey || !widgetsBoard || Object.keys(config).length === 0 || !hasAltitudeData) {
         return null
@@ -167,6 +196,7 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
                               id={id}
                               height="100%"
                               locked={isLocked}
+                              basicReplayProfile={basicReplayProfile}
                               width="100%"
                 />
             }

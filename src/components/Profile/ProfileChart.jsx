@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-02
- * Last modified: 2026-10-23
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -47,6 +47,7 @@ import { usePreviewChartResize } from '@Components/MainUI/widgets/editor/usePrev
 import { v4 as uuid } from 'uuid'
 import { WaIcon } from '@awesome.me/webawesome/dist/react'
 import {scheduleProfileChartResize} from '@Core/ui/ProfileChartResize'
+import {createProfileCurveGradient} from './profileCurveGradient'
 
 const scaleValue = (value, correction = 1) => {
     const numericValue = Number(value)
@@ -140,7 +141,12 @@ const REPLAY_PROFILE_HOVER_MARKER_GRAPHIC = 'replay-profile-hover-marker-graphic
 const REPLAY_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC = 'replay-profile-locked-horizontal-guide-graphic'
 const REPLAY_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC = 'replay-profile-locked-vertical-guide-graphic'
 const REPLAY_PROFILE_OVERLAY_GRAPHIC = 'replay-profile-overlay-graphic'
+const PROFILE_AREA_GRADIENT_GRAPHIC_PREFIX = 'profile-area-gradient'
 const PROFILE_LINE_WIDTH = 2
+const BASIC_REPLAY_PROFILE_AXIS_PRESET = Object.freeze({
+    xAxis: Object.freeze({main: false, second: false, labels: false, units: false}),
+    yAxis: Object.freeze({main: false, second: false, labels: false, units: false}),
+})
 
 const isJourneyReplaySeries = seriesId => String(seriesId ?? '').startsWith('replay-')
 const isFiniteCoordinate = value => Number.isFinite(Number(value))
@@ -160,8 +166,10 @@ const isVisibleProfileColor = value => {
     const color = colord(value ?? '')
     return color.isValid() && color.alpha() > 0
 }
-const profileLineModels = ({color, renderStyle, useTrackStyle}) => {
-    const mainColor = profileColor(renderStyle?.color ?? color)
+
+/** Build profile lines while optionally replacing track colors for Replay display. */
+const profileLineModels = ({color, renderStyle, useTrackStyle, colorOverride = null}) => {
+    const mainColor = profileColor(colorOverride ?? renderStyle?.color ?? color)
     const dash = renderStyle?.dash
 
     if (!useTrackStyle || dash?.enabled !== true) {
@@ -181,7 +189,7 @@ const profileLineModels = ({color, renderStyle, useTrackStyle}) => {
     if (dash.biColor === true && isVisibleProfileColor(dash.gapColor)) {
         models.push({
                         key:   'gap',
-                        color: profileColor(dash.gapColor),
+                        color: profileColor(colorOverride ?? dash.gapColor),
                         type:  [0, dashLength, gapLength, 0],
                     })
     }
@@ -282,9 +290,20 @@ const replayProfileHiddenGraphics = () => [
  * @param {number|string} props.width
  * @param {number|string} props.height
  * @param {boolean} props.preview
+ * @param {boolean} [props.basicReplayProfile] - Render the minimal Basic Replay profile presentation.
  * @returns {React.JSX.Element}
  */
-export const ProfileChart = ({data, id, configId, width, height, preview = false, locked = false, axisPreset = null}) => {
+export const ProfileChart = ({
+    data,
+    id,
+    configId,
+    width,
+    height,
+    preview = false,
+    locked = false,
+    axisPreset = null,
+    basicReplayProfile = false,
+}) => {
     const $configuration = lgs.settings.widgets['profile-widget'].configuration
     const configuration = useSnapshot($configuration)
 
@@ -301,7 +320,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         [replaySettings.progression],
     )
     const profileSettings = useSnapshot(lgs.settings.ui.profile)
-    const showJourneyReplayLiveData = profileSettings.liveData === true
+    const showJourneyReplayLiveData = !basicReplayProfile && profileSettings.liveData === true
+    const replayProfileColor = basicReplayProfile ? '#ffffff' : null
     const replayTrace = useMemo(
         () => normalizeJourneyReplayTrace(replaySettings.trace),
         [replaySettings.trace],
@@ -320,6 +340,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                                   completedChildren: [],
                                                   remainingChildren: [],
                                               })
+    const _profileGradientCache = useRef({data: null, styleKey: null, layoutKey: null, graphics: []})
     const [lockedProfileSample, setLockedProfileSample] = useState(null)
     const configKey = configId ?? id
     const scaleCorrection = useWidgetScaleCorrection(preview ? null : id)
@@ -359,17 +380,18 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     const element = useMemo(() => {
         return configuration.elements?.[configKey] ?? configuration.user ?? configuration.default
     }, [configuration, configKey])
+    const effectiveAxisPreset = basicReplayProfile ? BASIC_REPLAY_PROFILE_AXIS_PRESET : axisPreset
     const styleElement = useMemo(() => {
-        if (!axisPreset) {
+        if (!effectiveAxisPreset) {
             return element
         }
 
         return {
             ...element,
-            xAxis: {...element?.xAxis, ...axisPreset.xAxis},
-            yAxis: {...element?.yAxis, ...axisPreset.yAxis},
+            xAxis: {...element?.xAxis, ...effectiveAxisPreset.xAxis},
+            yAxis: {...element?.yAxis, ...effectiveAxisPreset.yAxis},
         }
-    }, [element, axisPreset])
+    }, [element, effectiveAxisPreset])
     const borderCorrection = element?.border?.scaled === false ? scaleCorrection : 1
     const borderWidth = element?.border?.show ? scaleValue(element.border.thickness, borderCorrection) : 0
     const padding = resolvePadding(element, scaleCorrection)
@@ -520,6 +542,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                 color:         option?.color,
                 renderStyle:   option?.renderStyle,
                 useTrackStyle: replayProfileInfo.useTrackStyle,
+                colorOverride: replayProfileColor,
             })
 
             if (dataset?.id && !indexes.has(dataset.id)) {
@@ -530,30 +553,15 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         })
 
         return indexes
-    }, [data?.dataset, data?.options, replayProfileInfo.useTrackStyle])
-    /**
-     * Build ECharts series object with optional gradient
-     */
-    const buildSerie = useCallback((params, config) => {
+    }, [data?.dataset, data?.options, replayProfileInfo.useTrackStyle, replayProfileColor])
+    /** Build ECharts line series for one profile dataset. */
+    const buildSerie = useCallback(params => {
         const lineModels = profileLineModels({
                                                  color:         params.color,
                                                  renderStyle:   params.renderStyle,
                                                  useTrackStyle: replayProfileInfo.useTrackStyle,
+                                                 colorOverride: replayProfileColor,
                                              })
-        const rgbColor = lineModels[0]?.color ?? profileColor(params.color)
-
-        // Handle optional gradient show/hide and custom color
-        const showGradient = config.gradient?.show ?? true
-        const gradientColor = config.gradient?.color
-                              ? colord(setColor(config.gradient)).toRgbString()
-                              : rgbColor
-
-        const areaStyle = showGradient ? {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                {offset: 0.2, color: __.ui.ui.RGB2RGBA(gradientColor, 0.5)},
-                {offset: 1, color: __.ui.ui.RGB2RGBA(gradientColor, 0.0)},
-            ]),
-        } : undefined
 
         return lineModels.map((lineModel, index) => ({
             id:              `${params.dataset}:profile:${lineModel.key}`,
@@ -566,13 +574,186 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             showSymbol:      false,
             emphasis:        {disabled: true},
             lineStyle:       profileSeriesLineStyle(lineModel),
-            areaStyle:       index === 0 ? areaStyle : undefined,
             dimensions:      params.dimensions,
             silent:          index > 0,
             legendHoverLink: index === 0,
             z:               2 + index,
         }))
-    }, [replayProfileInfo.useTrackStyle, setColor])
+    }, [replayProfileColor, replayProfileInfo.useTrackStyle])
+
+    /** Build cached gradient images using each profile point as its local fade origin. */
+    const getProfileAreaGradientGraphics = useCallback((chart) => {
+        const gridRect = readChartGridRect(chart)
+        const chartSize = readChartSize(chart, _chartDom.current)
+        const chartWidth = Math.ceil(Number(chartSize.width))
+        const chartHeight = Math.ceil(Number(chartSize.height))
+        if (!chart || !gridRect
+            || !Number.isFinite(chartWidth)
+            || !Number.isFinite(chartHeight)
+            || chartWidth < 1
+            || chartHeight < 1
+            || !data?.dimensions) {
+            return {graphics: [], graphicUpdates: [], changed: false}
+        }
+
+        const configuredGradientColor = element?.gradient?.color
+            ? colord(setColor(element.gradient)).toRgbString()
+            : null
+        const styleKey = JSON.stringify({
+            show: element?.gradient?.show ?? true,
+            color: configuredGradientColor,
+            replayProfileColor,
+            useTrackStyle: replayProfileInfo.useTrackStyle,
+            options: data.options?.map(option => ({
+                color: option?.color,
+                renderStyle: option?.renderStyle,
+            })),
+        })
+        const layoutKey = [
+            chartWidth,
+            chartHeight,
+            gridRect.x,
+            gridRect.y,
+            gridRect.width,
+            gridRect.height,
+            readChartAxisExtent(chart, 'xAxis'),
+            readChartAxisExtent(chart, 'yAxis'),
+        ].join(':')
+        const cached = _profileGradientCache.current
+        if (cached.data === data && cached.styleKey === styleKey && cached.layoutKey === layoutKey) {
+            return {graphics: cached.graphics, graphicUpdates: [], changed: false}
+        }
+
+        const distanceIndex = data.dimensions.indexOf(DISTANCE)
+        const elevationIndex = data.dimensions.indexOf(ELEVATION)
+        const chartModel = chart.getModel?.()
+        const yExtent = chartModel?.getComponent?.('yAxis', 0)?.axis?.scale?.getExtent?.()
+        const xExtent = chartModel?.getComponent?.('xAxis', 0)?.axis?.scale?.getExtent?.()
+        const baselineValue = Array.isArray(yExtent)
+            ? yExtent[0] > 0 ? yExtent[0] : yExtent[1] < 0 ? yExtent[1] : 0
+            : 0
+        let baseline = gridRect.y + gridRect.height
+        try {
+            const baselinePoint = chart.convertToPixel(
+                {xAxisIndex: 0, yAxisIndex: 0},
+                [Array.isArray(xExtent) ? xExtent[0] : 0, baselineValue],
+            )
+            if (Array.isArray(baselinePoint) && Number.isFinite(Number(baselinePoint[1]))) {
+                baseline = Number(baselinePoint[1])
+            }
+        }
+        catch {
+            // Retain the grid edge when the chart cannot resolve its axis origin.
+        }
+
+        const showGradient = element?.gradient?.show ?? true
+        const graphics = showGradient
+            ? processedDataset.map((dataset, index) => {
+                const option = data.options?.[index] ?? {}
+                const lineModel = profileLineModels({
+                    color:         option.color,
+                    renderStyle:   option.renderStyle,
+                    useTrackStyle: replayProfileInfo.useTrackStyle,
+                    colorOverride: replayProfileColor,
+                })[0]
+                const gradientColor = replayProfileColor
+                    ?? (element?.gradient?.color
+                        ? configuredGradientColor
+                        : lineModel?.color ?? profileColor(option.color))
+                const color = colord(gradientColor).toRgb()
+                const segments = []
+                let segment = []
+                /** Keep only profile paths with enough points to draw an area. */
+                const flushSegment = () => {
+                    if (segment.length > 1) {
+                        segments.push(segment)
+                    }
+                    segment = []
+                }
+
+                const source = Array.isArray(dataset?.source) ? dataset.source : []
+                const seriesIndex = interactiveSeriesIndexes.get(dataset?.id)
+                const seriesModel = Number.isInteger(seriesIndex)
+                    ? chartModel?.getSeriesByIndex?.(seriesIndex)
+                    : null
+                const seriesData = seriesModel?.getData?.()
+                const layoutPoints = seriesData?.getLayout?.('points')
+                const layoutRange = seriesData?.getLayout?.('pointsRange')
+                source.forEach((row, rowIndex) => {
+                    const distance = row?.[distanceIndex]
+                    const elevation = row?.[elevationIndex]
+                    if (!isFiniteCoordinate(distance) || !isFiniteCoordinate(elevation)) {
+                        flushSegment()
+                        return
+                    }
+
+                    try {
+                        const itemLayout = seriesData?.getItemLayout?.(rowIndex)
+                        const pointOffset = rowIndex - (layoutRange?.start ?? 0)
+                        const pixel = Array.isArray(itemLayout)
+                            ? itemLayout
+                            : layoutPoints && pointOffset >= 0 && pointOffset * 2 + 1 < layoutPoints.length
+                                ? [layoutPoints[pointOffset * 2], layoutPoints[pointOffset * 2 + 1]]
+                                : chart.convertToPixel(
+                                    {xAxisIndex: 0, yAxisIndex: 0},
+                                    [distance, elevation],
+                                )
+                        if (Array.isArray(pixel)
+                            && isFiniteCoordinate(pixel[0])
+                            && isFiniteCoordinate(pixel[1])) {
+                            segment.push({x: Number(pixel[0]), y: Number(pixel[1])})
+                        }
+                        else {
+                            flushSegment()
+                        }
+                    }
+                    catch {
+                        flushSegment()
+                    }
+                })
+                flushSegment()
+
+                const image = createProfileCurveGradient({
+                    width: chartWidth,
+                    height: chartHeight,
+                    plotRect: gridRect,
+                    baseline,
+                    segments,
+                    color: [color.r, color.g, color.b],
+                    alpha: 0.5 * (color.a ?? 1),
+                })
+                if (!image) {
+                    return null
+                }
+
+                return {
+                    id: `${PROFILE_AREA_GRADIENT_GRAPHIC_PREFIX}:${dataset?.id ?? index}`,
+                    type: 'image',
+                    z: 1,
+                    silent: true,
+                    style: {
+                        image,
+                        x: 0,
+                        y: 0,
+                        width: chartWidth,
+                        height: chartHeight,
+                    },
+                }
+            }).filter(Boolean)
+            : []
+
+        const nextIds = new Set(graphics.map(graphic => graphic.id))
+        const removedGraphics = cached.graphics
+            .filter(graphic => !nextIds.has(graphic.id))
+            .map(graphic => ({id: graphic.id, $action: 'remove'}))
+        _profileGradientCache.current = {data, styleKey, layoutKey, graphics}
+
+        return {
+            graphics,
+            graphicUpdates: [...removedGraphics, ...graphics],
+            changed: true,
+        }
+    }, [data, element, interactiveSeriesIndexes, processedDataset, replayProfileColor, replayProfileInfo.useTrackStyle, setColor])
 
     const replayMarkerStyle = useCallback(() => {
         const progression = normalizeJourneyReplayProgressionStyle(
@@ -598,7 +779,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                                                          color:       data.options[index].color,
                                                                          renderStyle: data.options[index].renderStyle,
                                                                          dimensions:  data.dimensions,
-                                                                     }, element))
+                                                                     }))
         const styles = getStyleOptions(styleElement)
         const yFloor = unitSystem === INTERNATIONAL ? 100 : 300
         const xCeiling = 1
@@ -773,13 +954,14 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
 
     const profileTrackStyleKey = useMemo(() => JSON.stringify({
                                                                   useTrackStyle: replayProfileInfo.useTrackStyle,
+                                                                  colorOverride: replayProfileColor,
                                                                   options:       data?.options?.map(option => ({
                                                                       color:       option?.color,
                                                                       renderStyle: option?.renderStyle,
                                                                   })),
-                                                              }), [data?.options, replayProfileInfo.useTrackStyle])
+                                                              }), [data?.options, replayProfileInfo.useTrackStyle, replayProfileColor])
 
-    const replayCompletedGraphics = useCallback((sample, chart) => {
+    const replayCompletedGraphics = useCallback((sample, chart, progressionStyle = replayProgression) => {
         const gridRect = readChartGridRect(chart)
         if (!sample || !chart || !gridRect || !data?.dimensions) {
             return {
@@ -793,6 +975,9 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
 
         const {width: chartWidth, height: chartHeight} = readChartSize(chart, _chartDom.current)
+        const replayGradientColor = element?.gradient?.color
+            ? colord(setColor(element.gradient)).toRgbString()
+            : null
         const cacheKey = [
             chartWidth,
             chartHeight,
@@ -803,6 +988,9 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             readChartAxisExtent(chart, 'xAxis'),
             readChartAxisExtent(chart, 'yAxis'),
             profileTrackStyleKey,
+            progressionStyle.fill.color,
+            element?.gradient?.show ?? true,
+            replayGradientColor,
         ].join(':')
         let geometries = _replayProfileGraphics.current.geometries
 
@@ -848,28 +1036,27 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                                              color:         option.color,
                                                              renderStyle:   option.renderStyle,
                                                              useTrackStyle: replayProfileInfo.useTrackStyle,
+                                                             colorOverride: replayProfileColor,
                                                          })
                     const rgbColor = lineModels[0]?.color ?? profileColor(option.color)
-                    const doneColor = profileColor(replayProgression.fill.color, rgbColor)
-                    const gradientColor = element.gradient?.color
-                                          ? colord(setColor(element.gradient)).toRgbString()
-                                          : doneColor
-                    const fill = (element.gradient?.show ?? true)
-                                 ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                     {offset: 0.2, color: __.ui.ui.RGB2RGBA(gradientColor, 0.5)},
-                                     {offset: 1, color: __.ui.ui.RGB2RGBA(gradientColor, 0.0)},
-                                 ])
-                                 : __.ui.ui.RGB2RGBA(gradientColor, 0.5)
+                    const doneColor = profileColor(progressionStyle.fill.color, rgbColor)
+                    const gradientColor = replayGradientColor ?? doneColor
+                    const rgba = colord(gradientColor).toRgb()
+                    const areaImage = createProfileCurveGradient({
+                        width: chartWidth,
+                        height: chartHeight,
+                        plotRect: gridRect,
+                        baseline,
+                        segments: [points.map(([x, y]) => ({x, y}))],
+                        color: [rgba.r, rgba.g, rgba.b],
+                        alpha: 0.5 * (rgba.a ?? 1),
+                        fade: element?.gradient?.show ?? true,
+                    })
 
                     return {
                         id:         dataset.id ?? option.dataset ?? index,
-                        areaPoints: [
-                            [points[0][0], baseline],
-                            ...points,
-                            [points[points.length - 1][0], baseline],
-                        ],
                         linePoints: points,
-                        fill,
+                        areaImage,
                         lineModels,
                     }
                 })
@@ -883,8 +1070,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         const showRemainingOverlay = isJourneyReplayActive
                                      && replayTrace.remaining.useDefinedTrackStyle === false
                                      && replayTrace.mode === 'full'
-        const remainingColor = profileColor(replayTrace.remaining.color, replayProgression.fill.color)
-        const doneColor = profileColor(replayProgression.fill.color, replayProgression.fill.color)
+        const remainingColor = profileColor(replayTrace.remaining.color, progressionStyle.fill.color)
+        const doneColor = profileColor(progressionStyle.fill.color, progressionStyle.fill.color)
         const overlayCacheKey = [
             cacheKey,
             doneColor,
@@ -893,19 +1080,21 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         ].join(':')
 
         const shouldReplaceChildren = _replayProfileGraphics.current.renderedKey !== overlayCacheKey
-        if (_replayProfileGraphics.current.key !== overlayCacheKey) {
+        if (shouldReplaceChildren) {
             const completedChildren = geometries.flatMap(geometry => [
-                {
-                    id:      `${REPLAY_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:area`,
-                    type:    'polygon',
-                    silent:  true,
-                    z:       8,
-                    shape:   {points: geometry.areaPoints},
-                    style:   {
-                        fill:    geometry.fill,
-                        opacity: 1,
+                ...(geometry.areaImage ? [{
+                    id: `${REPLAY_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:area`,
+                    type: 'image',
+                    silent: true,
+                    z: 8,
+                    style: {
+                        image: geometry.areaImage,
+                        x: 0,
+                        y: 0,
+                        width: chartWidth,
+                        height: chartHeight,
                     },
-                },
+                }] : []),
                 ...geometry.lineModels.map(lineModel => ({
                     id:      `${REPLAY_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:line:${lineModel.key}`,
                     type:    'polyline',
@@ -942,7 +1131,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                       : []
 
             _replayProfileGraphics.current = {
-                key:               overlayCacheKey,
+                key:               cacheKey,
                 renderedKey:       null,
                 geometries,
                 completedChildren,
@@ -998,8 +1187,9 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         chartPixelFromSample,
         data,
         element,
+        replayProfileColor,
         replayProfileInfo.useTrackStyle,
-        replayProgression.fill.color,
+        replayProgression,
         replayTrace.mode,
         replayTrace.remaining.color,
         replayTrace.remaining.useDefinedTrackStyle,
@@ -1207,12 +1397,19 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         if (!data?.dataset || !data?.dimensions) {
             return null
         }
+        const profileAreaGraphics = getProfileAreaGradientGraphics(chart).graphics
 
         const resolvedReplayState = resolveReplayVisibilityState({replay: replayState})
-        const visible = resolvedReplayState?.active
+        const replayPhase = resolvedReplayState?.framePhase ?? replayState?.replayFramePhase
+        const isProfilePlaybackPhase = !basicReplayProfile
+            || replayPhase?.kind === 'replay'
+            || replayPhase?.slot === 'replay'
+        const visible = isProfilePlaybackPhase && (
+            resolvedReplayState?.active
             || resolvedReplayState?.paused
             || resolvedReplayState?.playing
             || replayState?.toolbarVisible
+        )
         const controllerSample = controllerSampleOverride
                                  ?? resolvedReplayState?.sample
                                  ?? __.ui.replay?.controller?.currentSample?.()
@@ -1221,7 +1418,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                 ? (controllerSample ?? resolvedReplayState?.sample)
                                 : (resolvedReplayState?.sample ?? controllerSample))
                              : null
-        const lockedSample = !activeSample && locked ? lockedProfileSample : null
+        const lockedSample = !basicReplayProfile && !activeSample && locked ? lockedProfileSample : null
         const displaySample = activeSample ?? lockedSample
         const hoverSample = replayState?.hoverSample
         const metricState = activeSample
@@ -1230,6 +1427,10 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                 totalDistance: profileTooltipMeta.totalDistanceFromStart,
                                 direction:     1,
                             } : null)
+        const replayProgressionStyle = normalizeJourneyReplayProgressionStyle(
+            replayState?.progression ?? lgs.stores.replay?.progression ?? replayProgression,
+        )
+        const profileProgressionStyle = basicReplayProfile ? replayProgressionStyle : replayProgression
         const overlayGraphics = replayMetricGraphic(hoverSample ?? displaySample, metricState, chart)
         if (!activeSample) {
             _replayProfileGraphics.current.renderedKey = null
@@ -1239,38 +1440,38 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
         const graphics = activeSample
                          ? [
-                             ...replayCompletedGraphics(activeSample, chart),
-                             ...lockedGuideGraphics(activeSample, chart),
+                             ...replayCompletedGraphics(activeSample, chart, profileProgressionStyle),
+                             ...(basicReplayProfile ? [] : lockedGuideGraphics(activeSample, chart)),
                              replayMarkerGraphic({
                                  id:     REPLAY_PROFILE_CURRENT_MARKER_GRAPHIC,
                                  sample: activeSample,
                                  chart,
                                  z:      20,
                              }),
-                             replayMarkerGraphic({
+                             ...(!basicReplayProfile ? [replayMarkerGraphic({
                                  id:     REPLAY_PROFILE_HOVER_MARKER_GRAPHIC,
                                  sample: hoverSample,
                                  chart,
                                  z:      21,
-                             }),
+                             })] : []),
                              replayProfileOverlayResetGraphic(),
                              ...overlayGraphics,
                          ]
                          : lockedSample
                            ? [
-                               ...lockedGuideGraphics(lockedSample, chart),
+                               ...(basicReplayProfile ? [] : lockedGuideGraphics(lockedSample, chart)),
                                replayMarkerGraphic({
                                    id:     REPLAY_PROFILE_CURRENT_MARKER_GRAPHIC,
                                    sample: lockedSample,
                                    chart,
                                    z:      20,
                                }),
-                               replayMarkerGraphic({
+                               ...(!basicReplayProfile ? [replayMarkerGraphic({
                                    id:        REPLAY_PROFILE_HOVER_MARKER_GRAPHIC,
                                    sample:    null,
                                    chart,
                                    z:         21,
-                               }),
+                               })] : []),
                                replayProfileOverlayResetGraphic(),
                                ...overlayGraphics,
                            ]
@@ -1278,10 +1479,12 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
 
         return {
             animation: false,
-            graphic: graphics,
+            graphic: [...profileAreaGraphics, ...graphics],
         }
     }, [
+        basicReplayProfile,
         data,
+        replayProgression,
         replayCompletedGraphics,
         replayMetricGraphic,
         replayMarkerGraphic,
@@ -1290,6 +1493,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         locked,
         lockedProfileSample,
         profileTooltipMeta.totalDistanceFromStart,
+        getProfileAreaGradientGraphics,
                                                     showJourneyReplayLiveData,
     ])
 
@@ -1466,7 +1670,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     }, [replayProfileOption, locked, lockedProfileSample, preview])
 
     useEffect(() => {
-        if (preview) {
+        if (preview || basicReplayProfile) {
             return
         }
 
@@ -1491,6 +1695,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         handleJourneyReplayProfileHover,
         handleJourneyReplayProfileLeave,
         handleProfileBlankClick,
+        basicReplayProfile,
         preview,
     ])
 
@@ -1652,6 +1857,37 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
     }, [baseOptions, clearJourneyReplayProfileGraphicsCache, element, data, preview, handleResize, hasAltitudeData])
 
+    useEffect(() => {
+        const chart = _instance.current?.getEchartsInstance?.()
+        if (!chart || chart.isDisposed?.()) {
+            return
+        }
+
+        /** Update the cached curve-relative area images after ECharts lays out the plot. */
+        const synchronizeProfileGradient = () => {
+            if (chart.isDisposed?.()) {
+                return
+            }
+
+            const result = getProfileAreaGradientGraphics(chart)
+            if (result.changed && result.graphicUpdates.length > 0) {
+                chart.setOption({graphic: result.graphicUpdates}, {
+                    silent: true,
+                    lazyUpdate: false,
+                })
+            }
+        }
+
+        chart.on('finished', synchronizeProfileGradient)
+        const frame = requestAnimationFrame(synchronizeProfileGradient)
+        return () => {
+            cancelAnimationFrame(frame)
+            if (!chart.isDisposed?.()) {
+                chart.off('finished', synchronizeProfileGradient)
+            }
+        }
+    }, [getProfileAreaGradientGraphics])
+
     if (!data || !element || !hasAltitudeData) {
         return null
     }
@@ -1663,12 +1899,16 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             style={{
                 width:           width,
                 height:          height,
-                padding:         padding,
-                backgroundColor: element.background.show ? setColor(element.background) : 'transparent',
-                backdropFilter: element.background.blur ? 'blur(var(--lgs-blur-s))' : 'none',
-                border:          element.border.show
-                                 ? `${borderWidth}px solid ${setColor(element.border)}`
-                                 : 'none',
+                padding:         basicReplayProfile ? 0 : padding,
+                backgroundColor: basicReplayProfile || !element.background.show
+                    ? 'transparent'
+                    : setColor(element.background),
+                backdropFilter: basicReplayProfile || !element.background.blur
+                    ? 'none'
+                    : 'blur(var(--lgs-blur-s))',
+                border:          basicReplayProfile || !element.border.show
+                    ? 'none'
+                    : `${borderWidth}px solid ${setColor(element.border)}`,
                 overflow:        'hidden',
             }}
         >
