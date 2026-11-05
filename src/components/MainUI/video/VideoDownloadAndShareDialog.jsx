@@ -39,8 +39,17 @@ import './style.css'
 const DEFAULT_VIDEO_FILENAME = 'video'
 const DEFAULT_IMAGE_FILENAME = 'record'
 
+/**
+ * Keep Unicode letters in a media filename while removing unsafe characters.
+ * @param {string} value - Raw filename stem.
+ * @param {string} [fallback=DEFAULT_VIDEO_FILENAME] - Value used when the stem is empty after sanitization.
+ * @returns {string} A trimmed, filesystem-safe filename stem.
+ */
 const sanitizeFilenameStem = (value, fallback = DEFAULT_VIDEO_FILENAME) => {
-    const sanitized = `${value ?? ''}`.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim()
+    const sanitized = `${value ?? ''}`
+        .normalize('NFC')
+        .replace(/[^\p{L}\p{M}\p{N}_\-\s]/gu, '')
+        .trim()
     return sanitized || fallback
 }
 
@@ -422,15 +431,15 @@ export const VideoDownloadAndShareDialog = () => {
     }, [isRecordingInfoOpen])
 
     /**
-     * Handle filename input with sanitization.
+     * Preserve the user's text while editing and validate it for download availability.
+     * @param {Event} event - Native Web Awesome input event.
      */
     const handleFilenameChange = useCallback((event) => {
-        const value = event.target?.value || ''
-        const sanitized = value.replace(/[^a-zA-Z0-9_\-\s]/g, '')
-        _mediaBlob.current.filename = sanitized
-        const canProceed = sanitized.length > 0
+        const value = `${event.target?.value ?? ''}`
+        const canProceed = sanitizeFilenameStem(value, '').length > 0
+        _mediaBlob.current.filename = value
         setCanDownloadAndShare(canProceed)
-        setFilename(sanitized)
+        setFilename(value)
     }, [])
 
     /**
