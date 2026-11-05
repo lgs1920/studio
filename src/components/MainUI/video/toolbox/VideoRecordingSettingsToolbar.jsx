@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,7 +25,7 @@ import {
     prepareVideoEditingUi,
 } from '@Components/MainUI/video/videoEditingCleanup'
 import { BASIC_REPLAY_SETTINGS_DRAWER, REPLAY_DRAWER, VIDEO_CROP_ZONE } from '@Core/constants'
-import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
+import { UI_ACTIONS, UI_LABELS } from '@Core/ui/metadata/uiActionCatalog'
 import {
     DEFAULT_REPLAY_VIDEO_FPS_INDEX,
     DEFAULT_REPLAY_VIDEO_QUALITY_INDEX,
@@ -45,14 +45,26 @@ import {
 } from '@Core/ui/replay/ReplayModeSettings'
 import {isJourneyReplayDryRunActive} from '@Core/ui/replay/JourneyReplayRuntime'
 import {createReplayPOISpeedProfile} from '@Core/ui/replay/ReplayPOISpeedProfile'
+import {getBasicReplayWidgetVisibility} from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {currentReplayJourney} from '@Core/ui/replay/ReplayUserModeConstants'
 import {
     normalizeBasicReplaySettings,
     resolveBasicReplaySettings,
     syncJourneyBasicReplayDuration,
     syncJourneyBasicReplayEndFocus,
+    syncJourneyBasicReplayWidgetVisibility,
 } from '@Core/ui/replay/ReplayUserModes'
-import { WaButton, WaDivider, WaIcon, WaNumberInput, WaSwitch, WaTooltip } from '@awesome.me/webawesome/dist/react'
+import {
+    WaButton,
+    WaDivider,
+    WaIcon,
+    WaNumberInput,
+    WaSwitch,
+    WaTab,
+    WaTabGroup,
+    WaTabPanel,
+    WaTooltip,
+} from '@awesome.me/webawesome/dist/react'
 import { memo, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSnapshot } from 'valtio'
@@ -67,23 +79,46 @@ const RATIO_POPUP = 'ratio'
 const VIDEO_PRESET_POPUP = 'video-preset'
 const COMPACT_SETTINGS_POPUP = 'compact-replay-settings'
 
+/** Forward a visible Basic Replay label click to its Web Awesome control. */
+const activateBasicReplayControl = (event, controlId) => {
+    const control = document.getElementById(controlId)
+    if (!control) {
+        return
+    }
+
+    event.preventDefault()
+    control.click()
+}
+
 /**
  * Render a Basic Replay setting with equal legend and value columns.
  * @param {Object} props - Setting row properties.
  * @param {string} props.label - Visible label and accessible group name.
- * @param {string} [props.icon] - Optional legend icon.
+ * @param {string} [props.labelFor] - ID of a control activated and named by the visible label.
+ * @param {string|Object} [props.icon] - Optional legend icon or catalog icon properties.
  * @param {boolean} [props.iconSpacer=false] - Reserve the icon column without rendering an icon.
+ * @param {string} [props.valueClassName] - Optional modifier for the value column.
  * @param {React.ReactNode} props.children - Setting value controls.
  * @returns {JSX.Element} A two-column setting row.
  */
-const BasicReplaySettingsRow = ({label, icon, iconSpacer = false, children}) => (
+const BasicReplaySettingsRow = ({label, labelFor, icon, iconSpacer = false, valueClassName, children}) => (
     <div className="basic-replay-settings-row basic-replay-settings-row--split" role="group" aria-label={label}>
         <div className="basic-replay-settings-row__legend">
-            {icon && <WaIcon name={icon} variant="regular" label=""/>}
+            {icon && <WaIcon {...(typeof icon === 'string' ? {name: icon, variant: 'regular'} : icon)} label=""/>}
             {!icon && iconSpacer && <span className="basic-replay-settings-row__legend-icon-spacer" aria-hidden="true"/>}
-            <span>{label}</span>
+            {labelFor ? (
+                <label
+                    id={`${labelFor}-label`}
+                    htmlFor={labelFor}
+                    onClick={event => activateBasicReplayControl(event, labelFor)}
+                >
+                    {label}
+                </label>
+            ) : <span>{label}</span>}
         </div>
-        <div className="basic-replay-settings-row__value">{children}</div>
+        <div className={`basic-replay-settings-row__value${valueClassName ? ` ${valueClassName}` : ''}`}>
+            {children}
+        </div>
     </div>
 )
 
@@ -151,6 +186,7 @@ export const VideoRecordingSettingsToolbar = memo(({
         user: getBasicReplaySettings(replaySettings),
         journey: getBasicReplaySettings(basicJourney?.replay),
     })
+    const basicWidgetVisibility = getBasicReplayWidgetVisibility(basicJourney)
     const basicDuration = resolvedBasicSettings.duration
     const basicSampleCount = resolvedBasicSettings.sampleCount
     const basicEndFocus = resolvedBasicSettings.endFocus
@@ -349,6 +385,12 @@ export const VideoRecordingSettingsToolbar = memo(({
         updateBasicEndFocus({duration: rawDuration})
     }, [updateBasicEndFocus])
 
+    /** Persist Basic Replay widget visibility on the active Journey. */
+    const handleBasicWidgetVisibilityChange = useCallback((widget, event) => {
+        const checked = event.currentTarget?.checked ?? event.target?.checked
+        syncJourneyBasicReplayWidgetVisibility({[widget]: checked === true}, currentReplayJourney())
+    }, [])
+
     useEffect(() => {
         const safeFPS = Number.isInteger(lgs.settings.ui.video?.fps)
             && lgs.settings.ui.video.fps >= 0
@@ -443,14 +485,15 @@ export const VideoRecordingSettingsToolbar = memo(({
         return null
     }
 
-    const basicSettingsContent = (
-        <div className="video-recording-settings-popup video-recording-settings-popup--basic lgs-card wa-theme-lgs1920">
-            <BasicReplaySettingsRow label="Dry Run" icon="bolt">
+    const basicReplayPinnedControls = (
+        <div className="basic-replay-settings-pinned">
+            <BasicReplaySettingsRow label="Dry Run" labelFor="basic-replay-dry-run" icon="bolt">
                 <div className="basic-replay-settings-row__value--dry-run">
                     <WaSwitch
+                        id="basic-replay-dry-run"
                         className="basic-replay-dry-run-switch"
                         size="xs"
-                        aria-label="Dry Run"
+                        aria-labelledby="basic-replay-dry-run-label"
                         checked={dryRunEnabled}
                         onChange={handleDryRunChange}
                     />
@@ -471,6 +514,11 @@ export const VideoRecordingSettingsToolbar = memo(({
             <BasicReplaySettingsRow label="Sampling" icon="route">
                 <BasicReplaySamplingSettings/>
             </BasicReplaySettingsRow>
+        </div>
+    )
+
+    const basicReplayScrollableContent = (
+        <div className="basic-replay-settings-scroll-content">
             <WaDivider className="basic-replay-settings-divider"/>
             <div className="basic-replay-settings-core">
                 <BasicReplaySettingsRow label="Ratio" icon="crop-simple">
@@ -509,38 +557,92 @@ export const VideoRecordingSettingsToolbar = memo(({
             {basicPreparation && <WaDivider className="basic-replay-settings-divider"/>}
             {basicPreparation && <BasicReplayAppearanceSettings/>}
             {basicPreparation && <WaDivider className="basic-replay-settings-divider"/>}
-            {basicPreparation && <BasicReplayPOISettings/>}
             {basicPreparation && (
-                <>
-                    <WaDivider className="basic-replay-settings-divider"/>
-                    <BasicReplaySettingsRow label="End Focus" icon="rotate">
-                        <WaSwitch
-                            className="basic-replay-end-focus-switch"
-                            size="xs"
-                            aria-label="End Focus"
-                            checked={basicEndFocus.enabled}
-                            onChange={handleBasicEndFocusSwitchChange}
-                        />
-                    </BasicReplaySettingsRow>
-                    {basicEndFocus.enabled && (
-                        <BasicReplaySettingsRow label="Duration" iconSpacer>
-                            <WaNumberInput
-                                id="basic-replay-end-focus-duration"
-                                className="basic-replay-end-focus-duration lgs--short-input"
-                                appearance="filled"
-                                size="s"
-                                type="number"
-                                aria-label="End Focus duration in seconds"
-                                min={1}
-                                max={5}
-                                step={1}
-                                value={basicEndFocus.duration}
-                                onInput={handleBasicEndFocusDurationInput}
-                            />
-                        </BasicReplaySettingsRow>
-                    )}
-                </>
+                <WaTabGroup className="basic-replay-settings-tabs" active="basic-replay-pois">
+                    <WaTab slot="nav" panel="basic-replay-pois">{UI_LABELS.pois}</WaTab>
+                    <WaTab slot="nav" panel="basic-replay-widgets">{UI_LABELS.widgets}</WaTab>
+                    <WaTab slot="nav" panel="basic-replay-stop-clip">{UI_LABELS.clips}</WaTab>
+                    <WaTabPanel name="basic-replay-pois" active>
+                        <BasicReplayPOISettings/>
+                    </WaTabPanel>
+                    <WaTabPanel name="basic-replay-widgets">
+                        <section className="basic-replay-widget-settings" aria-label={UI_LABELS.widgets}>
+                            <BasicReplaySettingsRow
+                                label={UI_ACTIONS.showCompassWidget.label}
+                                labelFor="basic-replay-show-compass"
+                                icon={UI_ACTIONS.showCompassWidget.icon}
+                            >
+                                <WaSwitch
+                                    id="basic-replay-show-compass"
+                                    className="basic-replay-widget-settings__switch"
+                                    size="xs"
+                                    aria-labelledby="basic-replay-show-compass-label"
+                                    checked={basicWidgetVisibility.showCompass}
+                                    onChange={event => handleBasicWidgetVisibilityChange('showCompass', event)}
+                                />
+                            </BasicReplaySettingsRow>
+                            <BasicReplaySettingsRow
+                                label={UI_ACTIONS.showProfileWidget.label}
+                                labelFor="basic-replay-show-profile"
+                                icon={UI_ACTIONS.showProfileWidget.icon}
+                            >
+                                <WaSwitch
+                                    id="basic-replay-show-profile"
+                                    className="basic-replay-widget-settings__switch"
+                                    size="xs"
+                                    aria-labelledby="basic-replay-show-profile-label"
+                                    checked={basicWidgetVisibility.showProfile}
+                                    onChange={event => handleBasicWidgetVisibilityChange('showProfile', event)}
+                                />
+                            </BasicReplaySettingsRow>
+                        </section>
+                    </WaTabPanel>
+                    <WaTabPanel name="basic-replay-stop-clip">
+                        <section className="basic-replay-stop-clip-settings" aria-label={UI_LABELS.clips}>
+                            <BasicReplaySettingsRow label="End Focus" labelFor="basic-replay-end-focus" icon="rotate">
+                                <WaSwitch
+                                    id="basic-replay-end-focus"
+                                    className="basic-replay-end-focus-switch"
+                                    size="xs"
+                                    aria-labelledby="basic-replay-end-focus-label"
+                                    checked={basicEndFocus.enabled}
+                                    onChange={handleBasicEndFocusSwitchChange}
+                                />
+                            </BasicReplaySettingsRow>
+                            {basicEndFocus.enabled && (
+                                <BasicReplaySettingsRow
+                                    label="Duration"
+                                    iconSpacer
+                                    valueClassName="basic-replay-settings-row__value--align-end"
+                                >
+                                    <WaNumberInput
+                                        id="basic-replay-end-focus-duration"
+                                        className="basic-replay-end-focus-duration lgs--short-input"
+                                        appearance="filled"
+                                        size="s"
+                                        type="number"
+                                        aria-label="End Focus duration in seconds"
+                                        min={1}
+                                        max={5}
+                                        step={1}
+                                        value={basicEndFocus.duration}
+                                        onInput={handleBasicEndFocusDurationInput}
+                                    />
+                                </BasicReplaySettingsRow>
+                            )}
+                        </section>
+                    </WaTabPanel>
+                </WaTabGroup>
             )}
+        </div>
+    )
+
+    const basicSettingsContent = (
+        <div className="video-recording-settings-popup video-recording-settings-popup--basic lgs-card wa-theme-lgs1920">
+            {basicReplayPinnedControls}
+            <div className="basic-replay-settings-scroll-area">
+                <LGSScrollbars autoHide={false}>{basicReplayScrollableContent}</LGSScrollbars>
+            </div>
         </div>
     )
 
@@ -559,7 +661,7 @@ export const VideoRecordingSettingsToolbar = memo(({
             </span>
             <PanelActions/>
             <div className="basic-replay-settings-drawer__content">
-                <LGSScrollbars autoHide={false}>{basicSettingsContent}</LGSScrollbars>
+                {basicSettingsContent}
             </div>
             <DrawerFooter slot="footer"/>
         </WaDrawer>

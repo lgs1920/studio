@@ -49,6 +49,12 @@ legacy `simple` key only when it is absent. Settings hydration migrates legacy
 values to `basic`, preferring `basic` when both keys exist. Every subsequent
 write stores `basic` and removes `simple`.
 
+The Basic settings popup has a Widgets section with Show Compass and Show
+Profile switches. Both default to enabled. Changes are written to the active
+Journey's `replay.basic` settings rather than application-wide Replay defaults.
+The Replay widget policy applies these choices to the Basic preparation preview,
+playback composition, and export; Expert Replay keeps its existing widget policy.
+
 The Basic settings popup offers 10, 15, 20, 30, 45, and 60-second durations,
 border/fill color swatches, a border toggle, and four trace/marker size choices.
 It includes global POIs by default and lets the user select a 50–500 metre

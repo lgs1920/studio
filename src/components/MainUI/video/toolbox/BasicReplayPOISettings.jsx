@@ -37,6 +37,17 @@ const VISIBILITY_MODE_LABELS = {
     user: 'User choice',
 }
 
+/** Forward a visible Basic Replay label click to its Web Awesome control. */
+const activateBasicReplayControl = (event, controlId) => {
+    const control = document.getElementById(controlId)
+    if (!control) {
+        return
+    }
+
+    event.preventDefault()
+    control.click()
+}
+
 /** Render and persist Basic Replay POI visibility and animation preferences. */
 export const BasicReplayPOISettings = () => {
     const settings = useSnapshot(lgs.settings.ui.replay)
@@ -139,12 +150,18 @@ export const BasicReplayPOISettings = () => {
             <div className="basic-replay-poi-settings__global-filter" role="group" aria-label="Global POI filter">
                 <div className="basic-replay-poi-settings__global-toggle">
                     <WaIcon {...UI_ICONS.pointOfInterestMarker} label=""/>
-                    <span>{'Accept global POIs'}</span>
+                    <label
+                        id="basic-replay-global-poi-inclusion-label"
+                        htmlFor="basic-replay-global-poi-inclusion"
+                        onClick={event => activateBasicReplayControl(event, 'basic-replay-global-poi-inclusion')}
+                    >
+                        {'Accept global POIs'}
+                    </label>
                     <WaSwitch
                         id="basic-replay-global-poi-inclusion"
                         className="basic-replay-poi-settings__global-switch"
                         size="xs"
-                        aria-label="Accept global POIs"
+                        aria-labelledby="basic-replay-global-poi-inclusion-label"
                         checked={behavior.includeGlobalPois}
                         onInput={changeGlobalPOIInclusion}
                     />
@@ -169,19 +186,21 @@ export const BasicReplayPOISettings = () => {
                 />
             </div>
             <div className="basic-replay-poi-settings__global-summary">
-                <span aria-live="polite">
-                    {`${globalPOICount} ${globalPOICount === 1 ? 'POI' : 'POIs'}`}
-                </span>
-                <WaButton
-                    className="basic-replay-poi-settings__global-editor"
-                    size="s"
-                    appearance="plain"
-                    variant="brand"
-                    onClick={openPOIEditor}
-                >
-                    <WaIcon {...UI_ACTIONS.managePOIs.icon} size="s"/>
-                    {UI_ACTIONS.managePOIs.label}
-                </WaButton>
+                <div className="basic-replay-poi-settings__global-summary-content">
+                    <span aria-live="polite">
+                        {`${globalPOICount} ${globalPOICount === 1 ? 'POI' : 'POIs'}`}
+                    </span>
+                    <WaButton
+                        className="basic-replay-poi-settings__global-editor"
+                        size="s"
+                        appearance="plain"
+                        variant="brand"
+                        onClick={openPOIEditor}
+                    >
+                        <WaIcon {...UI_ACTIONS.managePOIs.icon} size="s"/>
+                        {UI_ACTIONS.managePOIs.label}
+                    </WaButton>
+                </div>
             </div>
             <div className="basic-replay-settings-row basic-replay-settings-row--split" role="group" aria-label="Show at start">
                 <div className="basic-replay-settings-row__legend">
@@ -212,7 +231,13 @@ export const BasicReplayPOISettings = () => {
             <div className="basic-replay-settings-row basic-replay-settings-row--split" role="group" aria-label="Animation">
                 <div className="basic-replay-settings-row__legend">
                     <span className="basic-replay-settings-row__legend-icon-spacer" aria-hidden="true"/>
-                    <span>{'Animation'}</span>
+                    <label
+                        id="basic-replay-poi-animation-label"
+                        htmlFor="basic-replay-poi-animation"
+                        onClick={event => activateBasicReplayControl(event, 'basic-replay-poi-animation')}
+                    >
+                        {'Animation'}
+                    </label>
                 </div>
                 <div className="basic-replay-settings-row__value basic-replay-settings-row__value--poi-animation">
                     <WaTooltip for="basic-replay-poi-animation" placement="top">
@@ -222,7 +247,7 @@ export const BasicReplayPOISettings = () => {
                         id="basic-replay-poi-animation"
                         className="basic-replay-poi-settings__switch"
                         size="xs"
-                        aria-label="Animation"
+                        aria-labelledby="basic-replay-poi-animation-label"
                         checked={behavior.animatePoisDuringJourneyReplay}
                         onInput={changeAnimation}
                     />
@@ -233,7 +258,7 @@ export const BasicReplayPOISettings = () => {
                     <span className="basic-replay-settings-row__legend-icon-spacer" aria-hidden="true"/>
                     <span>{'Duration'}</span>
                 </div>
-                <div className="basic-replay-settings-row__value">
+                <div className="basic-replay-settings-row__value basic-replay-settings-row__value--align-end">
                     <WaTooltip for="basic-replay-poi-duration" placement="top">
                         {'Duration'}
                     </WaTooltip>

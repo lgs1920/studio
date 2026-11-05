@@ -24,7 +24,8 @@ import {
     VIDEO_CROP_ZONE,
     VIDEO_WIDGETS_BOARD,
 } from '@Core/constants'
-import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
+import {getBasicReplaySettings} from './ReplayModeSettings'
+import {currentReplayJourney, isJourneyReplayBasicMode} from './ReplayUserModeConstants'
 
 /**
  * Widget types that must be registered automatically on every Replay video
@@ -67,6 +68,19 @@ export const getReplayVideoWidgetType = widgetId => typeof widgetId === 'string'
 const isBasicReplayActive = () => isJourneyReplayBasicMode()
 
 /**
+ * Resolve the per-Journey visibility preferences for Basic Replay widgets.
+ * @param {Object|null} [journey=currentReplayJourney()] - Journey supplying Replay settings.
+ * @returns {{showCompass: boolean, showProfile: boolean}} Basic widget visibility.
+ */
+export const getBasicReplayWidgetVisibility = (journey = currentReplayJourney()) => {
+    const basic = getBasicReplaySettings(journey?.replay)
+    return {
+        showCompass: basic?.showCompass !== false,
+        showProfile: basic?.showProfile !== false,
+    }
+}
+
+/**
  * Resolve the instance ID used when Replay automatically registers a widget type.
  *
  * @param {string} widgetType - Widget type requested by Replay.
@@ -85,16 +99,36 @@ export const getReplayVideoWidgetRegistrationId = (widgetType, {basicReplay = is
  *
  * @param {Object} options - Replay widget policy options.
  * @param {boolean} [options.basicReplay] - Whether Basic Replay is active.
+ * @param {{showCompass: boolean, showProfile: boolean}} [options.widgetVisibility] - Per-Journey widget visibility.
  * @returns {string[]} Required widget type identifiers.
  */
-export const getReplayVideoWidgetTypes = ({basicReplay = isBasicReplayActive()} = {}) => (
-    basicReplay ? REPLAY_VIDEO_BASIC_WIDGET_TYPES : REPLAY_VIDEO_WIDGET_TYPES
-)
+export const getReplayVideoWidgetTypes = ({
+    basicReplay = isBasicReplayActive(),
+    widgetVisibility = getBasicReplayWidgetVisibility(),
+} = {}) => basicReplay
+    ? REPLAY_VIDEO_BASIC_WIDGET_TYPES.filter(widgetType => (
+        (widgetType !== COMPASS_WIDGET || widgetVisibility.showCompass)
+        && (widgetType !== PROFILE_WIDGET || widgetVisibility.showProfile)
+    ))
+    : REPLAY_VIDEO_WIDGET_TYPES
 
-export const isReplayVideoWidgetAllowed = (widgetId, {basicReplay = isBasicReplayActive()} = {}) => {
+/**
+ * Determine whether a widget instance may appear in the current Replay composition.
+ * @param {string} widgetId - Widget type or instance identifier.
+ * @param {Object} options - Replay mode and widget visibility options.
+ * @param {boolean} [options.basicReplay] - Whether Basic Replay restrictions apply.
+ * @param {{showCompass: boolean, showProfile: boolean}} [options.widgetVisibility] - Per-Journey widget visibility.
+ * @returns {boolean} Whether the widget is included in Replay.
+ */
+export const isReplayVideoWidgetAllowed = (widgetId, {
+    basicReplay = isBasicReplayActive(),
+    widgetVisibility = getBasicReplayWidgetVisibility(),
+} = {}) => {
     const widgetType = getReplayVideoWidgetType(widgetId)
     if (!widgetType || REPLAY_VIDEO_NON_CONTENT_TYPES.has(widgetType)
-        || (!basicReplay && widgetId === BASIC_REPLAY_PROFILE_WIDGET_ID)) {
+        || (!basicReplay && widgetId === BASIC_REPLAY_PROFILE_WIDGET_ID)
+        || (basicReplay && widgetType === COMPASS_WIDGET && !widgetVisibility.showCompass)
+        || (basicReplay && widgetType === PROFILE_WIDGET && !widgetVisibility.showProfile)) {
         return false
     }
 
@@ -103,12 +137,21 @@ export const isReplayVideoWidgetAllowed = (widgetId, {basicReplay = isBasicRepla
         : true
 }
 
+/**
+ * Filter and de-duplicate registered widget IDs for Replay composition.
+ * @param {string[]} widgetKeys - Registered widget identifiers.
+ * @param {Object} options - Replay mode and widget visibility options.
+ * @param {boolean} [options.basicReplay] - Whether Basic Replay restrictions apply.
+ * @param {{showCompass: boolean, showProfile: boolean}} [options.widgetVisibility] - Per-Journey widget visibility.
+ * @returns {string[]} Widget identifiers allowed for Replay.
+ */
 export const filterReplayVideoWidgetKeys = (widgetKeys, options = {}) => {
     const basicReplay = options.basicReplay ?? isBasicReplayActive()
+    const widgetVisibility = options.widgetVisibility ?? getBasicReplayWidgetVisibility()
     const seenBasicCompass = new Set()
     const seenBasicProfile = new Set()
     return [...new Set(widgetKeys ?? [])].filter(widgetId => {
-        if (!isReplayVideoWidgetAllowed(widgetId, {basicReplay})) {
+        if (!isReplayVideoWidgetAllowed(widgetId, {basicReplay, widgetVisibility})) {
             return false
         }
 
@@ -144,8 +187,9 @@ export const getReplayVideoWidgetKeys = ({
     widgetsBoard = VIDEO_WIDGETS_BOARD,
     basicReplay = isBasicReplayActive(),
 } = {}) => {
+    const widgetVisibility = getBasicReplayWidgetVisibility()
     if (Array.isArray(widgetKeys)) {
-        return filterReplayVideoWidgetKeys(widgetKeys, {basicReplay})
+        return filterReplayVideoWidgetKeys(widgetKeys, {basicReplay, widgetVisibility})
     }
 
     const entries = new Map(
@@ -158,8 +202,8 @@ export const getReplayVideoWidgetKeys = ({
 
     const orderedWidgetIds = [...entries.entries()]
         .filter(([widgetId, entry]) => entry?.widgetsBoard === widgetsBoard
-            && isReplayVideoWidgetAllowed(widgetId, {basicReplay}))
+            && isReplayVideoWidgetAllowed(widgetId, {basicReplay, widgetVisibility}))
         .sort(([, left], [, right]) => (left?.zIndex || 0) - (right?.zIndex || 0))
         .map(([widgetId]) => widgetId)
-    return filterReplayVideoWidgetKeys(orderedWidgetIds, {basicReplay})
+    return filterReplayVideoWidgetKeys(orderedWidgetIds, {basicReplay, widgetVisibility})
 }

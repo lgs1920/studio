@@ -21,6 +21,7 @@ import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/Wi
 import { resolveWidgetCatalogGroup } from '@Core/ui/widget-manager/resolveWidgetCatalogGroup'
 import {
     filterReplayVideoWidgetKeys,
+    getBasicReplayWidgetVisibility,
     getReplayVideoWidgetRegistrationId,
     getReplayVideoWidgetTypes,
 } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
@@ -37,6 +38,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     const list = useSnapshot(lgs.stores.ui.widget.list)
     const video = useSnapshot(lgs.stores.ui.video)
     const replay = useSnapshot(lgs.stores.replay)
+    const main = useOptionalSnapshot(lgs.stores.main)
     const cropperState = useOptionalSnapshot(context, VIDEO_WIDGETS_CONTEXT_FALLBACK)
     // The editor can stay open while the video widgets are shown in preview.
     // Rehydration and invalidation must only run while an actual capture phase
@@ -48,6 +50,9 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     const synchronizedRecording = video.exporting === true
                                   && replay.recordingSync === true
     const basicReplay = isJourneyReplayBasicMode({replay})
+    const widgetVisibility = getBasicReplayWidgetVisibility(main?.theJourney)
+    const showBasicCompass = widgetVisibility.showCompass
+    const showBasicProfile = widgetVisibility.showProfile
     const previewOnly = videoCaptureActive || synchronizedRecording
     const _rehydrateKey = useRef('')
     const allWidgetEntries = Array.from(list.entries())
@@ -58,7 +63,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
         .map(([widgetId]) => widgetId)
     const allowedWidgetIds = new Set(filterReplayVideoWidgetKeys(
         widgetIdsForPolicy,
-        {basicReplay},
+        {basicReplay, widgetVisibility: {showCompass: showBasicCompass, showProfile: showBasicProfile}},
     ))
     const widgetEntries = allWidgetEntries
         .filter(([key]) => allowedWidgetIds.has(key))
@@ -162,7 +167,10 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
             ...(timeline?.widgetManifest ?? []),
             ...resolveReplayTimelineWidgetIds(timeline?.tracks),
         ]
-        for (const widgetType of getReplayVideoWidgetTypes({basicReplay})) {
+        for (const widgetType of getReplayVideoWidgetTypes({
+            basicReplay,
+            widgetVisibility: {showCompass: showBasicCompass, showProfile: showBasicProfile},
+        })) {
             const alreadyRegistered = registeredWidgetTypes.has(widgetType)
             if (!alreadyRegistered) {
                 const widgetId = timelineWidgetIds.find(id => id.split('#')[0] === widgetType)
@@ -180,7 +188,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                 })
             }
         }
-    }, [boardReady, hidden, basicReplay, widgetIds])
+    }, [boardReady, hidden, basicReplay, showBasicCompass, showBasicProfile, widgetIds])
 
     useEffect(() => {
         if (!boardReady || hidden || !videoCaptureActive || !widgetIds) {

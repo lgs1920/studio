@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-24
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -65,6 +65,8 @@ const basicSampleCountPersistTimers = new WeakMap()
 const basicEndFocusPersistTimers = new WeakMap()
 const basicPresentationPersistTimers = new WeakMap()
 const basicPOIBehaviorPersistTimers = new WeakMap()
+/** Debounced persistence timers for Basic Replay widget visibility edits. */
+const basicWidgetVisibilityPersistTimers = new WeakMap()
 const journeyReplayStartPositionPersistPromises = new WeakMap()
 const EXPERT_CAMERA_PERSIST_DELAY_MS = 250
 
@@ -510,7 +512,42 @@ export const defaultBasicReplaySettings = () => {
         ...defaults,
         camera,
         dryRun: false,
+        showCompass: true,
+        showProfile: true,
     }
+}
+
+/**
+ * Persist Basic Replay widget visibility on the active Journey after edits settle.
+ * @param {Object} visibility - Widget visibility updates.
+ * @param {Object|null} [journey=currentReplayJourney()] - Journey receiving the settings.
+ * @returns {{showCompass: boolean, showProfile: boolean}|null} Saved visibility or null without a Journey.
+ */
+export const syncJourneyBasicReplayWidgetVisibility = (visibility = {}, journey = currentReplayJourney()) => {
+    if (!journey) {
+        return null
+    }
+
+    const replay = journey.replay ?? {}
+    const basic = getBasicReplaySettings(replay) ?? {}
+    const nextVisibility = {
+        showCompass: visibility.showCompass === undefined ? basic.showCompass !== false : visibility.showCompass === true,
+        showProfile: visibility.showProfile === undefined ? basic.showProfile !== false : visibility.showProfile === true,
+    }
+    journey.replay = writeBasicReplaySettings(replay, {
+        ...basic,
+        ...nextVisibility,
+    })
+
+    if (typeof journey.persistToDatabase === 'function') {
+        clearTimeout(basicWidgetVisibilityPersistTimers.get(journey))
+        basicWidgetVisibilityPersistTimers.set(journey, setTimeout(() => {
+            basicWidgetVisibilityPersistTimers.delete(journey)
+            void journey.persistToDatabase()
+        }, EXPERT_CAMERA_PERSIST_DELAY_MS))
+    }
+
+    return nextVisibility
 }
 
 /** Persist Basic Replay POI behavior on the active Journey after edits settle. */
@@ -588,6 +625,8 @@ export const normalizeBasicReplaySettings = (settings = {}) => {
         sampleCount: normalizeReplaySampleCount(
             settings?.sampleCount ?? defaults.sampleCount ?? DEFAULT_REPLAY_SAMPLE_COUNT,
         ),
+        showCompass: settings?.showCompass !== false,
+        showProfile: settings?.showProfile !== false,
         dryRun: settings?.dryRun === true,
         camera,
         presentation: resolveBasicReplayPresentation(settings?.presentation, defaults.presentation),

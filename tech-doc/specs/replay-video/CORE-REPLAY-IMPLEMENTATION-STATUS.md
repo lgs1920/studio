@@ -124,6 +124,10 @@ distance slider. Global POI settings default to included at 500 metres and
 persist with application defaults and Journey settings. Changing the filter
 refreshes nearby POIs and recomputes the Replay timing profile and duration.
 These controls have reactive previews and Journey persistence.
+Its Widgets section provides Show Compass and Show Profile switches, enabled by
+default and written to the active Journey's `replay.basic` settings rather than
+application-wide Replay defaults. The Basic Replay widget policy uses them for
+preparation preview and video composition.
 The thin preset reduces the trace scale to 0.65 while keeping the marker at the
 small preset's baseline. Its duration choices include 45 seconds and one minute.
 

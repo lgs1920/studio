@@ -218,12 +218,47 @@
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
     box-sizing: border-box;
     width: 100%;
+    height: 100%;
     max-width: none;
+    max-height: 100%;
     min-width: 0;
+    min-height: 0;
     padding: 0;
     box-shadow: none;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-pinned {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-scroll-area {
+    display: flex;
+    overflow: hidden;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+
+    & .lgs-scrollbars-container {
+        flex: 1 1 auto;
+        min-width: 0;
+        min-height: 0;
+    }
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-scroll-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row--split {
@@ -247,9 +282,14 @@
     text-align: center;
 }
 
-.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__legend > span {
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__legend > :is(span, label) {
     min-width: 0;
     text-align: left;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__legend > label,
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-poi-settings__global-toggle > label {
+    cursor: pointer;
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__legend-icon-spacer {
@@ -266,6 +306,11 @@
     gap: var(--lgs-gutter-xxs);
     container-name: basic-replay-setting-value;
     container-type: inline-size;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__value--align-end {
+    align-items: center;
+    justify-content: flex-end;
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__value--dry-run {
@@ -291,6 +336,71 @@
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-s);
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-widget-settings {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: var(--lgs-gutter-xxs);
+    margin: 0;
+    padding: 0;
+
+    & .basic-replay-settings-row--split {
+        align-items: center;
+    }
+
+    & .basic-replay-settings-row__value {
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    &__switch {
+        flex: 0 0 auto;
+        width: auto;
+        max-width: 100%;
+        margin: 0 0 0 auto;
+    }
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-stop-clip-settings {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: var(--lgs-gutter-xxs);
+    margin: 0;
+    padding: 0;
+
+    & .basic-replay-settings-row--split {
+        align-items: center;
+    }
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-tabs {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    max-height: none;
+
+    &::part(base),
+    &::part(body) {
+        height: auto;
+        max-height: none;
+    }
+
+    & wa-tab-panel {
+        overflow: visible;
+        height: auto;
+        max-height: none;
+        --padding: var(--lgs-gutter-s) 0 0;
+
+        &::part(base),
+        &::part(body) {
+            overflow: visible;
+            height: auto;
+            max-height: none;
+        }
+    }
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .crop-ratio-popup-menu,
@@ -397,6 +507,7 @@
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
+    padding-inline: var(--lgs-gutter-xs);
 
     &::part(slider) {
         flex: 1 1 auto;
@@ -413,9 +524,9 @@
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-poi-settings__global-toggle {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
     min-width: 0;
-    gap: var(--lgs-gutter-xxs);
+    gap: var(--lgs-gutter-s);
     font-size: var(--lgs-font-size-s);
 
     & > wa-icon {
@@ -424,22 +535,38 @@
         text-align: center;
     }
 
-    & > span {
+    & > label {
+        flex: 1 1 auto;
         min-width: 0;
     }
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-poi-settings__global-summary {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: center;
-    justify-content: space-between;
     min-width: 0;
     gap: var(--lgs-gutter-s);
     font-size: var(--lgs-font-size-s);
 }
 
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-poi-settings__global-summary-content {
+    display: flex;
+    grid-column: 2;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+
+    & > span {
+        min-width: 0;
+        text-align: left;
+    }
+}
+
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-poi-settings__global-editor {
     flex: 0 0 auto;
+    margin-inline-start: auto;
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-poi-settings__global-switch {
@@ -449,7 +576,9 @@
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__value--poi-animation {
-    justify-content: space-between;
+    align-items: center;
+    display: flex;
+    justify-content: flex-end;
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-duration-buttons wa-button::part(base),
@@ -496,7 +625,7 @@
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-end-focus-switch {
     flex: 0 0 auto;
     width: auto;
-    margin: 0;
+    margin-inline: auto 0;
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic :is(.basic-replay-poi-settings__duration, .basic-replay-end-focus-duration) {
@@ -535,7 +664,7 @@
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__value--poi-animation .basic-replay-poi-settings__switch {
-    margin: 0;
+    margin-inline: auto 0;
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic.wa-theme-lgs1920 .basic-replay-appearance :is(.basic-replay-appearance__border-mode, .basic-replay-appearance__sizes) wa-radio {
