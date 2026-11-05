@@ -28,6 +28,7 @@ import {
     normalizeJourneyReplayTrace,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { resolveReplayVisibilityState } from '@Core/ui/replay/ReplayOverlayResolver'
+import { REPLAY_CLIP_SLOT_PRE_REPLAY, REPLAY_CLIP_SLOT_POST_REPLAY } from '@Core/ui/replay/JourneyReplayClips'
 import { registerReplayWidgetFrameRenderer } from '@Core/ui/replay/ReplayWidgetFrameRenderers'
 import {
     DISTANCE,
@@ -341,6 +342,7 @@ export const ProfileChart = ({
                                                   remainingChildren: [],
                                               })
     const _profileGradientCache = useRef({data: null, styleKey: null, layoutKey: null, graphics: []})
+    const _retainedReplayProfile = useRef({data: null, sample: null, progressionStyle: null, completed: false})
     const [lockedProfileSample, setLockedProfileSample] = useState(null)
     const configKey = configId ?? id
     const scaleCorrection = useWidgetScaleCorrection(preview ? null : id)
@@ -961,7 +963,7 @@ export const ProfileChart = ({
                                                                   })),
                                                               }), [data?.options, replayProfileInfo.useTrackStyle, replayProfileColor])
 
-    const replayCompletedGraphics = useCallback((sample, chart, progressionStyle = replayProgression) => {
+    const replayCompletedGraphics = useCallback((sample, chart, progressionStyle = replayProgression, completed = false) => {
         const gridRect = readChartGridRect(chart)
         if (!sample || !chart || !gridRect || !data?.dimensions) {
             return {
@@ -1064,10 +1066,10 @@ export const ProfileChart = ({
         }
 
         const samplePixel = chartPixelFromSample(sample, chart)
-        const clipRight = samplePixel?.[0] ?? gridRect.x
+        const clipRight = completed ? gridRect.x + gridRect.width : samplePixel?.[0] ?? gridRect.x
         const clipWidth = Math.max(0, Math.min(gridRect.width, clipRight - gridRect.x))
         const isJourneyReplayActive = Boolean(lgs.stores.replay?.active || lgs.stores.replay?.playing)
-        const showRemainingOverlay = isJourneyReplayActive
+        const showRemainingOverlay = !completed && isJourneyReplayActive
                                      && replayTrace.remaining.useDefinedTrackStyle === false
                                      && replayTrace.mode === 'full'
         const remainingColor = profileColor(replayTrace.remaining.color, progressionStyle.fill.color)
@@ -1401,7 +1403,7 @@ export const ProfileChart = ({
 
         const resolvedReplayState = resolveReplayVisibilityState({replay: replayState})
         const replayPhase = resolvedReplayState?.framePhase ?? replayState?.replayFramePhase
-        const isProfilePlaybackPhase = !basicReplayProfile
+        const isProfilePlaybackPhase = (!basicReplayProfile && !replayPhase)
             || replayPhase?.kind === 'replay'
             || replayPhase?.slot === 'replay'
         const visible = isProfilePlaybackPhase && (
@@ -1431,8 +1433,30 @@ export const ProfileChart = ({
             replayState?.progression ?? lgs.stores.replay?.progression ?? replayProgression,
         )
         const profileProgressionStyle = basicReplayProfile ? replayProgressionStyle : replayProgression
+        // Preserve route colors independently of the moving marker and clip camera samples.
+        const beforeReplay = replayPhase?.kind === REPLAY_CLIP_SLOT_PRE_REPLAY || replayPhase?.slot === REPLAY_CLIP_SLOT_PRE_REPLAY
+        const afterReplay = replayPhase?.kind === REPLAY_CLIP_SLOT_POST_REPLAY || replayPhase?.slot === REPLAY_CLIP_SLOT_POST_REPLAY
+        if (_retainedReplayProfile.current.data !== data || beforeReplay) {
+            _retainedReplayProfile.current = {data, sample: null, progressionStyle: null, completed: false}
+        }
+        if (activeSample || (afterReplay && !_retainedReplayProfile.current.sample && controllerSample)) {
+            _retainedReplayProfile.current = {
+                data,
+                sample: activeSample ?? controllerSample,
+                progressionStyle: profileProgressionStyle,
+                completed: false,
+            }
+        }
+        const retainedProfile = _retainedReplayProfile.current
+        const replayProgress = resolvedReplayState?.progress
+        const terminalProgress = Number(resolvedReplayState?.direction) < 0 ? 0 : 1
+        const reachedReplayEnd = replayProgress !== null && replayProgress !== undefined
+            && Number(replayProgress) === terminalProgress
+        if (retainedProfile.sample && (afterReplay || reachedReplayEnd)) {
+            retainedProfile.completed = true
+        }
         const overlayGraphics = replayMetricGraphic(hoverSample ?? displaySample, metricState, chart)
-        if (!activeSample) {
+        if (!activeSample && !retainedProfile.sample) {
             _replayProfileGraphics.current.renderedKey = null
         }
         if (!displaySample || !showJourneyReplayLiveData) {
@@ -1459,6 +1483,12 @@ export const ProfileChart = ({
                          ]
                          : lockedSample
                            ? [
+                               ...(retainedProfile.sample ? replayCompletedGraphics(
+                                   retainedProfile.sample,
+                                   chart,
+                                   retainedProfile.progressionStyle,
+                                   retainedProfile.completed,
+                               ) : []),
                                ...(basicReplayProfile ? [] : lockedGuideGraphics(lockedSample, chart)),
                                replayMarkerGraphic({
                                    id:     REPLAY_PROFILE_CURRENT_MARKER_GRAPHIC,
@@ -1475,7 +1505,17 @@ export const ProfileChart = ({
                                replayProfileOverlayResetGraphic(),
                                ...overlayGraphics,
                            ]
-                         : replayProfileHiddenGraphics()
+                         : retainedProfile.sample
+                           ? [
+                               ...replayProfileHiddenGraphics().filter(graphic => graphic.id !== REPLAY_PROFILE_COMPLETED_GRAPHIC),
+                               ...replayCompletedGraphics(
+                                   retainedProfile.sample,
+                                   chart,
+                                   retainedProfile.progressionStyle,
+                                   retainedProfile.completed,
+                               ),
+                           ]
+                           : replayProfileHiddenGraphics()
 
         return {
             animation: false,
@@ -1870,11 +1910,18 @@ export const ProfileChart = ({
             }
 
             const result = getProfileAreaGradientGraphics(chart)
-            if (result.changed && result.graphicUpdates.length > 0) {
-                chart.setOption({graphic: result.graphicUpdates}, {
-                    silent: true,
-                    lazyUpdate: false,
-                })
+            if (result.changed) {
+                // Retained colors must follow a resized or zoomed plot after the clock stops.
+                const retainedOption = !preview && _retainedReplayProfile.current.sample
+                    ? replayProfileOption(lgs.stores.replay ?? {}, chart)
+                    : null
+                if (retainedOption || result.graphicUpdates.length > 0) {
+                    chart.setOption(retainedOption ?? {graphic: result.graphicUpdates}, {
+                        ...(retainedOption ? {replaceMerge: ['graphic']} : {}),
+                        silent: true,
+                        lazyUpdate: false,
+                    })
+                }
             }
         }
 
@@ -1886,7 +1933,7 @@ export const ProfileChart = ({
                 chart.off('finished', synchronizeProfileGradient)
             }
         }
-    }, [getProfileAreaGradientGraphics])
+    }, [getProfileAreaGradientGraphics, preview, replayProfileOption])
 
     if (!data || !element || !hasAltitudeData) {
         return null

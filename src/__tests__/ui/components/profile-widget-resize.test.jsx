@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-29
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -53,8 +53,10 @@ describe('ProfileWidget resize ratio', () => {
             canvas: document.createElement('div'),
             settings: {
                 unitSystem: proxy({current: 0}),
+                ui: {replay: proxy({userMode: 'expert'})},
             },
             stores: {
+                replay: proxy({}),
                 main: {
                     components: {
                         profile: proxy({height: '200px', key: 1, width: '500px'}),

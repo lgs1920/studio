@@ -2,7 +2,7 @@
 
 Status: current implementation inventory; see the implementation status for known gaps
 
-Date: 2026-11-04
+Date: 2026-11-05
 
 ## Purpose
 
@@ -479,6 +479,13 @@ Export commits synchronous Valtio widget consumers through
 `ReplayWidgetFrameRenderers` before reading DOM pixels. Mounted widgets register
 imperative preparation with lifecycle-owned teardown: Stats settles its bounds,
 Compass applies the published heading, and Profile paints and flushes its chart.
+Profile keeps its acquired route colors through post-Replay clips, Basic end
+focus, and terminal runtime cleanup. Only Replay-phase samples advance its
+colored extent and moving marker. Completion fills the entire profile and hides
+the marker without consuming clip camera targets. A new pre-Replay phase or
+replacement profile data clears the retained presentation, while resize preserves
+it. This presentation state belongs to the mounted chart and adds no Replay clock
+or persisted journey state.
 Capture and composition resolve the same visible widget set on each frame,
 including user visibility and the dynamic/summary Stats phase transition.
 Visible capture failures, timeouts, and cancellation stop export rather than
