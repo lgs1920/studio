@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import {
     COMPASS_WIDGET,
     CREDITS_WIDGET,
     LOGO_WIDGET,
+    PROFILE_WIDGET,
     REPLAY_RECORDING_MONITOR_WIDGET_ID,
     REPLAY_TIMELINE_WIDGET,
     VIDEO_CROP_ZONE,
@@ -45,7 +46,11 @@ export const REPLAY_VIDEO_BASIC_WIDGET_TYPES = Object.freeze([
     COMPASS_WIDGET,
     CREDITS_WIDGET,
     LOGO_WIDGET,
+    PROFILE_WIDGET,
 ])
+
+/** Stable instance ID for the profile widget automatically added to Basic Replay. */
+export const BASIC_REPLAY_PROFILE_WIDGET_ID = `${PROFILE_WIDGET}#basic-replay`
 
 const REPLAY_VIDEO_BASIC_WIDGET_TYPE_SET = new Set(REPLAY_VIDEO_BASIC_WIDGET_TYPES)
 
@@ -62,6 +67,20 @@ export const getReplayVideoWidgetType = widgetId => typeof widgetId === 'string'
 const isBasicReplayActive = () => isJourneyReplayBasicMode()
 
 /**
+ * Resolve the instance ID used when Replay automatically registers a widget type.
+ *
+ * @param {string} widgetType - Widget type requested by Replay.
+ * @param {Object} options - Registration options.
+ * @param {boolean} [options.basicReplay] - Whether Basic Replay is active.
+ * @returns {string} Widget type or mode-specific instance ID.
+ */
+export const getReplayVideoWidgetRegistrationId = (widgetType, {basicReplay = isBasicReplayActive()} = {}) => (
+    basicReplay && widgetType === PROFILE_WIDGET
+        ? BASIC_REPLAY_PROFILE_WIDGET_ID
+        : widgetType
+)
+
+/**
  * Return the widget types that Replay must register for the active mode.
  *
  * @param {Object} options - Replay widget policy options.
@@ -74,7 +93,8 @@ export const getReplayVideoWidgetTypes = ({basicReplay = isBasicReplayActive()} 
 
 export const isReplayVideoWidgetAllowed = (widgetId, {basicReplay = isBasicReplayActive()} = {}) => {
     const widgetType = getReplayVideoWidgetType(widgetId)
-    if (!widgetType || REPLAY_VIDEO_NON_CONTENT_TYPES.has(widgetType)) {
+    if (!widgetType || REPLAY_VIDEO_NON_CONTENT_TYPES.has(widgetType)
+        || (!basicReplay && widgetId === BASIC_REPLAY_PROFILE_WIDGET_ID)) {
         return false
     }
 
@@ -86,6 +106,7 @@ export const isReplayVideoWidgetAllowed = (widgetId, {basicReplay = isBasicRepla
 export const filterReplayVideoWidgetKeys = (widgetKeys, options = {}) => {
     const basicReplay = options.basicReplay ?? isBasicReplayActive()
     const seenBasicCompass = new Set()
+    const seenBasicProfile = new Set()
     return [...new Set(widgetKeys ?? [])].filter(widgetId => {
         if (!isReplayVideoWidgetAllowed(widgetId, {basicReplay})) {
             return false
@@ -96,6 +117,13 @@ export const filterReplayVideoWidgetKeys = (widgetKeys, options = {}) => {
                 return false
             }
             seenBasicCompass.add(COMPASS_WIDGET)
+        }
+
+        if (basicReplay && getReplayVideoWidgetType(widgetId) === PROFILE_WIDGET) {
+            if (seenBasicProfile.has(PROFILE_WIDGET)) {
+                return false
+            }
+            seenBasicProfile.add(PROFILE_WIDGET)
         }
 
         return true

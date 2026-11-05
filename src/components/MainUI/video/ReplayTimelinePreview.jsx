@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,7 +28,6 @@ import {subscribeKey} from 'valtio/utils'
 import {
     CREDITS_WIDGET,
     LOGO_WIDGET,
-    MULTI_PURPOSE_WIDGETS,
     REPLAY_RECORDING_MONITOR_WIDGET_ID,
     REPLAY_TIMELINE_WIDGET,
     VIDEO_WIDGETS_BOARD,
@@ -45,7 +44,11 @@ import {
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
 import {WidgetDynamicRenderer} from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import {resolveWidgetCatalogGroup} from '@Core/ui/widget-manager/resolveWidgetCatalogGroup'
-import {filterReplayVideoWidgetKeys, getReplayVideoWidgetTypes} from '@Core/ui/replay/ReplayVideoWidgetPolicy'
+import {
+    filterReplayVideoWidgetKeys,
+    getReplayVideoWidgetRegistrationId,
+    getReplayVideoWidgetTypes,
+} from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {
     isReplayTimelineSourceUnchanged,
     normalizeJourneyReplayVideoTimeline,
@@ -854,8 +857,14 @@ export const ReplayTimelinePreview = forwardRef(({
                 continue
             }
 
-            const widgetId = widgetManifest.find(id => id.split('#')[0] === widgetType) ?? widgetType
-            void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetId, {
+            const widgetId = widgetManifest.find(id => id.split('#')[0] === widgetType)
+                ?? getReplayVideoWidgetRegistrationId(widgetType, {basicReplay})
+            const group = resolveWidgetCatalogGroup(widgetId, {widgetsBoard: VIDEO_WIDGETS_BOARD})
+            if (!group) {
+                console.error(`[LGS1920][ReplayWidgets] No catalogue group found for ${widgetId}`)
+                continue
+            }
+            void renderer.renderWidget(group, widgetId, {
                 widgetsBoard: VIDEO_WIDGETS_BOARD,
                 forceRefresh: true,
             }).catch(error => {

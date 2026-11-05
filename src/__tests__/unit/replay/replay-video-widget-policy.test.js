@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,7 +30,7 @@ describe('Replay video widget policy', () => {
         globalThis.lgs = undefined
     })
 
-    it('requires Compass in Basic Replay and leaves it optional in Expert Replay', () => {
+    it('requires Compass and Profile in Basic Replay and leaves them optional in Expert Replay', () => {
         expect(REPLAY_VIDEO_WIDGET_TYPES).toEqual([
             'credits-widget',
             'logo-widget',
@@ -39,6 +39,7 @@ describe('Replay video widget policy', () => {
             'compass-widget',
             'credits-widget',
             'logo-widget',
+            'profile-widget',
         ])
         expect(getReplayVideoWidgetTypes({basicReplay: false})).toBe(REPLAY_VIDEO_WIDGET_TYPES)
         expect(getReplayVideoWidgetTypes({basicReplay: true})).toBe(REPLAY_VIDEO_BASIC_WIDGET_TYPES)

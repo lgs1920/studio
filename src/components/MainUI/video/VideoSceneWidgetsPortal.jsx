@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-28
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-05
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,10 +16,12 @@
 
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
 import { WidgetPreviewContext } from '@Components/MainUI/widgets/WidgetContexts'
-import { MULTI_PURPOSE_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import { resolveWidgetCatalogGroup } from '@Core/ui/widget-manager/resolveWidgetCatalogGroup'
 import {
     filterReplayVideoWidgetKeys,
+    getReplayVideoWidgetRegistrationId,
     getReplayVideoWidgetTypes,
 } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
@@ -163,8 +165,14 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
         for (const widgetType of getReplayVideoWidgetTypes({basicReplay})) {
             const alreadyRegistered = registeredWidgetTypes.has(widgetType)
             if (!alreadyRegistered) {
-                const widgetId = timelineWidgetIds.find(id => id.split('#')[0] === widgetType) ?? widgetType
-                void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetId, {
+                const widgetId = timelineWidgetIds.find(id => id.split('#')[0] === widgetType)
+                    ?? getReplayVideoWidgetRegistrationId(widgetType, {basicReplay})
+                const group = resolveWidgetCatalogGroup(widgetId, {widgetsBoard: VIDEO_WIDGETS_BOARD})
+                if (!group) {
+                    console.error(`[LGS1920][ReplayWidgets] No catalogue group found for ${widgetId}`)
+                    continue
+                }
+                void renderer.renderWidget(group, widgetId, {
                     widgetsBoard: VIDEO_WIDGETS_BOARD,
                     forceRefresh: true,
                 }).catch(error => {
