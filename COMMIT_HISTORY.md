@@ -4883,3 +4883,11 @@
 ## 2026-11-05 — [`fix: preserve Unicode video filenames`](https://github.com/lgs1920/studio/commit/ef9373fb567c07685b484b247d807b7543670828)
 
 - Recorded automatically from Git history.
+
+## 2026-11-05 — [`feat: roll startup initialization messages`](https://github.com/lgs1920/studio/commit/60e0175a49de07b3cdd7e31766eda84c35caa634)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`style: slow Replay widget name roller`](https://github.com/lgs1920/studio/commit/b8dbc6225a5e33fda4f0999571242f4341edc80e)
+
+- Recorded automatically from Git history.
