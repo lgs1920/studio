@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-03
- * Last modified: 2026-08-03
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,7 +36,12 @@ export const CompassModern = ({width, height, ref}) => {
             preserveAspectRatio="xMidYMid meet"
             style={{display: 'block', overflow: 'visible'}}
         >
-            <g ref={ref} style={{transformOrigin: '65.5px 60px'}}>
+            <g
+                ref={ref}
+                data-replay-capture-transform="true"
+                data-replay-capture-rotation-origin="65.5 60"
+                style={{transformOrigin: '65.5px 60px'}}
+            >
                 <g
                     className="lgs-compass-poles lgs-compass-poles-arcs"
                     fill="none"

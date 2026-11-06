@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-18
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -240,7 +240,7 @@ export class CanvasOverlayComposer {
 
     /**
      * Add an overlay. Overlay objects are pooled to reduce allocations.
-     * @param {HTMLCanvasElement|Function} element - Canvas or getter returning a canvas.
+     * @param {CanvasImageSource|Function} element - Canvas image source or getter returning one.
      * @param {Object} options
      * @param {number} [options.x] - Left in CSS pixels relative to clip.
      * @param {number} [options.y] - Top in CSS pixels relative to clip.
@@ -251,6 +251,8 @@ export class CanvasOverlayComposer {
      * @param {number} [options.blur=0] - Backdrop blur radius in CSS pixels.
      * @param {number} [options.radius=0] - Corner radius in CSS pixels.
      * @param {number} [options.rotate=0] - Rotation in degrees.
+     * @param {number} [options.frameRotate=0] - Frame-specific inner-content rotation in degrees.
+     * @param {{x:number,y:number}|null} [options.frameRotationOrigin=null] - Frame rotation origin relative to the overlay content.
      * @param {number|{x:number,y:number}} [options.scale=1] - Scale factor.
      * @param {number} [options.zIndex=0] - Z order.
      * @param {{top:number,right:number,bottom:number,left:number}} [options.shadowMargins]
@@ -268,6 +270,8 @@ export class CanvasOverlayComposer {
                   blur          = 0,
                   radius        = 0,
                   rotate        = 0,
+                  frameRotate   = 0,
+                  frameRotationOrigin = null,
                   scale         = 1,
                   zIndex = 0,
                   shadowMargins = {top: 0, right: 0, bottom: 0, left: 0},
@@ -326,6 +330,11 @@ export class CanvasOverlayComposer {
         overlay.blurPx = blur > 0 ? (blur * this.#dpr * cssScale) : 0
         overlay.radius = radius
         overlay.rad = (rotate * Math.PI) / 180
+        overlay.frameRad = (Number(frameRotate) || 0) * Math.PI / 180
+        const frameOriginX = Number(frameRotationOrigin?.x)
+        const frameOriginY = Number(frameRotationOrigin?.y)
+        overlay.frameOffsetX = Number.isFinite(frameOriginX) ? frameOriginX - (logicalContentW / 2) : 0
+        overlay.frameOffsetY = Number.isFinite(frameOriginY) ? frameOriginY - (logicalContentH / 2) : 0
         overlay.scale = cssScale
         overlay.zIndex = zIndex
         overlay.dx = -(logicalContentW / 2) - shadowMargins.left
@@ -381,6 +390,11 @@ export class CanvasOverlayComposer {
                         ctx.translate(overlay.cx, overlay.cy)
                         ctx.rotate(overlay.rad)
                         ctx.scale(overlay.scale, overlay.scale)
+                        if (overlay.frameRad) {
+                            ctx.translate(overlay.frameOffsetX, overlay.frameOffsetY)
+                            ctx.rotate(overlay.frameRad)
+                            ctx.translate(-overlay.frameOffsetX, -overlay.frameOffsetY)
+                        }
                         this.#traceRoundedRect(ctx, -hw, -hh, overlay.contentWidth, overlay.contentHeight, overlay.radius)
                         ctx.clip()
 
@@ -401,6 +415,11 @@ export class CanvasOverlayComposer {
                 ctx.translate(overlay.cx, overlay.cy)
                 ctx.rotate(overlay.rad)
                 ctx.scale(overlay.scale, overlay.scale)
+                if (overlay.frameRad) {
+                    ctx.translate(overlay.frameOffsetX, overlay.frameOffsetY)
+                    ctx.rotate(overlay.frameRad)
+                    ctx.translate(-overlay.frameOffsetX, -overlay.frameOffsetY)
+                }
 
                 ctx.drawImage(
                     el,

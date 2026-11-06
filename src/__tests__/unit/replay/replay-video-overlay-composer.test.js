@@ -407,6 +407,58 @@ describe('Replay video widget capture canvas resolution', () => {
         )
     })
 
+    it('composes compass frame rotation around the SVG transform origin', () => {
+        const widgetElement = document.createElement('div')
+        const captureCanvas = document.createElement('canvas')
+        captureCanvas.className = 'lgs-widget-canvas'
+        captureCanvas.width = 400
+        captureCanvas.height = 400
+        captureCanvas.style.width = '100px'
+        captureCanvas.style.height = '100px'
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+        svg.setAttribute('viewBox', '4.5 0 122 122')
+        const transformElement = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+        transformElement.dataset.replayCaptureTransform = 'true'
+        transformElement.dataset.replayCaptureRotationOrigin = '65.5 60'
+        svg.appendChild(transformElement)
+        widgetElement.append(captureCanvas, svg)
+        const vectorSource = document.createElement('img')
+        vectorSource.width = 400
+        vectorSource.height = 400
+        const mirror = {
+            getCaptureGeometry: () => ({width: 100, height: 100}),
+            getReplayCaptureSource: () => vectorSource,
+            getReplayFrameRotationDelta: () => 45,
+        }
+        const composer = {
+            addOverlay: vi.fn(),
+            beginUpdate: vi.fn(),
+            endUpdate: vi.fn(),
+        }
+        globalThis.lgs = {viewer: {container: document.createElement('div')}}
+        globalThis.__ = {
+            ui: {
+                widgetManager: {
+                    getElementById: vi.fn(() => widgetElement),
+                    getWidgetConfig: vi.fn(() => ({position: {left: 12, top: 24}})),
+                },
+            },
+        }
+        vi.spyOn(Widget2Canvas, 'get').mockReturnValue(mirror)
+
+        buildReplayVideoComposerOverlays({
+            composer,
+            cropRect: {left: 0, top: 0, width: 320, height: 180},
+            widgetKeys: ['compass-widget#video'],
+            skipVisibilityChecks: true,
+        })
+
+        expect(composer.addOverlay).toHaveBeenCalledWith(vectorSource, expect.objectContaining({
+            frameRotate: 45,
+            frameRotationOrigin: {x: 50, y: (60 / 122) * 100},
+        }))
+    })
+
     it('waits for mounting before a delayed clip and for a bitmap only when that clip becomes visible', () => {
         const widgetId = 'text-widget#later'
         const container = document.createElement('div')

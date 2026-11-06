@@ -295,15 +295,21 @@ const resolveMetrics = ({widgetId, widgetEl, metricsCache = null, metricsCacheTt
 }
 
 /**
- * Resolve the raster canvas generated for a widget.
+ * Resolve the best captured source generated for a widget.
  *
- * Widget2Canvas inserts its canvas beside the captured widget content, so the
- * capture canvas can be either a descendant or a sibling of the widget node.
+ * SVG based Replay widgets can provide their decoded vector snapshot. Other
+ * widgets use the raster canvas inserted beside or inside the widget node.
  *
+ * @param {string} widgetId - Concrete widget identifier.
  * @param {HTMLElement|null} widgetElement - Mounted widget root.
- * @returns {HTMLCanvasElement|null} Resolved capture canvas.
+ * @returns {CanvasImageSource|null} Resolved capture source.
  */
-const resolveWidgetCaptureCanvas = widgetElement => {
+const resolveWidgetCaptureSource = (widgetId, widgetElement) => {
+    const replaySource = Widget2Canvas.get(widgetId)?.getReplayCaptureSource?.()
+    if (replaySource) {
+        return replaySource
+    }
+
     const descendantCanvas = widgetElement?.querySelector?.('.lgs-widget-canvas')
     if (descendantCanvas instanceof HTMLCanvasElement) {
         return descendantCanvas
@@ -312,6 +318,33 @@ const resolveWidgetCaptureCanvas = widgetElement => {
     const siblingCanvas = Array.from(widgetElement?.parentElement?.children ?? [])
         .find(element => element !== widgetElement && element.classList?.contains('lgs-widget-canvas'))
     return siblingCanvas instanceof HTMLCanvasElement ? siblingCanvas : null
+}
+
+/** Resolve a cached compass raster's current frame rotation and local origin. */
+const resolveReplayWidgetFrameTransform = ({widgetId, widgetElement, contentWidth, contentHeight} = {}) => {
+    const rotation = Number(Widget2Canvas.get(widgetId)?.getReplayFrameRotationDelta?.()) || 0
+    if (!rotation) {
+        return null
+    }
+
+    const transformElement = widgetElement?.matches?.('[data-replay-capture-transform="true"]')
+        ? widgetElement
+        : widgetElement?.querySelector?.('[data-replay-capture-transform="true"]')
+    const svg = transformElement?.closest?.('svg')
+    const viewBox = svg?.getAttribute('viewBox')?.trim().split(/[\s,]+/).map(Number) ?? []
+    const origin = transformElement?.dataset?.replayCaptureRotationOrigin?.trim().split(/[\s,]+/).map(Number) ?? []
+    if (viewBox.length !== 4 || origin.length !== 2 || !viewBox.every(Number.isFinite)
+        || !origin.every(Number.isFinite) || viewBox[2] <= 0 || viewBox[3] <= 0) {
+        return {rotation, origin: null}
+    }
+
+    return {
+        rotation,
+        origin: {
+            x: ((origin[0] - viewBox[0]) / viewBox[2]) * contentWidth,
+            y: ((origin[1] - viewBox[1]) / viewBox[3]) * contentHeight,
+        },
+    }
 }
 
 /**
@@ -417,8 +450,8 @@ export const buildReplayVideoComposerOverlays = ({
             continue
         }
 
-        const canvasEl = resolveWidgetCaptureCanvas(widgetEl)
-        if (!canvasEl) {
+        const captureSource = resolveWidgetCaptureSource(key, widgetEl)
+        if (!captureSource) {
             continue
         }
 
@@ -431,11 +464,11 @@ export const buildReplayVideoComposerOverlays = ({
             metricsCacheTtlMs,
         })
         const {blur, radius, border, margins} = metrics
-        const canvasStyle = getComputedStyleSafe(canvasEl)
+        const canvasStyle = getComputedStyleSafe(captureSource)
         const parsedWidth = parseFloat(canvasStyle?.width)
         const parsedHeight = parseFloat(canvasStyle?.height)
-        const canvasWidth = Number.isFinite(parsedWidth) && parsedWidth > 0 ? parsedWidth : Number(canvasEl.width) || 0
-        const canvasHeight = Number.isFinite(parsedHeight) && parsedHeight > 0 ? parsedHeight : Number(canvasEl.height) || 0
+        const canvasWidth = Number.isFinite(parsedWidth) && parsedWidth > 0 ? parsedWidth : Number(captureSource.width) || 0
+        const canvasHeight = Number.isFinite(parsedHeight) && parsedHeight > 0 ? parsedHeight : Number(captureSource.height) || 0
         const captureGeometry = Widget2Canvas.get(key)?.getCaptureGeometry?.()
         const captureWidth = Number(captureGeometry?.width) || 0
         const captureHeight = Number(captureGeometry?.height) || 0
@@ -450,18 +483,28 @@ export const buildReplayVideoComposerOverlays = ({
         const overlayY = hasCaptureViewBoxOrigin
             ? (Number(position.top) || 0) - normalizedCrop.top - captureOffsetY
             : (Number(position.top) || 0) - normalizedCrop.top - margins.top
+        const contentWidth = Math.max(0, width - (margins.left + margins.right)) * scaleX
+        const contentHeight = Math.max(0, height - (margins.top + margins.bottom)) * scaleY
+        const frameTransform = resolveReplayWidgetFrameTransform({
+            widgetId: key,
+            widgetElement: widgetEl,
+            contentWidth,
+            contentHeight,
+        })
 
-        composer.addOverlay(canvasEl, {
+        composer.addOverlay(captureSource, {
             x:             overlayX * scaleX,
             y:             overlayY * scaleY,
             w:             width * scaleX,
             h:             height * scaleY,
-            contentWidth:  Math.max(0, width - (margins.left + margins.right)) * scaleX,
-            contentHeight: Math.max(0, height - (margins.top + margins.bottom)) * scaleY,
+            contentWidth,
+            contentHeight,
             blur:          blur * effectScale,
             radius:        radius * effectScale,
             border:        border * effectScale,
             rotate:        config.rotate || 0,
+            frameRotate:   frameTransform?.rotation ?? 0,
+            frameRotationOrigin: frameTransform?.origin ?? null,
             scale:         resolveReplayVideoWidgetScale(widgetEl, config.scale),
             shadowMargins: {
                 top: margins.top * scaleY,
@@ -493,5 +536,5 @@ export const isReplayVideoWidgetReady = widgetId => {
         return true
     }
 
-    return Boolean(resolveWidgetCaptureCanvas(element))
+    return Boolean(resolveWidgetCaptureSource(widgetId, element))
 }

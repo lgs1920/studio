@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-09
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -357,6 +357,81 @@ describe('Widget2Canvas refresh modes', () => {
         expect(mirror.getCanvas().width).toBe(400)
         expect(mirror.getCanvas().height).toBe(200)
         expect(canvasContext.drawImage).toHaveBeenCalledWith(expect.objectContaining({width: 400, height: 200}), 0, 0, 400, 200)
+    })
+
+    it('reuses the compass raster for rotation-only frame changes', async () => {
+        target?.remove?.()
+        target = document.createElement('div')
+        const rotatingPart = document.createElement('div')
+        rotatingPart.dataset.replayCaptureTransform = 'true'
+        rotatingPart.style.transform = 'rotate(0deg)'
+        target.appendChild(rotatingPart)
+        Object.defineProperties(target, {
+            offsetWidth:  {configurable: true, value: 100},
+            offsetHeight: {configurable: true, value: 100},
+        })
+        target.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
+        document.body.appendChild(target)
+
+        mirror = new Widget2Canvas(target, {refreshMode: 'manual', captureWholeWidget: true})
+        await mirror.init()
+        mirror.setFrameDriven(true)
+        const initialRevision = mirror.getCaptureRevision()
+
+        rotatingPart.dataset.replayCaptureRotation = '90'
+        rotatingPart.style.transform = 'rotate(90deg)'
+
+        expect(await mirror.flush({onlyIfDirty: true})).toBe(true)
+        expect(snapdomMock).toHaveBeenCalledOnce()
+        expect(mirror.getCaptureRevision()).toBe(initialRevision)
+        expect(mirror.getReplayFrameRotationDelta()).toBe(90)
+
+        rotatingPart.dataset.replayCaptureRotation = '30'
+        rotatingPart.style.transform = 'rotate(30deg)'
+
+        expect(await mirror.flush({onlyIfDirty: true})).toBe(true)
+        expect(snapdomMock).toHaveBeenCalledOnce()
+        expect(mirror.getCaptureRevision()).toBe(initialRevision)
+        expect(mirror.getReplayFrameRotationDelta()).toBe(30)
+    })
+
+    it('retains the decoded SVG source for high-resolution Replay composition', async () => {
+        target?.remove?.()
+        target = document.createElement('div')
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+        svg.setAttribute('viewBox', '0 0 100 100')
+        svg.style.width = '100px'
+        svg.style.height = '100px'
+        const rotatingPart = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+        rotatingPart.dataset.replayCaptureTransform = 'true'
+        rotatingPart.dataset.replayCaptureRotation = '30'
+        svg.appendChild(rotatingPart)
+        target.appendChild(svg)
+        Object.defineProperties(target, {
+            offsetWidth:  {configurable: true, value: 100},
+            offsetHeight: {configurable: true, value: 100},
+        })
+        target.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
+        document.body.appendChild(target)
+
+        const vectorSource = document.createElement('img')
+        vectorSource.decode = vi.fn(async () => {
+            vectorSource.width = 400
+            vectorSource.height = 400
+        })
+        vi.stubGlobal('Image', vi.fn(() => vectorSource))
+
+        mirror = new Widget2Canvas(target, {
+            captureWholeWidget: true,
+            refreshMode: 'manual',
+            scale: 4,
+            type: 'svg',
+        })
+        await mirror.init()
+
+        expect(mirror.getReplayCaptureSource()).toBe(vectorSource)
+        expect(mirror.getCanvas()).toMatchObject({width: 400, height: 400})
+        expect(snapdomMock).not.toHaveBeenCalled()
     })
 
     it('uses the recording output density temporarily and restores its base density afterward', async () => {

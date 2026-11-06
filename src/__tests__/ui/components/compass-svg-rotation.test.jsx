@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-17
- * Last modified: 2026-06-17
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,6 +32,8 @@ describe('compass SVG rotation target', () => {
 
         render(<CompassFull ref={ref}/>)
 
+        expect(ref.current?.dataset.replayCaptureTransform).toBe('true')
+        expect(ref.current?.dataset.replayCaptureRotationOrigin).toBe('256 256')
         expect(ref.current?.querySelector('.lgs-compass-background')).not.toBeNull()
         expect(ref.current?.querySelector('.lgs-compass-poles')).not.toBeNull()
         expect(ref.current?.querySelector('.lgs-compass-needle')).not.toBeNull()
@@ -42,6 +44,7 @@ describe('compass SVG rotation target', () => {
 
         render(<CompassLight ref={ref}/>)
 
+        expect(ref.current?.dataset.replayCaptureRotationOrigin).toBe('256 256')
         expect(ref.current?.querySelector('.lgs-compass-needle')).not.toBeNull()
         expect(ref.current?.querySelector('.lgs-compass-needle-center')).not.toBeNull()
     })
@@ -51,6 +54,7 @@ describe('compass SVG rotation target', () => {
 
         render(<CompassModern ref={ref}/>)
 
+        expect(ref.current?.dataset.replayCaptureRotationOrigin).toBe('65.5 60')
         expect(ref.current?.closest('svg')?.getAttribute('viewBox')).toBe('4.5 0 122 122')
         expect(ref.current?.querySelector('.lgs-compass-poles-arcs')).not.toBeNull()
         expect(ref.current?.querySelector('.lgs-compass-text')).not.toBeNull()
@@ -77,6 +81,7 @@ describe('compass SVG rotation target', () => {
 
         render(<CompassFlat ref={ref}/>)
 
+        expect(ref.current?.dataset.replayCaptureRotationOrigin).toBe('100 100')
         expect(ref.current?.querySelector('.lgs-compass-background')).not.toBeNull()
         expect(ref.current?.querySelector('.lgs-compass-poles')).not.toBeNull()
         expect(ref.current?.querySelector('.lgs-compass-text')).not.toBeNull()

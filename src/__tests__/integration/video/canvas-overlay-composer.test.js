@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-13
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -187,13 +187,18 @@ describe('CanvasOverlayComposer recording path', () => {
             outputDpr: 1,
             continuousRendering: false,
         })
-        composer.addOverlay(overlayCanvas)
+        composer.addOverlay(overlayCanvas, {
+            frameRotate: 90,
+            frameRotationOrigin: {x: 25, y: 10},
+        })
 
         await composer.renderFrame()
 
         const overlayDraw = context.drawImage.mock.calls.find(call => call[0] === overlayCanvas)
         expect(overlayDraw[7]).toBe(100)
         expect(overlayDraw[8]).toBe(50)
+        expect(context.rotate).toHaveBeenCalledWith(Math.PI / 2)
+        expect(context.translate).toHaveBeenCalledWith(-25, -15)
     })
 
     test('excludes the scene flush from composition timings and reports the nested blur cost', async () => {

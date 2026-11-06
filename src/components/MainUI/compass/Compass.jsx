@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-20
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -119,11 +119,15 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true, syn
             return
         }
 
+        if (inWidget) {
+            rotatingPart.dataset.replayCaptureRotation = `${headingDegrees}`
+        }
+
         rotatingPart.style.transform = baseTransform
                                        ? `rotate(${headingDegrees}deg) ${baseTransform}`
                                        : `rotate(${headingDegrees}deg)`
         _lastHeading.current = headingDegrees
-    }, [baseTransform])
+    }, [baseTransform, inWidget])
 
     // Export applies heading before SVG capture, even when rAF is throttled.
     useEffect(() => inWidget && !fixed

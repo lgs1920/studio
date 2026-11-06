@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2025-04-09
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,7 +27,12 @@ export const CompassFull = ({width = '100%', height = '100%', ref}) => {
             xmlns="http://www.w3.org/2000/svg"
             style={{display: 'block', overflow: 'visible'}}
         >
-            <g ref={ref} style={{transformOrigin: '256px 256px'}}>
+            <g
+                ref={ref}
+                data-replay-capture-transform="true"
+                data-replay-capture-rotation-origin="256 256"
+                style={{transformOrigin: '256px 256px'}}
+            >
                 <g>
                     <path
                         className="lgs-compass-background"

@@ -2,7 +2,7 @@ Here is the complete Markdown code for the `tech-doc/specs/CORE-WIDGET-MANAGER-W
 
 # Widget2Canvas — High-Performance DOM-to-Canvas Mirroring
 
-The implementation uses `@zumer/snapdom` `3.7.0`.
+The implementation uses `@zumer/snapdom` `3.7.1`.
 
 A lightweight, production-ready class that replaces a DOM widget with a perfectly synced canvas
 using [@zumer/snapdom](https://github.com/zumer/snapdom).
@@ -84,6 +84,16 @@ Nested `<canvas>` sources remain raster inputs. Raising the surrounding
 `Widget2Canvas` density does not add detail that is absent from a nested canvas
 bitmap; a widget renderer must redraw that bitmap at a higher density to improve
 its source detail.
+
+Compass SVGs mark their heading rotation separately from their visual content.
+`Widget2Canvas` keeps the last decoded SVG source for Replay, while its usual
+canvas mirror continues to serve the editor. It records that source's heading
+as a baseline and ignores only the marked rotation style and frame-angle
+metadata when deciding whether a new capture is needed. Replay composition
+draws the decoded SVG source at the output size and applies the current angle
+delta around the SVG viewBox rotation origin. Compass heading updates therefore
+do not decode and rasterize the complete SVG again for every Replay frame;
+changes to compass content, mode, or layout still trigger capture.
 
 For Replay recording, a static widget zone should be captured once per layout
 revision. A dynamic zone should be refreshed only after its canonical Replay

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2025-04-09
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,7 +33,12 @@ export const CompassLight = ({width = '100%', height = '100%', ref}) => {
                 transformOrigin: '50% 50%',
             }}
         >
-            <g ref={ref} style={{transform: 'scale(1.2)', transformOrigin: '256px 256px'}}>
+            <g
+                ref={ref}
+                data-replay-capture-transform="true"
+                data-replay-capture-rotation-origin="256 256"
+                style={{transform: 'scale(1.2)', transformOrigin: '256px 256px'}}
+            >
                 <g className="lgs-compass-needle">
                     <path
                         className="lgs-compass-needle-north"

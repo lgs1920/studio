@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-14
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,8 @@
 
 import { DYNAMIC_WIDGET_PART, LGS_WIDGET_SCALE_BASE, STATIC_WIDGET_PART } from '@Core/constants'
 import { snapdom }                                 from '@zumer/snapdom'
+
+const REPLAY_CAPTURE_TRANSFORM_SELECTOR = '[data-replay-capture-transform="true"]'
 
 /**
  * Widget2Canvas — Ultra-fast DOM-to-canvas mirror
@@ -61,6 +63,8 @@ export class Widget2Canvas {
     #refreshError = null
     #layoutSize = null
     #recordingPixelRatio = null
+    #captureRotation = null
+    #replayCaptureSource = null
 
     #timingLabel = 'Widget2Canvas'
 
@@ -459,13 +463,41 @@ export class Widget2Canvas {
         return null
     }
 
+    /** Read the compass rotation represented by the current DOM frame. */
+    #readCaptureRotation = () => {
+        const element = this.#original?.matches?.(REPLAY_CAPTURE_TRANSFORM_SELECTOR)
+            ? this.#original
+            : this.#original?.querySelector?.(REPLAY_CAPTURE_TRANSFORM_SELECTOR)
+        if (!element) {
+            return null
+        }
+
+        const value = element.dataset?.replayCaptureRotation
+        if (value == null || value.trim() === '') {
+            return 0
+        }
+
+        const rotation = Number(value)
+        return Number.isFinite(rotation) ? rotation : null
+    }
+
+    /** Identify compass frame changes that the video compositor handles without rasterizing again. */
+    #isCaptureTransformMutation = mutation => mutation.type === 'attributes'
+        && mutation.target?.matches?.(REPLAY_CAPTURE_TRANSFORM_SELECTOR)
+        && ['style', 'data-replay-capture-rotation'].includes(mutation.attributeName)
+
     /** Invalidate affected parts and their raster revision from observed DOM changes. */
     #handleMutations = (mutations) => {
+        const contentMutations = mutations.filter(mutation => !this.#isCaptureTransformMutation(mutation))
+        if (!contentMutations.length) {
+            return
+        }
+
         this.#dirty = true
         this.#revision += 1
         let shouldRescan = false
 
-        for (const mutation of mutations) {
+        for (const mutation of contentMutations) {
             if (mutation.type === 'childList') {
                 this.#markAllPartsDirty()
                 shouldRescan = true
@@ -741,8 +773,9 @@ export class Widget2Canvas {
             }
 
             if (this.#options.captureWholeWidget || !this.#partOrder.length) {
+                const captureRotation = this.#readCaptureRotation()
                 const capture = await this.#renderPart(this.#original)
-                this.#updateCanvas(capture?.source, capture?.dimensions)
+                this.#updateCanvas(capture?.source, capture?.dimensions, captureRotation)
                 return
             }
 
@@ -927,8 +960,9 @@ export class Widget2Canvas {
      *
      * @param {HTMLCanvasElement|HTMLImageElement} source - Rasterized capture source.
      * @param {{width?: number, height?: number, offsetX?: number|null, offsetY?: number|null}|null} dimensions - Logical capture dimensions in CSS pixels.
+     * @param {number|null} captureRotation - Rotation represented by the captured source.
      */
-    #updateCanvas = (source, dimensions = null) => {
+    #updateCanvas = (source, dimensions = null, captureRotation = this.#readCaptureRotation()) => {
         if (this.#destroyed || !this.#original || !source) {
             return
         }
@@ -953,6 +987,10 @@ export class Widget2Canvas {
             this.#captureGeometry.offsetX = Number(dimensions.offsetX)
             this.#captureGeometry.offsetY = Number(dimensions.offsetY)
         }
+        this.#captureRotation = Number.isFinite(captureRotation) ? captureRotation : null
+        this.#replayCaptureSource = this.#captureRotation !== null && source instanceof HTMLImageElement
+            ? source
+            : null
 
         // 1. If the canvas doesn't exist, create it once
         if (!this.#canvas) {
@@ -1028,6 +1066,20 @@ export class Widget2Canvas {
      */
     getCaptureGeometry = () => this.#captureGeometry
 
+    /** Return the vector SVG snapshot for Replay when one backs the cached canvas. */
+    getReplayCaptureSource = () => this.#replayCaptureSource
+
+    /** Return the current replay compass rotation relative to the cached raster. */
+    getReplayFrameRotationDelta = () => {
+        const currentRotation = this.#readCaptureRotation()
+        if (this.#captureRotation === null || currentRotation === null) {
+            return 0
+        }
+
+        const delta = ((currentRotation - this.#captureRotation + 540) % 360) - 180
+        return Math.abs(delta) < 0.0001 ? 0 : delta
+    }
+
     /** Return a content revision for invalidating composition metadata. */
     getCaptureRevision = () => this.#revision
 
@@ -1064,6 +1116,8 @@ export class Widget2Canvas {
         this.#refreshing = false
         this.#resolveRefreshIdleWaiters(false)
         this.#captureGeometry = null
+        this.#captureRotation = null
+        this.#replayCaptureSource = null
         this.#canvas?.remove()
         this.#canvas = null
         this.#original = null
