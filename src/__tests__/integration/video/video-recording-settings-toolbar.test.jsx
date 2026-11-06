@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,6 +61,22 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
             </div>
         )
     },
+    /** Render a native range input for Basic Replay slider interactions. */
+    WaSlider: ({'aria-label': ariaLabel, disabled, max, min, onChange, step, value}) => (
+        <input type="range" aria-label={ariaLabel} disabled={disabled} max={max} min={min} step={step} value={value} onChange={onChange}/>
+    ),
+    /** Render the tab navigation control for toolbar tests. */
+    WaTab: ({children, panel, slot}) => (
+        <button type="button" data-panel={panel} data-slot={slot}>{children}</button>
+    ),
+    /** Keep each tab panel in the test DOM so its settings remain queryable. */
+    WaTabGroup: ({children, className, active}) => (
+        <div className={className} data-active={active}>{children}</div>
+    ),
+    /** Render a named panel for the mocked tab group. */
+    WaTabPanel: ({children, name, active}) => (
+        <div data-name={name} data-active={active ? 'true' : undefined}>{children}</div>
+    ),
     WaOption: ({children, value}) => {
         const items = Children.toArray(children)
         const icon = items.find(item => item.props?.name)
@@ -82,11 +98,13 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
             {children}
         </label>
     ),
-    WaSwitch: ({children, checked, className, onChange, 'aria-label': ariaLabel, 'label-at-start': labelAtStart, 'width-auto': widthAuto}) => (
+    /** Render an accessible checkbox compatible with Web Awesome switch events. */
+    WaSwitch: ({children, checked, className, id, onChange, onInput, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, 'label-at-start': labelAtStart, 'width-auto': widthAuto}) => (
         <label className={className}
                data-label-at-start={labelAtStart ? 'true' : undefined}
                data-width-auto={widthAuto ? 'true' : undefined}>
-            <input type="checkbox" aria-label={ariaLabel} checked={checked} onChange={onChange}/>
+            <input id={id} type="checkbox" aria-label={ariaLabel} aria-labelledby={ariaLabelledby}
+                   checked={checked} onChange={onInput ?? onChange}/>
             {children}
         </label>
     ),

@@ -18,6 +18,34 @@ import {afterEach, describe, expect, test, vi} from 'vitest'
 import {CanvasOverlayComposer} from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import {createReplayRecordingPerformance} from '@Core/ui/replay/ReplayRecordingPerformance'
 
+/**
+ * Create the 2D canvas methods exercised by the compositor tests.
+ * @returns {Object} Mocked canvas rendering context.
+ */
+const createMockCanvasContext = () => ({
+    setTransform: vi.fn(),
+    fillRect: vi.fn(),
+    drawImage: vi.fn(),
+    save: vi.fn(),
+    restore: vi.fn(),
+    translate: vi.fn(),
+    rotate: vi.fn(),
+    scale: vi.fn(),
+    beginPath: vi.fn(),
+    rect: vi.fn(),
+    moveTo: vi.fn(),
+    arcTo: vi.fn(),
+    closePath: vi.fn(),
+    clip: vi.fn(),
+})
+
+/**
+ * Stub jsdom's missing 2D canvas context for one compositor test.
+ */
+const stubCanvasContext = () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => createMockCanvasContext())
+}
+
 describe('CanvasOverlayComposer recording path', () => {
     let composer
 
@@ -41,6 +69,7 @@ describe('CanvasOverlayComposer recording path', () => {
         const flushWebGLBuffer = vi.fn()
         vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1))
         vi.stubGlobal('cancelAnimationFrame', vi.fn())
+        stubCanvasContext()
         composer = new CanvasOverlayComposer(sourceCanvas, {
             clip: {x: 10, y: 20, width: 400, height: 225},
             width: 400,
@@ -75,6 +104,7 @@ describe('CanvasOverlayComposer recording path', () => {
         sourceCanvas.height = 180
         const flushWebGLBuffer = vi.fn()
         vi.stubGlobal('requestAnimationFrame', vi.fn())
+        stubCanvasContext()
         composer = new CanvasOverlayComposer(sourceCanvas, {
             width: 320, height: 180, outputDpr: 1,
             continuousRendering: false, flushWebGLBuffer,
@@ -90,6 +120,7 @@ describe('CanvasOverlayComposer recording path', () => {
         const outputCanvas = document.createElement('canvas')
         source.width = 320
         source.height = 180
+        stubCanvasContext()
         composer = new CanvasOverlayComposer(source, {
             width: 320, height: 180, outputDpr: 1, continuousRendering: false, outputCanvas,
         })

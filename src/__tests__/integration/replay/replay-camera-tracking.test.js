@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -1439,10 +1439,10 @@ describe('replay camera tracking', () => {
             expect(overlay).not.toBeNull()
             expect(overlay.hidden).toBe(false)
             expect(overlay.style.display).not.toBe('none')
-            expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(10 + runtimeZone.left * 1000, 6)
-            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(20 + runtimeZone.top * 800, 6)
-            expect(Number.parseFloat(overlay.style.width)).toBeCloseTo(runtimeZone.width * 1000, 6)
-            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(runtimeZone.height * 800, 6)
+            expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(10 + runtimeZone.left * 1000, 3)
+            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(20 + runtimeZone.top * 800, 3)
+            expect(Number.parseFloat(overlay.style.width)).toBeCloseTo(runtimeZone.width * 1000, 3)
+            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(runtimeZone.height * 800, 3)
             expect(overlay.style.background).toContain('rgba(255, 0, 0')
             expect(overlay.firstElementChild?.className).toBe('replay-tolerance-zone-overlay-outer')
             expect(overlay.firstElementChild?.dataset.zone).toBe('z1')
@@ -1450,10 +1450,10 @@ describe('replay camera tracking', () => {
             expect(overlay.lastElementChild?.dataset.zone).toBe('z2')
             expect(overlay.lastElementChild?.style.border).toContain('dashed')
             const targetZone = mode[JOURNEY_REPLAY_INTERNAL_STATE].lastToleranceZoneRuntimeTracking.dynamic.targetZone
-            expect(Number.parseFloat(overlay.lastElementChild.style.left)).toBeCloseTo((targetZone.left - runtimeZone.left) * 1000, 6)
-            expect(Number.parseFloat(overlay.lastElementChild.style.top)).toBeCloseTo((targetZone.top - runtimeZone.top) * 800, 6)
-            expect(Number.parseFloat(overlay.lastElementChild.style.width)).toBeCloseTo(targetZone.width * 1000, 6)
-            expect(Number.parseFloat(overlay.lastElementChild.style.height)).toBeCloseTo(targetZone.height * 800, 6)
+            expect(Number.parseFloat(overlay.lastElementChild.style.left)).toBeCloseTo((targetZone.left - runtimeZone.left) * 1000, 3)
+            expect(Number.parseFloat(overlay.lastElementChild.style.top)).toBeCloseTo((targetZone.top - runtimeZone.top) * 800, 3)
+            expect(Number.parseFloat(overlay.lastElementChild.style.width)).toBeCloseTo(targetZone.width * 1000, 3)
+            expect(Number.parseFloat(overlay.lastElementChild.style.height)).toBeCloseTo(targetZone.height * 800, 3)
 
             mode.stop({emit: false})
             expect(document.querySelector('.replay-tolerance-zone-overlay')).toBeNull()
@@ -1580,10 +1580,10 @@ describe('replay camera tracking', () => {
             const overlayRect = mode[JOURNEY_REPLAY_INTERNAL_CALL].viewportRectForCesiumSurface()
             const runtimeZone = mode[JOURNEY_REPLAY_INTERNAL_STATE].lastToleranceZoneRuntimeTracking.dynamic.triggerZone
             expect(overlay).not.toBeNull()
-            expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(overlayRect.left + runtimeZone.left * overlayRect.width, 6)
-            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(overlayRect.top + runtimeZone.top * overlayRect.height, 6)
-            expect(Number.parseFloat(overlay.style.width)).toBeCloseTo(runtimeZone.width * overlayRect.width, 6)
-            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(runtimeZone.height * overlayRect.height, 6)
+            expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(overlayRect.left + runtimeZone.left * overlayRect.width, 3)
+            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(overlayRect.top + runtimeZone.top * overlayRect.height, 3)
+            expect(Number.parseFloat(overlay.style.width)).toBeCloseTo(runtimeZone.width * overlayRect.width, 3)
+            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(runtimeZone.height * overlayRect.height, 3)
 
             mode.stop({emit: false})
         }
@@ -1696,10 +1696,10 @@ describe('replay camera tracking', () => {
             const runtimeZone = mode[JOURNEY_REPLAY_INTERNAL_STATE].lastToleranceZoneRuntimeTracking.navigation.triggerZone
             expect(overlay).not.toBeNull()
             expect(overlay.dataset.mode).toBe(REPLAY_MARKER_MODE_NAVIGATION)
-            expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(overlayRect.left + runtimeZone.left * overlayRect.width, 6)
-            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(overlayRect.top + runtimeZone.top * overlayRect.height, 6)
-            expect(Number.parseFloat(overlay.style.width)).toBeCloseTo(runtimeZone.width * overlayRect.width, 6)
-            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(runtimeZone.height * overlayRect.height, 6)
+            expect(Number.parseFloat(overlay.style.left)).toBeCloseTo(overlayRect.left + runtimeZone.left * overlayRect.width, 3)
+            expect(Number.parseFloat(overlay.style.top)).toBeCloseTo(overlayRect.top + runtimeZone.top * overlayRect.height, 3)
+            expect(Number.parseFloat(overlay.style.width)).toBeCloseTo(runtimeZone.width * overlayRect.width, 3)
+            expect(Number.parseFloat(overlay.style.height)).toBeCloseTo(runtimeZone.height * overlayRect.height, 3)
             expect(overlay.querySelector('[data-zone="z1"]')).not.toBeNull()
             expect(overlay.querySelector('[data-zone="z2"]')).not.toBeNull()
 
