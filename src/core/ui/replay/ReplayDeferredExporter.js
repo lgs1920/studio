@@ -93,7 +93,10 @@ import {currentReplayJourney, isJourneyReplayBasicMode} from '@Core/ui/replay/Re
 import {createBasicReplayTraceFocusClips} from '@Core/ui/replay/JourneyReplayBasicFocus'
 import {currentBasicReplaySettingsForJourney} from '@Core/ui/replay/ReplayUserModes'
 import {projectReplayPOIsOnSampler} from '@Core/ui/replay/JourneyReplayPOIProjection'
-import {createReplayPOISpeedProfile} from '@Core/ui/replay/ReplayPOISpeedProfile'
+import {
+    createReplayPOIRouteSignature,
+    isReplayPOISpeedProfileForRoute,
+} from '@Core/ui/replay/ReplayPOISpeedProfile'
 import {
     normalizeMediabunnyMetadataTags,
 }                              from '@Core/ui/replay/ReplayMediaMetadata'
@@ -133,7 +136,7 @@ const clampProgress = value => Math.max(0, Math.min(1, Number(value) || 0))
  * Build the Basic Replay POI speed profile from the active canonical sampler.
  *
  * @param {Object} options - Replay export timing inputs.
- * @returns {Object|null} Basic Replay speed profile or null for Expert Replay.
+ * @returns {Object|null} Qualified Basic Replay profile or null when no qualified slowdown is available.
  */
 const resolveReplayPOISpeedProfile = ({replay, journey, controller, replayDurationMillis, direction} = {}) => {
     if (!isJourneyReplayBasicMode({settings: globalThis.lgs?.settings?.ui?.replay, replay})) {
@@ -141,21 +144,60 @@ const resolveReplayPOISpeedProfile = ({replay, journey, controller, replayDurati
     }
 
     const basicSettings = currentBasicReplaySettingsForJourney(journey)
-    const profile = createReplayPOISpeedProfile({
-        entries: projectReplayPOIsOnSampler(replay?.nearbyPois ?? [], controller?.sampler)
-            .map(entry => ({
-                ...entry,
-                inVideoCrop: replay?.poiCropVisibility?.[entry?.poi?.id],
-                inVideoCropPassages: replay?.poiCropPassageVisibility?.[entry?.poi?.id],
-            })),
-        totalDistance: controller?.sampler?.totalDistance,
-        replayDurationMillis,
+    const entries = projectReplayPOIsOnSampler(replay?.nearbyPois ?? [], controller?.sampler)
+    const poiRouteSignature = createReplayPOIRouteSignature(entries)
+    const qualifiedProfile = replay?.poiPlaybackProfile
+    if (!isReplayPOISpeedProfileForRoute(qualifiedProfile, {
+        journeySlug: journey?.slug ?? null,
         direction,
+        replayDurationMillis,
+        totalDistance: controller?.sampler?.totalDistance,
         basicSettings,
-        enabled: true,
-    })
+        poiRouteSignature,
+    })) {
+        return null
+    }
 
-    return profile.playbackDurationMillis !== profile.routeDurationMillis ? profile : null
+    return qualifiedProfile.playbackDurationMillis !== qualifiedProfile.routeDurationMillis
+        ? qualifiedProfile
+        : null
+}
+
+/** Pass the current terrain-qualified endpoint visibility into the export timeline. */
+const resolveReplayPOIVisibilityQualification = ({replay, journey, controller, replayDurationMillis, direction} = {}) => {
+    const profile = replay?.poiPlaybackProfile
+    if (!isJourneyReplayBasicMode({settings: globalThis.lgs?.settings?.ui?.replay, replay})) {
+        return null
+    }
+
+    if (profile?.visibilityQualificationAttempted !== true) {
+        return {
+            qualified: true,
+            routeDurationMillis: replayDurationMillis,
+            windows: [],
+        }
+    }
+
+    const entries = projectReplayPOIsOnSampler(replay?.nearbyPois ?? [], controller?.sampler)
+    const isCurrentProfile = isReplayPOISpeedProfileForRoute(profile, {
+        journeySlug: journey?.slug ?? null,
+        direction,
+        replayDurationMillis,
+        totalDistance: controller?.sampler?.totalDistance,
+        basicSettings: currentBasicReplaySettingsForJourney(journey),
+        poiRouteSignature: createReplayPOIRouteSignature(entries),
+    })
+    return isCurrentProfile
+        ? {
+            qualified: true,
+            routeDurationMillis: profile.routeDurationMillis,
+            windows: profile.poiPresentationWindows,
+        }
+        : {
+            qualified: true,
+            routeDurationMillis: replayDurationMillis,
+            windows: [],
+        }
 }
 
 /**
@@ -2160,6 +2202,13 @@ export const prepareReplayDeferredExportPlan = ({
         settings: globalThis.lgs?.settings?.ui?.replay ?? replay,
         replay,
         direction,
+        poiVisibilityQualification: resolveReplayPOIVisibilityQualification({
+            replay,
+            journey,
+            controller,
+            replayDurationMillis,
+            direction,
+        }),
     })
     const videoTimeline = buildReplayVideoTimeline({
         replayDurationMillis: timelineReplayDurationMillis,

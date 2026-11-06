@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-11
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -181,6 +181,7 @@ export const normalizeJourneyReplayPOISettings = (settings = {}) => {
 /**
  * Resolve one-second holds for visible and enabled Journey endpoint animations.
  * @param {Object} options - Journey and Replay state inputs.
+ * @param {Object|null} options.poiVisibilityQualification - Optional terrain and crop qualification.
  * @returns {{start: number, end: number}} Start and arrival holds in milliseconds.
  */
 export const resolveReplayEndpointPOIPauseMillis = ({
@@ -189,6 +190,7 @@ export const resolveReplayEndpointPOIPauseMillis = ({
     settings = globalThis.lgs?.settings?.ui?.replay,
     replay = globalThis.lgs?.stores?.replay,
     direction = 1,
+    poiVisibilityQualification = null,
 } = {}) => {
     const tracks = Array.from(journey?.tracks?.values?.() ?? [])
     const poiList = globalThis.lgs?.stores?.main?.components?.pois?.list
@@ -212,13 +214,27 @@ export const resolveReplayEndpointPOIPauseMillis = ({
             || replay?.animateAllPoisDuringJourneyReplay === true,
     }
     /** Check endpoint visibility and Replay animation permission. */
-    const canAnimateEndpoint = poi => {
+    const canAnimateEndpoint = (poi, endpoint) => {
         if (!poi || poi.visible === false) {
             return false
         }
 
         const poiSettings = normalizeJourneyReplayPOISettings(poi.replay)
-        return poiSettings.visible && shouldAnimateReplayPOI(behavior, poiSettings)
+        if (!poiSettings.visible || !shouldAnimateReplayPOI(behavior, poiSettings)) {
+            return false
+        }
+
+        if (poiVisibilityQualification?.qualified !== true) {
+            return true
+        }
+
+        const poiWindows = (Array.isArray(poiVisibilityQualification.windows)
+            ? poiVisibilityQualification.windows
+            : [])
+            .filter(window => window.poiId === poi.id)
+        return endpoint === 'start'
+            ? poiWindows.some(window => window.routeStartMillis <= 0.5)
+            : poiWindows.some(window => window.routeEndMillis >= poiVisibilityQualification.routeDurationMillis - 0.5)
     }
     const departurePOI = Number(direction) < 0 ? stopPOI : startPOI
     const arrivalPOI = Number(direction) < 0 ? startPOI : stopPOI
@@ -227,8 +243,8 @@ export const resolveReplayEndpointPOIPauseMillis = ({
         : arrivalPOI
 
     return {
-        start: canAnimateEndpoint(departurePOI) ? REPLAY_ENDPOINT_POI_PAUSE_MILLIS : 0,
-        end: canAnimateEndpoint(visibleArrivalPOI) ? REPLAY_ENDPOINT_POI_PAUSE_MILLIS : 0,
+        start: canAnimateEndpoint(departurePOI, 'start') ? REPLAY_ENDPOINT_POI_PAUSE_MILLIS : 0,
+        end: canAnimateEndpoint(visibleArrivalPOI, 'end') ? REPLAY_ENDPOINT_POI_PAUSE_MILLIS : 0,
     }
 }
 

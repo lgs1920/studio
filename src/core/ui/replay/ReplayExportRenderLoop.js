@@ -8,11 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-22
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
+import {preparePOITerrainCapture} from '@Core/ui/POITerrainCapture'
 
 /** Viewers whose normal render loop is temporarily owned by active exports. */
 const exportRenderLoops = new WeakMap()
@@ -51,7 +53,13 @@ export const acquireReplayExportRenderLoop = ({viewer = null, scene = viewer?.sc
         scene?.requestRender?.()
         if (canRenderViewer) {
             viewer.resize?.()
+            const maskRevision = preparePOITerrainCapture(scene)
             viewer.render()
+            // Terrain arriving during the draw can change masks in postRender. Consume those entity writes before capture.
+            if (preparePOITerrainCapture(scene) !== maskRevision) {
+                scene?.requestRender?.()
+                viewer.render()
+            }
         }
         else {
             scene?.render?.()

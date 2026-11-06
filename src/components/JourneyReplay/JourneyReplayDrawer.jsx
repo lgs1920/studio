@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,7 +55,10 @@ import {
 } from '@Core/ui/replay/JourneyReplayPOISettings'
 import { REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT } from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
 import {currentReplayJourney} from '@Core/ui/replay/ReplayUserModeConstants'
-import {createReplayPOISpeedProfile} from '@Core/ui/replay/ReplayPOISpeedProfile'
+import {
+    createReplayPOISpeedProfile,
+    isReplayPOISpeedProfileForRoute,
+} from '@Core/ui/replay/ReplayPOISpeedProfile'
 import {getBasicReplaySettings, writeBasicReplaySettings} from '@Core/ui/replay/ReplayModeSettings'
 import {
     normalizeBasicReplaySettings,
@@ -560,18 +563,28 @@ export const JourneyReplayDrawer = memo(() => {
     const totalVideoDurationSeconds = useMemo(() => {
         const replayDurationSeconds = Math.max(0, finiteNumber(effectiveReplaySettings.duration) ?? 0)
         const replayDurationMillis = replayDurationSeconds * 1000
-        const playbackProfile = createReplayPOISpeedProfile({
-            entries: (replayState.nearbyPois ?? []).map(entry => ({
-                ...entry,
-                inVideoCrop: replayState.poiCropVisibility?.[entry?.poi?.id],
-                poi: poiList.get(entry?.poi?.id) ?? entry?.poi,
-            })),
-            totalDistance: replayState.totalDistance,
-            replayDurationMillis,
+        const qualifiedProfile = replayState.poiPlaybackProfile
+        const useQualifiedProfile = !isExpertMode && isReplayPOISpeedProfileForRoute(qualifiedProfile, {
+            journeySlug,
             direction: replayState.direction,
+            replayDurationMillis,
+            totalDistance: replayState.totalDistance,
             basicSettings: effectiveReplaySettings.basic,
-            enabled: !isExpertMode && animatePOIsInBasicMode,
         })
+        const playbackProfile = useQualifiedProfile
+            ? qualifiedProfile
+            : createReplayPOISpeedProfile({
+                entries: (replayState.nearbyPois ?? []).map(entry => ({
+                    ...entry,
+                    inVideoCrop: replayState.poiCropVisibility?.[entry?.poi?.id],
+                    poi: poiList.get(entry?.poi?.id) ?? entry?.poi,
+                })),
+                totalDistance: replayState.totalDistance,
+                replayDurationMillis,
+                direction: replayState.direction,
+                basicSettings: effectiveReplaySettings.basic,
+                enabled: false,
+            })
         const clipDurationSeconds = isExpertMode
             ? [...(clips.start ?? []), ...(clips.stop ?? [])]
                 .reduce((total, clip) => total + Math.max(0, finiteNumber(clip?.params?.duration) ?? 0), 0)

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,6 +68,7 @@ import {
     shouldAnimateReplayPOI,
 }                                                                                          from './JourneyReplayPOISettings'
 import {projectReplayPOIsOnSampler} from './JourneyReplayPOIProjection'
+import {isPOIAnchorOccludedByTerrain} from './ReplayPOITerrainVisibility'
 
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
@@ -235,7 +236,7 @@ const replayPOICandidatesForProgress = (state, progress, replayDurationSeconds, 
 }
 
 /**
- * Project a POI into the active Replay view and check its crop bounds.
+ * Project a POI into the active Replay view and check crop bounds and terrain visibility.
  * @param {object} mode - Replay session mode.
  * @param {object} poi - POI being checked.
  * @returns {boolean|null} Crop visibility, or null when no render target is available.
@@ -274,6 +275,7 @@ export const isPOIInsideVideoCrop = (mode, poi) => {
 
     const camera = viewer?.camera ?? scene.camera
     const entities = call.poiEntities(poi)
+    let hasUnqualifiedTerrainVisibility = false
     for (const entity of entities) {
         const position = entity.position?.getValue?.(JulianDate.now()) ?? entity.position
         if (!position || ![position.x, position.y, position.z].every(Number.isFinite)) {
@@ -305,11 +307,17 @@ export const isPOIInsideVideoCrop = (mode, poi) => {
             && windowPosition.x <= right
             && windowPosition.y >= cropTop
             && windowPosition.y <= bottom) {
-            return true
+            const terrainOcclusion = isPOIAnchorOccludedByTerrain(scene, camera, poi)
+            if (terrainOcclusion === false) {
+                return true
+            }
+            if (terrainOcclusion === null) {
+                hasUnqualifiedTerrainVisibility = true
+            }
         }
     }
 
-    return false
+    return hasUnqualifiedTerrainVisibility ? null : false
 }
 
 /** Publish animation ownership only when its observable ID set changes. */
@@ -624,6 +632,14 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
         const replayPhase = phase ?? replay?.replayFramePhase
         // POI display timers follow route time so playback slowdowns cannot expire them early.
         const currentReplaySeconds = Math.max(0, Math.min(1, traversalProgress)) * replayDurationSeconds
+        const poiPresentationWindows = replay?.poiPlaybackProfile?.poiPresentationWindows ?? []
+        const poiPresentationWindowsById = new Map()
+        poiPresentationWindows.forEach(window => {
+            const passages = poiPresentationWindowsById.get(window.poiId) ?? new Map()
+            passages.set(window.passageIndex, window)
+            poiPresentationWindowsById.set(window.poiId, passages)
+        })
+        const useQualifiedVisibilitySchedule = replay?.poiPlaybackProfile?.visibilityQualificationAttempted === true
         const currentJourney = state.sampler?.journey ?? currentReplayJourney()
         const currentPOIList = globalThis.lgs?.stores?.main?.components?.pois?.list
         const endpointPOIs = replayJourneyEndpoints(currentJourney, currentPOIList)
@@ -705,7 +721,16 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                     // Endpoint holds own their presentation independently of passage timers.
                     // A zero-duration or expired passage must not hide the departure flag.
                     if (startsAtReplayBoundary) {
-                        expandedIds.add(poiId)
+                        const departureWindow = poiPresentationWindowsById.get(poiId)?.get(passage.index ?? 0)
+                        const departureVisibilityQualified = useQualifiedVisibilitySchedule
+                            && replay?.poiVisibilityQualifiedPassages?.[poiId]?.[passage.index ?? 0] === true
+                        const departureIsQualifiedVisible = !departureVisibilityQualified
+                            || (departureWindow
+                                && currentReplaySeconds * 1000 >= departureWindow.routeStartMillis
+                                && currentReplaySeconds * 1000 < departureWindow.routeEndMillis)
+                        if (departureIsQualifiedVisible) {
+                            expandedIds.add(poiId)
+                        }
                         continue
                     }
                     const traversalTargetProgress = direction < 0 ? 1 - passage.progress : passage.progress
@@ -728,6 +753,8 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                     // A wide camera view can contain the whole route. Crop entry must
                     // not open distant POIs before their route-relative approach window.
                     const passageIndex = passage.index ?? 0
+                    const passageVisibilityQualified = useQualifiedVisibilitySchedule
+                        && replay?.poiVisibilityQualifiedPassages?.[poiId]?.[passageIndex] === true
                     const passageCropVisibility = passage.key === 'arrival'
                         ? undefined
                         : replay?.poiCropPassageVisibility?.[poiId]?.[passageIndex]
@@ -743,8 +770,15 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                     const cropVisible = hasProjectedCropDecision
                         ? projectedCropVisible
                         : isPOIInsideVideoCrop(mode, poi) !== false
-                    const insideCrop = atEndpointEvent
-                        || (nearPassage && cropVisible)
+                    const presentationWindow = poiPresentationWindowsById.get(poiId)?.get(passageIndex)
+                    const currentRouteMillis = currentReplaySeconds * 1000
+                    const withinQualifiedPresentationWindow = Boolean(presentationWindow
+                        && currentRouteMillis >= presentationWindow.routeStartMillis
+                        && (currentRouteMillis < presentationWindow.routeEndMillis
+                            || (atTraversalEnd && currentRouteMillis === presentationWindow.routeEndMillis)))
+                    const insideCrop = passageVisibilityQualified
+                        ? withinQualifiedPresentationWindow
+                        : atEndpointEvent || (nearPassage && cropVisible)
                     const appearanceKey = isEndpoint
                         ? `${poiId}:endpoint:${passage.key}`
                         : poiId
@@ -775,8 +809,10 @@ export const syncNearbyPOIsForSample = async (mode, sample = null, {isReplayStar
                     if (passageStartTime?.displayStartedAt === null && markerReachedPOI) {
                         passageStartTime.displayStartedAt = currentReplaySeconds
                     }
-                    if (passageStartTime && (passageStartTime.displayStartedAt === null
-                        || currentReplaySeconds < passageStartTime.displayStartedAt + displayDurationSeconds)) {
+                    const withinQualifiedDisplayWindow = passageVisibilityQualified
+                        && withinQualifiedPresentationWindow
+                    if (withinQualifiedDisplayWindow || (passageStartTime && (passageStartTime.displayStartedAt === null
+                        || currentReplaySeconds < passageStartTime.displayStartedAt + displayDurationSeconds))) {
                         expandedIds.add(poiId)
                     }
                 }

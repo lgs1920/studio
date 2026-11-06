@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-28
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ import {
 } from '@Core/ui/replay/ReplayPOISpeedProfile'
 import {JourneyReplayPlaybackController} from '@Core/ui/replay/JourneyReplayPlaybackController'
 import {buildReplayVideoTimeline, resolveReplayVideoFramePhase} from '@Core/ui/replay/ReplayVideoTimeline'
+import {resolveReplayEndpointPOIPauseMillis} from '@Core/ui/replay/JourneyReplayPOISettings'
 import {describe, expect, it} from 'vitest'
 
 const basicSettings = {
@@ -173,7 +174,42 @@ describe('Basic Replay POI speed profile', () => {
 
         expect(profile.playbackDurationMillis).toBe(10000)
         expect(profile.shouldSlowdown).toBe(false)
-        expect(cropChecks).toBe(3)
+        expect(cropChecks).toBe(5)
+    })
+
+    it('does not qualify terrain visibility when the terrain ray is indeterminate', () => {
+        const entry = {...poiEntry('unknown-terrain', 500), inVideoCrop: true}
+        const profile = createReplayPOISpeedProfile({
+            entries: [entry],
+            totalDistance: 1000,
+            replayDurationMillis: 10000,
+            basicSettings,
+            enabled: true,
+            isPOIInVideoCrop: () => null,
+        })
+
+        expect(profile.playbackDurationMillis).toBe(10000)
+        expect(profile.shouldSlowdown).toBe(false)
+        expect(profile.poiPresentationWindows).toEqual([])
+    })
+
+    it('bounds route visibility qualification work when many POIs are selected', () => {
+        let visibilityChecks = 0
+        const profile = createReplayPOISpeedProfile({
+            entries: Array.from({length: 200}, (_, index) => poiEntry(`poi-${index}`, index * 5)),
+            totalDistance: 1000,
+            replayDurationMillis: 10000,
+            basicSettings,
+            enabled: true,
+            isPOIInVideoCrop: () => {
+                visibilityChecks += 1
+                return false
+            },
+        })
+
+        expect(visibilityChecks).toBe(512)
+        expect(profile.visibilitySampleCount).toBe(512)
+        expect(profile.shouldSlowdown).toBe(false)
     })
 
     it('slows down when a POI enters the crop during its display window', () => {
@@ -188,6 +224,63 @@ describe('Basic Replay POI speed profile', () => {
         })
 
         expect(profile.playbackDurationMillis).toBeGreaterThan(10000)
+    })
+
+    it('starts the slowdown at first terrain visibility and extends the POI window to cover it', () => {
+        const entry = poiEntry('terrain-reveal', 750)
+        const profile = createReplayPOISpeedProfile({
+            entries: [entry],
+            totalDistance: 1000,
+            replayDurationMillis: 10000,
+            basicSettings,
+            enabled: true,
+            isPOIInVideoCrop: (_entry, progress) => progress >= 0.8,
+        })
+        const presentation = profile.poiPresentationWindows[0]
+        const nominalWindowEnd = 8500
+        const crawlSegments = profile.segments.filter(segment => segment.poiCrawl)
+
+        expect(presentation.routeStartMillis).toBe(8000)
+        expect(presentation.routeEndMillis).toBeGreaterThan(nominalWindowEnd)
+        expect(crawlSegments.length).toBeGreaterThanOrEqual(32)
+        expect(crawlSegments.every(segment => segment.routeStartMillis >= presentation.routeStartMillis)).toBe(true)
+        expect(profile.segments.filter(segment => segment.routeEndMillis <= presentation.routeStartMillis)
+            .every(segment => segment.speedFactor === 1 && segment.poiCrawl !== true)).toBe(true)
+    })
+
+    it('qualifies visibility in traversal order when Replay runs in reverse', () => {
+        const profile = createReplayPOISpeedProfile({
+            entries: [poiEntry('reverse-reveal', 750)],
+            totalDistance: 1000,
+            replayDurationMillis: 10000,
+            direction: -1,
+            basicSettings,
+            enabled: true,
+            isPOIInVideoCrop: (_entry, progress) => progress <= 0.8,
+        })
+
+        expect(profile.poiPresentationWindows[0].routeStartMillis).toBeGreaterThan(1900)
+        expect(profile.poiPresentationWindows[0].routeStartMillis).toBeLessThan(2100)
+    })
+
+    it('does not slow down during terrain-occluded gaps between visible intervals', () => {
+        const profile = createReplayPOISpeedProfile({
+            entries: [poiEntry('intermittent-visibility', 500)],
+            totalDistance: 1000,
+            replayDurationMillis: 10000,
+            basicSettings,
+            enabled: true,
+            isPOIInVideoCrop: (_entry, progress) => progress < 0.45 || progress >= 0.55,
+        })
+        const hiddenGapSegments = profile.segments.filter(segment => (
+            (segment.routeStartMillis + segment.routeEndMillis) / 2 >= 4700
+            && (segment.routeStartMillis + segment.routeEndMillis) / 2 <= 5300
+        ))
+
+        expect(profile.poiPresentationWindows).toHaveLength(1)
+        expect(profile.poiPresentationWindows[0]).toMatchObject({routeStartMillis: 4000, routeEndMillis: 6000})
+        expect(hiddenGapSegments.length).toBeGreaterThan(0)
+        expect(hiddenGapSegments.every(segment => segment.speedFactor === 1 && segment.poiCrawl !== true)).toBe(true)
     })
 
     it('maps extended Replay timeline timestamps back to route progress', () => {
@@ -232,6 +325,34 @@ describe('Basic Replay POI speed profile', () => {
         expect(Number.isFinite(replayPlaybackTimeAtRouteTime(endProfile, 10000))).toBe(true)
         expect(replayRouteTimeAtPlaybackTime(endProfile, endProfile.playbackDurationMillis))
             .toBe(10000)
+    })
+
+    it('omits endpoint holds for terrain-hidden flags and keeps them for visible flags', () => {
+        const start = {...poiEntry('start-flag', 0).poi, type: 'start'}
+        const stop = {...poiEntry('stop-flag', 1000).poi, type: 'stop'}
+        const journey = {tracks: new Map([
+            ['first', {flags: {start: start.id}}],
+            ['last', {flags: {stop: stop.id}}],
+        ])}
+        const replay = {userMode: 'basic', nearbyPois: [{poi: start}, {poi: stop}]}
+        const settings = {userMode: 'basic', basic: basicSettings}
+        const common = {sampler: {journey}, journey, settings, replay, direction: 1}
+
+        expect(resolveReplayEndpointPOIPauseMillis({
+            ...common,
+            poiVisibilityQualification: {qualified: true, routeDurationMillis: 10000, windows: []},
+        })).toEqual({start: 0, end: 0})
+        expect(resolveReplayEndpointPOIPauseMillis({
+            ...common,
+            poiVisibilityQualification: {
+                qualified: true,
+                routeDurationMillis: 10000,
+                windows: [
+                    {poiId: start.id, routeStartMillis: 0, routeEndMillis: 1000},
+                    {poiId: stop.id, routeStartMillis: 9000, routeEndMillis: 10000},
+                ],
+            },
+        })).toEqual({start: 1000, end: 1000})
     })
 
     it('keeps the route duration when Basic Replay POI animation is disabled', () => {

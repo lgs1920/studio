@@ -8,18 +8,29 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-29
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {syncNearbyPOIsForSample} from '@Core/ui/replay/JourneyReplaySessionPOIController'
+import {
+    isPOIInsideVideoCrop,
+    syncNearbyPOIsForSample,
+} from '@Core/ui/replay/JourneyReplaySessionPOIController'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
+import {Cartesian2, Cartesian3} from 'cesium'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
 /** Build a moving view whose zoom can contain either nearby POIs or the complete route. */
-const createReplayView = ({userMode, height, direction = 1, distances = [2000, 50000, 90000]}) => {
+const createReplayView = ({
+                            userMode,
+                            height,
+                            direction = 1,
+                            distances = [2000, 50000, 90000],
+                            poiPresentationWindows = null,
+                            visibilityQualified = true,
+                        }) => {
     const totalDistance = 100000
     const pois = distances.map(distance => ({
         id: `poi-${distance}`,
@@ -30,6 +41,17 @@ const createReplayView = ({userMode, height, direction = 1, distances = [2000, 5
     const entries = pois.map((poi, index) => ({poi, projectedAbscissa: distances[index]}))
     const points = new Map(pois.map(poi => [poi.id, poi]))
     const replay = {userMode, direction, totalDistance, animatedPOIIds: []}
+    if (poiPresentationWindows) {
+        replay.poiPlaybackProfile = {
+            visibilityQualificationAttempted: true,
+            visibilityQualified,
+            poiPresentationWindows,
+        }
+        replay.poiVisibilityQualifiedPassages = Object.fromEntries(poiPresentationWindows.map(window => [
+            window.poiId,
+            {[window.passageIndex]: true},
+        ]))
+    }
     let markerDistance = 0
     const viewer = {
         canvas: {clientWidth: 800, clientHeight: 600},
@@ -72,7 +94,7 @@ const createReplayView = ({userMode, height, direction = 1, distances = [2000, 5
         await syncNearbyPOIsForSample(mode, {progress, distanceFromStart: markerDistance})
         return [...replay.animatedPOIIds]
     }
-    return {step}
+    return {step, replay}
 }
 
 afterEach(() => vi.unstubAllGlobals())
@@ -158,6 +180,61 @@ describe('Replay POI appearance proximity', () => {
 
         expect(await step(0.4)).toEqual([])
         expect(await step(0.5)).toEqual(['poi-50000'])
+    })
+
+    it('starts the POI display on terrain reveal and keeps it through its extended slowdown window', async () => {
+        const {step} = createReplayView({
+            userMode: 'basic',
+            height: 1000,
+            distances: [50000],
+            visibilityQualified: false,
+            poiPresentationWindows: [{
+                poiId: 'poi-50000',
+                passageIndex: 0,
+                routeStartMillis: 5500,
+                routeEndMillis: 8000,
+            }],
+        })
+
+        expect(await step(0.5)).toEqual([])
+        expect(await step(0.55)).toEqual(['poi-50000'])
+        expect(await step(0.79)).toEqual(['poi-50000'])
+        expect(await step(0.8)).toEqual([])
+    })
+
+    it('rejects a crop-visible POI when loaded terrain intersects its anchor ray', () => {
+        const canvas = {clientWidth: 800, clientHeight: 600}
+        const terrainHit = Cartesian3.fromDegrees(0, 0, 500)
+        const camera = {
+            positionWC: Cartesian3.fromDegrees(0, 0, 1000),
+            directionWC: new Cartesian3(-1, 0, 0),
+            getPickRay: vi.fn(() => ({})),
+        }
+        const scene = {
+            camera,
+            canvas,
+            globe: {
+                getHeight: () => 0,
+                pick: () => terrainHit,
+            },
+            cartesianToCanvasCoordinates: () => new Cartesian2(400, 300),
+            worldToWindowCoordinates: () => new Cartesian2(400, 300),
+        }
+        const viewer = {camera, canvas, scene}
+        const poi = {id: 'terrain-hidden', longitude: 0, latitude: 0}
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                cesiumViewer: () => viewer,
+                poiEntities: () => [{position: Cartesian3.fromDegrees(0, 0, 0)}],
+                videoCropRect: () => ({left: 100, top: 100, width: 600, height: 400}),
+            },
+        }
+        vi.stubGlobal('lgs', {viewer})
+
+        expect(isPOIInsideVideoCrop(mode, poi)).toBe(false)
+        scene.globe.pick = () => null
+        expect(isPOIInsideVideoCrop(mode, poi)).toBeNull()
+        expect(camera.getPickRay).toHaveBeenCalledTimes(2)
     })
 
     it.each(['basic', 'expert'])('expires a POI display after its passage during reverse %s playback', async userMode => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-28
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,9 @@ const POI_CRAWL_SPEED_FACTOR = 0.05
 const POI_CRAWL_RAMP_STEPS = 16
 const MAX_POI_REPLAY_DISTANCE_METERS = 500
 const POI_SPEED_RAMP_STEPS = 16
+const VISIBILITY_COARSE_SAMPLE_INTERVALS = 4
+const VISIBILITY_REFINEMENT_STEPS = 4
+const MAX_POI_VISIBILITY_SAMPLES = 512
 
 /** Convert input into a finite number or null. */
 const finiteNumber = value => {
@@ -33,12 +36,12 @@ const finiteNumber = value => {
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value))
 
 /** Create a one-second crawl profile that reaches zero speed at the POI. */
-const createPOICrawlSegments = (centerMillis, routeDuration) => {
+const createPOICrawlSegments = (centerMillis, routeDuration, minimumRouteMillis = 0, maximumRouteMillis = routeDuration) => {
     const maximumRouteSpan = DEFAULT_POI_SLOWDOWN_DURATION_MILLIS * POI_CRAWL_SPEED_FACTOR / 2
     const routeSpan = Math.min(
         maximumRouteSpan,
-        Math.max(0, centerMillis) * 2,
-        Math.max(0, routeDuration - centerMillis) * 2,
+        Math.max(0, centerMillis - minimumRouteMillis) * 2,
+        Math.max(0, Math.min(routeDuration, maximumRouteMillis) - centerMillis) * 2,
     )
     if (routeSpan <= 0) {
         return []
@@ -83,7 +86,7 @@ const isPOINearReplayRoute = entry => {
 }
 
 /** Return whether this POI can actually be shown as an animated Replay POI. */
-const canAnimatePOIInReplay = (entry, behavior) => {
+const canAnimatePOIInReplay = (entry, behavior, hasVisibilityQualifier) => {
     const poi = entry?.poi ?? entry
     const settings = normalizeJourneyReplayPOISettings(poi?.replay)
     const isEndpoint = ['start', 'stop', 'starter'].includes(poi?.type)
@@ -94,7 +97,7 @@ const canAnimatePOIInReplay = (entry, behavior) => {
         && settings.animated
         && replayVisible
         && poi?.visible !== false
-        && entry?.inVideoCrop !== false
+        && (hasVisibilityQualifier || entry?.inVideoCrop !== false)
 }
 
 /** Return an unmodified route timeline when no POI can produce a visible animation. */
@@ -104,6 +107,7 @@ const createRouteOnlyProfile = (routeDuration, safeDirection, factor, shouldSlow
     direction: safeDirection,
     shouldSlowdown,
     speedFactor: factor,
+    poiPresentationWindows: [],
     segments: [{
         routeStartMillis: 0,
         routeEndMillis: routeDuration,
@@ -112,6 +116,115 @@ const createRouteOnlyProfile = (routeDuration, safeDirection, factor, shouldSlow
         speedFactor: 1,
     }],
 })
+
+/** Build a stable signature for projected POI identities and passage positions. */
+export const createReplayPOIRouteSignature = entries => (Array.isArray(entries) ? entries : [])
+    .map(entry => {
+        const poi = entry?.poi ?? entry
+        const settings = poi?.replay ?? {}
+        const passages = Array.isArray(entry?.projectedPassages)
+            ? entry.projectedPassages.map(passage => Number(passage?.projectedAbscissa)).join(',')
+            : ''
+        return [
+            poi?.id ?? '',
+            Number(entry?.projectedAbscissa),
+            passages,
+            settings.animated,
+            settings.visible,
+            poi?.visible,
+            poi?.tooClose,
+        ].join(':')
+    })
+    .sort()
+    .join('|')
+
+/** Refine one visible-to-hidden transition inside its route-time sample interval. */
+const refineVisibilityTransitionRouteMillis = ({
+                                                   entry,
+                                                   routeDuration,
+                                                   direction,
+                                                   lowerRouteMillis,
+                                                   upperRouteMillis,
+                                                   lowerVisible,
+                                                   isPOIInVideoCrop,
+                                               }) => {
+    let lower = lowerRouteMillis
+    let upper = upperRouteMillis
+    for (let index = 0; index < VISIBILITY_REFINEMENT_STEPS; index += 1) {
+        const routeMillis = (lower + upper) / 2
+        const traversalProgress = routeDuration > 0 ? routeMillis / routeDuration : 0
+        const sampleProgress = direction < 0 ? 1 - traversalProgress : traversalProgress
+        const visible = isPOIInVideoCrop(entry, sampleProgress) === true
+        if (visible === lowerVisible) {
+            lower = routeMillis
+        }
+        else {
+            upper = routeMillis
+        }
+    }
+
+    return lowerVisible ? lower : upper
+}
+
+/** Sample and refine every visible interval over one bounded Replay route window. */
+const samplePOIVisibilityIntervals = ({
+                                          entry,
+                                          routeStartMillis,
+                                          routeEndMillis,
+                                          routeDuration,
+                                          direction,
+                                          isPOIInVideoCrop,
+                                      }) => {
+    if (typeof isPOIInVideoCrop !== 'function' || routeEndMillis <= routeStartMillis) {
+        return []
+    }
+
+    const samples = Array.from({length: VISIBILITY_COARSE_SAMPLE_INTERVALS + 1}, (_, index) => {
+        const fraction = index / VISIBILITY_COARSE_SAMPLE_INTERVALS
+        const routeMillis = routeStartMillis + (routeEndMillis - routeStartMillis) * fraction
+        const traversalProgress = routeDuration > 0 ? routeMillis / routeDuration : 0
+        const sampleProgress = direction < 0 ? 1 - traversalProgress : traversalProgress
+        return {routeMillis, visible: isPOIInVideoCrop(entry, sampleProgress) === true}
+    })
+    const intervals = []
+    let visibleStartMillis = samples[0].visible ? routeStartMillis : null
+
+    for (let index = 1; index < samples.length; index += 1) {
+        const previous = samples[index - 1]
+        const current = samples[index]
+        if (previous.visible === current.visible) {
+            continue
+        }
+
+        const transitionMillis = refineVisibilityTransitionRouteMillis({
+            entry,
+            routeDuration,
+            direction,
+            lowerRouteMillis: previous.routeMillis,
+            upperRouteMillis: current.routeMillis,
+            lowerVisible: previous.visible,
+            isPOIInVideoCrop,
+        })
+        if (current.visible) {
+            visibleStartMillis = transitionMillis
+        }
+        else if (visibleStartMillis !== null) {
+            if (transitionMillis > visibleStartMillis) {
+                intervals.push({routeStartMillis: visibleStartMillis, routeEndMillis: transitionMillis})
+            }
+            visibleStartMillis = null
+        }
+    }
+
+    if (visibleStartMillis !== null) {
+        intervals.push({
+            routeStartMillis: visibleStartMillis,
+            routeEndMillis: Math.max(visibleStartMillis, routeEndMillis),
+        })
+    }
+
+    return intervals
+}
 
 /**
  * Build a time-warp profile that slows around displayed POIs and crawls past each one.
@@ -136,11 +249,27 @@ export const createReplayPOISpeedProfile = ({
     const poiEntries = Array.isArray(entries) ? entries : []
     const displayDuration = Math.max(0, behavior.poiAnimationDurationSeconds * 1000)
     const safeDirection = Number(direction) < 0 ? -1 : 1
+    const visibilityQualificationAttempted = typeof isPOIInVideoCrop === 'function'
+    let visibilitySampleCount = 0
+    const qualifyVisibility = visibilityQualificationAttempted
+        ? (entry, progress) => {
+            if (visibilitySampleCount >= MAX_POI_VISIBILITY_SAMPLES) {
+                return null
+            }
+            visibilitySampleCount += 1
+            return isPOIInVideoCrop(entry, progress)
+        }
+        : null
     if (!enabled || !behavior.animatePoisDuringJourneyReplay || routeDuration <= 0
         || routeDistance <= 0 || displayDuration <= 0 || factor >= 1) {
-        return createRouteOnlyProfile(routeDuration, safeDirection, factor)
+        return {
+            ...createRouteOnlyProfile(routeDuration, safeDirection, factor),
+            visibilityQualificationAttempted,
+            visibilitySampleCount,
+        }
     }
 
+    const poiPresentationWindows = []
     const windows = poiEntries.flatMap(entry => {
         const poi = entry?.poi ?? entry
         if (!poi?.id) {
@@ -151,7 +280,7 @@ export const createReplayPOISpeedProfile = ({
             return []
         }
 
-        if (!canAnimatePOIInReplay(entry, behavior)) {
+        if (!canAnimatePOIInReplay(entry, behavior, visibilityQualificationAttempted)) {
             return []
         }
 
@@ -173,38 +302,92 @@ export const createReplayPOISpeedProfile = ({
                 replayPassageIndex: passageIndex,
             }
             const poiProgress = clamp(distance / routeDistance, 0, 1)
-            const centerMillis = poiProgress * routeDuration
+            const traversalProgress = safeDirection < 0 ? 1 - poiProgress : poiProgress
+            const centerMillis = traversalProgress * routeDuration
             const windowDuration = Math.min(displayDuration, routeDuration)
             const chronologicalStart = clamp(centerMillis - windowDuration / 2, 0, routeDuration - windowDuration)
             const chronologicalEnd = chronologicalStart + windowDuration
-            const cropProgressRadius = windowDuration / (2 * routeDuration)
-            const cropProgressSamples = [
-                clamp(poiProgress - cropProgressRadius, 0, 1),
-                poiProgress,
-                clamp(poiProgress + cropProgressRadius, 0, 1),
-            ]
-            const cropVisibilitySamples = typeof isPOIInVideoCrop === 'function'
-                ? cropProgressSamples.map(progress => isPOIInVideoCrop(passageEntry, progress))
-                : []
-            const passageCropVisibility = entry?.inVideoCropPassages?.[passageIndex]
-            const inVideoCrop = cropVisibilitySamples.includes(true)
-                ? true
-                : cropVisibilitySamples.length > 0 && cropVisibilitySamples.every(value => value === false)
-                    ? false
-                    : passageCropVisibility ?? entry.inVideoCrop
-            if (inVideoCrop === false) {
+            const baseVisibilityIntervals = typeof qualifyVisibility === 'function'
+                ? samplePOIVisibilityIntervals({
+                    entry: passageEntry,
+                    routeStartMillis: chronologicalStart,
+                    routeEndMillis: chronologicalEnd,
+                    routeDuration,
+                    direction: safeDirection,
+                    isPOIInVideoCrop: qualifyVisibility,
+                })
+                : (entry?.inVideoCropPassages?.[passageIndex] ?? entry?.inVideoCrop) === false
+                    ? []
+                    : [{routeStartMillis: chronologicalStart, routeEndMillis: chronologicalEnd}]
+            if (baseVisibilityIntervals.length === 0) {
                 return []
             }
 
-            const routeStartMillis = safeDirection < 0 ? routeDuration - chronologicalEnd : chronologicalStart
-            const routeEndMillis = safeDirection < 0 ? routeDuration - chronologicalStart : chronologicalEnd
-            const routeCenterMillis = safeDirection < 0 ? routeDuration - centerMillis : centerMillis
-            return [{routeStartMillis, routeEndMillis, routeCenterMillis}]
+            const visibilityStartMillis = baseVisibilityIntervals[0].routeStartMillis
+            const presentationEndMillis = Math.min(
+                routeDuration,
+                Math.max(chronologicalEnd, visibilityStartMillis + displayDuration),
+            )
+            const extensionVisibilityIntervals = presentationEndMillis > chronologicalEnd
+                ? samplePOIVisibilityIntervals({
+                    entry: passageEntry,
+                    routeStartMillis: chronologicalEnd,
+                    routeEndMillis: presentationEndMillis,
+                    routeDuration,
+                    direction: safeDirection,
+                    isPOIInVideoCrop: qualifyVisibility,
+                })
+                : []
+            const visibilityIntervals = [...baseVisibilityIntervals, ...extensionVisibilityIntervals]
+                .sort((left, right) => left.routeStartMillis - right.routeStartMillis)
+                .reduce((merged, interval) => {
+                    const previous = merged.at(-1)
+                    if (previous && interval.routeStartMillis <= previous.routeEndMillis + 0.5) {
+                        previous.routeEndMillis = Math.max(previous.routeEndMillis, interval.routeEndMillis)
+                    }
+                    else {
+                        merged.push({...interval})
+                    }
+                    return merged
+                }, [])
+            if (presentationEndMillis <= visibilityStartMillis) {
+                return []
+            }
+
+            const crawlRouteSpan = DEFAULT_POI_SLOWDOWN_DURATION_MILLIS * POI_CRAWL_SPEED_FACTOR
+            poiPresentationWindows.push({
+                poiId: poi.id,
+                passageIndex,
+                routeStartMillis: visibilityStartMillis,
+                routeEndMillis: presentationEndMillis,
+            })
+            return visibilityIntervals.flatMap(interval => {
+                const routeStartMillis = Math.max(visibilityStartMillis, interval.routeStartMillis)
+                const routeEndMillis = Math.min(presentationEndMillis, interval.routeEndMillis)
+                if (routeEndMillis <= routeStartMillis) {
+                    return []
+                }
+
+                const crawlCenterMillis = centerMillis > routeStartMillis && centerMillis < routeEndMillis
+                    ? centerMillis
+                    : routeStartMillis + Math.min(crawlRouteSpan / 2, (routeEndMillis - routeStartMillis) / 2)
+                return [{
+                    poiId: poi.id,
+                    passageIndex,
+                    routeStartMillis,
+                    routeEndMillis,
+                    routeCenterMillis: crawlCenterMillis,
+                }]
+            })
         })
     }).sort((left, right) => left.routeStartMillis - right.routeStartMillis)
 
     if (windows.length === 0) {
-        return createRouteOnlyProfile(routeDuration, safeDirection, factor)
+        return {
+            ...createRouteOnlyProfile(routeDuration, safeDirection, factor),
+            visibilityQualificationAttempted,
+            visibilitySampleCount,
+        }
     }
 
     // Merge overlapping windows while retaining each POI's crawl zone.
@@ -246,8 +429,8 @@ export const createReplayPOISpeedProfile = ({
         appendSegment(routeCursor, window.routeStartMillis, 1)
 
         const breakpoints = new Set([window.routeStartMillis, window.routeEndMillis])
-        const crawlSegments = window.windows.flatMap(({routeCenterMillis}) => (
-            createPOICrawlSegments(routeCenterMillis, routeDuration)
+        const crawlSegments = window.windows.flatMap(({routeCenterMillis, routeStartMillis, routeEndMillis}) => (
+            createPOICrawlSegments(routeCenterMillis, routeDuration, routeStartMillis, routeEndMillis)
         ))
         crawlSegments.forEach(({routeStartMillis, routeEndMillis}) => {
             breakpoints.add(routeStartMillis)
@@ -302,8 +485,39 @@ export const createReplayPOISpeedProfile = ({
         direction: safeDirection,
         shouldSlowdown: windows.length > 0,
         speedFactor: factor,
+        visibilityQualificationAttempted,
+        visibilitySampleCount,
+        poiPresentationWindows,
         segments,
     }
+}
+
+/** Check whether a qualified POI profile still describes the requested Replay route. */
+export const isReplayPOISpeedProfileForRoute = (profile, {
+    journeySlug = null,
+    direction = 1,
+    replayDurationMillis = 0,
+    totalDistance = 0,
+    basicSettings = null,
+    poiRouteSignature = null,
+} = {}) => {
+    if (profile?.visibilityQualificationAttempted !== true
+        || profile.journeySlug !== journeySlug
+        || profile.direction !== (Number(direction) < 0 ? -1 : 1)
+        || Math.abs((finiteNumber(profile.routeDurationMillis) ?? -1) - (finiteNumber(replayDurationMillis) ?? 0)) > 0.5
+        || Math.abs((finiteNumber(profile.routeDistanceMeters) ?? -1) - (finiteNumber(totalDistance) ?? 0)) > 0.01
+        || (poiRouteSignature !== null && profile.poiRouteSignature !== poiRouteSignature)) {
+        return false
+    }
+
+    if (!basicSettings || !profile.timingSettings) {
+        return true
+    }
+
+    const behavior = normalizeReplayPOIBehavior(basicSettings)
+    return profile.timingSettings.animatePoisDuringJourneyReplay === behavior.animatePoisDuringJourneyReplay
+        && profile.timingSettings.poiVisibilityMode === behavior.poiVisibilityMode
+        && profile.timingSettings.poiAnimationDurationSeconds === behavior.poiAnimationDurationSeconds
 }
 
 /**

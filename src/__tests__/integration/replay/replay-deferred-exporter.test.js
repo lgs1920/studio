@@ -35,7 +35,12 @@ import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import {WidgetDynamicRenderer} from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import {REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModeConstants'
 import {buildReplayVideoTimeline, resolveReplayVideoFramePhase} from '@Core/ui/replay/ReplayVideoTimeline'
-import {createReplayPOISpeedProfile, replayRouteTimeAtPlaybackTime} from '@Core/ui/replay/ReplayPOISpeedProfile'
+import {
+    createReplayPOIRouteSignature,
+    createReplayPOISpeedProfile,
+    replayRouteTimeAtPlaybackTime,
+} from '@Core/ui/replay/ReplayPOISpeedProfile'
+import {normalizeReplayPOIBehavior} from '@Core/ui/replay/JourneyReplayPOISettings'
 import {createReplayRecordingPerformance} from '@Core/ui/replay/ReplayRecordingPerformance'
 import * as replayOverlayComposer from '@Core/ui/replay/ReplayVideoOverlayComposer'
 import * as replayTileReadiness from '@Core/ui/replay/ReplaySceneTileReadiness'
@@ -377,6 +382,23 @@ describe('ReplayDeferredExporter', () => {
             totalDistance: 1000,
             atProgress: progress => ({progress}),
         }
+        const qualifiedProfile = {
+            ...createReplayPOISpeedProfile({
+                entries: nearbyPois,
+                totalDistance: 1000,
+                replayDurationMillis: 10000,
+                basicSettings: basic,
+                enabled: true,
+                isPOIInVideoCrop: () => true,
+            }),
+            visibilityQualificationAttempted: true,
+            visibilityQualified: true,
+            journeySlug: journey.slug,
+            routeDistanceMeters: 1000,
+            poiRouteSignature: createReplayPOIRouteSignature(nearbyPois),
+            timingSettings: normalizeReplayPOIBehavior(basic),
+        }
+        replay.poiPlaybackProfile = qualifiedProfile
         globalThis.lgs = {
             settings: {ui: {replay: {userMode: 'basic', basic}}},
             stores: {replay},
@@ -397,6 +419,97 @@ describe('ReplayDeferredExporter', () => {
         expect(plan.outputDurationMillis).toBe(plan.poiSpeedProfile.playbackDurationMillis)
         expect(resolveReplayVideoFramePhase({timeline: plan.videoTimeline, frameTimeMs: 6500}).progress)
             .toBeCloseTo(replayRouteTimeAtPlaybackTime(plan.poiSpeedProfile, 6500) / 10000)
+    })
+
+    it('uses the terrain-qualified POI timing window for the Basic Record timeline', () => {
+        const basic = {
+            duration: 10,
+            animatePoisDuringJourneyReplay: true,
+            poiAnimationDurationSeconds: 2,
+            endFocus: {enabled: false, duration: 0},
+        }
+        const nearbyPois = [{
+            projectedAbscissa: 750,
+            poi: {id: 'terrain-reveal', type: 'poi', replay: {visible: true, animated: true}},
+        }]
+        const journey = {slug: 'qualified-poi-export', replay: {basic}}
+        const sampler = {totalDistance: 1000, atProgress: progress => ({progress})}
+        const qualifiedProfile = {
+            ...createReplayPOISpeedProfile({
+                entries: nearbyPois,
+                totalDistance: 1000,
+                replayDurationMillis: 10000,
+                basicSettings: basic,
+                enabled: true,
+                isPOIInVideoCrop: (_entry, progress) => progress >= 0.8,
+            }),
+            visibilityQualificationAttempted: true,
+            visibilityQualified: true,
+            journeySlug: journey.slug,
+            routeDistanceMeters: 1000,
+            poiRouteSignature: createReplayPOIRouteSignature(nearbyPois),
+            timingSettings: normalizeReplayPOIBehavior(basic),
+        }
+        const replay = {
+            userMode: 'basic',
+            basicPreparationActive: true,
+            duration: 10,
+            totalDistance: 1000,
+            nearbyPois,
+            poiPlaybackProfile: qualifiedProfile,
+        }
+        globalThis.lgs = {
+            settings: {ui: {replay: {userMode: 'basic', basic}}},
+            stores: {replay},
+        }
+
+        const {plan} = prepareReplayDeferredExportPlan({
+            replay,
+            journey,
+            controller: {duration: 10, direction: 1, sampler},
+            fps: 10,
+            dimensions: {width: 1280, height: 720},
+            sourceCanvas: {width: 1280, height: 720},
+        })
+
+        expect(plan.poiSpeedProfile).toBe(qualifiedProfile)
+        expect(plan.poiSpeedProfile.poiPresentationWindows[0].routeStartMillis).toBe(8000)
+        expect(plan.poiSpeedProfile.poiPresentationWindows[0].routeEndMillis).toBe(10000)
+        expect(plan.outputDurationMillis).toBe(qualifiedProfile.playbackDurationMillis)
+    })
+
+    it('does not derive Basic Record slowdowns from crop visibility without terrain qualification', () => {
+        const basic = {
+            duration: 10,
+            animatePoisDuringJourneyReplay: true,
+            poiAnimationDurationSeconds: 2,
+            endFocus: {enabled: false, duration: 0},
+        }
+        const replay = {
+            userMode: 'basic',
+            basicPreparationActive: true,
+            duration: 10,
+            totalDistance: 1000,
+            nearbyPois: [{
+                projectedAbscissa: 500,
+                poi: {id: 'crop-only', type: 'poi', replay: {visible: true, animated: true}},
+            }],
+            poiCropVisibility: {'crop-only': true},
+        }
+        globalThis.lgs = {
+            settings: {ui: {replay: {userMode: 'basic', basic}}},
+            stores: {replay},
+        }
+
+        const {plan} = prepareReplayDeferredExportPlan({
+            replay,
+            journey: {slug: 'crop-only-export', replay: {basic}},
+            controller: {duration: 10, direction: 1, sampler: {totalDistance: 1000}},
+            fps: 10,
+        })
+
+        expect(plan.poiSpeedProfile).toBeNull()
+        expect(plan.videoTimeline.replayDurationMillis).toBe(10000)
     })
 
     it('starts the exported Replay at the preparation range start', async () => {

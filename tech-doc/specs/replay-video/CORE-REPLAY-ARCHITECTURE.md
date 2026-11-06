@@ -2,7 +2,7 @@
 
 Status: current implementation inventory; see the implementation status for known gaps
 
-Date: 2026-11-05
+Date: 2026-11-06
 
 ## Purpose
 
@@ -84,9 +84,17 @@ windows share one slowdown envelope rather than stacking speed changes; each
 distinct POI keeps its own crawl zone. POIs more than 500 meters from the active
 Replay path do not add slowdown segments even when associated with the Journey.
 Slowdown profiles include only POIs whose Replay animation and visibility rules
-allow display and that project inside the video crop at a sampled route point in
-their display window. Hidden, non-animated, and out-of-crop POIs do not extend
-the Replay duration.
+allow display and whose terrain-clamped anchor is visible inside the video crop
+over bounded route-time samples in their display window. Visibility transitions
+are refined between samples, and only visible intervals contribute a slowdown.
+Qualification checks loaded terrain along the camera-to-anchor ray; an
+indeterminate terrain ray does not qualify a slowdown. When a POI first becomes
+visible after its nominal display window starts, its slowdown begins at that
+visibility time and its presentation window extends far enough to cover the
+full slowdown. Terrain-occluded spans do not slow Replay. Hidden, non-animated,
+terrain-occluded, and out-of-crop POIs do not extend the Replay duration.
+Playback, Record, and the POI expansion state share the same qualified passage
+windows.
 When global Replay and per-POI animation settings allow it, the Start flag opens
 once when Replay starts, then the canonical clock holds the departure marker
 for one second before route movement. At route arrival, the Stop flag opens once
@@ -95,7 +103,9 @@ flags marked `tooClose` remain excluded from nearby-POI selection; the visible
 Start flag also gets the one-second arrival hold when that final Stop is hidden.
 The holds keep the route sample and trace at their endpoints and are included in
 the shared Replay and export timeline. A hold is omitted when its endpoint is
-hidden or its animation is disabled.
+hidden or its animation is disabled. When terrain visibility qualification is
+available, the endpoint anchor must also be visible at that endpoint for its
+hold to apply.
 
 Basic and Expert MP4 recording temporarily suspend the main viewer's default render loop.
 Each capture flush calls `Viewer.render()` after resizing and requesting the
@@ -106,6 +116,15 @@ cleanup, including encoder failure and cancellation. Pending terrain and 3D Tile
 waits advance this same render driver on bounded browser tasks, preserving network
 and worker progress without a competing render loop. Dry run retains its normal
 render scheduling.
+
+Mounted POI controllers register a scene-local capture preparation callback.
+Each explicit viewer render recalculates terrain-anchor occlusion before entity
+visualizers run, independently of threshold-based camera events. A visibility
+revision detects masks changed during the draw and triggers one corrective viewer
+render before capture reads the canvas. Disposing a POI controller removes its
+callback. This remains an anchor-based whole-billboard mask, not a per-pixel
+terrain clipping algorithm. Real terrain Record validation of this synchronization
+is pending while the browser automation CLI is unavailable.
 
 Basic Replay offers an opt-in Dry run preference in the video settings popup.
 It traverses the same fixed-timestamp timeline, including start and stop clips,

@@ -8,75 +8,21 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-01
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {POIUtils} from '@Utils/cesium/POIUtils'
-import {Cartesian2, Cartesian3, Cartographic, JulianDate} from 'cesium'
-
-const TERRAIN_FOCUS_DEPTH_TOLERANCE_METERS = 2
+import {registerPOITerrainCapture} from '@Core/ui/POITerrainCapture'
+import {isPOIAnchorOccludedByTerrain} from '@Core/ui/replay/ReplayPOITerrainVisibility'
+import {JulianDate} from 'cesium'
 
 /** Resolve a constant or time-varying Cesium visibility property. */
 const getVisibilityValue = (property, time) => typeof property?.getValue === 'function'
     ? property.getValue(time)
     : property
-
-/** Read a POI's terrain-clamped focus position without sampling terrain asynchronously. */
-const getPOIFocusPosition = (scene, poi) => {
-    if (!Number.isFinite(poi?.longitude) || !Number.isFinite(poi?.latitude)) {
-        return null
-    }
-
-    const cartographic = Cartographic.fromDegrees(poi.longitude, poi.latitude)
-    const height = scene.globe.getHeight(cartographic)
-        ?? (Number.isFinite(poi.simulatedHeight) ? poi.simulatedHeight : null)
-        ?? (Number.isFinite(poi.height) ? poi.height : 0)
-
-    return Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, height)
-}
-
-/** Return whether the terrain hit is closer to the camera than the POI focus. */
-const isPOIFocusOccluded = (scene, camera, poi) => {
-    const focusPosition = getPOIFocusPosition(scene, poi)
-    const canvasPosition = focusPosition
-        ? scene.cartesianToCanvasCoordinates(focusPosition, new Cartesian2())
-        : null
-    const canvas = scene.canvas
-    const width = Number(canvas?.clientWidth) || Number(canvas?.width)
-    const height = Number(canvas?.clientHeight) || Number(canvas?.height)
-    if (!canvasPosition || !Number.isFinite(width) || !Number.isFinite(height)
-        || canvasPosition.x < 0 || canvasPosition.x > width
-        || canvasPosition.y < 0 || canvasPosition.y > height) {
-        return false
-    }
-
-    const pickRay = camera.getPickRay(canvasPosition)
-    if (!pickRay) {
-        return false
-    }
-
-    let terrainPosition = null
-    try {
-        terrainPosition = scene.globe.pick(pickRay, scene)
-    }
-    catch {
-        return false
-    }
-    if (!terrainPosition) {
-        return false
-    }
-
-    const cameraPosition = camera.positionWC ?? camera.position
-    if (!cameraPosition) {
-        return false
-    }
-
-    return Cartesian3.distance(cameraPosition, terrainPosition) + TERRAIN_FOCUS_DEPTH_TOLERANCE_METERS
-        < Cartesian3.distance(cameraPosition, focusPosition)
-}
 
 /** Keep POI focus occlusion transient and evaluate it only after relevant scene changes. */
 export const createPOITerrainOcclusionController = ({scene, poiList, isReplayActive}) => {
@@ -88,6 +34,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
     const entitiesBeingUpdated = new Set()
     let checkAllRequested = true
     let disposed = false
+    let visibilityRevision = 0
 
     /** Resolve visibility from Replay's runtime entity state or the persisted map state. */
     const isPOIEffectivelyVisible = (poi, entity) => entity?.show === true
@@ -135,6 +82,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
         entitiesBeingUpdated.add(poiId)
         try {
             entity.billboard.show = visible
+            visibilityRevision += 1
         }
         finally {
             entitiesBeingUpdated.delete(poiId)
@@ -252,7 +200,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
                 continue
             }
 
-            const isOccluded = isPOIFocusOccluded(scene, camera, poi)
+            const isOccluded = isPOIAnchorOccludedByTerrain(scene, camera, poi)
             if (isOccluded) {
                 occludedPOIIds.add(poiId)
                 occludedEntityContainers.set(poiId, container)
@@ -273,6 +221,13 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
         }
     }
 
+    // Capture must update entities before Viewer.render runs its visualizers, without camera-event throttling.
+    const removeCapturePreparation = registerPOITerrainCapture(scene, () => {
+        checkAllRequested = true
+        updateOcclusion()
+        enforceOcclusionMasks()
+        return visibilityRevision
+    })
     const removePreRenderListener = scene?.preRender?.addEventListener(enforceOcclusionMasks)
     const removePostRenderListener = scene?.postRender?.addEventListener(updateOcclusion)
     // Cesium events provide change metadata; discard it so every event requests a full visibility pass.
@@ -294,6 +249,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
                 return
             }
             disposed = true
+            removeCapturePreparation()
             removePreRenderListener?.()
             removePostRenderListener?.()
             removeCameraListener?.()

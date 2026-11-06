@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-31
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,8 +26,9 @@ import {publishReplayTimelineTime} from './ReplayFramePublisher'
 import {buildReplayVideoTimeline, resolveReplayVideoFramePhase} from './ReplayVideoTimeline'
 import {projectReplayPOIsOnSampler} from './JourneyReplayPOIProjection'
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
-import {resolveReplayEndpointPOIPauseMillis} from './JourneyReplayPOISettings'
+import {normalizeReplayPOIBehavior, resolveReplayEndpointPOIPauseMillis} from './JourneyReplayPOISettings'
 import {
+    createReplayPOIRouteSignature,
     createReplayPOISpeedProfile,
     isReplayPOICrawlAtPlaybackTime,
     replayPlaybackTimeAtRouteTime,
@@ -149,17 +150,35 @@ export class JourneyReplayPlaybackController {
                         passageSamples.set(passageIndex, samples)
                         cropVisibilitySamples.set(id, passageSamples)
                     }
-                    return cropVisible === true || cropVisible === false
-                        ? cropVisible
-                        : entry?.inVideoCrop
+                    return cropVisible
                 }
                 : null,
         })
+        const sampledVisibilityValues = Array.from(cropVisibilitySamples.values())
+            .flatMap(passages => Array.from(passages.values()).flat())
+        const visibilityQualified = sampledVisibilityValues.length > 0
+            && sampledVisibilityValues.every(value => typeof value === 'boolean')
+        const visibilityQualificationAttempted = typeof isPOIInVideoCrop === 'function'
+        const poiVisibilityQualifiedPassages = {}
+        cropVisibilitySamples.forEach((passages, id) => {
+            const qualifiedPassages = {}
+            passages.forEach((samples, passageIndex) => {
+                qualifiedPassages[passageIndex] = samples.length > 0
+                    && samples.every(value => typeof value === 'boolean')
+            })
+            poiVisibilityQualifiedPassages[id] = qualifiedPassages
+        })
+        const poiVisibilityQualification = {
+            qualified: visibilityQualificationAttempted,
+            routeDurationMillis: this.#playbackProfile.routeDurationMillis,
+            windows: this.#playbackProfile.poiPresentationWindows,
+        }
         const endpointPOIPauseMillis = resolveReplayEndpointPOIPauseMillis({
             sampler: this.#sampler,
             settings: activeReplaySettings,
             replay: replayState,
             direction: this.#direction,
+            poiVisibilityQualification,
         })
         if (replayState) {
             const poiCropVisibility = {}
@@ -180,9 +199,16 @@ export class JourneyReplayPlaybackController {
             })
             replayState.poiCropVisibility = poiCropVisibility
             replayState.poiCropPassageVisibility = poiCropPassageVisibility
+            replayState.poiVisibilityQualifiedPassages = poiVisibilityQualifiedPassages
+            const poiBehavior = normalizeReplayPOIBehavior(activeReplaySettings?.basic)
             replayState.poiPlaybackProfile = {
                 ...this.#playbackProfile,
                 journeySlug: this.#sampler?.journey?.slug ?? null,
+                routeDistanceMeters: this.#sampler?.totalDistance ?? 0,
+                poiRouteSignature: createReplayPOIRouteSignature(nearbyPois),
+                timingSettings: poiBehavior,
+                visibilityQualificationAttempted,
+                visibilityQualified,
             }
         }
         if (videoTimeline && this.#playbackProfile.playbackDurationMillis === this.#duration * MILLIS

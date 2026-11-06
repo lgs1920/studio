@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-01
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import {createPOITerrainOcclusionController} from '@Components/MainUI/MapPOI/poiTerrainOcclusionController'
 import {isReplayPOIPresentationActive} from '@Core/ui/replay/JourneyReplayPOISettings'
+import {acquireReplayExportRenderLoop} from '@Core/ui/replay/ReplayExportRenderLoop'
 import {POIUtils} from '@Utils/cesium/POIUtils'
 import {Cartesian3} from 'cesium'
 import {afterEach, describe, expect, it, vi} from 'vitest'
@@ -75,6 +76,63 @@ afterEach(() => {
 })
 
 describe('POI terrain occlusion controller', () => {
+    it('captures current terrain masks without camera events and consumes masks changed during rendering', () => {
+        const {scene, setTerrainHeight} = createTerrainScene()
+        const entity = {id: 'record-poi', show: true, billboard: {show: true, image: {}}}
+        const poi = {id: entity.id, longitude: 2, latitude: 48, height: 0, visible: true, expanded: true}
+        const drawnVisibility = []
+        let loadTerrainDuringDraw = false
+        const viewer = {
+            scene,
+            entities: {getById: id => id === poi.id ? entity : null},
+            useDefaultRenderLoop: true,
+            render: () => {
+                // Entity visualizers consume visibility before the scene starts drawing.
+                const primitiveVisibility = entity.billboard.show
+                scene.preRender.raiseEvent()
+                drawnVisibility.push(primitiveVisibility)
+                if (loadTerrainDuringDraw) {
+                    loadTerrainDuringDraw = false
+                    setTerrainHeight(10)
+                    scene.globe.tileLoadProgressEvent.raiseEvent(0)
+                }
+                scene.postRender.raiseEvent()
+            },
+        }
+        globalThis.lgs = {viewer}
+        const controller = createPOITerrainOcclusionController({
+            scene, poiList: new Map([[poi.id, poi]]), isReplayActive: () => true,
+        })
+        const loop = acquireReplayExportRenderLoop({viewer, scene})
+        try {
+            setTerrainHeight(-10)
+            loop.render()
+            expect(drawnVisibility).toEqual([true])
+
+            // Fixed-frame camera changes need not raise Cesium's threshold-based changed event.
+            setTerrainHeight(10)
+            loop.render()
+            expect(drawnVisibility).toEqual([true, false])
+
+            setTerrainHeight(-10)
+            loadTerrainDuringDraw = true
+            loop.render()
+            expect(drawnVisibility).toEqual([true, false, true, false])
+            expect(entity.billboard.show).toBe(false)
+        }
+        finally {
+            loop.release()
+            controller.dispose()
+        }
+        const renderCount = drawnVisibility.length
+        const nextLoop = acquireReplayExportRenderLoop({viewer, scene})
+        nextLoop.render()
+        nextLoop.release()
+        expect(drawnVisibility).toHaveLength(renderCount + 1)
+        expect(drawnVisibility.at(-1)).toBe(true)
+        expect(viewer.useDefaultRenderLoop).toBe(true)
+    })
+
     it('rechecks terrain visibility on camera rotation without replacing the POI image', () => {
         const {scene, setTerrainHeight} = createTerrainScene()
         const canvas = {}

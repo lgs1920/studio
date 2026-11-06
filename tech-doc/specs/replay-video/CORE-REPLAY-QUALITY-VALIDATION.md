@@ -3,7 +3,7 @@
 Status: validation contract for interactive Replay and deterministic Replay
 video export
 
-Date: 2026-10-22
+Date: 2026-11-06
 
 ## Purpose
 
@@ -120,6 +120,11 @@ narrow crop, and at least one high-resolution output profile.
 - Dry run draws the trace during its Replay phase even when pre-Replay clips
   hide it, and its first, phase-boundary, and final trace geometry is exact.
 - The marker follows the same sample used by the trace.
+- A terrain-occluded POI contributes no slowdown. If its anchor becomes visible
+  before its nominal display expires, the slowdown starts at the visible route
+  interval and its expanded state lasts through the qualified slowdown window.
+  Check disjoint visible intervals, reverse Replay, endpoint holds, and unknown
+  terrain rays in both interactive playback and Basic Record.
 - The Start flag animates at Replay startup and the Stop flag at route arrival
   only when global Replay and per-POI animation settings allow it; a `tooClose`
   Stop stays hidden and the Start animates again at route arrival. Hold the
@@ -194,7 +199,9 @@ render hosts, or encoding:
    of a long untimed route with a normal-duration Replay and reviewing tight
    turns and elevation changes at both speeds;
 4. inspect first and final frames;
-5. inspect terrain and 3D Tiles replacement or missing-detail artifacts;
+5. inspect terrain and 3D Tiles replacement or missing-detail artifacts, then
+   verify POI slowdown starts and ends at the same terrain-visible intervals in
+   interactive playback and Basic Record;
 6. repeat a recording with the browser window fully covered and confirm the
    trace remains present;
 7. record output dimensions, frame count, duration, export time, and browser;
