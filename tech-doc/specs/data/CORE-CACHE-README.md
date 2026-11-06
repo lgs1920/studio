@@ -1,99 +1,96 @@
-# Local Cartographic Cache
+# Local Tile Cache
 
 Status: current implementation
 
-## Scope and settings
+## Scope and provider rules
 
-Studio keeps map tile, terrain, and direct 3D Tiles responses in a dedicated local
-CacheStorage cache. Journeys, GPX files, POI data, statistics, rendered videos,
-provider APIs, and Google tile endpoints are outside this cache. The PWA shell
-retains its separate version-aware application cache.
+Studio stores eligible map resources in browser Cache Storage under a dedicated
+tile cache. The version-aware PWA application-asset cache remains separate and
+is not included in tile-cache usage.
 
-**Settings > Global Settings > Cartographic cache** exposes:
+The service worker only considers safe `GET` requests registered from the
+provider catalog. Supported resource kinds are raster imagery, terrain and
+elevation data, explicitly configured vector tiles (`.pbf` and `.mvt`), and 3D
+Tiles resources, including tileset JSON, nested content, subtrees, and declared
+additional resource hosts. WMS is limited to configured `GetMap` operations;
+WMTS is limited to configured `GetTile` operations. A layer can opt out with
+`cache: false`. A 3D provider can declare additional nested resource roots with
+`cacheHosts` on the provider, layer, or `tiles3d` configuration.
 
-- a maximum payload budget of 256 MiB, 512 MiB (default), 1 GiB, or 2 GiB;
-- current cached payload usage;
-- the effective budget when browser storage pressure reduces the configured cap;
-- an acknowledged purge of cartographic responses only.
+The cache does not discover or persist arbitrary third-party requests. It only
+stores responses with an explicit positive freshness lifetime from `max-age` or
+`Expires`. Provider terms and response directives continue to apply. A provider
+can opt out through its catalog entry, and a response with `no-store` or
+`no-cache` is never stored. `private` responses are stored only when the request
+has an explicit credential that can be hashed into an isolated partition.
+Requests carrying browser-managed credentials, same-origin cookie requests,
+and `Vary: Cookie` responses bypass persistence because Studio cannot reliably
+identify that account context. WMS is limited to configured `GetMap` operations;
+same-origin proxy requests with implicit browser credentials bypass persistence.
 
-The panel starts with a neutral availability check. Confirmed unavailability
-replaces its summary icon with a warning triangle and applies the theme's warning
-text color to both icon and label. The status explains missing browser support,
-an uncontrolled page, or communication failures when the cause is known. Recovery
-restores the normal map icon and summary color.
+Google Maps content is excluded before cache-key lookup and storage. This covers
+Google Maps tile hostnames and Google layers identified in the provider catalog,
+including Google Photorealistic 3D Tiles and Google 2D Ion assets. Google Map
+Tiles API terms prohibit storage except under limited agreement-specific
+conditions, so Studio does not cache those endpoints.
 
-The preference is `app.tileCacheMaxBytes` in `public/settings.yaml`. The existing
-Valtio settings owner persists it in IndexedDB and preserves it during hydration.
-Changing the budget does not prefetch resources. Reducing it triggers eviction.
+## Local storage, privacy, and freshness
 
-## Storage and routing
+Tile responses and their accounting index stay on the current device, in the
+current browser profile. Studio does not upload cache data or usage statistics
+and does not request persistent browser storage. Cached responses normally
+survive reloads and browser restarts until Studio or the user deletes them, or
+the browser evicts site data. Browser quota and eviction rules remain in force.
 
-`public/service-worker-pwa.js` delegates cartographic requests to
-`public/cartographic-cache.js`. The response cache is `lgs-cartographic-tiles-v1`;
-small accounting records and credential-free configuration live in
-`lgs-cartographic-metadata-v1`.
+Cache keys are SHA-256 digests of the complete request identity, including the
+URL, visible request headers, and credential partition. This preserves query
+parameters that distinguish resources without storing raw URLs or access
+tokens. Account partitions are derived with SHA-256 from explicit authorization
+or recognized credential query values. The local index records the opaque
+partition, provider, resource kind, payload size, freshness metadata, and last
+access time. Responses with no reliable account identity are not stored when
+they are marked `private`.
 
-The application supplies source rules built from its configured provider catalog.
-Rules restrict persistence to imagery tile operations, terrain resources, and
-3D content under configured source roots. WMS and WMTS capability and feature
-queries are excluded. WMS routing supports the existing allowlisted PHP proxy.
-A catalog layer can opt out with `cache: false`.
+Fresh responses are returned from Cache Storage. Expired entries are never
+served stale: Studio revalidates with `ETag` or `Last-Modified` when available
+and otherwise requests the resource again. `Vary: *`, cookie variation,
+variation fields unavailable on the service-worker request, range requests,
+partial responses, failed responses, opaque responses, and oversized
+individual tiles are not stored. Successful network responses are
+returned to Cesium without waiting for background cache writes.
 
-Ion content requests are scoped by their authenticated request identity. Only
-SHA-256 resource keys are persisted: original request URLs and authorization
-headers are not written to the response or accounting cache. The cache does not
-forward credentials to other providers. Responses themselves remain readable by
-scripts executing in the Studio origin; this is not encrypted storage.
+The default tile-cache budget is 512 MiB. Settings offers 256 MiB, 512 MiB,
+1 GiB, and 2 GiB choices. The byte-based limit applies across imagery, terrain,
+vector and 3D resources and all account partitions. The local index tracks
+usage incrementally; routine usage reporting does not reread cached tile
+bodies. When space is needed, expired entries are removed first, then least
+recently used entries are evicted by bytes. Browser storage estimates can lower
+the effective limit to leave room for other Studio data, but are only a safety
+signal and are not an exact measurement of this cache.
 
-The old `cesium-ion-assets` caches are discarded on first initialization because
-they lack trustworthy size and freshness metadata.
+Changing or removing the Cesium Ion token clears Ion tile entries before the
+credential changes. Changing or removing a personal provider key clears all
+private account partitions while retaining public tiles. A failed
+service-worker acknowledgement prevents Studio from changing the credential.
+Cache operations handle quota and storage errors without blocking Cesium's
+network response.
 
-## Freshness and limits
+## Controls and deletion
 
-A response is persisted only when its visible HTTP headers establish a positive
-freshness lifetime through `max-age` or `Expires`. `Age` and `Date` reduce the
-remaining lifetime. `no-store`, `no-cache`, opaque responses, wildcard `Vary`,
-range requests, partial responses, and resources larger than the effective
-budget are excluded. Cross-origin responses without readable freshness headers
-retain the browser's HTTP caching behavior.
+**Settings > Global Settings > Cartographic cache** displays tile-cache usage,
+the configured budget, any lower effective limit, and a clear-cache action.
+Static application-file usage is separate and is not shown as tile usage. The
+panel explains that browser quotas and eviction can reduce retention and that
+Studio cannot guarantee permanent storage.
 
-Fresh entries are reused locally. Expired entries still present at access time
-are revalidated with `ETag` or `Last-Modified`; a 304 updates their freshness.
-If conditional headers cause a CORS failure, Studio retries the original request.
-Maintenance removes expired entries. Provider permissions and attribution remain
-applicable; this cache does not authorize offline use or bulk downloading.
+The clear tile-cache action removes every tile response and matching index
+record, then waits for a service-worker acknowledgement. Studio's delete-profile
+action removes every account partition, the cache index, usage metadata, and
+saved routing configuration before deleting the local application databases.
+The service worker blocks new tile persistence during that deletion and remains
+disabled for tile caching until a later Studio session sends fresh settings.
+Static application files retain the existing delete-profile behavior.
 
-The budget measures response payload bytes, rather than all browser disk overhead.
-Per-resource metadata makes routine usage reporting independent of rereading
-binary contents. Eviction protects soft reserves of 20% for imagery and 10% for
-terrain against growing 3D content. 3D resources use the remaining capacity and
-can borrow unused reserves. The hard overall cap takes precedence when individual
-resources cannot fit alongside the reserves. LRU ordering applies within the
-eligible categories.
-
-`navigator.storage.estimate()` is consulted with bounded frequency. The effective
-cap leaves origin storage for IndexedDB and concurrent writes. A quota failure
-reduces retention and preserves the downloaded network response. CacheStorage
-or hashing failures also preserve network loading.
-
-## Lifecycle and validation
-
-`CartographicCacheController` synchronizes the hydrated preference and resends it
-after service worker controller changes. `CacheManager` uses acknowledged
-MessageChannel commands with an eight-second timeout and closes both ports on
-completion or failure. No cache operation requires backend storage.
-
-Development registers `service-worker-pwa.js` as a module because Vite serves its
-source imports directly. Production retains classic worker registration for the
-bundled IIFE. Registering the development source as a classic worker fails before
-the cartographic cache can initialize.
-
-Cache mutations are serialized. Concurrent identical requests share a download;
-returned responses can be consumed independently. A purge invalidates pending
-download writes. Ion credential changes await an Ion-only purge, preserving
-unrelated cartographic resources and the PWA shell.
-
-Regression tests cover source classification, freshness, byte accounting, worker
-restart recovery, budget reduction, LRU, storage pressure, failure fallback,
-request coalescing, credential isolation, purge races, message acknowledgements,
-settings hydration, native Web Awesome controls, and refresh cleanup.
+Older `v1` cartographic caches are discarded because they do not have the
+current privacy and account-partition metadata. The browser may still evict any
+tile or application cache independently of Studio's controls.

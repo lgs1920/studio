@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-07
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { BASE3D_ENTITY, BASE_ENTITY, PERSONAL_ACCESS, TERRAIN_ENTITY, TILES3D_ENTITY, VAULT_STORE } from '@Core/constants'
+import { cartographicCacheController }                                                from '@Core/cache/CartographicCacheController'
 import { UI_ACTIONS }                                                                    from '@Core/ui/metadata/uiActionCatalog'
 import { UIToast }                                                                    from '@Utils/UIToast'
 import { IonLayerUtils }                                                               from '@Utils/cesium/IonLayerUtils'
@@ -83,6 +84,7 @@ export const TokenLayerModal = () => {
                 await __.ui.ionTokenManager.save(token)
             }
             else {
+                await cartographicCacheController.clearPrivate()
                 await lgs.db.vault.put(proxy.id, token, VAULT_STORE)
                 proxy.usage.token = token
                 proxy.usage.unlocked = true

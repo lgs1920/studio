@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-13
- * Last modified: 2026-10-02
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -214,10 +214,15 @@ self.addEventListener('fetch', event => {
     }
 
     if (event.request.method === 'GET' && url.protocol.startsWith('http')) {
-        const response = cartographicCache.handle(event.request, () => handleAppFetch(event))
+        const backgroundWrites = new Set()
+        const response = cartographicCache.handle(
+            event.request,
+            () => handleAppFetch(event),
+            promise => backgroundWrites.add(promise),
+        )
             .catch(() => new Response('Offline', {status: 503, statusText: 'Offline'}))
         event.respondWith(response)
-        event.waitUntil(response.then(() => undefined))
+        event.waitUntil(response.then(() => Promise.allSettled([...backgroundWrites].map(promise => Promise.resolve(promise)))))
     }
 })
 
@@ -281,7 +286,7 @@ function isUnversionedScriptOrStyleRequest(request) {
 }
 
 function shouldCacheRequest(request) {
-    if (request.method !== 'GET') {
+    if (request.method !== 'GET' || request.cache === 'no-store') {
         return false
     }
 
@@ -302,7 +307,7 @@ function shouldCacheRequest(request) {
 }
 
 function isCacheableResponse(request, response) {
-    if (!response || !response.ok || isPartialResponse(response)) {
+    if (!response || !response.ok || isPartialResponse(response) || isRangeRequest(request) || request.cache === 'no-store') {
         return false
     }
 

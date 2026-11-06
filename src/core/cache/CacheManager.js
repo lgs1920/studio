@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-03-18
- * Last modified: 2026-10-08
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,6 +68,32 @@ export class CacheManager {
         return this.request('CONFIGURE_TILE_CACHE', {maxBytes, rules})
     }
 
-    /** Purge only the requested cartographic scope and await completion. */
-    clear = () => this.request('CLEAR_CACHE', {scope: this.cacheName === 'cesium-ion-assets' ? 'ion' : 'all'})
+    /** Purge the selected cartographic scope and require a worker acknowledgement. */
+    clear = async () => {
+        const scope = this.cacheName === 'cesium-ion-assets' ? 'ion' : 'all'
+        const result = await this.request('CLEAR_CACHE', {scope})
+        if (!result?.available) throw new Error(result?.reason ?? 'The cartographic cache could not be cleared.')
+        return result
+    }
+
+    /** Purge every tile-cache partition and require a worker acknowledgement. */
+    clearAll = async () => {
+        const result = await this.request('CLEAR_CACHE', {scope: 'all'})
+        if (!result?.available) throw new Error(result?.reason ?? 'The cartographic cache could not be cleared.')
+        return result
+    }
+
+    /** Purge every account-scoped tile partition before a provider credential changes. */
+    clearPrivate = async () => {
+        const result = await this.request('CLEAR_CACHE', {scope: 'private'})
+        if (!result?.available) throw new Error(result?.reason ?? 'Private tile data could not be cleared.')
+        return result
+    }
+
+    /** Delete all cache data and configuration before Studio removes local account data. */
+    deleteAll = async () => {
+        const result = await this.request('CLEAR_CACHE', {scope: 'app-data'})
+        if (!result?.available) throw new Error(result?.reason ?? 'Studio tile-cache data could not be deleted.')
+        return result
+    }
 }

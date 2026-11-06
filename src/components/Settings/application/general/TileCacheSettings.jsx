@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,6 +31,7 @@ export const TileCacheSettings = () => {
     const app = useSnapshot(lgs.settings.app)
     const cache = useSnapshot($cartographicCache)
     const [clearing, setClearing] = useState(false)
+    const [clearError, setClearError] = useState('')
     const maxBytes = normalizeTileCacheBudget(app.tileCacheMaxBytes)
     const entries = cache.entries ?? 0
     const unavailable = !cache.available && !cache.checking
@@ -49,7 +50,9 @@ export const TileCacheSettings = () => {
     /** Await the purge before showing its updated usage. */
     const clearCache = async () => {
         setClearing(true)
+        setClearError('')
         try { await cartographicCacheController.clear() }
+        catch (error) { setClearError(error instanceof Error ? error.message : 'The cartographic cache could not be cleared.') }
         finally { setClearing(false) }
     }
 
@@ -60,7 +63,7 @@ export const TileCacheSettings = () => {
             </span>
             <WaDivider/>
             <div className="tile-cache-settings wa-stack">
-                <WaSelect label="Maximum cartographic cache size" hint="Shared by map tiles, terrain, and 3D tiles."
+                <WaSelect label="Maximum cartographic cache size" hint="Shared by imagery, terrain, vector, and 3D tiles."
                           size="s" appearance="filled" value={String(maxBytes)} onChange={changeBudget}>
                     {TILE_CACHE_BUDGETS.map(bytes => (
                         <WaOption key={bytes} value={String(bytes)}>
@@ -75,9 +78,12 @@ export const TileCacheSettings = () => {
                      ? `${formatTileCacheSize(cache.usage)} used across ${entries} ${entries === 1 ? 'resource' : 'resources'} of ${formatTileCacheSize(maxBytes)}`
                      : `Cartographic cache unavailable. ${cache.error ? `${cache.error} ` : ''}Tiles continue to load from the network.`}
                 </p>
+                <p>{'Tiles stay on this device in this browser profile. Browser storage quotas and eviction still apply. Studio’s limit does not override the browser quota or guarantee permanent retention.'}</p>
+                <p>{'Static Studio application files use a separate cache and are not included in this tile-cache usage.'}</p>
                 {cache.available && cache.effectiveMaxBytes < maxBytes && (
                     <p>{`Available storage currently limits the cache to ${formatTileCacheSize(cache.effectiveMaxBytes)}.`}</p>
                 )}
+                {clearError && <p role="alert">{clearError}</p>}
                 <WaButton size="s" appearance="outlined" variant="neutral" loading={clearing}
                           disabled={clearing || !cache.available} onClick={clearCache}>
                     <WaIcon slot="start" {...UI_ACTIONS.clearCartographicCache.icon}/>{UI_ACTIONS.clearCartographicCache.label}

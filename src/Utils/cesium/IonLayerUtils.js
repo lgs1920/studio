@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-26
- * Last modified: 2026-10-02
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,7 @@ const getActiveToken = () => normalizeToken(globalThis.lgs?.stores?.ion?.token)
 
 export class IonLayerUtils {
     static lastSyncedToken = null
+    /** Return the stable, credential-free cache bridge identifier for Cesium Ion. */
     static tokenCacheName = () => CESIUM_CACHE_NAME
 
     /** Synchronize the Ion cache bridge and await cleanup when the active token changes. */
@@ -41,12 +42,7 @@ export class IonLayerUtils {
 
         if (currentCache?.cacheName === cacheName) {
             if (purgePrevious && IonLayerUtils.lastSyncedToken !== null && IonLayerUtils.lastSyncedToken !== normalizedToken) {
-                try {
-                    await currentCache.clear?.()
-                }
-                catch (error) {
-                    console.error('[IonLayerUtils] Failed to clear Cesium cache after token change:', error)
-                }
+                await currentCache.clear?.()
             }
 
             IonLayerUtils.lastSyncedToken = normalizedToken
@@ -54,12 +50,7 @@ export class IonLayerUtils {
         }
 
         if (purgePrevious && currentCache?.cacheName && currentCache.cacheName !== cacheName) {
-            try {
-                await currentCache.clear?.()
-            }
-            catch (error) {
-                console.error('[IonLayerUtils] Failed to clear previous Cesium cache:', error)
-            }
+            await currentCache.clear?.()
         }
 
         if (globalThis.__?.app) {
@@ -90,12 +81,7 @@ export class IonLayerUtils {
      */
     static async clearCesiumCache() {
         const currentCache = globalThis.__?.app?.cesiumCache
-        try {
-            await (currentCache ?? new CacheManager(CESIUM_CACHE_NAME, DEFAULT_CACHE_QUOTA)).clear?.()
-        }
-        catch (error) {
-            console.error('[IonLayerUtils] Failed to clear Cesium cache:', error)
-        }
+        await (currentCache ?? new CacheManager(CESIUM_CACHE_NAME, DEFAULT_CACHE_QUOTA)).clear?.()
 
         if (globalThis.__?.app) {
             globalThis.__.app.cesiumCache = null

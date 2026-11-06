@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-07
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
+import { cartographicCacheController } from '@Core/cache/CartographicCacheController'
 import { UI_ICONS }      from '@Core/ui/metadata/uiActionCatalog'
 import { useConfirm }    from '@Components/Modals/ConfirmUI'
 import {
@@ -31,6 +32,7 @@ import { Fragment, useRef, useLayoutEffect } from 'react'
 import { useSnapshot }                   from 'valtio'
 import { LayersUtils }                   from '@Utils/cesium/LayersUtils'
 import { IonLayerUtils }                 from '@Utils/cesium/IonLayerUtils'
+import { UIToast }                        from '@Utils/UIToast'
 import { applyLayerSelection }           from './layerSelection'
 
 /**
@@ -86,13 +88,22 @@ export const SelectEntity = (props) => {
                 case 'remove': {
                     const confirmation = await confirmRemoveToken()
                     if (confirmation) {
-                        if (IonLayerUtils.isIonDependentLayer(entity)) {
-                            await __.ui.ionTokenManager.clear()
+                        try {
+                            if (IonLayerUtils.isIonDependentLayer(entity)) {
+                                await __.ui.ionTokenManager.clear()
+                            }
+                            else {
+                                await cartographicCacheController.clearPrivate()
+                                entity.usage.token = ''
+                                entity.usage.unlocked = false
+                                await lgs.db.vault.put(entity.id, entity.usage.token, VAULT_STORE)
+                            }
                         }
-                        else {
-                            entity.usage.token = ''
-                            entity.usage.unlocked = false
-                            await lgs.db.vault.put(entity.id, entity.usage.token, VAULT_STORE)
+                        catch (error) {
+                            UIToast.error({
+                                caption: 'Provider access',
+                                text: error instanceof Error ? error.message : 'Private tile data could not be cleared.',
+                            })
                         }
                     }
                     break

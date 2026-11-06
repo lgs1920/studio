@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-24
- * Last modified: 2026-09-13
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -161,5 +161,20 @@ describe('IonTokenManager', () => {
             tmpEntity:   null,
             refreshList: true,
         })
+    })
+
+    it('does not change account credentials when the previous Ion partition cannot be purged', async () => {
+        globalThis.lgs.stores.ion.token = 'previous-account-token'
+        ionUtils.clearCesiumCache.mockRejectedValueOnce(new Error('Cache acknowledgement failed'))
+        const manager = new IonTokenManager()
+
+        await expect(manager.save('next-account-token')).rejects.toThrow('Cache acknowledgement failed')
+        expect(globalThis.lgs.db.vault.put).not.toHaveBeenCalled()
+        expect(globalThis.lgs.stores.ion.token).toBe('previous-account-token')
+
+        ionUtils.clearCesiumCache.mockRejectedValueOnce(new Error('Cache acknowledgement failed'))
+        await expect(manager.clear()).rejects.toThrow('Cache acknowledgement failed')
+        expect(globalThis.lgs.db.vault.delete).not.toHaveBeenCalledWith('cesium_ion_token', 'vault')
+        expect(globalThis.lgs.stores.ion.token).toBe('previous-account-token')
     })
 })

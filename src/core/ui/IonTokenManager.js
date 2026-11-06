@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-24
- * Last modified: 2026-09-13
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -242,9 +242,9 @@ export class IonTokenManager {
         }
 
         await this.#validateToken(nextToken)
+        await IonLayerUtils.clearCesiumCache()
         await globalThis.lgs.db.vault.put(ION_TOKEN_KEY, nextToken, VAULT_STORE)
         this.#applyState(nextToken)
-        await IonLayerUtils.clearCesiumCache()
         return nextToken
     }
 
@@ -253,8 +253,8 @@ export class IonTokenManager {
      * @returns {Promise<Object>} The resulting Ion store.
      */
     clear = async () => {
-        await globalThis.lgs?.db?.vault?.delete?.(ION_TOKEN_KEY, VAULT_STORE)
         await IonLayerUtils.clearCesiumCache()
+        await globalThis.lgs?.db?.vault?.delete?.(ION_TOKEN_KEY, VAULT_STORE)
         this.#applyState('')
         const editor = globalThis.lgs?.editorSettingsProxy
         if (editor?.layer) {

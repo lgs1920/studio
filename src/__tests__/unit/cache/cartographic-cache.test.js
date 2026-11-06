@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-10-14
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,7 +57,7 @@ const fixture = (options = {}) => {
     const engine = createCartographicCache({
         storage, network, origin: 'https://studio.example',
         now: () => time,
-        digest: value => webcrypto.subtle.digest('SHA-256', new TextEncoder().encode(value)),
+        digest: options.digest ?? (value => webcrypto.subtle.digest('SHA-256', new TextEncoder().encode(value))),
         estimate: options.estimate ?? (() => undefined),
     })
     return {engine, network, storage, advance: value => { time += value }}
@@ -96,23 +96,73 @@ describe('cartographic routing and freshness', () => {
         expect(classifyTileRequest(new Request('https://data.geopf.fr/wmts?REQUEST=GetCapabilities'), rules)).toBeNull()
         const wmsRules = buildTileCacheRules([{layers: [{tile: 'wms', type: 'base', layer: 'public-map', url: 'https://wms.example/map'}]}])
         const source = 'https://wms.example/map?REQUEST=GetMap&LAYERS=public-map'
-        expect(classifyTileRequest(new Request(`https://studio.example/proxy.php?csurl=${encodeURIComponent(source)}`), wmsRules)?.kind).toBe('imagery')
+        expect(classifyTileRequest(new Request(`https://studio.example/proxy.php?csurl=${encodeURIComponent(source)}`, {credentials: 'omit'}), wmsRules)?.kind).toBe('imagery')
         expect(classifyTileRequest(new Request('https://wms.example/map?REQUEST=GetFeatureInfo&LAYERS=public-map'), wmsRules)).toBeNull()
     })
 
     it('routes only Mapterhorn XYZ WebP tiles through the terrain cache', () => {
         expect(classifyTileRequest(new Request('https://tiles.mapterhorn.com/12/2112/1500.webp'), rules))
-            .toEqual({kind: 'terrain', ion: false})
+            .toMatchObject({kind: 'terrain', ion: false, provider: 'mapterhorn'})
         expect(classifyTileRequest(new Request('https://tiles.mapterhorn.com/tilejson.json'), rules)).toBeNull()
         expect(classifyTileRequest(new Request('https://tiles.mapterhorn.com/logo.webp'), rules)).toBeNull()
+        const heightmapRules = buildTileCacheRules([{id: 'heightmaps', layers: [
+            {type: 'terrain', terrainType: 'url', url: 'https://heightmaps.example/elevation'},
+        ]}])
+        expect(classifyTileRequest(new Request('https://heightmaps.example/elevation/12/1220/1500.png'), heightmapRules))
+            .toMatchObject({kind: 'terrain', provider: 'heightmaps'})
+    })
+
+    it('registers vector tiles, provider identity, and declared nested 3D resource hosts', () => {
+        const providerRules = buildTileCacheRules([
+            {
+                id: 'vector-source',
+                cacheHosts: ['https://nested.example/tiles/'],
+                layers: [
+                    {type: 'vector', url: 'https://vector.example/tiles/{z}/{x}/{y}.pbf'},
+                    {type: 'tiles3d', url: 'https://models.example/scene/tileset.json'},
+                ],
+            },
+        ])
+        expect(classifyTileRequest(new Request('https://vector.example/tiles/1/2/3.pbf'), providerRules))
+            .toMatchObject({kind: 'vector', provider: 'vector-source'})
+        expect(classifyTileRequest(new Request('https://nested.example/tiles/content/1.glb'), providerRules))
+            .toMatchObject({kind: 'tiles3d', provider: 'vector-source'})
+    })
+
+    it('excludes Google layers by identity and every Google Maps tile host', () => {
+        const googleRules = buildTileCacheRules([{id: 'cesium', layers: [
+            {id: 'google-photorealistic-3d', type: 'base3d', sceneKind: 'google-photorealistic', assetId: 2275207},
+            {id: 'google-maps-2d-satellite', type: 'base', tile: 'ion', imageryKind: 'google2d', assetId: 3830182},
+        ]}])
+        expect(classifyTileRequest(new Request('https://assets.ion.cesium.com/2275207/root.json'), googleRules)).toMatchObject({kind: 'bypass'})
+        expect(classifyTileRequest(new Request('https://assets.ion.cesium.com/3830182/0/0/0.png'), googleRules)).toMatchObject({kind: 'bypass'})
+        for (const host of ['tile.googleapis.com', 'maps.googleapis.com', 'mt0.google.com']) {
+            expect(classifyTileRequest(new Request(`https://${host}/v1/3dtiles/root.json`), googleRules)).toMatchObject({kind: 'bypass'})
+        }
+    })
+
+    it('routes catalog opt-outs and same-origin cookie requests directly to network', () => {
+        const optOutRules = buildTileCacheRules([{id: 'restricted', layers: [
+            {type: 'base', tile: 'slippy', cache: false, url: 'https://restricted.example/tiles/{z}/{x}/{y}.png'},
+        ]}])
+        expect(classifyTileRequest(new Request('https://restricted.example/tiles/1/2/3.png'), optOutRules))
+            .toMatchObject({kind: 'bypass'})
+
+        const sameOriginRules = buildTileCacheRules([{id: 'self-hosted', layers: [
+            {type: 'base', tile: 'slippy', url: 'https://studio.example/map-tiles/{z}/{x}/{y}.png'},
+        ]}])
+        expect(classifyTileRequest(new Request('https://studio.example/map-tiles/1/2/3.png'), sameOriginRules, 'https://studio.example'))
+            .toMatchObject({kind: 'bypass'})
     })
 
     it('does not cache application data, Google tiles, ranges, or unknown endpoints', () => {
-        for (const url of ['https://studio.example/journeys.json', 'https://studio.example/route.gpx', 'https://tile.googleapis.com/v1/2dtiles/1/2/3', 'https://unknown.example/1/2/3.png', 'https://terrain.reearth.land/cesium-mesh/ellipsoid-other/1.terrain']) {
+        for (const url of ['https://studio.example/journeys.json', 'https://studio.example/route.gpx', 'https://unknown.example/1/2/3.png', 'https://terrain.reearth.land/cesium-mesh/ellipsoid-other/1.terrain']) {
             expect(classifyTileRequest(new Request(url), rules)).toBeNull()
         }
-        expect(classifyTileRequest(new Request(terrain(), {headers: {Range: 'bytes=0-100'}}), rules)).toBeNull()
-        expect(classifyTileRequest(new Request(terrain(), {cache: 'no-store'}), rules)).toBeNull()
+        expect(classifyTileRequest(new Request('https://tile.googleapis.com/v1/2dtiles/1/2/3'), rules))
+            .toMatchObject({kind: 'bypass', provider: 'google'})
+        expect(classifyTileRequest(new Request(terrain(), {headers: {Range: 'bytes=0-100'}}), rules)).toMatchObject({kind: 'bypass'})
+        expect(classifyTileRequest(new Request(terrain(), {cache: 'no-store'}), rules)).toMatchObject({kind: 'bypass'})
     })
 
     it('keeps provider credentials out of persisted routing rules', () => {
@@ -172,7 +222,15 @@ describe('persistent cartographic payload cache', () => {
     it('does not persist no-store, opaque, partial, or oversized responses', async () => {
         const opaque = new Response('hidden')
         Object.defineProperty(opaque, 'type', {value: 'opaque'})
-        for (const response of [tileResponse('tile', {'Cache-Control': 'no-store'}), new Response('partial', {status: 206}), opaque]) {
+        const restrictedResponses = [
+            tileResponse('tile', {'Cache-Control': 'no-store'}),
+            tileResponse('tile', {Vary: '*'}),
+            tileResponse('tile', {Vary: 'Cookie'}),
+            new Response('partial', {status: 206}),
+            new Response('failed', {status: 404}),
+            opaque,
+        ]
+        for (const response of restrictedResponses) {
             const {engine} = fixture({network: vi.fn(async () => response)})
             await engine.handle(terrain())
             expect((await engine.status()).entries).toBe(0)
@@ -181,6 +239,120 @@ describe('persistent cartographic payload cache', () => {
         await engine.configure({maxBytes: 3})
         await engine.handle(terrain())
         expect((await engine.status()).entries).toBe(0)
+    })
+
+    it('keeps private responses only in an opaque credential-derived account partition', async () => {
+        const rules = buildTileCacheRules([{id: 'private-provider', layers: [{tile: 'slippy', url: 'https://private.example/tiles/'}]}])
+        const network = vi.fn(async () => tileResponse('private', {'Cache-Control': 'private, max-age=60'}))
+        const {engine, storage} = fixture({network})
+        await engine.configure({rules})
+        await engine.handle(new Request('https://private.example/tiles/1/2/3.png'))
+        expect((await engine.status()).entries).toBe(0)
+
+        for (const token of ['private-account-one', 'private-account-two']) {
+            await engine.handle(new Request('https://private.example/tiles/1/2/3.png', {
+                headers: {Authorization: `Bearer ${token}`},
+            }))
+        }
+        const status = await engine.status()
+        const metadata = storage.caches.get(TILE_CACHE_METADATA_NAME)
+        const records = await Promise.all([...metadata.entries.values()].map(response => response.clone().json()))
+        const accountRecords = records.filter(record => record.key?.includes('/resource/'))
+        expect(status.entries).toBe(2)
+        expect(accountRecords.map(record => record.partition)).toHaveLength(2)
+        expect(accountRecords.every(record => record.partition.startsWith('account-'))).toBe(true)
+        expect(JSON.stringify(records)).not.toContain('private-account-')
+    })
+
+    it('stores eligible imagery, terrain, vector, and nested 3D Tiles under one byte budget', async () => {
+        const rules = buildTileCacheRules([{
+            id: 'mixed-provider',
+            cacheHosts: ['https://nested-models.example/resources/'],
+            layers: [
+                {type: 'base', tile: 'slippy', url: 'https://imagery.example/tiles/{z}/{x}/{y}.png'},
+                {type: 'terrain', terrainType: 'url', url: 'https://terrain.example/mesh'},
+                {type: 'vector', url: 'https://vectors.example/tiles/{z}/{x}/{y}.pbf'},
+                {type: 'tiles3d', url: 'https://models.example/tileset.json'},
+            ],
+        }])
+        const {engine, storage} = fixture()
+        await engine.configure({maxBytes: 128, rules})
+        const requests = [
+            new Request('https://imagery.example/tiles/1/2/3.png'),
+            new Request('https://terrain.example/mesh/1/2/3.terrain'),
+            new Request('https://vectors.example/tiles/1/2/3.pbf'),
+            new Request('https://models.example/tileset.json'),
+            new Request('https://nested-models.example/resources/content/1.glb'),
+        ]
+        for (const request of requests) await engine.handle(request)
+        expect(await engine.status()).toMatchObject({usage: 20, entries: 5, maxBytes: 128})
+        const metadata = storage.caches.get(TILE_CACHE_METADATA_NAME)
+        const records = await Promise.all([...metadata.entries.values()].map(response => response.clone().json()))
+        const resources = records.filter(record => record.kind)
+        expect(resources.map(record => record.kind).sort()).toEqual(['imagery', 'terrain', 'tiles3d', 'tiles3d', 'vector'])
+        expect(resources.every(record => record.provider === 'mixed-provider' && record.partition === 'public')).toBe(true)
+    })
+
+    it('bypasses both reads and writes for cached Google Photorealistic identities and hosts', async () => {
+        const zeroDigest = async () => new Uint8Array(32).buffer
+        const googleRules = buildTileCacheRules([{id: 'cesium', layers: [
+            {id: 'google-photorealistic-3d', type: 'base3d', sceneKind: 'google-photorealistic', assetId: 2275207},
+        ]}])
+        const {engine, storage} = fixture({digest: zeroDigest})
+        await engine.configure({rules: googleRules})
+        const cachedRequest = new Request('https://tile.googleapis.com/v1/3dtiles/root.json?key=google-private-key')
+        const cachedKey = `https://studio.example/__lgs_tile_cache__/resource/${'00'.repeat(32)}`
+        const dataCache = await storage.open(TILE_CACHE_NAME)
+        const metadataCache = await storage.open(TILE_CACHE_METADATA_NAME)
+        await dataCache.put(cachedKey, tileResponse('previous-google-content'))
+        await metadataCache.put(cachedKey, new Response(JSON.stringify({
+            key: cachedKey,
+            size: 23,
+            expiresAt: 100000,
+            lastAccess: 1,
+            partition: `account-${'00'.repeat(32)}`,
+            provider: 'google',
+            kind: 'tiles3d',
+            ion: false,
+            freshness: {deadline: 100000, vary: []},
+        })))
+        const network = vi.fn(async () => tileResponse('network-google-content'))
+        const restarted = fixture({storage, digest: zeroDigest, network})
+        await restarted.engine.status()
+        dataCache.match.mockClear()
+        dataCache.put.mockClear()
+
+        const direct = await restarted.engine.handle(cachedRequest)
+        const ionIdentity = await restarted.engine.handle(new Request('https://assets.ion.cesium.com/2275207/root.json', {
+            headers: {Authorization: 'Bearer google-private-key'},
+        }))
+        expect(await direct.text()).toBe('network-google-content')
+        expect(await ionIdentity.text()).toBe('network-google-content')
+        expect(dataCache.match).not.toHaveBeenCalled()
+        expect(dataCache.put).not.toHaveBeenCalled()
+        expect(network).toHaveBeenCalledTimes(2)
+    })
+
+    it('returns network tiles without waiting for background CacheStorage writes', async () => {
+        const started = deferred()
+        const write = deferred()
+        const {engine, storage} = fixture()
+        await engine.status()
+        const dataCache = storage.caches.get(TILE_CACHE_NAME)
+        dataCache.put.mockImplementation(async (request, response) => {
+            started.resolve()
+            await write.promise
+            dataCache.entries.set(typeof request === 'string' ? request : request.url, response.clone())
+        })
+        const retained = []
+        const responsePromise = engine.handle(terrain(), undefined, promise => retained.push(promise))
+        const response = await responsePromise
+        await started.promise
+        expect(await response.text()).toBe('tile')
+        expect(retained).toHaveLength(1)
+        write.resolve()
+        await Promise.all(retained)
+        expect((await engine.status()).usage).toBe(4)
     })
 
     it('revalidates an expired response and applies a 304 freshness update', async () => {
@@ -233,6 +405,16 @@ describe('persistent cartographic payload cache', () => {
         expect(network).toHaveBeenCalledTimes(1)
     })
 
+    it('serializes concurrent writes against the shared byte limit', async () => {
+        const {engine} = fixture()
+        await engine.configure({maxBytes: 8})
+        await Promise.all([
+            engine.handle(terrain('concurrent-a')),
+            engine.handle(terrain('concurrent-b')),
+        ])
+        expect(await engine.status()).toMatchObject({usage: 8, entries: 2})
+    })
+
     it('does not repopulate after clearing an in-flight download', async () => {
         const started = deferred()
         const response = deferred()
@@ -243,6 +425,29 @@ describe('persistent cartographic payload cache', () => {
         await engine.clear()
         response.resolve(tileResponse())
         expect(await (await loading).text()).toBe('tile')
+        expect((await engine.status()).entries).toBe(0)
+    })
+
+    it('bypasses new requests while app-data deletion is waiting for storage removal', async () => {
+        const deletionStarted = deferred()
+        const finishDeletion = deferred()
+        const rules = buildTileCacheRules([{id: 'public-provider', layers: [{tile: 'slippy', url: 'https://tiles.example/'}]}])
+        const {engine, storage, network} = fixture()
+        await engine.configure({rules})
+        storage.delete.mockImplementation(async name => {
+            if (name === TILE_CACHE_NAME) {
+                deletionStarted.resolve()
+                await finishDeletion.promise
+            }
+            return storage.caches.delete(name)
+        })
+        const deletion = engine.clear('app-data')
+        await deletionStarted.promise
+        const response = await engine.handle(new Request('https://tiles.example/1/2/3.png'))
+        expect(await response.text()).toBe('tile')
+        finishDeletion.resolve()
+        await deletion
+        expect(network).toHaveBeenCalledOnce()
         expect((await engine.status()).entries).toBe(0)
     })
 
@@ -264,6 +469,7 @@ describe('persistent cartographic payload cache', () => {
         Object.defineProperty(response, 'url', {value: 'https://assets.ion.cesium.com/1/tile.terrain?key=private-test-key'})
         const {engine, storage} = fixture({network: vi.fn(async () => response)})
         await engine.handle(terrain())
+        await engine.status()
         const saved = [...storage.caches.get(TILE_CACHE_NAME).entries.values()][0]
         expect(saved.url).toBe('')
         expect(saved.headers.has('X-Provider-Credential')).toBe(false)
@@ -300,11 +506,63 @@ describe('persistent cartographic payload cache', () => {
         await engine.configure({rules: buildTileCacheRules([{layers: [{tile: 'slippy', url: 'https://tiles.example/'}]}])})
         await engine.handle(terrain())
         await engine.handle(new Request('https://tiles.example/1/2/3.png'))
+        await engine.status()
         await engine.clear('ion')
         expect((await engine.status()).entries).toBe(1)
         await engine.clear()
         expect((await engine.status()).entries).toBe(0)
         expect(await (await app.match('https://studio.example/index.html')).text()).toBe('app')
+    })
+
+    it('clears every private account partition before a provider credential changes', async () => {
+        const rules = buildTileCacheRules([{id: 'private-provider', layers: [{tile: 'slippy', url: 'https://private.example/tiles/'}]}])
+        const {engine} = fixture()
+        await engine.configure({rules})
+        await engine.handle(new Request('https://private.example/tiles/1/2/3.png', {headers: {Authorization: 'Bearer first'}}))
+        await engine.handle(new Request('https://private.example/tiles/1/2/3.png'))
+        expect((await engine.status()).entries).toBe(2)
+        await engine.clear('private')
+        expect((await engine.status()).entries).toBe(1)
+        expect((await engine.status()).usage).toBe(4)
+    })
+
+    it('deletes every account entry and index before acknowledging app-data removal', async () => {
+        const rules = buildTileCacheRules([{id: 'public-provider', layers: [{tile: 'slippy', url: 'https://tiles.example/'}]}])
+        const {engine, storage, network} = fixture()
+        const appCache = await storage.open('lgs-studio-static-assets')
+        await appCache.put('https://studio.example/index.html', new Response('app-shell'))
+        await engine.configure({rules})
+        await engine.handle(new Request('https://tiles.example/1/2/3.png'))
+        await engine.handle(new Request('https://tiles.example/1/2/3.png', {headers: {Authorization: 'Bearer another-account'}}))
+        const result = await engine.clear('app-data')
+        expect(result).toMatchObject({usage: 0, entries: 0, available: true})
+        expect([...storage.caches.get(TILE_CACHE_METADATA_NAME).entries.keys()]).toEqual([])
+        expect(await (await appCache.match('https://studio.example/index.html')).text()).toBe('app-shell')
+        const cached = await engine.handle(new Request('https://tiles.example/1/2/3.png'))
+        expect(await cached.text()).toBe('tile')
+        expect(network).toHaveBeenCalledTimes(3)
+        expect((await engine.status()).entries).toBe(0)
+
+        await engine.configure({rules})
+        await engine.handle(new Request('https://tiles.example/1/2/3.png'))
+        expect((await engine.status()).entries).toBe(1)
+    })
+
+    it('reports indexed usage without rescanning tile responses', async () => {
+        const {engine, storage} = fixture()
+        await engine.handle(terrain())
+        const dataCache = storage.caches.get(TILE_CACHE_NAME)
+        const metadataCache = storage.caches.get(TILE_CACHE_METADATA_NAME)
+        dataCache.keys.mockClear()
+        dataCache.match.mockClear()
+        metadataCache.keys.mockClear()
+        metadataCache.match.mockClear()
+
+        expect(await engine.status()).toMatchObject({usage: 4, entries: 1})
+        expect(await engine.status()).toMatchObject({usage: 4, entries: 1})
+        expect(dataCache.keys).not.toHaveBeenCalled()
+        expect(dataCache.match).not.toHaveBeenCalled()
+        expect(metadataCache.keys).not.toHaveBeenCalled()
     })
 
     it('reduces the effective budget under origin storage pressure', async () => {

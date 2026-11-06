@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-10-07
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -62,8 +62,35 @@ describe('CacheManager acknowledged commands', () => {
         const {channels, serviceWorker} = bridgeFixture()
         const response = new CacheManager('cesium-ion-assets').clear()
         expect(serviceWorker.controller.postMessage.mock.calls[0][0]).toMatchObject({type: 'CLEAR_CACHE', scope: 'ion'})
-        channels[0].port1.onmessage({data: {usage: 0}})
+        channels[0].port1.onmessage({data: {available: true, usage: 0}})
         await expect(response).resolves.toMatchObject({usage: 0})
+    })
+
+    it('clears every tile partition and deletes app-data metadata through acknowledged commands', async () => {
+        const {channels, serviceWorker} = bridgeFixture()
+        const manager = new CacheManager()
+        const clearResponse = manager.clearAll()
+        expect(serviceWorker.controller.postMessage.mock.calls[0][0]).toMatchObject({type: 'CLEAR_CACHE', scope: 'all'})
+        channels[0].port1.onmessage({data: {available: true, usage: 0, entries: 0}})
+        await expect(clearResponse).resolves.toMatchObject({entries: 0})
+
+        const deleteResponse = manager.deleteAll()
+        expect(serviceWorker.controller.postMessage.mock.calls[1][0]).toMatchObject({type: 'CLEAR_CACHE', scope: 'app-data'})
+        channels[1].port1.onmessage({data: {available: true, usage: 0, entries: 0}})
+        await expect(deleteResponse).resolves.toMatchObject({entries: 0})
+    })
+
+    it('waits for acknowledgement before clearing private tile partitions', async () => {
+        const {channels, serviceWorker} = bridgeFixture()
+        const response = new CacheManager().clearPrivate()
+        expect(serviceWorker.controller.postMessage.mock.calls[0][0]).toMatchObject({type: 'CLEAR_CACHE', scope: 'private'})
+        channels[0].port1.onmessage({data: {available: true, usage: 0, entries: 0}})
+        await expect(response).resolves.toMatchObject({entries: 0})
+    })
+
+    it('does not report deletion success when the service worker is unavailable', async () => {
+        vi.stubGlobal('navigator', {})
+        await expect(new CacheManager().deleteAll()).rejects.toThrow('Service workers are unavailable')
     })
 
     it('rejects a missing acknowledgement within a bounded timeout', async () => {
@@ -118,7 +145,7 @@ describe('cartographic preference lifecycle', () => {
         const {serviceWorker} = bridgeFixture()
         const bridge = new CacheManager()
         const configured = vi.spyOn(bridge, 'configure').mockResolvedValue({available: true})
-        vi.stubGlobal('lgs', {settings: {app: proxy({tileCacheMaxBytes: 'broken'}), layers: {providers: []}}})
+        vi.stubGlobal('lgs', {settings: {app: proxy({tileCacheMaxBytes: 'broken'}), layers: proxy({providers: []})}})
         const controller = new CartographicCacheController(bridge)
         try {
             controller.init()
@@ -132,6 +159,19 @@ describe('cartographic preference lifecycle', () => {
         }
         finally { controller.destroy() }
         expect(serviceWorker.removeEventListener).toHaveBeenCalledTimes(2)
+    })
+
+    it('awaits complete cache deletion before publishing success', async () => {
+        const bridge = new CacheManager()
+        const controller = new CartographicCacheController(bridge)
+        const deleted = vi.fn(async () => ({available: true, usage: 0, entries: 0}))
+        bridge.deleteAll = deleted
+        try {
+            await expect(controller.deleteAll()).resolves.toMatchObject({entries: 0})
+            expect(deleted).toHaveBeenCalledOnce()
+            expect($cartographicCache).toMatchObject({available: true, usage: 0, entries: 0})
+        }
+        finally { controller.destroy() }
     })
 
     it('prevents an obsolete diagnostics result from replacing newer usage', async () => {
