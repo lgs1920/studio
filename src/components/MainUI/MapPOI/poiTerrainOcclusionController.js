@@ -24,6 +24,35 @@ const getVisibilityValue = (property, time) => typeof property?.getValue === 'fu
     ? property.getValue(time)
     : property
 
+/** Resolve every Cesium instance of a POI, including stale duplicates in other data sources. */
+const getPOIEntityRecords = (poi, poiId, cachedContainers = []) => {
+    const viewer = globalThis.lgs?.viewer
+    const containers = [
+        ...(poi ? [POIUtils.getEntityContainer(poi)] : []),
+        ...cachedContainers,
+        viewer?.entities,
+    ]
+    const dataSourceCount = Number(viewer?.dataSources?.length) || 0
+    for (let index = 0; index < dataSourceCount; index += 1) {
+        containers.push(viewer.dataSources.get(index)?.entities)
+    }
+
+    const seenContainers = new Set()
+    const seenEntities = new Set()
+    return containers.flatMap(container => {
+        if (!container || seenContainers.has(container)) {
+            return []
+        }
+        seenContainers.add(container)
+        const entity = container.getById?.(poiId)
+        if (!entity || seenEntities.has(entity)) {
+            return []
+        }
+        seenEntities.add(entity)
+        return [{container, entity}]
+    })
+}
+
 /** Keep POI focus occlusion transient and evaluate it only after relevant scene changes. */
 export const createPOITerrainOcclusionController = ({scene, poiList, isReplayActive}) => {
     const camera = scene?.camera
@@ -57,20 +86,50 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
         POIUtils.requestRender(scene)
     }
 
-    /** Subscribe to effective POI visibility writes made outside this controller. */
-    const observeEntityVisibility = (poiId, entity) => {
-        const subscription = entitySubscriptions.get(poiId)
-        if (subscription?.entity === entity) {
-            return
+    /** Subscribe to visibility writes on every rendered entity instance of an occluded POI. */
+    const observeEntityVisibility = (poiId, entities) => {
+        let subscriptions = entitySubscriptions.get(poiId)
+        if (!subscriptions) {
+            subscriptions = new Map()
+            entitySubscriptions.set(poiId, subscriptions)
         }
 
-        subscription?.remove?.()
-        const remove = entity?.definitionChanged?.addEventListener?.(() => {
-            if (!entitiesBeingUpdated.has(poiId)) {
-                requestCheck(poiId)
+        const currentEntities = new Set(entities)
+        for (const [entity, remove] of subscriptions) {
+            if (currentEntities.has(entity)) {
+                continue
             }
+            remove?.()
+            subscriptions.delete(entity)
+        }
+        currentEntities.forEach(entity => {
+            if (subscriptions.has(entity)) {
+                return
+            }
+            const remove = entity?.definitionChanged?.addEventListener?.(() => {
+                if (!entitiesBeingUpdated.has(poiId)) {
+                    requestCheck(poiId)
+                }
+            })
+            subscriptions.set(entity, remove)
         })
-        entitySubscriptions.set(poiId, {entity, remove})
+    }
+
+    /** Remove all visibility listeners owned by one POI mask. */
+    const clearEntityVisibilityObservers = poiId => {
+        const subscriptions = entitySubscriptions.get(poiId)
+        subscriptions?.forEach(remove => remove?.())
+        entitySubscriptions.delete(poiId)
+    }
+
+    /** Remember all collections so a removed POI can still be restored during cleanup. */
+    const rememberEntityContainers = (poiId, records) => {
+        let containers = occludedEntityContainers.get(poiId)
+        if (!containers) {
+            containers = new Set()
+            occludedEntityContainers.set(poiId, containers)
+        }
+        records.forEach(({container}) => containers.add(container))
     }
 
     /** Update a billboard only when its effective visibility needs to change. */
@@ -100,14 +159,18 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
         let changed = false
         for (const poiId of occludedPOIIds) {
             const poi = poiList.get(poiId)
-            const currentContainer = poi ? POIUtils.getEntityContainer(poi) : null
-            const cachedContainer = occludedEntityContainers.get(poiId)
-            const entity = currentContainer?.getById(poiId) ?? cachedContainer?.getById(poiId)
-            if (entity?.billboard) {
-                changed = setBillboardVisibility(poiId, entity, isPOIEffectivelyVisible(poi, entity), time) || changed
-            }
-            entitySubscriptions.get(poiId)?.remove?.()
-            entitySubscriptions.delete(poiId)
+            const records = getPOIEntityRecords(poi, poiId, occludedEntityContainers.get(poiId))
+            records.forEach(({entity}) => {
+                if (entity.billboard) {
+                    changed = setBillboardVisibility(
+                        poiId,
+                        entity,
+                        isPOIEffectivelyVisible(poi, entity),
+                        time,
+                    ) || changed
+                }
+            })
+            clearEntityVisibilityObservers(poiId)
         }
         occludedPOIIds.clear()
         occludedEntityContainers.clear()
@@ -132,27 +195,21 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
         let changed = false
         for (const poiId of occludedPOIIds) {
             const poi = poiList.get(poiId)
-            let container = occludedEntityContainers.get(poiId)
-            let entity = container?.getById(poiId)
-            if (!entity && poi) {
-                container = POIUtils.getEntityContainer(poi)
-                entity = container?.getById(poiId)
-                if (entity) {
-                    occludedEntityContainers.set(poiId, container)
-                }
-            }
-            if (!entity?.billboard) {
+            const records = getPOIEntityRecords(poi, poiId, occludedEntityContainers.get(poiId))
+                .filter(({entity}) => entity.billboard)
+            if (records.length === 0) {
                 occludedPOIIds.delete(poiId)
                 occludedEntityContainers.delete(poiId)
-                entitySubscriptions.get(poiId)?.remove?.()
-                entitySubscriptions.delete(poiId)
+                clearEntityVisibilityObservers(poiId)
                 continue
             }
-            if (entity.show !== true) {
-                continue
-            }
-            observeEntityVisibility(poiId, entity)
-            changed = setBillboardVisibility(poiId, entity, false, time) || changed
+            rememberEntityContainers(poiId, records)
+            observeEntityVisibility(poiId, records.map(({entity}) => entity))
+            records.forEach(({entity}) => {
+                if (isPOIEffectivelyVisible(poi, entity)) {
+                    changed = setBillboardVisibility(poiId, entity, false, time) || changed
+                }
+            })
         }
         if (changed) {
             POIUtils.requestRender(scene)
@@ -180,39 +237,43 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
         for (const poiId of candidatePOIIds) {
             const poi = poiList.get(poiId)
             const wasOccluded = occludedPOIIds.has(poiId)
-            const container = poi ? POIUtils.getEntityContainer(poi) : null
-            const entity = container?.getById(poiId)
-            if (!entity?.billboard) {
+            const records = getPOIEntityRecords(poi, poiId, occludedEntityContainers.get(poiId))
+                .filter(({entity}) => entity.billboard)
+            if (records.length === 0) {
                 occludedPOIIds.delete(poiId)
                 occludedEntityContainers.delete(poiId)
-                entitySubscriptions.get(poiId)?.remove?.()
-                entitySubscriptions.delete(poiId)
+                clearEntityVisibilityObservers(poiId)
                 continue
             }
 
-            if (!isPOIEffectivelyVisible(poi, entity)) {
-                if (wasOccluded) {
-                    observeEntityVisibility(poiId, entity)
-                }
-                continue
-            }
-            if (!wasOccluded && getVisibilityValue(entity.billboard.show, time) !== true) {
+            const visibleRecords = records.filter(({entity}) => isPOIEffectivelyVisible(poi, entity))
+            const hasVisibleBillboard = visibleRecords.some(({entity}) =>
+                getVisibilityValue(entity.billboard.show, time) === true)
+            if (!wasOccluded && !hasVisibleBillboard) {
                 continue
             }
 
             const isOccluded = isPOIAnchorOccludedByTerrain(scene, camera, poi)
             if (isOccluded) {
                 occludedPOIIds.add(poiId)
-                occludedEntityContainers.set(poiId, container)
-                observeEntityVisibility(poiId, entity)
-                changed = setBillboardVisibility(poiId, entity, false, time) || changed
+                rememberEntityContainers(poiId, records)
+                observeEntityVisibility(poiId, records.map(({entity}) => entity))
+                visibleRecords.forEach(({entity}) => {
+                    changed = setBillboardVisibility(poiId, entity, false, time) || changed
+                })
             }
             else if (wasOccluded) {
                 occludedPOIIds.delete(poiId)
                 occludedEntityContainers.delete(poiId)
-                entitySubscriptions.get(poiId)?.remove?.()
-                entitySubscriptions.delete(poiId)
-                changed = setBillboardVisibility(poiId, entity, isPOIEffectivelyVisible(poi, entity), time) || changed
+                clearEntityVisibilityObservers(poiId)
+                records.forEach(({entity}) => {
+                    changed = setBillboardVisibility(
+                        poiId,
+                        entity,
+                        isPOIEffectivelyVisible(poi, entity),
+                        time,
+                    ) || changed
+                })
             }
         }
 
@@ -256,7 +317,9 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
             removeTerrainProviderListener?.()
             removeTerrainListener?.()
             const changed = restoreOccludedPOIs()
-            entitySubscriptions.forEach(subscription => subscription.remove?.())
+            entitySubscriptions.forEach(subscriptions => {
+                subscriptions.forEach(remove => remove?.())
+            })
             entitySubscriptions.clear()
             if (changed) {
                 POIUtils.requestRender(scene)

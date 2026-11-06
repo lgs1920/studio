@@ -122,9 +122,12 @@ Each explicit viewer render recalculates terrain-anchor occlusion before entity
 visualizers run, independently of threshold-based camera events. A visibility
 revision detects masks changed during the draw and triggers one corrective viewer
 render before capture reads the canvas. Disposing a POI controller removes its
-callback. This remains an anchor-based whole-billboard mask, not a per-pixel
-terrain clipping algorithm. Real terrain Record validation of this synchronization
-is pending while the browser automation CLI is unavailable.
+callback. The controller applies the mask to every Cesium entity instance with
+that POI ID across the viewer's entity collections, so a duplicate cannot remain
+visible after its owning instance is hidden. This remains an anchor-based
+whole-billboard mask, not a per-pixel terrain clipping algorithm. Real terrain
+Record validation of this synchronization is pending while the browser
+automation CLI is unavailable.
 
 Basic Replay offers an opt-in Dry run preference in the video settings popup.
 It traverses the same fixed-timestamp timeline, including start and stop clips,
