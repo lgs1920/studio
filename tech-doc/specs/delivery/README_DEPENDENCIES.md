@@ -79,7 +79,6 @@ These are the current package names declared in the `dependencies` section of `p
 @zumer/snapdom
 argparse
 axios
-babel-plugin-module-resolver
 canvg
 cesium
 classnames
