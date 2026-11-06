@@ -4891,3 +4891,51 @@
 ## 2026-11-05 — [`style: slow Replay widget name roller`](https://github.com/lgs1920/studio/commit/b8dbc6225a5e33fda4f0999571242f4341edc80e)
 
 - Recorded automatically from Git history.
+
+## 2026-11-05 — [`fix: improve SnapDOM Record capture quality`](https://github.com/lgs1920/studio/commit/d847c69f903cb4decc3c403e67b148ef59a84348)
+
+- Recorded automatically from Git history.
+
+## 2026-11-05 — [`fix: keep terrain occlusion during Replay`](https://github.com/lgs1920/studio/commit/b79c7ac3c37dabdfcf6adc85f34d9903bcb6a7c8)
+
+- Recorded automatically from Git history.
+
+## 2026-11-06 — [`fix: read live display DPR for Record`](https://github.com/lgs1920/studio/commit/370065203442352e21fbff764381fb3bbd4a402b)
+
+- Recorded automatically from Git history.
+
+## 2026-11-06 — [`chore: remove unused Babel module resolver`](https://github.com/lgs1920/studio/commit/8cf8a26ffde4cb69cb2120b46c465f50c7be6235)
+
+- Recorded automatically from Git history.
+
+## 2026-11-06 — [`fix: avoid SnapDOM recapture on Record start`](https://github.com/lgs1920/studio/commit/e55f47f8ce402b8b8c4dbabde7816dd8feda4b15)
+
+- Recorded automatically from Git history.
+
+## 2026-11-06 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/553852f28bc27c289c15d6778f4097b8095937c4)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-11-06 — [`fix: avoid compass capture timeout during Replay`](https://github.com/lgs1920/studio/commit/3eac8d3f7e8246e6a2ec4f9e1b3bb9218ec0ee4e)
+
+- Recorded automatically from Git history.
+
+## 2026-11-06 — [`fix: align POI slowdown with terrain visibility`](https://github.com/lgs1920/studio/commit/cc82eb4f89d74e26634b8fcd9b0c6c4080315527)
+
+- Recorded automatically from Git history.
+
+## 2026-11-06 — [`chore: remove tracked IDE settings`](https://github.com/lgs1920/studio/commit/55d9c1214572d30e174e4e8174777c82498ffd03)
+
+- Recorded automatically from Git history.
+
+## 2026-11-06 — [`docs: track pending Replay and SnapDOM validation`](https://github.com/lgs1920/studio/commit/20a121176280c1318ba6ee96488a32197671b27c)
+
+- Recorded automatically from Git history.
+
+## 2026-11-06 — [`chore: add root development entrypoint`](https://github.com/lgs1920/studio/commit/3d47d2c167e0a05205751b0997e4a20ce5d4ef4f)
+
+- Recorded automatically from Git history.
+
+## 2026-11-06 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/6e6804d11a56575dec72d44cfa7607486d2292a4)
+
+- Recorded automatically from Git history.
