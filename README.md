@@ -1,285 +1,89 @@
 # LGS1920 Studio
 
-LGS1920 Studio is a web-based geospatial editor built to load, inspect, edit, and present journeys, tracks, and points
-of interest on top of a Cesium scene. The application is centered on privacy-first, local-first editing, rich camera
-workflows, and media capture for map storytelling.
+**A free, privacy-first studio for turning journeys into videos.**
 
-## Current Application State
+LGS1920 Studio helps transform GPS journeys into visual stories on interactive Cesium maps. Prepare a Journey Replay, compose the scene with camera movement and on-map widgets, preview the result, and export it as an MP4 video. The same workspace also supports journey analysis, still images, and reports.
 
-The application is already a working geospatial studio, not just a map viewer. It lets users import outdoor journeys,
-organize them, inspect their geometry and statistics, style their traces, attach points of interest, and prepare visual
-outputs from the same workspace. The default posture is privacy-first: journey data is edited in the browser, most
-project state is kept locally, and exports are explicit user actions. IndexedDB is used for persisted journeys, widgets,
-settings, and cached runtime data.
+## Create journey videos
 
-The current product surface is built around Cesium. Users can move between 2D and 3D views, focus the camera
-on journeys or POIs, run orbit and panorama camera modes, and export Journey Replay videos or screenshots with
-selected overlays. The widget system is also part of the core workflow: widgets can be positioned, resized, locked,
-ordered, reduced, and included in Replay media.
+Video creation is at the heart of Studio. Journey Replay animates a route across the map and keeps the trace, camera, and selected visual elements synchronized. Prepare the map composition, preview the playback, and render a video for download or sharing.
 
-Replay and media export are active parts of the codebase. Journey Replay has a sampler, playback controller, Cesium
-renderer, camera behavior, replay clips, overlay visibility rules, and a deterministic MP4 export path. All video
-video creation uses Replay MP4 export. The current Replay UI still uses
-start/stop clip lists, while video export renders deterministic frames and
-replay phases.
+- Import a journey and choose the route to present
+- Frame the map and set up the camera for the journey
+- Compose the scene with tracks, points of interest, and widgets
+- Preview the Replay, then export the finished composition as an MP4
+- Capture still images from the map and Replay composition
 
-The repository already contains the main product surface used by the studio:
+## Main capabilities
 
-- Journey, track, and POI management
-- Journey group management
-- GeoJSON, KML, and GPX import
-- Cesium-based 2D / 3D scene navigation
-- Journey and POI focus workflows
-- Live orbit rotation and panorama controls
-- Elevation-aware metrics and profile widgets
-- Widget rendering, placement, ordering, reduction, locking, and export-aware capture
-- Widget grid, edge, and center snapping across widgets during video composition
-- Video crop dimensions persist across editor sessions, with crop snapping limited to the composition bounds
-- Geocoding tools and coordinate utilities
-- Journey Replay playback and replay-aware video synchronization
-- Interactive Replay frame synchronization and bounded trace rendering
-- Double-clicking a linked Replay timeline action opens or toggles its editor target
-- Replay MP4 export and image snapshot workflows
-- Mobile video preview actions keep Replay export actions on a dedicated right-aligned row
-- Linked replay video editing temporarily hides the Journey toolbar without changing its saved visibility setting
-- Deterministic export camera following for navigation and dynamic corrections, including 1.5-second transitions
-- Crop-aware collision tracking and visible diagnostic overlays across video formats
-- IndexedDB persistence for editor state and loaded content
-- Privacy-first local workspace for imported journeys and generated media
-- PWA support and offline-friendly caching
-- Boot splash video loading uses browser-supported video element preloading
-- Webapp updates are checked before Studio entry, while installed PWAs use an explicit update dialog and restart after activation
+### Journeys and geospatial data
 
-## Main Features
+Import GPX, KML, and GeoJSON journeys, organize them into groups, and manage their tracks and points of interest. Export journey data in portable geospatial formats.
 
-### Journey Editing
+### Maps and journey analysis
 
-- Load and manage multiple journeys at once
-- Organize journeys into reusable groups from the Journey Groups drawer
-- Edit journey metadata, activity, track styling, visibility, and POI visibility
-- Handle start / stop flags and parented POIs
-- Tune journey statistics cleaning through activity-aware thresholds persisted with each journey
-- Style tracks with presets, underlay, dash patterns, bicolor dashes, far-distance fallback lines, and locator markers
-- Persist journey camera state and orbit/panoramic settings
+Explore journeys in Cesium 2D and 3D views. Review distance, elevation, duration, speed, pace, and elevation profiles while navigating or focusing on points of interest.
 
-### Scene and Camera
+### Visual composition
 
-- Cesium-powered globe and map rendering
-- Focus on journeys, tracks, POIs, or arbitrary coordinates
-- Continuous orbit/panoramic rotation with live speed and direction controls
-- Camera movement feedback with lock-aware on-map display
-- Compass, scene mode switching, and camera targeting helpers
+Customize track appearance and arrange map widgets for titles, credits, and journey information. Use the same composition in the interactive map, Replay preview, snapshots, and video output.
 
-### Metrics and Visualization
+### Reports and snapshots
 
-- Distance, elevation, duration, speed, pace ...
-- Elevation profile and journey statistics widgets
-- Responsive date and time display for editors, POIs, and journey statistics
-- Text, credits, and compass widget system with draggable, reducible, and lockable on-map controls
-- Export-aware widget rendering for recording and snapshots
+Alongside video exports, capture images and create journey reports in PDF or HTML formats.
 
-### Media Workflows
+## Privacy and local storage
 
-- Replay video crop area and export UI
-- Snapshot capture
-- Media composition through canvas overlays
-- MP4 export pipeline based on Mediabunny
-- Replay playback synchronization and deterministic MP4 export
-- Dynamic overlay visibility for replay-driven widgets
+Studio is designed to keep the workspace local. Journeys, groups, settings, and widget configuration are stored in the browser, and Replay video is rendered and encoded there. No Studio cloud account or remote project database is required for the core workflow. Exporting or sharing a project or video is initiated by the user.
 
-### Journey Reports
+Map and data providers may receive requests when their services are used. Their own privacy terms and usage limits apply.
 
-- Export journeys as GPX or GeoJSON, including associated POIs and their LGS display settings while excluding generated start / end system markers
-- Export journeys as PDF reports or HTML reports packaged as ZIP archives
-- Include journey metadata, description, statistics, dates, elevation profile, POI tables, coordinates, and altitude data
-- Generate 2D overview maps and 3D Cesium map captures for the four cardinal orientations
-- Add POI badges, start / end markers, walking direction markers
+## Free and open source
 
-### App Platform
+LGS1920 Studio is free to use and open source under the GNU Affero General Public License, version 3 or later. The application has no license fee; external map and data services may have separate terms or charges.
 
-- Local browser persistence with IndexedDB
-- Privacy-first by default: user journeys and editor state stay in the browser unless the user exports, shares, syncs, or enables a provider-backed feature
-- Settings and widget configuration from YAML files in `public/`
-- Shared shortcut catalog displayed in the information drawer, with PDF export
-- PWA service worker and version-aware caching
-- Adjustable local map tile, terrain, and 3D Tiles cache: [Cartographic cache documentation](tech-doc/specs/data/CORE-CACHE-README.md)
-- PWA installation and update behavior: [PWA technical documentation](tech-doc/specs/platform/PWA-README.md)
+## Development
 
-## Roadmap
+Install [Bun](https://bun.sh/), then install dependencies and start the development server:
 
-### 1.0 — Current Studio - Done
+```bash
+bun install
+bun run dev
+```
 
-LGS1920 Studio is a privacy-first, local-first geospatial editor for importing and managing outdoor journeys,
-tracks, and points of interest. It provides Cesium 2D/3D visualization, journey editing, elevation-aware statistics,
-camera controls, widgets, replay, snapshots, Replay video export, and PDF/HTML journey reports. Projects and imported data
-are persisted locally in the browser, with explicit export and sharing actions.
-
-### 1.1 — Extended Activity Imports
-
-Expand journey imports with FIT and TCX files from Garmin and Strava, while preserving activity metadata and sensor
-data such as altitude, heart rate, cadence, and power. Add optional authenticated Strava activity import through its
-API, independently from local file parsing. This milestone also adds cloud access for browsing, importing, exporting,
-and synchronizing project files through connected providers ([#372 — Add Cloud access](https://github.com/lgs1920/studio/issues/372)).
-Garmin Connect cloud synchronization remains outside this milestone.
-
-Technical spec: [Journey import formats](tech-doc/todo/JOURNEY_IMPORT_FORMATS_SPEC.md).
-
-### 1.2 — Timeline Video Editor
-
-Replace the current separate Replay `start` / `replay` / `stop` clip UI with a track-based timeline inside the Replay
-drawer. The timeline will combine start clips, one locked journey replay, stop clips, and widget clips across up to 20
-widget tracks. The timeline state will drive interactive Replay and deterministic MP4 export from the same frame definition.
-
-Technical specs: [Replay Timeline preparation implementation](tech-doc/specs/replay-video/CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) for the delivered preparation surface and [Replay track timeline editor evolution](tech-doc/todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) for the complete editor.
-
-The current 1.0.0 integration renders the Replay preparation timeline with the `lgs1920-timeline` Web Component.
-The surface owns local timeline interactions while Replay event and controller wiring remains a follow-up step.
-
-### 1.3 — 3D Camera Path Editor
-
-The 3D Camera editor will let users author an actual 3D camera path with GPS positions, altitude, duration, motion
-profiles, look-at targets, and easing. It will support directly editable 3D Bezier paths
-with a dedicated visual preview/editor, while keeping the path engine deterministic and reusable independently from
-Journey Replay. The engine will be testable without a live Cesium scene, while Cesium remains the runtime adapter that
-applies the final camera pose.
-
-Technical spec: [Camera 3D path editor](tech-doc/todo/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md).
-
-## Technical Documentation
-
-All technical specifications and architecture notes are centralized in [tech-doc/](tech-doc/README.md). Important entry
-points include:
-
-- [Specs technical documentation](tech-doc/specs/)
-- [Implementation work to do](tech-doc/todo/)
-- [Internal database architecture](tech-doc/specs/data/CORE-INTERNAL-DATABASE-ARCHITECTURE.md)
-- [Replay architecture](tech-doc/specs/replay-video/CORE-REPLAY-ARCHITECTURE.md)
-- [Replay implementation status](tech-doc/specs/replay-video/CORE-REPLAY-IMPLEMENTATION-STATUS.md)
-- [Replay quality validation](tech-doc/specs/replay-video/CORE-REPLAY-QUALITY-VALIDATION.md)
-- [Replay Timeline preparation implementation](tech-doc/specs/replay-video/CORE-REPLAY-TIMELINE-IMPLEMENTATION.md)
-- [Replay track timeline editor evolution](tech-doc/todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
-- [Drone camera path architecture](tech-doc/specs/replay-video/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
-- [Brand and season swatch reactivity](tech-doc/todo/BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)
-- [Clip altitude data alignment](tech-doc/todo/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
-- [POI animation during replay](tech-doc/todo/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
-- [Widget manager](tech-doc/specs/ui-widgets/CORE-WIDGET-MANAGER-README.md)
-- [Replay media capture](tech-doc/specs/replay-video/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
-- [Canvas overlay composer](tech-doc/specs/replay-video/CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
-- [Deployment and backend environment handling](tech-doc/specs/delivery/DEPLOYMENT-README.md)
-- [All technical docs](tech-doc/README.md)
-- [Bun command reference](tech-doc/specs/delivery/HOW_TO_BUN_COMMANDS.md)
-
-## Internal Skills
-
-The repository includes a set of internal Skills for AI-assisted development. These Skills provide the project context,
-workflow constraints, and validation expectations for recurring tasks. They are instructions for contributors and AI
-agents, not runtime application dependencies.
-
-The Skills are stored in the agent-independent [skills/](skills/) directory and cover:
-
-- [Accessibility audits](skills/lgs-1920-studio-accessibility-audit/SKILL.md)
-- [Browser persistence](skills/lgs-1920-studio-browser-persistence/SKILL.md)
-- [Bun and Elysia backend](skills/lgs-1920-studio-bun-elysia-backend/SKILL.md)
-- [Cesium camera](skills/lgs-1920-studio-cesium-camera/SKILL.md)
-- [CSS theme system](skills/lgs-1920-studio-css-theme-system/SKILL.md)
-- [Documentation maintenance](skills/lgs-1920-studio-documentation-maintenance/SKILL.md)
-- [GitHub issues and Project workflow](skills/lgs-1920-studio-github-issues/SKILL.md)
-- [GPX journey import](skills/lgs-1920-studio-gpx-journey-import/SKILL.md)
-- [Internal database](skills/lgs-1920-studio-internal-database/SKILL.md)
-- [Journey statistics](skills/lgs-1920-studio-journey-statistics/SKILL.md)
-- [Map layer providers](skills/lgs-1920-studio-map-layer-provider/SKILL.md)
-- [Map POI management](skills/lgs-1920-studio-map-poi-management/SKILL.md)
-- [Performance rendering](skills/lgs-1920-studio-performance-rendering/SKILL.md)
-- [Replay video export](skills/lgs-1920-studio-replay-video-export/SKILL.md)
-- [Scene composition](skills/lgs-1920-studio-scene-composition/SKILL.md)
-- [Testing workflow](skills/lgs-1920-studio-testing-workflow/SKILL.md)
-- [Valtio stores](skills/lgs-1920-studio-valtio-store/SKILL.md)
-- [Web Awesome UI](skills/lgs-1920-studio-webawesome-ui/SKILL.md)
-- [Widget creation](skills/lgs-1920-studio-widget-creation/SKILL.md)
-
-Commit preparation and release work are also covered by the [Git commit quality](skills/lgs-1920-studio-git-commit-quality/SKILL.md)
-and [release changelog](skills/lgs-1920-studio-release-changelog/SKILL.md) Skills.
-
-The shared baseline and cross-repository delivery guidance are maintained in
-[agent-guidance/](agent-guidance/). After cloning, activate the repository
-hooks once with:
+Install the repository's Git hooks once after cloning:
 
 ```bash
 bun run git:hooks:install
 ```
 
-During local development, provider directories may link to an external source.
-The pre-commit hook materializes those external links as physical files for the
-commit, while the post-commit hook restores the local links. The same
-pre-commit hook updates staged source-file headers. A standalone clone remains
-self-contained.
+Common project checks:
 
-## Technology Stack
+```bash
+bun run test
+bun run lint
+bun run typecheck
+bun run build
+```
 
-This README only highlights the main runtime pieces. Technical documentation is centralized in
-[tech-doc/](tech-doc/README.md), including the complete dependency inventory.
+## Documentation
 
-- **Runtime**: Bun
-- **Frontend**: React
-- **State management**: Valtio
-- **Map / 3D engine**: Cesium
-- **UI libraries**: Web Awesome, Shoelace
-- **Charts**: ECharts
-- **Geospatial processing**: Turf, Mapbox GeoJSON helpers, `@tmcw/togeojson`
-- **Recording / export**: Mediabunny, html2canvas, canvg, jsPDF, SnapDOM
-- **Build tooling**: Vite, `@vitejs/plugin-react`, `vite-plugin-cesium`, `vite-plugin-pwa`
-- **Tests**: Vitest, Testing Library React
-
-Tests are organized under `src/__tests__/` by responsibility:
-
-- `unit/`: isolated camera, data, journey, replay, utility, and widget tests
-- `integration/`: cross-module journey, replay, report, and video tests
-- `ui/`: component and interface interaction tests
-
-## Project Layout
-
-- `src/core/`: application core, stores, camera / scene managers, DB layer, widget manager, Replay media capture
-- `src/components/`: React UI components for editing, map controls, widgets, video tools, and panels
-- `src/Utils/`: Cesium and app utilities
-- `public/`: static configuration, widgets catalog, service worker, images, changelog, and runtime assets
-- `deployment/`: deployment helpers and environment-specific deployment scripts
-- `tech-doc/`: technical specifications, architecture notes, and module-level documentation
-
-## Configuration Notes
-
-- Application settings are primarily defined in `public/settings.yaml`
-- Map, overlay, and terrain providers are documented in [tech-doc/specs/HOW_TO_ADD_PROVIDERS_LAYERS.md](tech-doc/specs/cesium/HOW_TO_ADD_PROVIDERS_LAYERS.md)
-- Widget registration is defined in `public/widgets.yaml`
-- PWA behavior is configured through `vite.config.mts` and `public/service-worker-pwa.js`
-- Static version metadata is stored in `public/version.json` and `public/build.json`
-- Backend deployments read the local `../backend/.env`, upload it to the remote shared backend environment with
-  restrictive permissions, and load it through PM2. SMTP credentials and recipient mappings never belong in Studio
-  source, builds, or release archives.
-
-## Dependencies
-
-The root dependency documentation has been synchronized with the current `package.json`:
-
-- Full package inventory: [tech-doc/specs/delivery/README_DEPENDENCIES.md](tech-doc/specs/delivery/README_DEPENDENCIES.md)
-- Build and runtime commands: [package.json](package.json)
+- [Technical documentation index](tech-doc/README.md)
+- [Journey Replay architecture](tech-doc/specs/replay-video/CORE-REPLAY-ARCHITECTURE.md)
+- [Video export and media capture](tech-doc/specs/replay-video/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
+- [Local database architecture](tech-doc/specs/data/CORE-INTERNAL-DATABASE-ARCHITECTURE.md)
+- [Map providers and layers](tech-doc/specs/cesium/HOW_TO_ADD_PROVIDERS_LAYERS.md)
+- [Local map cache](tech-doc/specs/data/CORE-CACHE-README.md)
+- [PWA behavior](tech-doc/specs/platform/PWA-README.md)
+- [Bun commands](tech-doc/specs/delivery/HOW_TO_BUN_COMMANDS.md)
+- [Dependency inventory](tech-doc/specs/delivery/README_DEPENDENCIES.md)
 
 ## Contributing
 
-Contributions are welcome under the same AGPL terms as the repository.
-
-- Contribution terms: [CONTRIBUTOR_LICENSE_AGREEMENT.md](CONTRIBUTOR_LICENSE_AGREEMENT.md)
-
-For contribution questions: `studio@lgs1920.fr`
+Contributions are welcome under the repository's AGPL terms. See the
+[Contributor License Agreement](CONTRIBUTOR_LICENSE_AGREEMENT.md). For questions, contact
+studio@lgs1920.fr.
 
 ## License
 
-This project is licensed under the **GNU Affero General Public License v3.0 or later**.
-
-- See [LICENSE.md](LICENSE.md) for the full license text
-- See [LICENSES.md](LICENSES.md) for the repository licensing model summary
-
-Copyright © 2026 LGS1920
-
-## Sponsors
-
-This project welcomes sponsors who want to help support its continued development, hosting, maintenance, and the cartographic data and services that power it. If your organization would like to become a sponsor, your contribution will help keep the studio sustainable and allow the project to evolve over time.
+See [LICENSE.md](LICENSE.md) for the license text and [LICENSES.md](LICENSES.md) for the repository's licensing model.
