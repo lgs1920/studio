@@ -87,11 +87,13 @@ Slowdown profiles include only POIs whose Replay animation and visibility rules
 allow display and whose terrain-clamped anchor is visible inside the video crop
 over bounded route-time samples in their display window. Visibility transitions
 are refined between samples, and only visible intervals contribute a slowdown.
-Qualification checks loaded terrain along the camera-to-anchor ray; an
-indeterminate terrain ray does not qualify a slowdown. When a POI first becomes
-visible after its nominal display window starts, its slowdown begins at that
-visibility time and its presentation window extends far enough to cover the
-full slowdown. Terrain-occluded spans do not slow Replay. Hidden, non-animated,
+Qualification checks loaded terrain along the camera-to-anchor ray. Confirmed
+terrain occlusion excludes a slowdown. When the POI is inside the crop but the
+terrain ray is indeterminate, keep it eligible because the runtime mask leaves
+it visible unless occlusion is confirmed. When a POI first becomes visible after
+its nominal display window starts, its slowdown begins at that visibility time
+and its presentation window extends far enough to cover the full slowdown.
+Terrain-occluded spans do not slow Replay. Hidden, non-animated, confirmed
 terrain-occluded, and out-of-crop POIs do not extend the Replay duration.
 Playback, Record, and the POI expansion state share the same qualified passage
 windows.

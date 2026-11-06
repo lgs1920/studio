@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -150,7 +150,7 @@ const isReplayPOIInVideoCropAtProgress = (mode, poi, progress) => {
             return null
         }
 
-        cropVisible = call.isPOIInsideVideoCrop?.(poi) ?? null
+        cropVisible = call.isPOIInsideVideoCrop?.(poi, {allowUnqualifiedTerrain: true}) ?? null
     }
     catch {
         cropVisible = null

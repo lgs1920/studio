@@ -239,9 +239,11 @@ const replayPOICandidatesForProgress = (state, progress, replayDurationSeconds, 
  * Project a POI into the active Replay view and check crop bounds and terrain visibility.
  * @param {object} mode - Replay session mode.
  * @param {object} poi - POI being checked.
+ * @param {object} [options] - Visibility qualification policy.
+ * @param {boolean} [options.allowUnqualifiedTerrain=false] - Keep an in-crop POI eligible when the terrain ray is unknown.
  * @returns {boolean|null} Crop visibility, or null when no render target is available.
  */
-export const isPOIInsideVideoCrop = (mode, poi) => {
+export const isPOIInsideVideoCrop = (mode, poi, {allowUnqualifiedTerrain = false} = {}) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     const viewer = call.cesiumViewer?.()
     const scene = call.cesiumScene?.() ?? viewer?.scene
@@ -317,7 +319,11 @@ export const isPOIInsideVideoCrop = (mode, poi) => {
         }
     }
 
-    return hasUnqualifiedTerrainVisibility ? null : false
+    if (hasUnqualifiedTerrainVisibility) {
+        // Match runtime masking: an unknown terrain ray does not hide the billboard.
+        return allowUnqualifiedTerrain ? true : null
+    }
+    return false
 }
 
 /** Publish animation ownership only when its observable ID set changes. */
