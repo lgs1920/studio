@@ -4963,3 +4963,7 @@
 ## 2026-11-06 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/c59dc4677a992bbaa96166c50a03e6cff1407682)
 
 - Recorded automatically from Git history.
+
+## 2026-11-06 — [`fix: keep visible POIs eligible for Replay slowdown`](https://github.com/lgs1920/studio/commit/35a4c7312d9159a54523b97d4909ccee3fb447bb)
+
+- Recorded automatically from Git history.
