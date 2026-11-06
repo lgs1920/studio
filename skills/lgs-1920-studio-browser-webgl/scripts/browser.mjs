@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-20
- * Last modified: 2026-10-20
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,6 +28,15 @@ const CHROME_ARGUMENTS = [
     '--use-angle=swiftshader-webgl',
     '--enable-unsafe-swiftshader',
 ]
+
+/** Resolve an explicit native CLI path without interpreting shell commands or switching browser environments. */
+const chromeExecutable = () => {
+    const executable = process.env.LGS1920_CHROME_DEVTOOLS_CLI?.trim() || 'chrome-devtools'
+    if (process.platform === 'linux' && /(?:^[a-z]:\\|\.(?:cmd|bat|exe)$)/i.test(executable)) {
+        throw new Error('LGS1920_CHROME_DEVTOOLS_CLI points to a Windows executable. The WSL preflight requires a Linux CLI for Linux Chrome. Configure a native Linux executable path instead.')
+    }
+    return executable
+}
 
 /** Return a CLI environment with an accessible daemon runtime and, for headless launches, no desktop dependencies. */
 const browserEnvironment = (headlessLaunch = false) => {
@@ -54,12 +63,19 @@ const browserEnvironment = (headlessLaunch = false) => {
 
 /** Run the installed CLI without a shell, bounding failures so a blocked GPU cannot stall the workflow indefinitely. */
 const runChrome = (argumentsList, {headlessLaunch = false, timeout = 25000} = {}) => {
-    const result = spawnSync('chrome-devtools', argumentsList, {
+    const executable = chromeExecutable()
+    const result = spawnSync(executable, argumentsList, {
         encoding: 'utf8',
         env: browserEnvironment(headlessLaunch),
         maxBuffer: 8 * 1024 * 1024,
         timeout,
     })
+    if (result.error?.code === 'ENOENT' || result.error?.code === 'EACCES') {
+        throw new Error(`Chrome DevTools CLI is unavailable: ${executable} (${result.error.code}). `
+            + 'Set LGS1920_CHROME_DEVTOOLS_CLI to an executable Linux CLI path or expose chrome-devtools on the WSL PATH. '
+            + 'The IDE may provide only a Windows .cmd launcher, which cannot serve this Linux preflight. '
+            + 'This is a tooling failure, not a WebGL rendering failure. No browser was validated.')
+    }
     if (result.error || result.status !== 0) {
         throw new Error(`chrome-devtools ${argumentsList[0]} failed: ${result.error?.message
             ?? (result.stderr?.trim() || result.stdout?.trim() || `exit ${result.status}`)}`)

@@ -11,6 +11,25 @@ WebGL or the Studio scene works.
 
 ## Prepare the browser before opening Studio
 
+### Configure the native CLI once
+
+The wrapper runs `chrome-devtools` from the WSL `PATH` by default. To use an existing native Linux CLI outside
+that path, set `LGS1920_CHROME_DEVTOOLS_CLI` to its executable file path, without arguments:
+
+```bash
+export LGS1920_CHROME_DEVTOOLS_CLI="/absolute/path/to/linux/chrome-devtools"
+```
+
+Persist that export in the shell initialization used by the agent, or its launch environment, and restart the
+agent session. Verify with the wrapper's `--version` command before `ensure`. Paths containing spaces are supported.
+An invalid explicit path fails immediately instead of silently selecting another CLI.
+
+In JetBrains, request `execute_tool(command="get_chrome_connect_cli")` to identify the bundled CLI. A returned
+Windows `.cmd` path does not supply a Linux CLI to WSL and must not be used for this preflight. Missing commands
+(`ENOENT`) and inaccessible executables (`EACCES`) are tooling failures, not evidence of broken WebGL. If no native
+Linux CLI is available, report that prerequisite and arrange its setup explicitly. Do not install a global package
+automatically, search IDE caches for substitutes, or switch to Windows Chrome or another profile to bypass it.
+
 Run from the repository root:
 
 ```bash
