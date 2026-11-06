@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -3141,7 +3141,7 @@ export const runReplayDeferredMp4Export = async ({
                         try {
                             visibleWidgetKeys = await flushReplayVideoOverlayCanvases({
                                 replay, controller, frameState: plan.runtime?.frameState,
-                                outputDpr: composerOutputDpr, captureMirrors, strict: true, signal,
+                                captureMirrors, strict: true, signal,
                             })
                         }
                         finally {

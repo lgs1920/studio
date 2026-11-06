@@ -72,12 +72,13 @@ The application also follows the v3 migration rules:
 
 `Widget2Canvas` pins SnapDOM `dpr` to `1` and expresses physical raster density
 through `scale`. Its composition buffers use the same physical pixels-per-CSS-
-pixel ratio as the SnapDOM bitmap. The widget host keeps its normal 4× capture
-density; Replay temporarily selects `min(4, outputDpr × widgetTransformScale)`
-for each visible widget, then restores the normal density when deterministic
-capture ends. `outputDpr` comes from the encoded dimensions and crop size, not
-from the display DPR. A density change invalidates the cached parts once, while
-unchanged static parts remain cached across subsequent Replay frames.
+pixel ratio as the SnapDOM bitmap. The widget host keeps its initialized 4×
+capture density throughout Replay preparation and export. The video compositor
+scales that cached source directly to the encoded dimensions, avoiding a
+full-widget SnapDOM recapture when recording starts and another recapture during
+cleanup. `outputDpr` comes from the encoded dimensions and crop size, not from
+the display DPR. A changed widget still invalidates only the affected parts
+according to the static and dynamic capture rules below.
 
 Nested `<canvas>` sources remain raster inputs. Raising the surrounding
 `Widget2Canvas` density does not add detail that is absent from a nested canvas

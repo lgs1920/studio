@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,6 @@ import {
     flushReplayVideoOverlayCanvases,
     getReplayVideoOverlayMetrics,
     isReplayVideoWidgetReady,
-    resolveReplayVideoWidgetCapturePixelRatio,
     resolveReplayVideoWidgetScale,
 } from '@Core/ui/replay/ReplayVideoOverlayComposer'
 import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
@@ -342,13 +341,6 @@ describe('getReplayVideoOverlayMetrics', () => {
 })
 
 describe('Replay video widget capture density', () => {
-    it('tracks encoded output density and applies the widget transform within the existing 4x budget', () => {
-        expect(resolveReplayVideoWidgetCapturePixelRatio({outputDpr: 1})).toBe(1)
-        expect(resolveReplayVideoWidgetCapturePixelRatio({outputDpr: 2})).toBe(2)
-        expect(resolveReplayVideoWidgetCapturePixelRatio({outputDpr: 2, widgetScale: {x: 1.25, y: 1.5}})).toBe(3)
-        expect(resolveReplayVideoWidgetCapturePixelRatio({outputDpr: 3, widgetScale: {x: 2, y: 1}})).toBe(4)
-    })
-
     it('derives logical-to-physical density from the selected 1080p and 4K output dimensions', () => {
         const cropRect = {left: 0, top: 0, width: 1920, height: 1080}
         const video1080p = buildReplayVideoRenderSpec({cropRect, dimensions: {width: 1920, height: 1080}})
@@ -497,13 +489,12 @@ describe('Replay widget frame capture', () => {
         expect(journeyRender).toHaveBeenCalledTimes(1)
     })
 
-    it('sets the widget raster density from output DPR and transform before flushing its frame', async () => {
+    it('keeps the initialized raster density when flushing for an output DPR', async () => {
         const widgetElement = document.createElement('div')
         const captureCanvas = document.createElement('canvas')
         captureCanvas.className = 'lgs-widget-canvas'
         widgetElement.append(captureCanvas)
         __.ui.widgetManager.getElementById.mockReturnValue(widgetElement)
-        __.ui.widgetManager.getWidgetConfig.mockReturnValue({scale: {x: 1.25, y: 1.5}})
         const mirror = {setCapturePixelRatio: vi.fn(), setFrameDriven: vi.fn()}
         vi.spyOn(Widget2Canvas, 'get').mockReturnValue(mirror)
         vi.spyOn(Widget2Canvas, 'flush').mockResolvedValue(true)
@@ -516,7 +507,7 @@ describe('Replay widget frame capture', () => {
             strict: true,
         })
 
-        expect(mirror.setCapturePixelRatio).toHaveBeenCalledWith(3)
+        expect(mirror.setCapturePixelRatio).not.toHaveBeenCalled()
         expect(mirror.setFrameDriven).toHaveBeenCalledWith(true)
         expect(captureMirrors.has(mirror)).toBe(true)
         expect(Widget2Canvas.flush).toHaveBeenCalledWith('custom-widget', {onlyIfDirty: true})
