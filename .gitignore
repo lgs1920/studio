@@ -17,14 +17,7 @@ coverage
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea/*
-!.idea/copyright/
-.idea/copyright/*
-!.idea/copyright/Studio LGS1920.xml
-!.idea/copyright/profiles_settings.xml
-!.idea/scopes/
-!.idea/scopes/TODO_md.xml
-!.idea/watcherTasks.xml
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
