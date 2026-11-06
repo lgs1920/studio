@@ -4939,3 +4939,27 @@
 ## 2026-11-06 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/6e6804d11a56575dec72d44cfa7607486d2292a4)
 
 - Recorded automatically from Git history.
+
+## 2026-11-06 — [`fix: mask duplicate POI entities behind terrain`](https://github.com/lgs1920/studio/commit/19211cb3a71afe7f163775a0f51e1ded6eec5960)
+
+- Recorded automatically from Git history.
+
+## 2026-11-06 — [`docs: refactor main README`](https://github.com/lgs1920/studio/commit/076f44a65b28b8b6e929642b10d9697f92652913)
+
+- Recorded automatically from Git history.
+
+## 2026-11-06 — [`feat: add privacy-first tile caching`](https://github.com/lgs1920/studio/commit/26f4fc7ae5586e51d61c68259c56fadf9cf084c8)
+
+- Recorded automatically from Git history.
+
+## 2026-11-06 — [`test: repair integration test fixtures and assertions`](https://github.com/lgs1920/studio/commit/ff7aa437456f8095bf671e201e3ed2af2db826c2)
+
+- Recorded automatically from Git history.
+
+## 2026-11-06 — [`docs: update 1.0.0 changelog`](https://github.com/lgs1920/studio/commit/100093a3b8101d64cb9dc5f1f47fdc3815fddc21)
+
+- Recorded automatically from Git history.
+
+## 2026-11-06 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/c59dc4677a992bbaa96166c50a03e6cff1407682)
+
+- Recorded automatically from Git history.
