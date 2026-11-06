@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2025-01-06
+ * Last modified: 2026-11-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,8 +46,6 @@ export class DeviceManager {
         // Initialize user agent
         this.#ua = navigator.userAgent.toLowerCase()
 
-        // DPR
-        this.dpr = window.devicePixelRatio || 1
         // OS
         if (this.isIOS) {
             this.os = OS.iOS
@@ -67,6 +65,12 @@ export class DeviceManager {
 
         // Set singleton instance
         DeviceManager.#instance = this
+    }
+
+    /** Return the current display DPR because browser device emulation can change after startup. */
+    get dpr() {
+        const dpr = Number(window.devicePixelRatio)
+        return Number.isFinite(dpr) && dpr > 0 ? dpr : 1
     }
 
     /**

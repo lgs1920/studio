@@ -43,6 +43,9 @@ capture. `Widget2Canvas` captures DOM and SVG content at the resulting physical
 pixel density, adjusted for the widget transform and capped at its existing 4×
 budget. This keeps logical widget geometry independent from encoded pixel size
 and display DPR.
+Automatic output sizing reads the current display DPR when Record starts, so a
+Firefox Responsive Design change made after Studio loads is reflected in the
+export plan.
 
 Canvas dimension assignments reset 2D context state. The compositor therefore
 sets high-quality image smoothing after resizing its output canvas. The blur
