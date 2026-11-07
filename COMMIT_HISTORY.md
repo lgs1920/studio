@@ -4975,3 +4975,27 @@
 ## 2026-11-07 — [`style: slow splash crossfade to two seconds`](https://github.com/lgs1920/studio/commit/f6088838f023ec6c0d9ac294ca149d95f64801d6)
 
 - Recorded automatically from Git history.
+
+## 2026-11-07 — [`feat: decouple geocoding search from POI creation`](https://github.com/lgs1920/studio/commit/190d15a6900425bc490cff390c9c78b7be86f9f2)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`fix: compose widgets in Native HQ video exports`](https://github.com/lgs1920/studio/commit/bfce59d220f4eaf9a2fbf0bc99ef2f410b4ddbda)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`feat: add Native HQ Replay video export`](https://github.com/lgs1920/studio/commit/34d9fe01ae1e763946d800699747b95132a85e62)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`fix: improve POI and geocoding toast layouts`](https://github.com/lgs1920/studio/commit/5eb1ef181d11af7d9daae28a5fd61264437d0ab6)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`test: register POI and geocoding proxy owners`](https://github.com/lgs1920/studio/commit/d2e0c055836f4a0d1f20871f930c8bdbcf93b8fd)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`Merge remote-tracking branch 'origin/feature/cesium-native-hq-video-capture' into feature/cesium-native-hq-video-capture`](https://github.com/lgs1920/studio/commit/a18244deb0eb07670a9debcfaa5216d35075e371)
+
+- Recorded automatically from Git history.
