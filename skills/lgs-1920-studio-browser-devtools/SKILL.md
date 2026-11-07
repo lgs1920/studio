@@ -23,7 +23,9 @@ bun skills/lgs-1920-studio-browser-webgl/scripts/browser.mjs list_pages
 ```
 
 Use that wrapper for subsequent CLI commands to preserve the WSL runtime-directory fallback when needed.
-If the command is missing from WSL, follow the WebGL skill's native CLI setup section. The wrapper accepts
+The wrapper automatically uses the project's pinned CLI after `bun install`, even when `chrome-devtools` is
+absent from the agent's WSL `PATH`. Do not treat a failed `command -v chrome-devtools` as a blocker: run the wrapper.
+If the project dependency is missing, follow the WebGL skill's native CLI setup section. The wrapper accepts
 `LGS1920_CHROME_DEVTOOLS_CLI` for an explicit Linux executable path. A Windows `.cmd` returned by the IDE
 does not satisfy this prerequisite. Report the missing tooling separately from a failed WebGL probe.
 It reuses a running daemon. Do not unconditionally restart or stop the browser before every action. An

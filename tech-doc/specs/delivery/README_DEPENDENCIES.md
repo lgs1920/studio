@@ -156,6 +156,7 @@ These are the current package names declared in the `devDependencies` section of
 @vitejs/plugin-react
 baseline-browser-mapping
 canvas
+chrome-devtools-mcp
 jsdom
 less
 oxlint

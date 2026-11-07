@@ -8,16 +8,17 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-20
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {spawnSync} from 'node:child_process'
-import {accessSync, constants, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync} from 'node:fs'
+import {accessSync, constants, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync} from 'node:fs'
 import {homedir, tmpdir, userInfo} from 'node:os'
 import {join} from 'node:path'
+import {fileURLToPath} from 'node:url'
 
 const PROFILE = join(homedir(), '.cache/chrome-devtools-mcp-cli/chrome-profile')
 const LOG_DIRECTORY = join(homedir(), '.cache/chrome-devtools-mcp-cli')
@@ -29,13 +30,19 @@ const CHROME_ARGUMENTS = [
     '--enable-unsafe-swiftshader',
 ]
 
-/** Resolve an explicit native CLI path without interpreting shell commands or switching browser environments. */
-const chromeExecutable = () => {
-    const executable = process.env.LGS1920_CHROME_DEVTOOLS_CLI?.trim() || 'chrome-devtools'
+/** Prefer an explicit override, then the repository CLI, before falling back to the system PATH. */
+const chromeCommand = () => {
+    const override = process.env.LGS1920_CHROME_DEVTOOLS_CLI?.trim()
+    const executable = override || 'chrome-devtools'
     if (process.platform === 'linux' && /(?:^[a-z]:\\|\.(?:cmd|bat|exe)$)/i.test(executable)) {
         throw new Error('LGS1920_CHROME_DEVTOOLS_CLI points to a Windows executable. The WSL preflight requires a Linux CLI for Linux Chrome. Configure a native Linux executable path instead.')
     }
-    return executable
+    const localCli = fileURLToPath(new URL('../../../node_modules/.bin/chrome-devtools', import.meta.url))
+    if (!override && existsSync(localCli)) {
+        // Invoke the JS entry with the current runtime so an IDE-specific PATH cannot hide node or bun.
+        return {executable: process.execPath, prefix: [localCli]}
+    }
+    return {executable, prefix: []}
 }
 
 /** Return a CLI environment with an accessible daemon runtime and, for headless launches, no desktop dependencies. */
@@ -63,8 +70,8 @@ const browserEnvironment = (headlessLaunch = false) => {
 
 /** Run the installed CLI without a shell, bounding failures so a blocked GPU cannot stall the workflow indefinitely. */
 const runChrome = (argumentsList, {headlessLaunch = false, timeout = 25000} = {}) => {
-    const executable = chromeExecutable()
-    const result = spawnSync(executable, argumentsList, {
+    const {executable, prefix} = chromeCommand()
+    const result = spawnSync(executable, [...prefix, ...argumentsList], {
         encoding: 'utf8',
         env: browserEnvironment(headlessLaunch),
         maxBuffer: 8 * 1024 * 1024,
@@ -72,7 +79,7 @@ const runChrome = (argumentsList, {headlessLaunch = false, timeout = 25000} = {}
     })
     if (result.error?.code === 'ENOENT' || result.error?.code === 'EACCES') {
         throw new Error(`Chrome DevTools CLI is unavailable: ${executable} (${result.error.code}). `
-            + 'Set LGS1920_CHROME_DEVTOOLS_CLI to an executable Linux CLI path or expose chrome-devtools on the WSL PATH. '
+            + 'Run bun install to restore the project CLI, set LGS1920_CHROME_DEVTOOLS_CLI to an executable Linux CLI path, or expose chrome-devtools on the WSL PATH. '
             + 'The IDE may provide only a Windows .cmd launcher, which cannot serve this Linux preflight. '
             + 'This is a tooling failure, not a WebGL rendering failure. No browser was validated.')
     }

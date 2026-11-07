@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-06
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,15 +16,17 @@
 
 import {afterEach, beforeEach, describe, expect, test} from 'vitest'
 import {spawnSync} from 'node:child_process'
-import {chmodSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs'
+import {chmodSync, copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join, resolve} from 'node:path'
 
 const wrapper = resolve('skills/lgs-1920-studio-browser-webgl/scripts/browser.mjs')
 let directory
+let fixtureWrapper
 
 /** Run the public wrapper in an isolated environment without starting a real browser. */
-const runWrapper = (executable = '', argumentsList = ['--version']) => spawnSync(process.execPath, [wrapper, ...argumentsList], {
+const runWrapper = (executable = '', argumentsList = ['--version']) => spawnSync(process.execPath, [fixtureWrapper, ...argumentsList], {
+    cwd: directory,
     encoding: 'utf8',
     env: {...process.env, PATH: directory, LGS1920_CHROME_DEVTOOLS_CLI: executable},
     timeout: 10000,
@@ -40,6 +42,10 @@ const createCli = (name = 'custom cli') => {
 
 beforeEach(() => {
     directory = mkdtempSync(join(tmpdir(), 'lgs1920-cli-test-'))
+    const scripts = join(directory, 'skills/lgs-1920-studio-browser-webgl/scripts')
+    mkdirSync(scripts, {recursive: true})
+    fixtureWrapper = join(scripts, 'browser.mjs')
+    copyFileSync(wrapper, fixtureWrapper)
 })
 
 afterEach(() => {
@@ -47,6 +53,28 @@ afterEach(() => {
 })
 
 describe('browser wrapper CLI configuration', () => {
+    test('prefers the project CLI over PATH and runs it without node on PATH', () => {
+        const binaries = join(directory, 'node_modules/.bin')
+        mkdirSync(binaries, {recursive: true})
+        writeFileSync(join(binaries, 'chrome-devtools'), 'console.log(JSON.stringify(process.argv.slice(2)))\n')
+        createCli('chrome-devtools')
+        const result = runWrapper('', ['evaluate_script', '$(literal)', '--help'])
+        expect(result.status, JSON.stringify(result)).toBe(0)
+        expect(JSON.parse(result.stdout)).toEqual(['evaluate_script', '$(literal)', '--help'])
+    })
+
+    test('keeps the explicit override authoritative when a project CLI is installed', () => {
+        const binaries = join(directory, 'node_modules/.bin')
+        mkdirSync(binaries, {recursive: true})
+        writeFileSync(join(binaries, 'chrome-devtools'), 'throw new Error("Must not run")\n')
+        const result = runWrapper(createCli())
+        expect(result.status).toBe(0)
+        expect(result.stdout).toBe('<--version>\n')
+        const invalid = runWrapper(join(directory, 'missing'))
+        expect(invalid.status).toBe(1)
+        expect(invalid.stderr).toContain('ENOENT')
+    })
+
     test('reports a missing PATH command as a tooling failure with setup instructions', () => {
         const result = runWrapper('', ['ensure'])
         expect(result.status).toBe(1)
