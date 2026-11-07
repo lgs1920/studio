@@ -24,11 +24,25 @@
     & .location-displayed-toast-message {
         flex: 1 1 auto;
         min-width: 0;
+        line-height: 1.4;
+        text-align: center;
     }
 
     & .location-displayed-toast-button {
         flex: 0 0 auto;
         align-self: center;
         margin: 0;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 42rem) {
+    .location-displayed-toast-content {
+        align-items: stretch;
+        flex-direction: column;
+
+        & .location-displayed-toast-button {
+            align-self: flex-end;
+        }
     }
 }

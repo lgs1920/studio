@@ -34,6 +34,7 @@ export const showPOICreationDuplicateToast = (nearbyPOI, {beforeEdit} = {}) => {
             canEdit: true,
             action: UI_ACTIONS.editNearbyPOI,
             message: 'A POI is already near this location.',
+            inlineAction: true,
             onEdit: () => {
                 beforeEdit?.()
                 void openPOIEditor(nearbyPOI.id)

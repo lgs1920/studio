@@ -335,6 +335,7 @@ describe('GeocodingUI location display', () => {
         const addButton = screen.getByRole('button', {name: UI_ACTIONS.addPOIToLibrary.label})
         expect(addButton.querySelector('[data-icon="circle-plus"]')).toBeTruthy()
         expect(addButton.parentElement.classList.contains('location-displayed-toast-content')).toBe(true)
+        expect(addButton.parentElement.classList.contains('lgs-toast-wide-action')).toBe(true)
 
         fireEvent.click(addButton)
 

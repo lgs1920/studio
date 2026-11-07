@@ -31,7 +31,7 @@ export const LocationDisplayedToastContent = ({poiId}) => {
     }
 
     return (
-        <div className="location-displayed-toast-content">
+        <div className="location-displayed-toast-content lgs-toast-wide-action">
             <div className="location-displayed-toast-message">
                 This location is not saved as a POI. Select Add to save it in your POI library.
             </div>

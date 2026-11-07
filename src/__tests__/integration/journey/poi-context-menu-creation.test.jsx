@@ -109,11 +109,14 @@ describe('POI context-menu creation and editing', () => {
             canEdit: true,
             message: 'A POI is already near this location.',
             action: {label: 'Edit nearby POI'},
+            inlineAction: true,
         })
 
         render(warning.text)
+        const editAction = screen.getByText('Edit nearby POI')
+        expect(editAction.parentElement.classList.contains('poi-creation-toast-content--inline-action')).toBe(true)
         expect(screen.getByText('Nearby Paris POI')).toBeTruthy()
-        fireEvent.click(screen.getByText('Edit nearby POI'))
+        fireEvent.click(editAction)
         await waitFor(() => expect(__.ui.drawerManager.open).toHaveBeenCalledWith(POIS_EDITOR_DRAWER,
             expect.objectContaining({entity: nearbyPOI.id})))
     })

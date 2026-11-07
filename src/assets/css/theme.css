@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -1874,6 +1874,16 @@ wa-callout::part(message) {
     width: var(--lgs-max-mobile-width);
     padding: 0;
     pointer-events: none;
+}
+
+.Toastify__toast-container.lgs-toaster:has(.lgs-toast-wide-action) {
+    width: min(46rem, calc(100vw - var(--left) - var(--top)));
+}
+
+@media (max-width: 42rem) {
+    .Toastify__toast-container.lgs-toaster:has(.lgs-toast-wide-action) {
+        width: var(--lgs-max-mobile-width);
+    }
 }
 
 .Toastify__toast-container--bottom-left.lgs-toaster {
