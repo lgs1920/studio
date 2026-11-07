@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { LGS_WIDGET_SCALE_BASE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { resolveVideoOverlayVisibility } from '@Core/ui/replay/ReplayOverlayResolver'
 import { getReplayVideoWidgetKeys } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import { normalizeReplayVideoCropRect } from '@Core/ui/replay/ReplayVideoRenderSpec'
@@ -169,6 +169,7 @@ export const getVisibleReplayVideoWidgetKeys = ({
  * @param {number} [options.timeoutMs=1000] - Maximum wait per overlay mirror.
  * @param {object|null} [options.frameState=null] - Canonical frame supplied to widget renderers.
  * @param {Set|null} [options.captureMirrors=null] - Mirrors owned by this export session.
+ * @param {number} [options.outputDpr=1] - Physical output pixels per logical crop pixel.
  * @param {boolean} [options.strict=false] - Reject incomplete captures rather than reuse stale pixels.
  * @param {AbortSignal|null} [options.signal=null] - Export cancellation signal.
  * @returns {Promise<string[]>} Visible widget IDs whose mirrors are ready to compose.
@@ -181,6 +182,7 @@ export const flushReplayVideoOverlayCanvases = async ({
                                                          controller = globalThis.__?.ui?.replay?.controller ?? null,
                                                          frameState = null,
                                                          captureMirrors = null,
+                                                         outputDpr = 1,
                                                          strict = false,
                                                          signal = null,
                                                      } = {}) => {
@@ -200,6 +202,21 @@ export const flushReplayVideoOverlayCanvases = async ({
             if (captureMirrors) {
                 currentMirror.setFrameDriven(true)
                 captureMirrors.add(currentMirror)
+            }
+
+            const requiredPixelRatio = Math.max(1, Number(outputDpr) || 1)
+            const currentPixelRatio = Number(currentMirror.getCapturePixelRatio?.())
+            if (captureMirrors && Number.isFinite(currentPixelRatio) && requiredPixelRatio > currentPixelRatio + 0.0001) {
+                currentMirror.setCapturePixelRatio?.(requiredPixelRatio)
+            }
+
+            const effectivePixelRatio = Number(currentMirror.getCapturePixelRatio?.())
+            if (captureMirrors && Number.isFinite(effectivePixelRatio) && effectivePixelRatio + 0.0001 < requiredPixelRatio) {
+                const supportedPixelRatio = Math.max(1, Number.isFinite(effectivePixelRatio) ? effectivePixelRatio : LGS_WIDGET_SCALE_BASE)
+                throw new RangeError(
+                    `Replay widget ${widgetId} can be captured at ${supportedPixelRatio} pixels per CSS pixel, `
+                    + `below the ${requiredPixelRatio} required by this export. Choose a lower output resolution.`,
+                )
             }
         }
         prepareMirror(mirror)
@@ -352,7 +369,12 @@ const resolveReplayWidgetFrameTransform = ({widgetId, widgetElement, contentWidt
  *
  * @param {object} options - Overlay build options.
  * @param {boolean} [options.skipVisibilityChecks=false] - Include mounted widgets without replay visibility filtering.
- * @param {{x:number,y:number}|null} [options.coordinateScale=null] - Optional crop-to-host coordinate scale.
+ * @param {{x:number,y:number}|null} [options.coordinateScale=null] - Crop-space CSS to compositor-space scale, applied once to widget geometry and effects.
+ *
+ * Widget positions and capture geometry stay in logical CSS pixels. The
+ * coordinate scale maps those logical values into the compositor viewport;
+ * CanvasOverlayComposer then applies outputDpr once when drawing to physical
+ * output pixels. Widget bitmap density is controlled separately by the mirror.
  */
 export const buildReplayVideoComposerOverlays = ({
                                                      composer,

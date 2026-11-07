@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -43,6 +43,7 @@ import {
 import {normalizeReplayPOIBehavior} from '@Core/ui/replay/JourneyReplayPOISettings'
 import {createReplayRecordingPerformance} from '@Core/ui/replay/ReplayRecordingPerformance'
 import * as replayOverlayComposer from '@Core/ui/replay/ReplayVideoOverlayComposer'
+import {Widget2Canvas} from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 import * as replayTileReadiness from '@Core/ui/replay/ReplaySceneTileReadiness'
 import * as replayWidgetFrames from '@Core/ui/replay/ReplayWidgetFrameRenderers'
 import {
@@ -1553,7 +1554,7 @@ describe('ReplayDeferredExporter', () => {
         expect(composerOptions.width).toBeCloseTo(1280 / 1.8, 5)
         expect(composerOptions.height).toBe(400)
         const captureOptions = flushOverlayCapture.mock.calls.at(-1)?.[0]
-        expect(captureOptions).not.toHaveProperty('outputDpr')
+        expect(captureOptions.outputDpr).toBeCloseTo(1.8)
         expect(CanvasOverlayComposer.instances[0].canvas).toMatchObject({
             width:  1280,
             height: 720,
@@ -2159,7 +2160,7 @@ describe('ReplayDeferredExporter', () => {
         }
 
         expect(exportError).toMatchObject({
-            message: 'Isolated Replay rendering could not be initialized.',
+            message: 'WebGL context unavailable',
             cause: expect.objectContaining({message: 'WebGL context unavailable'}),
         })
         expect(isolatedRenderHostFactory).toHaveBeenCalledOnce()
@@ -2171,6 +2172,189 @@ describe('ReplayDeferredExporter', () => {
         expect(CanvasOverlayComposer).not.toHaveBeenCalled()
         expect(mainScene.render).not.toHaveBeenCalled()
         expect(restorePlaybackScene).toHaveBeenCalledTimes(2)
+    })
+
+    it('composes synchronized video widgets over the native Cesium frame at the requested size', async () => {
+        const sourceCanvas = document.createElement('canvas')
+        sourceCanvas.width = 320
+        sourceCanvas.height = 180
+        sourceCanvas.getBoundingClientRect = () => ({left: 0, top: 0, width: 320, height: 180})
+        const isolatedCanvas = document.createElement('canvas')
+        isolatedCanvas.width = 320
+        isolatedCanvas.height = 180
+        isolatedCanvas.getBoundingClientRect = () => ({left: 0, top: 0, width: 320, height: 180})
+        const camera = {
+            heading: 0.5,
+            pitch: -0.5,
+            roll: 0,
+            frustum: new PerspectiveFrustum({
+                fov: Math.PI / 3,
+                aspectRatio: 320 / 180,
+                near: 1,
+                far: 10000,
+            }),
+            positionCartographic: {longitude: 1, latitude: 0.5, height: 1000},
+        }
+        const mainScene = {mode: 3, camera, globe: {}, fog: {}, render: vi.fn(), requestRender: vi.fn()}
+        const isolatedScene = {mode: 3, camera: {}, globe: {}, fog: {}, render: vi.fn(), requestRender: vi.fn()}
+        const viewer = {
+            scene: mainScene,
+            camera,
+            terrainProvider: {id: 'terrain'},
+            imageryLayers: {length: 0, get: vi.fn()},
+            useDefaultRenderLoop: true,
+            render: vi.fn(),
+        }
+        const isolatedViewer = {scene: isolatedScene, canvas: isolatedCanvas, render: vi.fn()}
+        const target = {viewer: isolatedViewer, scene: isolatedScene, canvas: isolatedCanvas}
+        let activeScene = mainScene
+        const replayMode = {
+            restorePlaybackScene: vi.fn(async () => undefined),
+            preparePlaybackSceneForExport: vi.fn(async () => true),
+            renderReplayExportFrame: vi.fn(({phase}) => ({progress: phase.progress})),
+            cesiumScene: () => activeScene,
+            cesiumViewer: () => activeScene === isolatedScene ? isolatedViewer : viewer,
+            setRenderTarget: vi.fn(() => { activeScene = isolatedScene }),
+            clearRenderTarget: vi.fn(() => { activeScene = mainScene }),
+        }
+        const isolatedRenderHost = {
+            initialize: vi.fn(async () => undefined),
+            renderTarget: vi.fn(() => target),
+            canvas: vi.fn(() => isolatedCanvas),
+            prepareForCapture: vi.fn(async () => true),
+            destroy: vi.fn(),
+        }
+        const isolatedRenderHostFactory = vi.fn(() => isolatedRenderHost)
+        const widgetId = 'custom-replay-widget'
+        const widgetElement = document.createElement('div')
+        widgetElement.dataset.videoOverlayVisible = 'true'
+        const widgetCanvas = document.createElement('canvas')
+        widgetCanvas.className = 'lgs-widget-canvas'
+        widgetCanvas.width = 200
+        widgetCanvas.height = 80
+        widgetCanvas.style.width = '50px'
+        widgetCanvas.style.height = '20px'
+        widgetElement.append(widgetCanvas)
+        const mirror = {
+            getCapturePixelRatio: () => 4,
+            getCaptureGeometry: () => ({width: 50, height: 20}),
+            getReplayCaptureSource: () => null,
+            getCaptureRevision: () => 1,
+            setCapturePixelRatio: vi.fn(),
+            setFrameDriven: vi.fn(),
+        }
+        const getMirror = vi.spyOn(Widget2Canvas, 'get').mockReturnValue(mirror)
+        const flushMirror = vi.spyOn(Widget2Canvas, 'flush').mockResolvedValue(true)
+        const renderWidgetFrame = vi.fn()
+        const unregisterWidgetFrame = replayWidgetFrames.registerReplayWidgetFrameRenderer(widgetId, renderWidgetFrame)
+        const replay = {
+            progress: 0,
+            durationMillis: 100,
+            videoCropRect: {left: 0, top: 0, width: 320, height: 180},
+            readiness: {enabled: false, prewarmEnabled: false},
+            clips: {catalog: {}, start: [], stop: []},
+        }
+        const exportContext = {clearRect: vi.fn(), drawImage: vi.fn()}
+        const buildCanvas = vi.fn(({width, height}) => ({
+            width,
+            height,
+            getContext: () => exportContext,
+        }))
+
+        globalThis.lgs = {
+            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_EXPERT}}},
+            canvas: sourceCanvas,
+            scene: mainScene,
+            viewer,
+            stores: {
+                ui: {
+                    video: {
+                        fps: 0,
+                        quality: 0,
+                        renderHostMode: 'isolated',
+                        resolutionProfile: 'custom',
+                        customDimensions: {width: 320, height: 180},
+                        readinessPolicy: 'adaptive',
+                    },
+                    widget: {list: new Map([[widgetId, {widgetsBoard: VIDEO_WIDGETS_BOARD}]])},
+                },
+            },
+            theJourney: {slug: 'journey-a'},
+        }
+        globalThis.__ = {
+            device: {browser: 'chromium'},
+            ui: {
+                replay: replayMode,
+                widgetCache: {getAll: vi.fn(() => new Map([[widgetId, {widgetsBoard: VIDEO_WIDGETS_BOARD}]]))},
+                widgetManager: {
+                    getElementById: vi.fn(id => id === widgetId ? widgetElement : null),
+                    getWidgetConfig: vi.fn(id => id === widgetId ? {position: {left: 12, top: 24}} : {}),
+                },
+            },
+        }
+
+        try {
+            const runExport = () => runReplayDeferredMp4Export({
+                replay,
+                journey: {slug: 'journey-a'},
+                controller: {
+                    duration: 0.1,
+                    progress: 0,
+                    sampler: {atProgress: progress => ({progress})},
+                    currentSample: () => ({progress: 0}),
+                    seek: vi.fn(),
+                },
+                replayMode,
+                fps: 10,
+                dimensions: {width: 320, height: 180},
+                sourceCanvas,
+                buildCanvas,
+                download: null,
+                renderHostMode: 'isolated',
+                isolatedRenderHostFactory,
+            })
+            const result = await runExport()
+
+            const composer = CanvasOverlayComposer.instances[0]
+            expect(result.blob.size).toBeGreaterThan(0)
+            expect(composer.sourceCanvas).toBe(isolatedCanvas)
+            expect(composer.options.outputCanvas).toBe(buildCanvas.mock.results[0].value)
+            expect(composer.canvas).toEqual({width: 320, height: 180})
+            expect(composer.addOverlay).toHaveBeenCalledWith(widgetCanvas, expect.objectContaining({x: 12, y: 24, w: 50, h: 20}))
+            expect(renderWidgetFrame).toHaveBeenCalledTimes(result.frameCount)
+            expect(renderWidgetFrame.mock.calls.every(([frameState]) => Number.isFinite(frameState?.frameTimeMs))).toBe(true)
+            expect(flushMirror).toHaveBeenCalledTimes(result.frameCount)
+            expect(mirror.setFrameDriven).toHaveBeenLastCalledWith(false)
+            expect(isolatedRenderHost.canvas).toHaveBeenCalledTimes(result.frameCount + 1)
+            expect(buildCanvas.mock.results[0].value.width).toBe(320)
+            expect(buildCanvas.mock.results[0].value.height).toBe(180)
+
+            const encodedFrameCount = mediabunnyMocks.canvasAddCount
+            isolatedRenderHost.canvas
+                .mockImplementationOnce(() => isolatedCanvas)
+                .mockReturnValue(null)
+            await expect(runExport()).rejects.toThrow('Native HQ did not provide its isolated Cesium canvas for composition.')
+            expect(mediabunnyMocks.canvasAddCount).toBe(encodedFrameCount)
+            expect(CanvasOverlayComposer.instances).toHaveLength(1)
+            expect(Output.instances.at(-1).cancel).toHaveBeenCalledOnce()
+
+            isolatedRenderHost.canvas.mockReturnValue(isolatedCanvas)
+            CanvasOverlayComposer.mockImplementationOnce(function FailingCanvasOverlayComposer() {
+                throw new Error('overlay composer unavailable')
+            })
+            await expect(runExport()).rejects.toMatchObject({
+                message: 'Replay video composition could not be initialized: overlay composer unavailable',
+                cause: expect.objectContaining({message: 'overlay composer unavailable'}),
+            })
+            expect(mediabunnyMocks.canvasAddCount).toBe(encodedFrameCount)
+            expect(CanvasOverlayComposer.instances).toHaveLength(1)
+            expect(Output.instances.at(-1).cancel).toHaveBeenCalledOnce()
+        }
+        finally {
+            unregisterWidgetFrame()
+            getMirror.mockRestore()
+            flushMirror.mockRestore()
+        }
     })
 
     it('restores the Interactive scene when export preparation fails', async () => {

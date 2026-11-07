@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -2685,7 +2685,6 @@ export const runReplayDeferredMp4Export = async ({
     let exportSucceeded = false
     const cleanupErrors = []
     let replayComposer = null
-    let replayComposerFallback = false
     const captureMirrors = new Set()
     const overlayMetricsCache = new Map()
     let restoreReplaySceneTileCache = null
@@ -2694,6 +2693,7 @@ export const runReplayDeferredMp4Export = async ({
     let isolatedRenderHost = null
     let isolatedRenderTarget = null
     let isolatedViewportDimensions = null
+    let isolatedCanvasDimensions = null
     let previousReplayExportFrame = null
     let previousReplayExportSample = null
     const exportStartedAt = runtimeNow()
@@ -2822,6 +2822,18 @@ export const runReplayDeferredMp4Export = async ({
                     ),
                 })
                 await isolatedRenderHost.initialize()
+                const isolatedCanvas = isolatedRenderHost.canvas?.()
+                isolatedCanvasDimensions = {
+                    width: Number(isolatedCanvas?.width) || 0,
+                    height: Number(isolatedCanvas?.height) || 0,
+                }
+                if (isolatedCanvasDimensions.width !== outputDimensions.width
+                    || isolatedCanvasDimensions.height !== outputDimensions.height) {
+                    throw new Error(
+                        `Native HQ Cesium rendered ${isolatedCanvasDimensions.width} × ${isolatedCanvasDimensions.height} pixels, `
+                        + `but the requested output is ${outputDimensions.width} × ${outputDimensions.height}.`,
+                    )
+                }
                 isolatedRenderTarget = isolatedRenderHost.renderTarget?.() ?? null
                 if (!isolatedRenderTarget) {
                     throw new Error('The isolated Replay render host did not expose a render target')
@@ -2855,7 +2867,7 @@ export const runReplayDeferredMp4Export = async ({
                 replayVideoTraceDebug('export.render-host.isolated.failed', {
                     message: error?.message ?? String(error),
                 })
-                throw new Error('Isolated Replay rendering could not be initialized.', {cause: error})
+                throw new Error(error?.message ?? 'Isolated Replay rendering could not be initialized.', {cause: error})
             }
         }
 
@@ -3124,10 +3136,22 @@ export const runReplayDeferredMp4Export = async ({
                     dryRunTimings.tileReadinessMillis += runtimeNow() - tileReadinessStartedAt
                     return
                 }
-                const frameSource = isolatedRenderHost?.canvas?.()
-                                    ?? sourceCanvas
-                                    ?? defaultReplaySourceCanvas()
-                if (frameSource instanceof HTMLCanvasElement) {
+                const frameSource = isolatedRenderHost
+                    ? isolatedRenderHost.canvas?.()
+                    : (sourceCanvas ?? defaultReplaySourceCanvas())
+                if (!(frameSource instanceof HTMLCanvasElement)) {
+                    throw new Error(isolatedRenderHost
+                        ? 'Native HQ did not provide its isolated Cesium canvas for composition.'
+                        : 'Replay export did not provide a Cesium canvas for composition.')
+                }
+                if (isolatedRenderHost
+                    && (frameSource.width !== outputDimensions.width || frameSource.height !== outputDimensions.height)) {
+                    throw new Error(
+                        `Native HQ Cesium canvas changed to ${frameSource.width} × ${frameSource.height} pixels during export; `
+                        + `the requested output is ${outputDimensions.width} × ${outputDimensions.height}.`,
+                    )
+                }
+                {
                     const cropRect = outputRenderSpec?.cropRect
                                      ?? normalizeReplayVideoCropRect(plan.runtime?.context?.cropRect ?? replay?.videoCropRect ?? null)
                     const composerClip = isolatedRenderHost && isolatedViewportDimensions
@@ -3146,7 +3170,7 @@ export const runReplayDeferredMp4Export = async ({
                                               ))
                     const composerWidth = canvas.width / composerOutputDpr
                     const composerHeight = canvas.height / composerOutputDpr
-                    if (!replayComposer && !replayComposerFallback) {
+                    if (!replayComposer) {
                         const compositionSetupStartedAt = recordingPerformance.now()
                         try {
                             replayComposer = new CanvasOverlayComposer(frameSource, {
@@ -3161,8 +3185,12 @@ export const runReplayDeferredMp4Export = async ({
                                 recordingPerformance,
                             })
                         }
-                        catch {
-                            replayComposerFallback = true
+                        catch (cause) {
+                            const error = new Error(
+                                `Replay video composition could not be initialized: ${cause?.message ?? String(cause)}`,
+                            )
+                            error.cause = cause
+                            throw error
                         }
                         finally {
                             recordingPerformance.record('compositionSetup', compositionSetupStartedAt)
@@ -3190,7 +3218,7 @@ export const runReplayDeferredMp4Export = async ({
                         try {
                             visibleWidgetKeys = await flushReplayVideoOverlayCanvases({
                                 replay, controller, frameState: plan.runtime?.frameState,
-                                captureMirrors, strict: true, signal,
+                                captureMirrors, outputDpr: composerOutputDpr, strict: true, signal,
                             })
                         }
                         finally {
@@ -3219,6 +3247,16 @@ export const runReplayDeferredMp4Export = async ({
                         await replayComposer.renderFrame()
 
                         const composedCanvas = replayComposer.getCanvas?.()
+                        if (!composedCanvas) {
+                            throw new Error('Replay video composition did not produce a frame canvas.')
+                        }
+                        if (Number(composedCanvas.width) !== outputDimensions.width
+                            || Number(composedCanvas.height) !== outputDimensions.height) {
+                            throw new Error(
+                                `Replay composition produced ${composedCanvas.width} × ${composedCanvas.height} pixels, `
+                                + `but the requested output is ${outputDimensions.width} × ${outputDimensions.height}.`,
+                            )
+                        }
                         if (composedCanvas && composedCanvas !== canvas) {
                             const transferStartedAt = recordingPerformance.now()
                             try {
@@ -3228,17 +3266,6 @@ export const runReplayDeferredMp4Export = async ({
                             finally {
                                 recordingPerformance.record('compositionTransfer', transferStartedAt)
                             }
-                        }
-                    }
-                    else {
-                        flushReplayRenderTarget()
-                        const compositionStartedAt = recordingPerformance.now()
-                        try {
-                            context.clearRect(0, 0, canvas.width, canvas.height)
-                            context.drawImage(frameSource, 0, 0, frameSource.width, frameSource.height, 0, 0, canvas.width, canvas.height)
-                        }
-                        finally {
-                            recordingPerformance.record('composition', compositionStartedAt)
                         }
                     }
                 }
