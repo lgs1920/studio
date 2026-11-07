@@ -5066,3 +5066,7 @@
 ## 2026-11-07 — [`Merge branch '1.0.0' into feature/cesium-native-hq-video-capture`](https://github.com/lgs1920/studio/commit/c8d533333bdd79a2fbfd9b6f912511a662cef2b3)
 
 - Recorded automatically from Git history.
+
+## 2026-11-07 — [`Merge pull request #565 from lgs1920/feature/cesium-native-hq-video-capture`](https://github.com/lgs1920/studio/commit/3136dd0bb37b745268c1a2b3a205cd5c78c14ace)
+
+- feat(replay): deliver Native HQ video export for Basic Replay
