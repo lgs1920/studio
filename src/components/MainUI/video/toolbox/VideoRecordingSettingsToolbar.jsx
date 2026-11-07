@@ -535,6 +535,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                         <VideoExportRenderOptions basicReplay basicReplayGroup="quality"/>
                     </div>
                 )}
+                <WaDivider className="basic-replay-settings-divider"/>
                 <BasicReplaySettingsRow label="Duration" icon="clock">
                     <div className="basic-replay-duration-buttons">
                         {BASIC_REPLAY_DURATIONS.map(duration => (
@@ -550,8 +551,8 @@ export const VideoRecordingSettingsToolbar = memo(({
                         ))}
                     </div>
                 </BasicReplaySettingsRow>
-                <section className="basic-replay-settings-video" aria-labelledby="basic-replay-settings-video-title">
-                    <h3 id="basic-replay-settings-video-title" className="basic-replay-settings-video__heading">{'Video settings'}</h3>
+                <section className="basic-replay-settings-video" aria-label="Video settings">
+                    <WaDivider className="basic-replay-settings-divider"/>
                     <BasicReplaySettingsRow label="Ratio" icon="crop-simple">
                         <VideoRecordingSettingsMenuContent menu="ratio"
                                                            context={$cropper}

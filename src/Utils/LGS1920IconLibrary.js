@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-11
- * Last modified: 2026-10-30
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import * as kitIcons from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import * as kitDuotoneIcons from '@awesome.me/kit-eb5c406148/icons/kit-duotone/custom'
 import {
-    faArrowRightArrowLeft, faCirclePlus, faQuestion, faRulerVertical, faSquare, faSquareB, faSquareCheck, faSquareH, faSquareM,
+    faArrowRightArrowLeft, faCirclePlus, faGlassesRound, faQuestion, faRulerVertical, faSpinnerScale, faSquare, faSquareB, faSquareCheck, faSquareH, faSquareM,
 } from '@fortawesome/pro-regular-svg-icons'
 import {
     faArrowsLeftRight, faArrowsUpDown, faBasketShopping, faBottleWater, faBridge, faBusStop, faCableCar,
@@ -64,7 +64,7 @@ export const LGS1920_ICON_KITS = [
         variant: 'solid',
         icons: {faArrowsLeftRight, faArrowsUpDown, faLasso, faLocationDot, faLocationPin, faSquareDashed, faSquareFull},
     },
-    {family: 'classic', variant: 'regular', icons: {faArrowRightArrowLeft, faCirclePlus, faQuestion, faRulerVertical}},
+    {family: 'classic', variant: 'regular', icons: {faArrowRightArrowLeft, faCirclePlus, faGlassesRound, faQuestion, faRulerVertical, faSpinnerScale}},
     {family: 'classic', variant: 'solid', icons: {faMagnifyingGlassMinus, faMagnifyingGlassPlus, faArrowRotateLeft, faArrowRotateRight}},
 ]
 

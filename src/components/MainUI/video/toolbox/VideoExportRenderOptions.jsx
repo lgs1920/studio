@@ -20,8 +20,8 @@ import {
     REPLAY_VIDEO_RENDER_QUALITIES,
     REPLAY_VIDEO_RESOLUTION_PROFILES,
 } from '@Core/ui/replay/ReplayVideoRenderSpec'
-import {WaButton, WaNumberInput, WaOption, WaSelect} from '@awesome.me/webawesome/dist/react'
-import {Fragment, memo, useCallback, useEffect} from 'react'
+import {WaButton, WaIcon, WaNumberInput, WaOption, WaSelect} from '@awesome.me/webawesome/dist/react'
+import {Fragment, memo, useCallback, useEffect, useRef} from 'react'
 import {useSnapshot} from 'valtio'
 
 const VIDEO_RENDER_DEFAULTS = {
@@ -30,6 +30,7 @@ const VIDEO_RENDER_DEFAULTS = {
     customDimensions: {width: 1920, height: 1080},
     renderQuality: REPLAY_VIDEO_RENDER_QUALITIES.STANDARD,
 }
+const VIDEO_RENDER_PORTRAIT_DIMENSIONS = Object.freeze({width: 1080, height: 1920})
 
 /**
  * Render and persist independent Cesium export settings.
@@ -43,6 +44,25 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
     const $settings = lgs.settings.ui.video
     const video = useSnapshot($video)
     const settings = useSnapshot($settings)
+    const videoRatioValue = video.ratio?.value ?? video.ratio
+    const videoRatio = lgs.configuration?.videoFormats?.find(format => format.value === videoRatioValue)
+    const configuredAspectRatio = Number(videoRatio?.aspectRatio ?? video.ratio?.aspectRatio)
+    const [ratioWidth, ratioHeight] = `${videoRatioValue ?? ''}`.replace(':', 'x').split('x').map(Number)
+    const videoAspectRatio = configuredAspectRatio > 0
+        ? configuredAspectRatio
+        : ratioWidth > 0 && ratioHeight > 0
+            ? ratioWidth / ratioHeight
+            : null
+    const customDimensionsOrientation = videoAspectRatio === null
+        ? 'unknown'
+        : videoAspectRatio < 1
+            ? 'portrait'
+            : videoAspectRatio > 1
+                ? 'landscape'
+                : 'square'
+    const defaultCustomDimensions = customDimensionsOrientation === 'portrait'
+        ? VIDEO_RENDER_PORTRAIT_DIMENSIONS
+        : VIDEO_RENDER_DEFAULTS.customDimensions
     const renderHostMode = video.renderHostMode ?? settings.renderHostMode ?? VIDEO_RENDER_DEFAULTS.renderHostMode
     const resolutionProfile = video.resolutionProfile ?? settings.resolutionProfile ?? VIDEO_RENDER_DEFAULTS.resolutionProfile
     const renderQuality = video.renderQuality ?? settings.renderQuality ?? VIDEO_RENDER_DEFAULTS.renderQuality
@@ -54,30 +74,64 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
             ? REPLAY_VIDEO_READINESS_POLICIES.STRICT
             : REPLAY_VIDEO_READINESS_POLICIES.ADAPTIVE
     )
-    const customDimensions = video.customDimensions ?? settings.customDimensions ?? VIDEO_RENDER_DEFAULTS.customDimensions
+    const customDimensions = video.customDimensions ?? settings.customDimensions ?? defaultCustomDimensions
     const automaticResolutionHint = resolutionProfile === REPLAY_VIDEO_RESOLUTION_PROFILES.AUTOMATIC
         ? 'Automatic uses an output pixel budget affected by the selected FPS and encoding quality.'
         : ''
     const basicResolutionHint = resolutionProfile === REPLAY_VIDEO_RESOLUTION_PROFILES.AUTOMATIC
         ? 'Automatic uses a pixel budget affected by frame rate and encoding quality.'
         : ''
+    const _previousRatioOrientation = useRef(null)
+    const _previousResolutionProfile = useRef(null)
 
     useEffect(() => {
         Object.entries(VIDEO_RENDER_DEFAULTS).forEach(([key, value]) => {
+            const defaultValue = key === 'customDimensions' ? defaultCustomDimensions : value
             if ($settings[key] === undefined || $settings[key] === null) {
-                $settings[key] = key === 'customDimensions' ? {...value} : value
+                $settings[key] = key === 'customDimensions' ? {...defaultValue} : defaultValue
             }
             if ($video[key] === undefined || $video[key] === null) {
                 $video[key] = key === 'customDimensions' ? {...$settings[key]} : $settings[key]
             }
         })
+        const ratioOrientationChanged = _previousRatioOrientation.current !== customDimensionsOrientation
+        const enteringCustomProfile = resolutionProfile === REPLAY_VIDEO_RESOLUTION_PROFILES.CUSTOM
+            && _previousResolutionProfile.current !== REPLAY_VIDEO_RESOLUTION_PROFILES.CUSTOM
+        _previousRatioOrientation.current = customDimensionsOrientation
+        _previousResolutionProfile.current = resolutionProfile
+        const shouldOrientCustomDimensions = resolutionProfile === REPLAY_VIDEO_RESOLUTION_PROFILES.CUSTOM
+            && (ratioOrientationChanged || enteringCustomProfile)
+            && (basicReplay !== true || basicReplayGroup === 'all' || basicReplayGroup === 'video')
+            && ['portrait', 'landscape'].includes(customDimensionsOrientation)
+        if (shouldOrientCustomDimensions) {
+            // Reorient the stored bounds once when the selected ratio or custom mode changes.
+            const dimensions = $video.customDimensions ?? $settings.customDimensions ?? defaultCustomDimensions
+            const width = Math.max(2, Math.round(Number(dimensions.width) || defaultCustomDimensions.width))
+            const height = Math.max(2, Math.round(Number(dimensions.height) || defaultCustomDimensions.height))
+            const dimensionsArePortrait = width < height
+            const ratioIsPortrait = customDimensionsOrientation === 'portrait'
+            if (dimensionsArePortrait !== ratioIsPortrait) {
+                const nextDimensions = {width: height, height: width}
+                $video.customDimensions = {...nextDimensions}
+                $settings.customDimensions = {...nextDimensions}
+            }
+        }
         if ($settings.readinessPolicy !== readinessPolicy) {
             $settings.readinessPolicy = readinessPolicy
         }
         if ($video.readinessPolicy !== readinessPolicy) {
             $video.readinessPolicy = readinessPolicy
         }
-    }, [$settings, $video, readinessPolicy])
+    }, [
+        $settings,
+        $video,
+        basicReplay,
+        basicReplayGroup,
+        customDimensionsOrientation,
+        defaultCustomDimensions,
+        readinessPolicy,
+        resolutionProfile,
+    ])
 
     /**
      * Persist one renderer setting in the runtime store and user preferences.
@@ -109,6 +163,7 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
         {
             group: 'video',
             label: 'Mode',
+            icon: 'desktop',
             value: renderHostMode,
             choices: [
                 {value: REPLAY_VIDEO_RENDER_HOST_MODES.STANDARD, label: 'Standard'},
@@ -119,6 +174,7 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
         {
             group: 'video',
             label: 'Size',
+            icon: 'expand',
             value: resolutionProfile,
             hint: basicResolutionHint,
             choices: [
@@ -133,6 +189,7 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
         {
             group: 'quality',
             label: 'Map detail',
+            icon: 'glasses-round',
             value: renderQuality,
             choices: [
                 {value: REPLAY_VIDEO_RENDER_QUALITIES.STANDARD, label: 'Standard'},
@@ -145,6 +202,7 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
         {
             group: 'quality',
             label: 'Map loading',
+            icon: 'spinner-scale',
             value: readinessPolicy,
             choices: [
                 {value: REPLAY_VIDEO_READINESS_POLICIES.ADAPTIVE, label: 'Balanced'},
@@ -199,10 +257,13 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
                  aria-label={basicReplay ? basicSectionLabel : 'Cesium export rendering'}>
             {basicReplay ? (
                 <div className="video-export-render-options__basic-rows">
-                    {basicGroupChoices.map(({label, value, choices, onSelect, disabled, choicesClassName, hint}) => (
+                        {basicGroupChoices.map(({label, icon, value, choices, onSelect, disabled, choicesClassName, hint}) => (
                         <Fragment key={label}>
                             <div className="video-export-render-options__row" role="group" aria-label={label}>
-                                <span className="video-export-render-options__label">{label}</span>
+                                    <div className="video-export-render-options__label">
+                                        <WaIcon name={icon} variant="regular" label=""/>
+                                        <span>{label}</span>
+                                    </div>
                                 <div className="video-export-render-options__value">
                                     {renderBasicChoiceButtons({value, choices, onSelect, disabled, choicesClassName})}
                                     {hint && <span className="video-export-render-options__hint">{hint}</span>}
@@ -210,7 +271,7 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
                             </div>
                             {label === 'Size' && resolutionProfile === REPLAY_VIDEO_RESOLUTION_PROFILES.CUSTOM && (
                                 <>
-                                    <WaNumberInput label="Width (px)"
+                                        <WaNumberInput label="Max width (px)"
                                                    label-at-start
                                                    className="half-width video-export-render-options__dimension-field"
                                                    size="s"
@@ -219,7 +280,7 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
                                                    step="2"
                                                    value={customDimensions.width}
                                                    onChange={event => updateCustomDimension('width', event)}/>
-                                    <WaNumberInput label="Height (px)"
+                                        <WaNumberInput label="Max height (px)"
                                                    label-at-start
                                                    className="half-width video-export-render-options__dimension-field"
                                                    size="s"
@@ -228,6 +289,9 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
                                                    step="2"
                                                    value={customDimensions.height}
                                                    onChange={event => updateCustomDimension('height', event)}/>
+                                        <span className="video-export-render-options__hint video-export-render-options__dimension-hint">
+                                            {'The video keeps the selected ratio and stays within these maximum sizes.'}
+                                        </span>
                                 </>
                             )}
                         </Fragment>
