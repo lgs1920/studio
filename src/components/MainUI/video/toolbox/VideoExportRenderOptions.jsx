@@ -77,12 +77,6 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
             : REPLAY_VIDEO_READINESS_POLICIES.ADAPTIVE
     )
     const customDimensions = video.customDimensions ?? settings.customDimensions ?? defaultCustomDimensions
-    const automaticResolutionHint = resolutionProfile === REPLAY_VIDEO_RESOLUTION_PROFILES.AUTOMATIC
-        ? 'Automatic uses an output pixel budget affected by the selected FPS and encoding quality.'
-        : ''
-    const basicResolutionHint = resolutionProfile === REPLAY_VIDEO_RESOLUTION_PROFILES.AUTOMATIC
-        ? 'Automatic uses a pixel budget affected by frame rate and encoding quality.'
-        : ''
     const _previousRatioOrientation = useRef(null)
     const _previousResolutionProfile = useRef(null)
 
@@ -178,7 +172,6 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
             label: 'Size',
             icon: 'expand',
             value: resolutionProfile,
-            hint: basicResolutionHint,
             choices: [
                 {value: REPLAY_VIDEO_RESOLUTION_PROFILES.AUTOMATIC, label: 'Automatic'},
                 {value: REPLAY_VIDEO_RESOLUTION_PROFILES.FULL_HD, label: '1080p'},
@@ -262,7 +255,7 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
                  aria-label={basicReplay ? basicSectionLabel : 'Cesium export rendering'}>
             {basicReplay ? (
                 <div className="video-export-render-options__basic-rows">
-                        {basicGroupChoices.map(({label, icon, value, choices, onSelect, disabled, choicesClassName, hint}) => (
+                        {basicGroupChoices.map(({label, icon, value, choices, onSelect, disabled, choicesClassName}) => (
                         <Fragment key={label}>
                             <div className="video-export-render-options__row" role="group" aria-label={label}>
                                     <div className="video-export-render-options__label">
@@ -271,7 +264,6 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
                                     </div>
                                 <div className="video-export-render-options__value">
                                     {renderBasicChoiceButtons({value, choices, onSelect, disabled, choicesClassName})}
-                                    {hint && <span className="video-export-render-options__hint">{hint}</span>}
                                 </div>
                             </div>
                             {label === 'Size' && resolutionProfile === REPLAY_VIDEO_RESOLUTION_PROFILES.CUSTOM && (
@@ -323,7 +315,6 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
                         <WaOption value={REPLAY_VIDEO_RESOLUTION_PROFILES.FULL_HD}>{'1080p'}</WaOption>
                         <WaOption value={REPLAY_VIDEO_RESOLUTION_PROFILES.UHD_4K}>{'4K UHD'}</WaOption>
                         <WaOption value={REPLAY_VIDEO_RESOLUTION_PROFILES.CUSTOM}>{'Custom'}</WaOption>
-                        {automaticResolutionHint && <span slot="hint">{automaticResolutionHint}</span>}
                     </WaSelect>
                     {resolutionProfile === REPLAY_VIDEO_RESOLUTION_PROFILES.CUSTOM && (
                         <div className="video-export-render-options__dimensions" role="group" aria-label="Custom output bounds">

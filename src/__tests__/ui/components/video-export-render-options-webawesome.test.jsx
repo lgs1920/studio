@@ -55,8 +55,7 @@ describe('VideoExportRenderOptions with the real Web Awesome select', () => {
         expect(renderer).not.toBeNull()
         expect(resolution).not.toBeNull()
         expect(renderer.hasAttribute('disabled')).toBe(false)
-        expect(resolution.querySelector('[slot="hint"]')?.textContent)
-            .toContain('pixel budget affected by the selected FPS and encoding quality')
+        expect(resolution.querySelector('[slot="hint"]')).toBeNull()
 
         await act(async () => {
             resolution.value = '4k-uhd'

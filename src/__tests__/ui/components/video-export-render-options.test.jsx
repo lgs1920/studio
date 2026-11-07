@@ -62,7 +62,7 @@ describe('VideoExportRenderOptions', () => {
             expect(settings.readinessPolicy).toBe('adaptive')
         })
         expect(screen.getByLabelText('Tile readiness').value).toBe('adaptive')
-        expect(screen.getByText(/Automatic uses an output pixel budget affected by the selected FPS and encoding quality/)).not.toBeNull()
+        expect(screen.queryByText(/Automatic uses an output pixel budget affected by the selected FPS and encoding quality/)).toBeNull()
         await act(async () => {
             fireEvent.change(screen.getByLabelText('Export renderer'), {target: {value: 'isolated'}})
             await Promise.resolve()
@@ -108,6 +108,6 @@ describe('VideoExportRenderOptions', () => {
         render(<VideoExportRenderOptions basicReplay/>)
 
         expect(screen.getByRole('group', {name: 'Map loading'})).not.toBeNull()
-        expect(screen.getByText(/Automatic uses a pixel budget affected by frame rate and encoding quality/)).not.toBeNull()
+        expect(screen.queryByText(/Automatic uses a pixel budget affected by frame rate and encoding quality/)).toBeNull()
     })
 })
