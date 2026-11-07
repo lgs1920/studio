@@ -4971,3 +4971,10 @@
 ## 2026-11-07 — [`docs: specify automatic POI slowdown timeline for Basic and Expert`](https://github.com/lgs1920/studio/commit/67682dfbdceb4847119e9729717d3ebe58bfa661)
 
 - Recorded automatically from Git history.
+
+## 2026-11-07 — [`docs: specify automatic POI slowdown visualization for Basic and Expert (#564)`](https://github.com/lgs1920/studio/commit/3f1071e6927fae0884ed684e2f93c31bf00bcd81)
+
+- * docs: specify automatic POI slowdown timeline for Basic and Expert
+- * docs: update commit history
+- ---------
+- Co-authored-by: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
