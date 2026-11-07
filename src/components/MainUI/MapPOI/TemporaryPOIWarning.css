@@ -1,0 +1,34 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: TemporaryPOIWarning.css
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-11-07
+ * Last modified: 2026-11-07
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+.temporary-poi-warning-content {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    column-gap: var(--lgs-gutter-s);
+    row-gap: var(--lgs-gutter-xs);
+    width: 100%;
+    min-width: 0;
+}
+
+.temporary-poi-warning-content > span {
+    flex: 1 1 18rem;
+    min-width: 0;
+}
+
+.temporary-poi-warning-content > wa-button {
+    flex: 0 0 auto;
+}

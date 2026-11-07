@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -88,6 +88,36 @@ afterEach(() => {
 })
 
 describe('POI context-menu creation and editing', () => {
+    it('shows the shared nearby-POI warning with the existing POI and an editor action', async () => {
+        const nearbyPOI = __.ui.poiManager.createPOI({
+            id: 'nearby-poi',
+            latitude: FIRST_PLACE.latitude,
+            longitude: FIRST_PLACE.longitude,
+            title: 'Nearby Paris POI',
+            type: 'poi',
+        })
+        lgs.stores.main.components.pois.list.set(nearbyPOI.id, nearbyPOI)
+        render(<MapPointContextMenu target={FIRST_PLACE}/>)
+
+        fireEvent.click(screen.getByText('Create POI'))
+
+        await waitFor(() => expect(UIToast.warning).toHaveBeenCalledOnce())
+        const warning = UIToast.warning.mock.calls[0][0]
+        expect(warning.caption).toBe('POI not created.')
+        expect(warning.text.props).toMatchObject({
+            poi: nearbyPOI,
+            canEdit: true,
+            message: 'A POI is already near this location.',
+            action: {label: 'Edit nearby POI'},
+        })
+
+        render(warning.text)
+        expect(screen.getByText('Nearby Paris POI')).toBeTruthy()
+        fireEvent.click(screen.getByText('Edit nearby POI'))
+        await waitFor(() => expect(__.ui.drawerManager.open).toHaveBeenCalledWith(POIS_EDITOR_DRAWER,
+            expect.objectContaining({entity: nearbyPOI.id})))
+    })
+
     it('creates, saves, edits and focuses each clicked POI independently from the old map state', async () => {
         const view = render(<MapPointContextMenu target={FIRST_PLACE}/>)
         fireEvent.click(screen.getByText('Create POI'))

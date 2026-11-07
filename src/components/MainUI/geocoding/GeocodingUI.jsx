@@ -8,19 +8,22 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-21
- * Last modified: 2026-11-04
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { LocationDisplayedToastContent } from '@Components/MainUI/geocoding/LocationDisplayedToastContent'
 import { SelectLocation }              from '@Components/MainUI/geocoding/SelectLocation'
-import { openPOIEditor }                from '@Components/MainUI/MapPOI/openPOIEditor'
-import { POICreationToastContent }      from '@Components/MainUI/MapPOI/POICreationToastContent'
 import { focusPOIInOpenList }           from '@Components/MainUI/MapPOI/focusPOIInOpenList'
+import { showPOICreationDuplicateToast } from '@Components/MainUI/MapPOI/showPOICreationDuplicateToast'
 import WaDialogNonModal                from '@Components/WaDialogNonModal'
-import { POI_NEW_BADGE_DURATION, POI_STANDARD_TYPE, SECOND } from '@Core/constants'
-import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
+import {
+    hideGeocodingPOIAddOverlay, showGeocodingPOIAddOverlay,
+}                                        from '@Core/stores/geocodingPOIAddOverlay'
+import { focusablePOI }                 from '@Core/ui/POIManager'
+import { UI_ACTIONS }                  from '@Core/ui/metadata/uiActionCatalog'
 import {
     WaButton, WaDivider, WaIcon, WaInput, WaSwitch, WaTooltip,
 }                                      from '@awesome.me/webawesome/dist/react'
@@ -41,6 +44,7 @@ export const GeocodingUI = () => {
     const geocoder = useSnapshot(store)
     const address = useRef(null)
     const geolocationRequestId = useRef(0)
+    const locationSelectionId = useRef(0)
     const _reopenAfterHide = useRef(false)
     const [exactMatch, setExactMatch] = useState(false)
     const [coordinates, setCoordinates] = useState(false)
@@ -123,18 +127,23 @@ export const GeocodingUI = () => {
     }
 
     /**
-     * Resolve terrain height after a provisional POI has been created.
+     * Resolve and apply Cesium terrain height before focusing a temporary location marker.
      * @param {Object} poi - POI whose terrain height should be resolved.
-     * @param {Promise<number>} terrainHeightRequest - Terrain height request started during POI insertion.
-     * @returns {Promise<void>} Resolves after the POI height update is attempted.
+     * @returns {Promise<number|null>} Sampled terrain height, or null when it could not be resolved.
      */
-    const resolvePOITerrainHeight = async (poi, terrainHeightRequest) => {
-        let simulatedHeight = 0
+    const resolvePOITerrainHeight = async (poi) => {
+        let simulatedHeight
         try {
-            simulatedHeight = await terrainHeightRequest
+            simulatedHeight = await __.ui.poiManager.getHeightFromTerrain({
+                coordinates: {
+                    longitude: poi.longitude,
+                    latitude:  poi.latitude,
+                },
+            })
         }
-        catch {
-            // Keep the same zero-height fallback used by the previous synchronous terrain lookup.
+        catch (error) {
+            console.error('[GeocodingUI] Failed to sample terrain altitude:', error)
+            return null
         }
 
         const currentPOI = __.ui.poiManager.get(poi.id)
@@ -142,7 +151,7 @@ export const GeocodingUI = () => {
             || currentPOI.longitude !== poi.longitude
             || currentPOI.latitude !== poi.latitude
             || !Number.isFinite(simulatedHeight)) {
-            return
+            return null
         }
 
         try {
@@ -151,90 +160,103 @@ export const GeocodingUI = () => {
                 skipLocationUpdate: true,
             })
         }
-        catch {
-            // The POI remains visible at its provisional ground-clamped position if saving its height fails.
+        catch (error) {
+            // Retain the sampled altitude for camera focus if the temporary marker redraw fails.
+            console.error('[GeocodingUI] Failed to update the temporary marker altitude:', error)
         }
+
+        return simulatedHeight
     }
 
     /**
-     * Focus a POI immediately after insertion and complete slower persistence and terrain work afterward.
+     * Add a temporary map marker, focus it, and show its Add overlay and toast action after focus completes.
      * @param {Object} geoPoint - GeoJSON point to display.
      * @param {{keepDialogOpen?: boolean, shouldContinue?: () => boolean}} [options] - Dialog and cancellation options.
-     * @returns {Promise<Object|null>} The created POI, or null when creation is cancelled or rejected.
+     * @returns {Promise<Object|null>} The displayed temporary POI, or null when display is cancelled.
      */
-    const showPOI = async (geoPoint, {keepDialogOpen = false, shouldContinue = () => true} = {}) => {
+    const displayLocation = async (geoPoint, {keepDialogOpen = false, shouldContinue = () => true} = {}) => {
+        const selectionId = ++locationSelectionId.current
+        hideGeocodingPOIAddOverlay()
+        await __.ui.cameraManager?.stopRotate?.()
+
         const point = await __.ui.poiManager.getPointFromGeoJson(geoPoint, false)
         if (!shouldContinue()) {
             return null
         }
 
-        // Search-created POIs follow the same persisted standard type as context-menu POIs.
-        point.type = POI_STANDARD_TYPE
-        point.newBadgeExpiresAt = Date.now() + POI_NEW_BADGE_DURATION
-        const creation = __.ui.poiManager.add(point)
-        const poi = __.ui.poiManager.get(point.id)
+        const poi = await __.ui.poiManager.add(point, true, false)
         if (!poi) {
-            const rejectedPOI = await creation
-            if (rejectedPOI) {
-                return rejectedPOI
+            if (!keepDialogOpen) {
+                requestClose()
             }
-
             const nearbyPOI = __.ui.poiManager.findNearestPOIWithinDistance(point)
-            UIToast.warning({
-                                caption: 'POI not created.',
-                                text:    nearbyPOI
-                                    ? <POICreationToastContent
-                                          poi={nearbyPOI}
-                                          canEdit
-                                          action={UI_ACTIONS.editNearbyPOI}
-                                          message="A POI is already near this location."
-                                          onEdit={() => {
-                                              requestClose()
-                                              void openPOIEditor(nearbyPOI.id)
-                                          }}
-                                      />
-                                    : 'This location is too close to an existing POI.',
-                            }, 8 * SECOND)
+            showPOICreationDuplicateToast(nearbyPOI)
             return null
         }
 
-        const terrainHeightRequest = Promise.resolve()
-            .then(() => __.ui.poiManager.getHeightFromTerrain({
-                coordinates: {
-                    longitude: poi.longitude,
-                    latitude:  poi.latitude,
-                },
-            }))
-            .catch(() => 0)
-
         focusPOIInOpenList(poi.id)
 
-        void __.ui.sceneManager.focus(poi, {
-            target:     poi,
-            lookAt:     true,
-            infinite:   false,
-            rotate:     lgs.settings.ui.poi.rotate,
-            rpm:        lgs.settings.ui.poi.rpm,
-            flyingTime: 2,
-            callback: async (focusedPOI) => {
-                if (!shouldContinue()) {
-                    return
-                }
-
-                await __.ui.poiManager.updatePOI(poi.id, {camera: focusedPOI.camera})
-            },
-        })
-
+        /** Check that this selection still owns camera focus and its toast action. */
+        const isCurrentSelection = () => selectionId === locationSelectionId.current && shouldContinue()
         if (!keepDialogOpen) {
             requestClose()
         }
 
-        const createdPOI = await creation
-        if (createdPOI) {
-            void resolvePOITerrainHeight(createdPOI, terrainHeightRequest)
+        const simulatedHeight = await resolvePOITerrainHeight(poi)
+        if (!isCurrentSelection()) {
+            return poi
         }
 
-        return createdPOI
+        if (!Number.isFinite(simulatedHeight) && !Number.isFinite(poi.height)) {
+            UIToast.error({
+                caption: 'Location display failed.',
+                text: 'Terrain altitude could not be retrieved for this location.',
+            })
+            return poi
+        }
+
+        if (isCurrentSelection()) {
+            const focusTarget = focusablePOI(Number.isFinite(simulatedHeight)
+                ? {...poi, simulatedHeight}
+                : poi)
+            void Promise.resolve(__.ui.sceneManager.focus(focusTarget, {
+                target:     poi,
+                lookAt:     true,
+                infinite:   false,
+                // Location exploration should settle on the result without starting a POI orbit.
+                rotate:     false,
+                flyingTime: 2,
+                callback: (focusedPOI) => {
+                    if (!isCurrentSelection()) {
+                        return
+                    }
+
+                    void __.ui.poiManager.updatePOI(poi.id, {camera: focusedPOI.camera}, {
+                        skipPersist: true,
+                        skipLocationUpdate: true,
+                    })
+                    showGeocodingPOIAddOverlay(poi.id)
+                    UIToast.notify({
+                        caption: 'Location displayed',
+                        text: <LocationDisplayedToastContent poiId={poi.id}/>,
+                    })
+                },
+            })).then(focused => {
+                if (focused === false) {
+                    throw new Error('The selected POI does not have valid camera coordinates.')
+                }
+            }).catch(error => {
+                if (isCurrentSelection()) {
+                    UIToast.error({
+                        caption: 'Location display failed.',
+                        text: 'The selected location could not be focused on the map.',
+                    })
+                }
+                console.error('[GeocodingUI] Failed to focus the selected location:', error)
+            })
+        }
+
+        return poi
     }
 
     const handleSubmit = async (event) => {
@@ -262,7 +284,7 @@ export const GeocodingUI = () => {
                     [latitude, longitude] = convert(address.current.value).decimalCoordinates.split(regex)
                 }
 
-                await showPOI(turf.point([longitude * 1, latitude * 1]))
+                await displayLocation(turf.point([longitude * 1, latitude * 1]))
                 return
             }
 
@@ -286,6 +308,10 @@ export const GeocodingUI = () => {
 
             store.dialog.noResults = true
         }
+        catch (error) {
+            console.error('[GeocodingUI] Location search or display failed:', error)
+            store.dialog.error = {message: 'The location could not be displayed on the map.'}
+        }
         finally {
             store.dialog.loading = false
         }
@@ -297,7 +323,7 @@ export const GeocodingUI = () => {
     }
 
     /**
-     * Add the selected search result and show the success toast after persistence completes.
+     * Display the selected geocoding result without saving it to the POI library.
      * @param {string|number} placeId - Geocoder result identifier.
      * @returns {Promise<void>} Resolves after selection handling completes.
      */
@@ -306,29 +332,16 @@ export const GeocodingUI = () => {
         if (!point) {
             return
         }
-        let createdPOI
         try {
-            createdPOI = await showPOI(point)
+            await displayLocation(point)
         }
         catch {
             UIToast.error({
-                caption: 'POI creation failed.',
-                text:    'The selected location could not be added to the map.',
+                caption: 'Location display failed.',
+                text:    'The selected location could not be displayed on the map.',
             })
             return
         }
-        if (!createdPOI) {
-            return
-        }
-
-        UIToast.success({
-                            caption: 'POI created.',
-                            text:    <POICreationToastContent
-                                         poi={createdPOI}
-                                         canEdit
-                                         onEdit={() => openPOIEditor(createdPOI.id)}
-                                     />,
-                        }, 8 * SECOND)
     }
 
     /**
@@ -417,7 +430,7 @@ export const GeocodingUI = () => {
                     // Keep the coordinates in the search field when reverse geocoding fails.
                 })
 
-            await showPOI(turf.point([longitude, latitude]), {
+            await displayLocation(turf.point([longitude, latitude]), {
                 keepDialogOpen: true,
                 shouldContinue: () => requestId === geolocationRequestId.current,
             })
@@ -508,6 +521,7 @@ export const GeocodingUI = () => {
                         <WaInput
                             appearance="filled"
                             name="location"
+                            autoComplete="off"
                             ref={address}
                             id="geocoder-search-location"
                             placeholder="Address or coordinates (lat,lon)"
