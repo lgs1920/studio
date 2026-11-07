@@ -5031,3 +5031,27 @@
 ## 2026-11-07 — [`Merge remote-tracking branch 'origin/feature/cesium-native-hq-video-capture' into feature/cesium-native-hq-video-capture`](https://github.com/lgs1920/studio/commit/8d1f1f7a5183ce9f54d7355cae0f83799a987385)
 
 - Recorded automatically from Git history.
+
+## 2026-11-07 — [`feat(replay): refine basic render settings`](https://github.com/lgs1920/studio/commit/1ca0df1debbb4183063d3c17baea09241410d817)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`test(replay): add Native HQ browser export matrix`](https://github.com/lgs1920/studio/commit/8d14151098e7b552eb89306d13b1d3c176ec9d73)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`docs(replay): refresh replay follow-up list`](https://github.com/lgs1920/studio/commit/6b3cba7b2164b7847f961d5f760f924513977083)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`Merge remote-tracking branch 'origin/feature/cesium-native-hq-video-capture' into feature/cesium-native-hq-video-capture`](https://github.com/lgs1920/studio/commit/bdac360fcaf0347cfcf40d8545feba5e245b7eb0)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`fix(replay): align Basic Replay drawer controls`](https://github.com/lgs1920/studio/commit/1475d667ed5034ffb490ee95aeb41f5b39590648)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`fix(replay): hide automatic resolution hints`](https://github.com/lgs1920/studio/commit/059fa003f8ce541e772d2029f83991ea450cf4dd)
+
+- Recorded automatically from Git history.
