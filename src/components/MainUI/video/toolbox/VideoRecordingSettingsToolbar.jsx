@@ -159,6 +159,7 @@ export const VideoRecordingSettingsToolbar = memo(({
     const video = useSnapshot($video)
     const [openPopup, setOpenPopup] = useState(null)
     const [popupDirections, setPopupDirections] = useState({ratio: 'bottom', preset: 'bottom'})
+    const [activeBasicSettingsTab, setActiveBasicSettingsTab] = useState('basic-replay-pois')
     const replaySettingsTriggerId = `replay-settings-trigger-${useId().replaceAll(':', '')}`
     const samplingIconTooltipId = `${replaySettingsTriggerId}-sampling`
     const _cropSyncPromise = useRef(null)
@@ -568,7 +569,11 @@ export const VideoRecordingSettingsToolbar = memo(({
             {basicPreparation && <BasicReplayAppearanceSettings/>}
             {basicPreparation && <WaDivider className="basic-replay-settings-divider"/>}
             {basicPreparation && (
-                <WaTabGroup className="basic-replay-settings-tabs" active="basic-replay-pois">
+                <WaTabGroup
+                    className="basic-replay-settings-tabs"
+                    active={activeBasicSettingsTab}
+                    onWaTabShow={event => setActiveBasicSettingsTab(event.detail?.name ?? 'basic-replay-pois')}
+                >
                     <WaTab slot="nav" panel="basic-replay-pois">{UI_LABELS.pois}</WaTab>
                     <WaTab slot="nav" panel="basic-replay-widgets">{UI_LABELS.widgets}</WaTab>
                     <WaTab slot="nav" panel="basic-replay-stop-clip">{UI_LABELS.clips}</WaTab>

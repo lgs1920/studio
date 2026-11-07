@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-14
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,6 +36,19 @@ import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import {useSnapshot} from 'valtio'
 
 const BASIC_REPLAY_SIZE_LABELS = ['thin', 'small', 'medium', 'large']
+
+/** Render one labeled appearance setting and its controls. */
+const AppearanceSettingRow = ({label, icon, children, valueClassName = ''}) => (
+    <div className="basic-replay-settings-row basic-replay-settings-row--split basic-replay-appearance__row" role="group" aria-label={label}>
+        <div className="basic-replay-settings-row__legend">
+            <WaIcon name={icon} variant="regular" label=""/>
+            <span>{label}</span>
+        </div>
+        <div className={`basic-replay-settings-row__value${valueClassName ? ` ${valueClassName}` : ''}`}>
+            {children}
+        </div>
+    </div>
+)
 
 /** Render live color swatches and fixed-scale trace/marker choices for Basic Replay. */
 export const BasicReplayAppearanceSettings = () => {
@@ -73,12 +86,8 @@ export const BasicReplayAppearanceSettings = () => {
     const baseMarkerDiameter = 8
 
     return (
-        <div className="basic-replay-settings-row basic-replay-settings-row--split basic-replay-appearance" role="group" aria-label="Colour">
-            <div className="basic-replay-settings-row__legend">
-                <WaIcon name="paintbrush" variant="regular" label=""/>
-                <span>{'Colour'}</span>
-            </div>
-            <div className="basic-replay-settings-row__value basic-replay-appearance__controls">
+        <div className="basic-replay-appearance" role="group" aria-label="Replay appearance">
+            <AppearanceSettingRow label="Colour" icon="paintbrush" valueClassName="basic-replay-appearance__color-value">
                 <div className="basic-replay-appearance__control-row">
                     <div className="basic-replay-appearance__colors">
                         <WaColorPicker id="basic-replay-border-color" size="s"
@@ -129,99 +138,99 @@ export const BasicReplayAppearanceSettings = () => {
                         {UI_ACTIONS.resetReplayAppearance.label}
                     </WaTooltip>
                 </div>
-                <div className="basic-replay-appearance__control-row">
-                    <WaRadioGroup className="basic-replay-appearance__border-mode wa-visually-hidden-label"
-                                  label="Replay trace color style" orientation="horizontal" size="s"
-                                  value={colorMode}
-                                  onChange={event => updatePresentation({colorMode: event.currentTarget.value})}>
-                        <WaRadio key="with-border" id="basic-replay-with-border" value={BASIC_REPLAY_COLOR_MODE_WITH_BORDER} appearance="button"
-                                 className={`video-choice-button${colorMode === BASIC_REPLAY_COLOR_MODE_WITH_BORDER ? ' is-selected' : ''}`}
-                                 aria-label="Trace with border">
-                            <span className="basic-replay-appearance__choice">
-                                <svg className="basic-replay-appearance__color-mode-preview" viewBox="0 0 36 24" aria-hidden="true">
-                                    <rect x="6" y="6" width="24" height="3" fill={border.color}/>
-                                    <rect x="4" y="9" width="28" height="6" fill={fill.color}/>
-                                    <rect x="6" y="15" width="24" height="3" fill={border.color}/>
-                                </svg>
-                            </span>
-                        </WaRadio>
-                        <WaRadio key="no-border" id="basic-replay-without-border" value={BASIC_REPLAY_COLOR_MODE_NO_BORDER} appearance="button"
-                                 className={`video-choice-button${colorMode === BASIC_REPLAY_COLOR_MODE_NO_BORDER ? ' is-selected' : ''}`}
-                                 aria-label="Trace without border">
-                            <span className="basic-replay-appearance__choice">
-                                <svg className="basic-replay-appearance__color-mode-preview" viewBox="0 0 36 24" aria-hidden="true">
-                                    <rect x="4" y="6" width="28" height="12" fill={fill.color}/>
-                                </svg>
-                            </span>
-                        </WaRadio>
-                        <WaRadio key="side-by-side" id="basic-replay-side-by-side" value={BASIC_REPLAY_COLOR_MODE_SIDE_BY_SIDE} appearance="button"
-                                 className={`video-choice-button${sideBySide ? ' is-selected' : ''}`}
-                                 aria-label="Trace side by side">
-                            <span className="basic-replay-appearance__choice">
-                                <svg className="basic-replay-appearance__side-by-side-preview" viewBox="0 0 36 24" aria-hidden="true">
-                                    <rect x="6" y="6" width="24" height="6" fill={border.color}/>
-                                    <rect x="4" y="12" width="28" height="6" fill={fill.color}/>
-                                </svg>
-                            </span>
-                        </WaRadio>
-                    </WaRadioGroup>
-                    <WaTooltip for="basic-replay-with-border" placement="top">With border</WaTooltip>
-                    <WaTooltip for="basic-replay-without-border" placement="top">No border</WaTooltip>
-                    <WaTooltip for="basic-replay-side-by-side" placement="top">Side by side</WaTooltip>
-                </div>
-                <div className="basic-replay-appearance__control-row">
-                    <WaRadioGroup className="basic-replay-appearance__sizes wa-visually-hidden-label"
-                                  label="Replay marker and line size" orientation="horizontal" size="s"
-                                  value={String(presentation.sizeScale)}
-                                  onChange={event => {
-                                      const scale = Number(event.currentTarget.value)
-                                      updatePresentation({sizeScale: scale, markerSizeScale: scale === 0.65 ? 1 : scale})
-                                  }}>
-                        {BASIC_REPLAY_SIZE_SCALES.map((scale, index) => {
-                            const selected = presentation.sizeScale === scale
-                            const fillWidth = baseFillWidth * scale
-                            const borderWidth = baseBorderWidth * scale
-                            const sideBySideWidth = fillWidth + borderWidth * 2
-                            const markerScale = scale === 0.65 ? 1 : scale
-                            const markerDiameter = baseMarkerDiameter * markerScale
-                            const sizeLabel = BASIC_REPLAY_SIZE_LABELS[index]
-                            return (
-                                <WaRadio key={scale} id={`basic-replay-size-${sizeLabel}`} value={String(scale)} appearance="button"
-                                          className={`video-choice-button${selected ? ' is-selected' : ''}`}
-                                          aria-label={`Replay size ${sizeLabel}`}>
-                                    <span className="basic-replay-appearance__choice">
-                                        <svg className="basic-replay-appearance__preview" width="36" height="24" viewBox="0 0 36 24" aria-hidden="true">
-                                            {sideBySide ? (
-                                                <>
-                                                    <rect x="4" y={12 - sideBySideWidth / 2} width="28" height={sideBySideWidth / 2} fill={border.color}/>
-                                                    <rect x="4" y="12" width="28" height={sideBySideWidth / 2} fill={fill.color}/>
-                                                    <circle cx="18" cy="12" r={markerDiameter / 2}
-                                                            fill={fill.color} stroke={border.color}
-                                                            strokeWidth={baseBorderWidth * markerScale}/>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    {borderEnabled && <line x1="4" x2="32" y1="12" y2="12" stroke={border.color}
-                                                                           strokeWidth={fillWidth + borderWidth * 2}/>}
-                                                    <line x1="4" x2="32" y1="12" y2="12" stroke={fill.color} strokeWidth={fillWidth}/>
-                                                    <circle cx="18" cy="12" r={markerDiameter / 2}
-                                                            fill={fill.color} stroke={borderEnabled ? border.color : 'none'}
-                                                            strokeWidth={borderEnabled ? baseBorderWidth * markerScale : 0}/>
-                                                </>
-                                            )}
-                                        </svg>
-                                    </span>
-                                </WaRadio>
-                            )
-                        })}
-                    </WaRadioGroup>
-                    {BASIC_REPLAY_SIZE_LABELS.map(sizeLabel => (
-                        <WaTooltip key={sizeLabel} for={`basic-replay-size-${sizeLabel}`} placement="top">
-                            {sizeLabel[0].toUpperCase() + sizeLabel.slice(1)}
-                        </WaTooltip>
-                    ))}
-                </div>
-            </div>
+            </AppearanceSettingRow>
+            <AppearanceSettingRow label="Type" icon="sliders" valueClassName="basic-replay-appearance__choice-value">
+                <WaRadioGroup className="basic-replay-appearance__border-mode wa-visually-hidden-label"
+                              label="Replay trace color style" orientation="horizontal" size="s"
+                              value={colorMode}
+                              onChange={event => updatePresentation({colorMode: event.currentTarget.value})}>
+                    <WaRadio key="with-border" id="basic-replay-with-border" value={BASIC_REPLAY_COLOR_MODE_WITH_BORDER} appearance="button"
+                             className={`video-choice-button${colorMode === BASIC_REPLAY_COLOR_MODE_WITH_BORDER ? ' is-selected' : ''}`}
+                             aria-label="Trace with border">
+                        <span className="basic-replay-appearance__choice">
+                            <svg className="basic-replay-appearance__color-mode-preview" viewBox="0 0 36 24" aria-hidden="true">
+                                <rect x="6" y="6" width="24" height="3" fill={border.color}/>
+                                <rect x="4" y="9" width="28" height="6" fill={fill.color}/>
+                                <rect x="6" y="15" width="24" height="3" fill={border.color}/>
+                            </svg>
+                        </span>
+                    </WaRadio>
+                    <WaRadio key="no-border" id="basic-replay-without-border" value={BASIC_REPLAY_COLOR_MODE_NO_BORDER} appearance="button"
+                             className={`video-choice-button${colorMode === BASIC_REPLAY_COLOR_MODE_NO_BORDER ? ' is-selected' : ''}`}
+                             aria-label="Trace without border">
+                        <span className="basic-replay-appearance__choice">
+                            <svg className="basic-replay-appearance__color-mode-preview" viewBox="0 0 36 24" aria-hidden="true">
+                                <rect x="4" y="6" width="28" height="12" fill={fill.color}/>
+                            </svg>
+                        </span>
+                    </WaRadio>
+                    <WaRadio key="side-by-side" id="basic-replay-side-by-side" value={BASIC_REPLAY_COLOR_MODE_SIDE_BY_SIDE} appearance="button"
+                             className={`video-choice-button${sideBySide ? ' is-selected' : ''}`}
+                             aria-label="Trace side by side">
+                        <span className="basic-replay-appearance__choice">
+                            <svg className="basic-replay-appearance__side-by-side-preview" viewBox="0 0 36 24" aria-hidden="true">
+                                <rect x="6" y="6" width="24" height="6" fill={border.color}/>
+                                <rect x="4" y="12" width="28" height="6" fill={fill.color}/>
+                            </svg>
+                        </span>
+                    </WaRadio>
+                </WaRadioGroup>
+                <WaTooltip for="basic-replay-with-border" placement="top">With border</WaTooltip>
+                <WaTooltip for="basic-replay-without-border" placement="top">No border</WaTooltip>
+                <WaTooltip for="basic-replay-side-by-side" placement="top">Side by side</WaTooltip>
+            </AppearanceSettingRow>
+            <AppearanceSettingRow label="Size" icon="ruler-vertical" valueClassName="basic-replay-appearance__choice-value">
+                <WaRadioGroup className="basic-replay-appearance__sizes wa-visually-hidden-label"
+                              label="Replay marker and line size" orientation="horizontal" size="s"
+                              value={String(presentation.sizeScale)}
+                              onChange={event => {
+                                  const scale = Number(event.currentTarget.value)
+                                  updatePresentation({sizeScale: scale, markerSizeScale: scale === 0.65 ? 1 : scale})
+                              }}>
+                    {BASIC_REPLAY_SIZE_SCALES.map((scale, index) => {
+                        const selected = presentation.sizeScale === scale
+                        const fillWidth = baseFillWidth * scale
+                        const borderWidth = baseBorderWidth * scale
+                        const sideBySideWidth = fillWidth + borderWidth * 2
+                        const markerScale = scale === 0.65 ? 1 : scale
+                        const markerDiameter = baseMarkerDiameter * markerScale
+                        const sizeLabel = BASIC_REPLAY_SIZE_LABELS[index]
+                        return (
+                            <WaRadio key={scale} id={`basic-replay-size-${sizeLabel}`} value={String(scale)} appearance="button"
+                                      className={`video-choice-button${selected ? ' is-selected' : ''}`}
+                                      aria-label={`Replay size ${sizeLabel}`}>
+                                <span className="basic-replay-appearance__choice">
+                                    <svg className="basic-replay-appearance__preview" width="36" height="24" viewBox="0 0 36 24" aria-hidden="true">
+                                        {sideBySide ? (
+                                            <>
+                                                <rect x="4" y={12 - sideBySideWidth / 2} width="28" height={sideBySideWidth / 2} fill={border.color}/>
+                                                <rect x="4" y="12" width="28" height={sideBySideWidth / 2} fill={fill.color}/>
+                                                <circle cx="18" cy="12" r={markerDiameter / 2}
+                                                        fill={fill.color} stroke={border.color}
+                                                        strokeWidth={baseBorderWidth * markerScale}/>
+                                            </>
+                                        ) : (
+                                            <>
+                                                {borderEnabled && <line x1="4" x2="32" y1="12" y2="12" stroke={border.color}
+                                                                       strokeWidth={fillWidth + borderWidth * 2}/>}
+                                                <line x1="4" x2="32" y1="12" y2="12" stroke={fill.color} strokeWidth={fillWidth}/>
+                                                <circle cx="18" cy="12" r={markerDiameter / 2}
+                                                        fill={fill.color} stroke={borderEnabled ? border.color : 'none'}
+                                                        strokeWidth={borderEnabled ? baseBorderWidth * markerScale : 0}/>
+                                            </>
+                                        )}
+                                    </svg>
+                                </span>
+                            </WaRadio>
+                        )
+                    })}
+                </WaRadioGroup>
+                {BASIC_REPLAY_SIZE_LABELS.map(sizeLabel => (
+                    <WaTooltip key={sizeLabel} for={`basic-replay-size-${sizeLabel}`} placement="top">
+                        {sizeLabel[0].toUpperCase() + sizeLabel.slice(1)}
+                    </WaTooltip>
+                ))}
+            </AppearanceSettingRow>
         </div>
     )
 }

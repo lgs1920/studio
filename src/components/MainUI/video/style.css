@@ -270,7 +270,7 @@
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-row__legend {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     align-self: start;
     min-width: 0;
     gap: var(--lgs-gutter-xs);
@@ -373,7 +373,7 @@
 
     & .video-export-render-options__label {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         min-width: 0;
         gap: var(--lgs-gutter-xs);
         text-align: left;
@@ -494,6 +494,11 @@
     &::part(body) {
         height: auto;
         max-height: none;
+    }
+
+    & wa-tab::part(tab) {
+        padding-inline-start: calc(var(--lgs-dimension-s) + var(--lgs-gutter-xs));
+        padding-inline-end: var(--lgs-gutter-s);
     }
 
     & wa-tab-panel {
@@ -696,12 +701,24 @@
     box-shadow: none !important;
 }
 
-.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__controls {
-    align-items: stretch;
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance {
+    display: flex;
     flex-direction: column;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
+    width: 100%;
+    min-width: 0;
     gap: var(--lgs-gutter-xxs);
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__row {
+    align-items: start;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__color-value {
+    align-items: center;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__choice-value {
+    flex-wrap: wrap;
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__control-row {
@@ -712,17 +729,24 @@
     gap: var(--lgs-gutter-xxs);
 }
 
-.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__control-row:first-child {
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__color-value .basic-replay-appearance__control-row {
     justify-content: space-between;
 }
 
-.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__control-row wa-tooltip {
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance :is(.basic-replay-appearance__color-value, .basic-replay-appearance__choice-value) wa-tooltip {
     display: contents;
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__sizes::part(form-control-input),
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__border-mode::part(form-control-input) {
     flex-wrap: wrap;
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-appearance__choice-value > wa-radio-group {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-settings-divider {
@@ -747,6 +771,12 @@
         box-shadow: none !important;
         filter: none !important;
     }
+}
+
+.basic-replay-settings-drawer .video-recording-settings-popup--basic wa-number-input::part(number-input) {
+    box-sizing: border-box;
+    height: var(--wa-form-control-height) !important;
+    min-height: var(--wa-form-control-height) !important;
 }
 
 .basic-replay-settings-drawer .video-recording-settings-popup--basic .basic-replay-sampling-control {
@@ -821,6 +851,7 @@
 .video-recording-settings-popup--basic .basic-replay-settings-row--label-and-controls {
     display: grid;
     grid-template-columns: var(--lgs-dimension-s) 4rem minmax(max-content, 1fr);
+    align-items: start;
 }
 
 .video-recording-settings-popup--basic .basic-replay-settings-row--label-and-controls > :last-child {
@@ -838,8 +869,8 @@
 
 .video-recording-settings-popup--basic .basic-replay-end-focus-duration {
     flex-wrap: nowrap;
-    justify-self: end;
-    width: max-content;
+    justify-self: stretch;
+    width: 100%;
     min-width: 0;
     max-width: 100%;
     white-space: nowrap;
@@ -926,8 +957,10 @@
 }
 
 .video-recording-settings-popup--basic .basic-replay-poi-settings__duration {
-    flex: 0 0 auto;
-    width: 7rem;
+    flex: 1 1 0;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     font-size: var(--lgs-font-size-s) !important;
 
     &::part(input),
@@ -937,16 +970,25 @@
 }
 
 .video-recording-settings-popup--basic :is(.basic-replay-poi-settings__duration, .basic-replay-end-focus-duration) {
-    &::part(base) {
+    &::part(number-input) {
         box-sizing: border-box;
-        flex: none;
-        width: 7rem;
+        flex: 1 1 0;
+        width: 100%;
+        min-width: 0;
     }
 
     &::part(input) {
         flex: 1 1 0;
         width: 0;
         min-width: 0;
+    }
+}
+
+.video-recording-settings-popup--basic .basic-replay-poi-settings__duration-row {
+    grid-template-columns: minmax(max-content, auto) minmax(0, 1fr);
+
+    & .basic-replay-settings-row__legend {
+        white-space: nowrap;
     }
 }
 
@@ -1012,9 +1054,6 @@
 }
 
 .basic-replay-appearance {
-    justify-content: flex-start !important;
-    align-items: center !important;
-
     & .basic-replay-appearance__reset::part(base) {
         min-width: var(--lgs-dimension-s);
         min-height: var(--lgs-dimension-s);
@@ -1037,7 +1076,9 @@
     }
 
     & :is(.basic-replay-appearance__border-mode, .basic-replay-appearance__sizes) {
-        flex: 0 1 auto;
+        flex: 1 1 auto;
+        width: 100%;
+        max-width: 100%;
         min-width: 0;
         margin: 0;
     }
