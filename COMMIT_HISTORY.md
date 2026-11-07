@@ -4967,3 +4967,7 @@
 ## 2026-11-06 — [`fix: keep visible POIs eligible for Replay slowdown`](https://github.com/lgs1920/studio/commit/35a4c7312d9159a54523b97d4909ccee3fb447bb)
 
 - Recorded automatically from Git history.
+
+## 2026-11-07 — [`docs: specify automatic POI slowdown timeline for Basic and Expert`](https://github.com/lgs1920/studio/commit/67682dfbdceb4847119e9729717d3ebe58bfa661)
+
+- Recorded automatically from Git history.
