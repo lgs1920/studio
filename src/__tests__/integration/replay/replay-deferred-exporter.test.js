@@ -2357,6 +2357,126 @@ describe('ReplayDeferredExporter', () => {
         }
     })
 
+    it('does not submit a Native HQ frame when strict Cesium readiness times out', async () => {
+        mediabunnyMocks.canvasAddCount = 0
+        Output.instances.length = 0
+        const sourceCanvas = document.createElement('canvas')
+        sourceCanvas.width = 320
+        sourceCanvas.height = 180
+        sourceCanvas.getBoundingClientRect = () => ({left: 0, top: 0, width: 320, height: 180})
+        const isolatedCanvas = document.createElement('canvas')
+        isolatedCanvas.width = 320
+        isolatedCanvas.height = 180
+        const camera = {
+            heading: 0.5,
+            pitch: -0.5,
+            roll: 0,
+            frustum: new PerspectiveFrustum({
+                fov: Math.PI / 3,
+                aspectRatio: 320 / 180,
+                near: 1,
+                far: 10000,
+            }),
+            positionCartographic: {longitude: 1, latitude: 0.5, height: 1000},
+        }
+        const mainScene = {mode: 3, camera, globe: {}, fog: {}}
+        const isolatedScene = {mode: 3, camera: {}, globe: {}, fog: {}, render: vi.fn()}
+        const viewer = {
+            scene: mainScene,
+            camera,
+            terrainProvider: {id: 'terrain'},
+            imageryLayers: {length: 0, get: vi.fn()},
+        }
+        const target = {viewer: {scene: isolatedScene, canvas: isolatedCanvas}, scene: isolatedScene, canvas: isolatedCanvas}
+        let activeScene = mainScene
+        const replayMode = {
+            restorePlaybackScene: vi.fn(async () => undefined),
+            preparePlaybackSceneForExport: vi.fn(async () => true),
+            renderReplayExportFrame: vi.fn(async () => ({})),
+            cesiumScene: () => activeScene,
+            cesiumViewer: () => activeScene === isolatedScene ? target.viewer : viewer,
+            setRenderTarget: vi.fn(() => { activeScene = isolatedScene }),
+            clearRenderTarget: vi.fn(() => { activeScene = mainScene }),
+        }
+        const isolatedRenderHost = {
+            initialize: vi.fn(async () => undefined),
+            renderTarget: vi.fn(() => target),
+            canvas: vi.fn(() => isolatedCanvas),
+            prepareForCapture: vi.fn(async () => false),
+            destroy: vi.fn(),
+        }
+        const isolatedRenderHostFactory = vi.fn(() => isolatedRenderHost)
+        globalThis.lgs = {
+            canvas: sourceCanvas,
+            scene: mainScene,
+            viewer,
+            stores: {
+                ui: {
+                    video: {
+                        fps: 0,
+                        quality: 0,
+                        renderHostMode: 'isolated',
+                        resolutionProfile: 'automatic',
+                        renderQuality: 'standard',
+                        readinessPolicy: 'strict',
+                    },
+                },
+            },
+            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_EXPERT}}},
+            theJourney: {slug: 'journey-a'},
+        }
+        globalThis.__ = {
+            device: {browser: 'chromium'},
+            ui: {
+                replay: replayMode,
+                widgetCache: {getAll: vi.fn(() => new Map())},
+                widgetManager: {
+                    getElementById: vi.fn(() => null),
+                    getWidgetConfig: vi.fn(() => ({})),
+                },
+            },
+        }
+        const replay = {
+            progress: 0,
+            durationMillis: 1000,
+            videoCropRect: {left: 0, top: 0, width: 320, height: 180},
+            readiness: {enabled: false, prewarmEnabled: false},
+            clips: {catalog: {}, start: [], stop: []},
+        }
+
+        await expect(runReplayDeferredMp4Export({
+            replay,
+            journey: {slug: 'journey-a'},
+            controller: {
+                duration: 1,
+                progress: 0,
+                sampler: {atProgress: progress => ({progress})},
+                currentSample: () => ({progress: 0}),
+                seek: vi.fn(),
+            },
+            replayMode,
+            fps: 2,
+            dimensions: {width: 320, height: 180},
+            sourceCanvas,
+            buildCanvas: dimensions => ({
+                ...dimensions,
+                getContext: () => ({clearRect: vi.fn(), drawImage: vi.fn()}),
+            }),
+            download: null,
+            renderHostMode: 'isolated',
+            isolatedRenderHostFactory,
+        })).rejects.toMatchObject({
+            name: 'TimeoutError',
+            message: expect.stringContaining('Strict Replay scene readiness timed out after 3 bounded attempts'),
+        })
+
+        expect(isolatedRenderHost.prepareForCapture).toHaveBeenCalledTimes(3)
+        expect(mediabunnyMocks.canvasAddCount).toBe(0)
+        expect(Output.instances.at(-1).cancel).toHaveBeenCalledOnce()
+        expect(isolatedRenderHost.destroy).toHaveBeenCalledOnce()
+        expect(replayMode.clearRenderTarget).toHaveBeenCalledOnce()
+    })
+
     it('restores the Interactive scene when export preparation fails', async () => {
         const restorePlaybackScene = vi.fn(() => Promise.resolve())
         const preparePlaybackSceneForExport = vi.fn(async () => {

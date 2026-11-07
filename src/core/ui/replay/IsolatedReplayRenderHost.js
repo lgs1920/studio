@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-10-01
- * Last modified: 2026-10-01
+ * Created on: 2026-08-24
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@
  * Isolated Cesium render host for deterministic Replay export frames.
  */
 
-import {CesiumWidget, ImageryLayer} from 'cesium'
+import {CesiumWidget, DirectionalLight, ImageryLayer, SkyAtmosphere, SkyBox, SunLight} from 'cesium'
 
 import {IonLayerUtils} from '@Utils/cesium/IonLayerUtils'
 import {applyReplayCesiumCameraCommand} from './ReplayCesiumCameraAdapter'
@@ -51,6 +51,60 @@ const normalizeReplayHostViewportDimensions = dimensions => ({
     width: Math.max(1, Number(dimensions?.width) || 1920),
     height: Math.max(1, Number(dimensions?.height) || 1080),
 })
+
+/**
+ * Normalize the export-specific screen-space error target.
+ *
+ * @param {number|null} value - Requested maximum screen-space error.
+ * @returns {number} Positive screen-space error target.
+ */
+const normalizeReplayHostScreenSpaceError = value => {
+    const numeric = Number(value)
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : 16
+}
+
+/**
+ * Verify that the isolated Cesium canvas matches its physical output dimensions.
+ *
+ * @param {HTMLCanvasElement} canvas - Isolated Cesium canvas.
+ * @param {Object} dimensions - Requested physical dimensions.
+ * @returns {Object} Actual dimensions and observable WebGL limits.
+ * @throws {Error} When the browser or GPU cannot produce the requested canvas.
+ */
+const verifyReplayHostCanvasDimensions = (canvas, scene, dimensions) => {
+    const actual = {
+        width: Number(scene?.drawingBufferWidth ?? canvas?.width) || 0,
+        height: Number(scene?.drawingBufferHeight ?? canvas?.height) || 0,
+    }
+    if (actual.width !== dimensions.width || actual.height !== dimensions.height) {
+        throw new Error(
+            `Native Replay rendering requested ${dimensions.width} × ${dimensions.height} pixels, `
+            + `but Cesium created ${actual.width} × ${actual.height}. The export was stopped without upscaling.`,
+        )
+    }
+
+    const context = canvas?.getContext?.('webgl2') ?? canvas?.getContext?.('webgl') ?? null
+    const limits = context
+        ? {
+            maxRenderbufferSize: context.getParameter(context.MAX_RENDERBUFFER_SIZE),
+            maxTextureSize: context.getParameter(context.MAX_TEXTURE_SIZE),
+            maxViewportDimensions: Array.from(context.getParameter(context.MAX_VIEWPORT_DIMS) ?? []),
+        }
+        : null
+    const maximumDimension = Math.min(
+        Number(limits?.maxRenderbufferSize) || Infinity,
+        Number(limits?.maxTextureSize) || Infinity,
+        ...((limits?.maxViewportDimensions?.length === 2) ? limits.maxViewportDimensions.map(Number) : [Infinity]),
+    )
+    if (dimensions.width > maximumDimension || dimensions.height > maximumDimension) {
+        throw new Error(
+            `Native Replay rendering requested ${dimensions.width} × ${dimensions.height} pixels, `
+            + `which exceeds this browser/GPU's observed ${maximumDimension}px render limit.`,
+        )
+    }
+
+    return {actual, limits}
+}
 
 /**
  * Create the off-screen DOM container owned by an isolated render host.
@@ -95,20 +149,60 @@ const applyReplayHostEnvironment = (scene, descriptor) => {
         scene.backgroundColor = environment.backgroundColor.clone?.() ?? environment.backgroundColor
     }
     if (scene.globe) {
-        scene.globe.show = environment.globe?.show !== false
-        scene.globe.depthTestAgainstTerrain = environment.globe?.depthTestAgainstTerrain === true
-        scene.globe.enableLighting = environment.globe?.enableLighting === true
-        if (environment.globe?.baseColor) {
-            scene.globe.baseColor = environment.globe.baseColor.clone?.() ?? environment.globe.baseColor
-        }
+        Object.entries(environment.globe ?? {}).forEach(([property, value]) => {
+            if (property in scene.globe) {
+                scene.globe[property] = value?.clone?.() ?? value
+            }
+        })
     }
     if (scene.fog) {
-        scene.fog.enabled = environment.fog?.enabled !== false
-        scene.fog.renderable = environment.fog?.renderable !== false
-        if (Number.isFinite(Number(environment.fog?.density))) {
-            scene.fog.density = Number(environment.fog.density)
+        Object.entries(environment.fog ?? {}).forEach(([property, value]) => {
+            if (property in scene.fog) {
+                scene.fog[property] = value?.clone?.() ?? value
+            }
+        })
+    }
+    if (environment.skyAtmosphere) {
+        scene.skyAtmosphere ??= new SkyAtmosphere()
+        if (scene.skyAtmosphere) {
+            Object.entries(environment.skyAtmosphere).forEach(([property, value]) => {
+                if (property in scene.skyAtmosphere) {
+                    scene.skyAtmosphere[property] = value?.clone?.() ?? value
+                }
+            })
         }
     }
+    if (environment.skyBox?.sources && scene.skyBox) {
+        scene.skyBox.destroy?.()
+        scene.skyBox = new SkyBox({
+            sources: {...environment.skyBox.sources},
+            show: environment.skyBox.show,
+        })
+    }
+    else if (environment.skyBox?.sources) {
+        scene.skyBox = new SkyBox({
+            sources: {...environment.skyBox.sources},
+            show: environment.skyBox.show,
+        })
+    }
+    else if (environment.skyBox === null && scene.skyBox) {
+        scene.skyBox.show = false
+    }
+    if (environment.light?.type === 'SunLight') {
+        scene.light = new SunLight({
+            color: environment.light.color?.clone?.() ?? environment.light.color ?? undefined,
+            intensity: environment.light.intensity ?? undefined,
+        })
+    }
+    else if (environment.light?.type === 'DirectionalLight') {
+        scene.light = new DirectionalLight({
+            direction: environment.light.direction?.clone?.() ?? environment.light.direction,
+            color: environment.light.color?.clone?.() ?? environment.light.color ?? undefined,
+            intensity: environment.light.intensity ?? undefined,
+        })
+    }
+    scene.verticalExaggeration = environment.verticalExaggeration ?? 1
+    scene.verticalExaggerationRelativeHeight = environment.verticalExaggerationRelativeHeight ?? 0
 }
 
 /**
@@ -126,8 +220,10 @@ export class IsolatedReplayRenderHost {
     #createWidget
     #createImageryLayer
     #createTileset
+    #maximumScreenSpaceError
     #createReadinessCoordinator
     #cropProjection
+    #canvasDimensions = null
     #destroyed = false
 
     /**
@@ -141,9 +237,10 @@ export class IsolatedReplayRenderHost {
         descriptor = captureReplaySceneDescriptor(),
         container = null,
         readiness = {},
+        maximumScreenSpaceError = 16,
         createWidget = (element, options) => new CesiumWidget(element, options),
         createImageryLayer = provider => new ImageryLayer(provider),
-        createTileset = definition => IonLayerUtils.createTileset(definition),
+        createTileset = (definition, options) => IonLayerUtils.createTileset(definition, options),
         createReadinessCoordinator = createReplaySceneTileReadinessCoordinator,
         cropProjection = null,
     } = {}) {
@@ -153,6 +250,7 @@ export class IsolatedReplayRenderHost {
         this.#container = container
         this.#ownsContainer = !container
         this.#readiness = readiness
+        this.#maximumScreenSpaceError = normalizeReplayHostScreenSpaceError(maximumScreenSpaceError)
         this.#createWidget = createWidget
         this.#createImageryLayer = createImageryLayer
         this.#createTileset = createTileset
@@ -191,6 +289,13 @@ export class IsolatedReplayRenderHost {
         if (!this.#descriptor) {
             throw new Error('Cannot initialize the isolated Replay render host without a scene descriptor')
         }
+        if (this.#descriptor.compatibilityLimitations?.length) {
+            throw new Error(
+                'Native Replay rendering cannot reproduce this scene: '
+                + this.#descriptor.compatibilityLimitations.join('; ')
+                + '. Remove those scene items or use Standard export.',
+            )
+        }
 
         this.#container ??= createReplayHostContainer(this.#viewportDimensions)
         this.#widget = this.#createWidget(this.#container, {
@@ -224,10 +329,15 @@ export class IsolatedReplayRenderHost {
         }
 
         if (this.#descriptor.base3dDefinition) {
-            const tileset = await this.#createTileset(this.#descriptor.base3dDefinition)
+            const tileset = await this.#createTileset(this.#descriptor.base3dDefinition, {
+                maximumScreenSpaceError: this.#maximumScreenSpaceError,
+            })
             if (this.#destroyed) {
                 tileset?.destroy?.()
                 throw new DOMException('Replay export host initialization was aborted', 'AbortError')
+            }
+            if (tileset && 'maximumScreenSpaceError' in tileset) {
+                tileset.maximumScreenSpaceError = this.#maximumScreenSpaceError
             }
             this.#widget.scene?.primitives?.add?.(tileset)
         }
@@ -236,9 +346,14 @@ export class IsolatedReplayRenderHost {
         this.#widget.resize?.()
         this.#applyCropFrustum()
         this.#widget.render?.()
+        this.#canvasDimensions = verifyReplayHostCanvasDimensions(this.#widget.canvas, this.#widget.scene, this.#dimensions)
         this.#readinessCoordinator = this.#createReadinessCoordinator(
             this.#widget.scene,
-            this.#readiness,
+            {
+                ...this.#readiness,
+                requirePostRender: this.#readiness?.policy === 'strict',
+                renderNow: () => this.#widget?.render?.(),
+            },
         )
         return this
     }
@@ -263,6 +378,9 @@ export class IsolatedReplayRenderHost {
      * @returns {Object|null} Isolated Cesium widget.
      */
     viewer = () => this.#widget ?? null
+
+    /** Return cumulative source events observed by the owned readiness coordinator. */
+    readinessMetrics = () => this.#readinessCoordinator?.getMetrics?.() ?? null
 
     /**
      * Return the explicit replay render target exposed by this host.
@@ -305,9 +423,7 @@ export class IsolatedReplayRenderHost {
             throw new Error('The Replay export frame does not contain an applicable camera command')
         }
 
-        this.#widget.resize?.()
         this.#applyCropFrustum()
-        this.#widget.render?.()
         const ready = this.#readinessCoordinator?.prepareForCapture
             ? await this.#readinessCoordinator.prepareForCapture({
                 maxMillis,
@@ -317,7 +433,7 @@ export class IsolatedReplayRenderHost {
             })
             : true
         this.#widget.render?.()
-        return {intent, appliedFrame, ready}
+        return {intent, appliedFrame, ready, canvasDimensions: this.#canvasDimensions}
     }
 
     /**
@@ -337,9 +453,7 @@ export class IsolatedReplayRenderHost {
             throw new DOMException('Replay export frame preparation was aborted', 'AbortError')
         }
 
-        this.#widget.resize?.()
         this.#applyCropFrustum()
-        this.#widget.render?.()
         const ready = this.#readinessCoordinator?.prepareForCapture
             ? await this.#readinessCoordinator.prepareForCapture({
                 maxMillis,

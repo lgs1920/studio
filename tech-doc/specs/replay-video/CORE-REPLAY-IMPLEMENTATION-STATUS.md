@@ -167,8 +167,29 @@ Basic/Expert support is present but incomplete:
 - Explicit replay session ownership and guarded cleanup.
 - Canonical camera-command continuity across transitions and clips.
 - Explicit owner-scoped viewer, scene, and canvas render targets.
-- Optional isolated no-loop `CesiumWidget` implementation with scene descriptor
-  replication for explicit off-screen render targets.
+- Standard / Fast remains the default MP4 path: it uses the visible Cesium
+  canvas, automatic resolution, adaptive tile readiness, and allocates no extra
+  WebGL context. Native HQ is an explicit second path that creates one isolated
+  no-loop `CesiumWidget` per export, renders at the requested physical drawing
+  buffer size, applies the export SSE policy, and leaves the interactive camera
+  alone.
+- Native HQ supports Automatic, 1080p, 4K UHD, and custom output bounds. Explicit
+  profiles are independent of FPS, keep the crop aspect ratio, verify the actual
+  Cesium drawing-buffer dimensions, and reject visible-canvas upscaling. Scene
+  descriptors recreate terrain, imagery, the configured base 3D layer, supported
+  atmosphere and lighting values, and target-owned Replay trace/marker entities.
+  Unsupported active scene content fails with a compatibility explanation.
+- Native HQ defaults to strict readiness: visible tile resources and a completed
+  Cesium `postRender` boundary are required before a frame is submitted. Strict
+  timeout, failure, and cancellation outcomes are separate and retry counts are
+  bounded. The existing adaptive Standard behavior remains available.
+- The existing performance report now identifies export mode, requested and
+  actual render/composition resolution, codec, FPS, LOD, readiness outcomes,
+  tile events, stage percentiles, total export wall time, and sampled heap use
+  where the browser exposes it. Browser-wide WebGL inventory, GPU utilization,
+  GPU memory, exact request counts, and cache misses remain unavailable.
+- The compositor allocates its full-frame blur surface only when a blurred
+  overlay is present, avoiding an unused output-sized canvas in ordinary exports.
 - Basic and Expert product MP4 recording keeps the main Cesium scene visible,
   temporarily suspends its default render loop, and updates the viewer's entity
   visualizers before explicitly rendering each capture. Pending terrain/3D Tiles
@@ -198,7 +219,8 @@ Basic/Expert support is present but incomplete:
   crop pixel parity, and deterministic MP4 encoding, but complete browser
   validation remains pending: Chromium WebGL initialization is unavailable
   in the current environment. Reference-journey export validation and total
-  export-time benchmarks have not been completed.
+  export-time benchmarks for Standard and Native HQ have not been completed;
+  see the [Native HQ performance report](CORE-REPLAY-NATIVE-HQ-PERFORMANCE-REPORT.md).
 - Crop-aware isolated export camera frustums and readiness identity for 2D,
   terrain, and 3D Tiles capture.
 - Frame-accurate export trace updates and deterministic Navigation camera updates.

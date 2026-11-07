@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-13
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -130,10 +130,11 @@ describe('CanvasOverlayComposer recording path', () => {
         expect(outputCanvas.height).toBe(180)
     })
 
-    test('restores output smoothing after resizing and keeps the same-size blur buffer unfiltered', () => {
+    test('allocates a matching unsmoothed blur buffer only when a blurred overlay is added', () => {
         const sourceCanvas = document.createElement('canvas')
         sourceCanvas.width = 320
         sourceCanvas.height = 180
+        const overlayCanvas = document.createElement('canvas')
         const originalCreateElement = document.createElement.bind(document)
         const createdCanvases = []
         const canvasContexts = new WeakMap()
@@ -181,6 +182,9 @@ describe('CanvasOverlayComposer recording path', () => {
             continuousRendering: false,
         })
 
+        expect(createdCanvases).toHaveLength(1)
+        composer.addOverlay(overlayCanvas, {blur: 2})
+        expect(createdCanvases).toHaveLength(2)
         const outputContext = canvasContexts.get(composer.getCanvas())
         const blurContext = canvasContexts.get(createdCanvases.find(canvas => canvas !== composer.getCanvas()))
         expect(composer.getCanvas().width).toBe(640)

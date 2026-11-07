@@ -46,7 +46,8 @@ import {
     ReplayVideoRenderSession,
 }                              from '@Core/ui/replay/ReplayVideoRenderSession'
 import {
-    buildReplayVideoRenderSpec, normalizeReplayVideoCropRect, replayVideoComposerClipFromCropRect,
+    assertReplayVideoSourceResolution, buildReplayVideoRenderSpec, normalizeReplayVideoCropRect,
+    replayVideoComposerClipFromCropRect,
 }                              from '@Core/ui/replay/ReplayVideoRenderSpec'
 import {
     replayVideoTraceDebug,
@@ -63,6 +64,7 @@ import {
     prepareReplaySceneTilesForCapture,
     resolveReplayTileSpeedLevel,
 }                              from '@Core/ui/replay/ReplaySceneTileReadiness'
+import {qualifyReplayExportFrameReadiness} from '@Core/ui/replay/ReplayExportFrameReadiness'
 import {
     buildReplayFrameState, currentJourneyReplayCameraSettings,
 }                              from '@Core/ui/replay/JourneyReplayRuntime'
@@ -118,6 +120,7 @@ const REPLAY_EXPORT_CODEC_KEEPALIVE_TIMESTAMP_STEP_SECONDS = 0.000001
 const REPLAY_DRY_RUN_BROWSER_YIELD_INTERVAL_MS = 50
 const REPLAY_DRY_RUN_PROGRESS_UPDATE_INTERVAL_MS = 100
 const REPLAY_DRY_RUN_TILE_READINESS_CHECK_TIMEOUT_MS = 250
+const REPLAY_EXPORT_STRICT_READINESS_MAX_RETRIES = 2
 const REPLAY_FRAME_SAMPLE_WORKER_MIN_FRAME_COUNT = 120
 const REPLAY_FRAME_SAMPLE_WORKER_MAX_FRAME_COUNT = 36000
 const REPLAY_FRAME_SAMPLE_WORKER_MAX_ROUTE_SAMPLE_COUNT = 50000
@@ -2648,6 +2651,18 @@ export const runReplayDeferredMp4Export = async ({
                                  fps,
                                  captureMode: plan.captureMode,
                                  })
+    const selectedRenderHostMode = outputRenderSpec?.renderHostMode === 'isolated'
+        ? 'isolated'
+        : (renderHostMode === 'isolated' ? 'isolated' : 'visible')
+    if (selectedRenderHostMode === 'visible' && outputRenderSpec?.resolutionProfile !== 'automatic') {
+        assertReplayVideoSourceResolution({
+            sourceCanvas,
+            cropRect: outputRenderSpec.cropRect,
+            dimensions: outputDimensions,
+        })
+    }
+    const readinessPolicy = outputRenderSpec?.readinessPolicy
+                            ?? (selectedRenderHostMode === 'isolated' ? 'strict' : 'adaptive')
     const sourceViewportDimensions = outputRenderSpec?.sourceCanvasDimensions
                                      ?? {
                                          width:  Number(sourceCanvas?.width) || 0,
@@ -2785,7 +2800,7 @@ export const runReplayDeferredMp4Export = async ({
         }
 
 
-        if (renderHostMode === 'isolated') {
+        if (selectedRenderHostMode === 'isolated') {
             const isolatedHostSupported = typeof replayMode?.setRenderTarget === 'function'
                                           && typeof replayMode?.clearRenderTarget === 'function'
                                           && typeof isolatedRenderHostFactory === 'function'
@@ -2816,10 +2831,20 @@ export const runReplayDeferredMp4Export = async ({
                     viewportDimensions: isolatedViewportDimensions,
                     descriptor,
                     cropProjection,
-                    readiness: normalizeJourneyReplayReadiness(
-                        replay?.readiness
-                        ?? globalThis.lgs?.settings?.ui?.replay?.readiness,
-                    ),
+                    maximumScreenSpaceError: outputRenderSpec?.maximumScreenSpaceError ?? 16,
+                    readiness: {
+                        ...normalizeJourneyReplayReadiness(
+                            replay?.readiness
+                            ?? globalThis.lgs?.settings?.ui?.replay?.readiness,
+                        ),
+                        enabled: readinessPolicy === 'strict'
+                                 || normalizeJourneyReplayReadiness(
+                                     replay?.readiness
+                                     ?? globalThis.lgs?.settings?.ui?.replay?.readiness,
+                                 ).enabled,
+                        policy: readinessPolicy,
+                        requirePostRender: readinessPolicy === 'strict',
+                    },
                 })
                 await isolatedRenderHost.initialize()
                 const isolatedCanvas = isolatedRenderHost.canvas?.()
@@ -2895,10 +2920,13 @@ export const runReplayDeferredMp4Export = async ({
                                 ?? globalThis.lgs?.scene
                                 ?? globalThis.lgs?.viewer?.scene
                                 ?? null
-            const replayReadiness = normalizeJourneyReplayReadiness(
+            const replayReadinessBase = normalizeJourneyReplayReadiness(
                 replay?.readiness
                 ?? globalThis.lgs?.settings?.ui?.replay?.readiness,
             )
+            const replayReadiness = readinessPolicy === 'strict'
+                ? {...replayReadinessBase, enabled: true, policy: 'strict', requirePostRender: true}
+                : replayReadinessBase
             // Capture owns entity updates and scene draws. Pending tile waits
             // pump this same driver without a competing animation-frame loop.
             if (!isDryRun) {
@@ -2915,11 +2943,12 @@ export const runReplayDeferredMp4Export = async ({
                 }
                 : createReplaySceneTileReadinessCoordinator(replayScene, {
                     enabled:                 replayReadiness.enabled,
-                    policy:                  replayReadiness.policy,
+                    policy:                  readinessPolicy,
                     knownFootprintTimeoutMs: replayReadiness.knownFootprintTimeoutMs,
                     movingTimeoutMs:         replayReadiness.movingTimeoutMs,
                     settledTimeoutMs:        replayReadiness.settledTimeoutMs,
                     prewarmEnabled:          replayReadiness.prewarmEnabled,
+                    requirePostRender:       readinessPolicy === 'strict',
                     renderNow:               flushReplayRenderTarget,
                 })
             replaySceneTileReadinessOptions = {
@@ -2977,7 +3006,23 @@ export const runReplayDeferredMp4Export = async ({
         recordingPerformance = isDryRun ? null : createReplayRecordingPerformance()
         recordingPerformance?.configure({
             qualityIndex: outputRenderSpec?.qualityIndex ?? null,
-            renderHostMode,
+            renderHostMode: selectedRenderHostMode,
+            resolutionProfile: outputRenderSpec?.resolutionProfile ?? 'automatic',
+            renderQuality: outputRenderSpec?.renderQuality ?? 'standard',
+            requestedScreenSpaceError: outputRenderSpec?.maximumScreenSpaceError ?? 16,
+            readinessPolicy,
+            requestedResolution: {...outputDimensions},
+            actualCesiumResolution: isolatedCanvasDimensions ?? {
+                width: Number(sourceCanvas?.width) || 0,
+                height: Number(sourceCanvas?.height) || 0,
+            },
+            compositionResolution: {...outputDimensions},
+            selectedCodec: plan.runtime?.outputConfig?.codec ?? null,
+            nominalFps: plan.videoTimeline?.fps ?? fps,
+            additionalWebglContexts: isolatedRenderHost ? 1 : 0,
+            knownWebglContextCount: Number(Boolean(globalThis.lgs?.viewer?.scene?.context))
+                + (isolatedRenderHost ? 1 : 0),
+            totalExportStartedAt: exportStartedAt,
             captureMode,
             cropRect: outputRenderSpec?.cropRect ? {...outputRenderSpec.cropRect} : null,
             visibleOverlayIds: [...(plan.runtime?.context?.visibleOverlayIds ?? [])],
@@ -3001,6 +3046,9 @@ export const runReplayDeferredMp4Export = async ({
             buildCanvas,
             recordingPerformance,
             onPerformance: report => {
+                report.context.tileSourceMetrics = isolatedRenderHost?.readinessMetrics?.()
+                    ?? replaySceneTileReadinessCoordinator?.getMetrics?.()
+                    ?? null
                 plan.runtime.recordingPerformance = ref(report)
             },
             onFileSize: bytes => {
@@ -3107,16 +3155,15 @@ export const runReplayDeferredMp4Export = async ({
                         const maxMillis = isDryRun
                             ? Math.min(tileReadinessTimeoutMs, REPLAY_DRY_RUN_TILE_READINESS_CHECK_TIMEOUT_MS)
                             : tileReadinessTimeoutMs
-                        if (replaySceneTileReadinessCoordinator) {
-                            await replaySceneTileReadinessCoordinator.prepareForCapture({
+                        const settled = isReplayExportFrameSettled({frame, phase})
+                        const prepareReadiness = () => replaySceneTileReadinessCoordinator
+                            ? replaySceneTileReadinessCoordinator.prepareForCapture({
                                 maxMillis,
                                 signal,
                                 speedLevel,
-                                settled: isReplayExportFrameSettled({frame, phase}),
+                                settled,
                             })
-                        }
-                        else {
-                            await prepareReplaySceneTilesForCapture({
+                            : prepareReplaySceneTilesForCapture({
                                 scene: replayMode?.cesiumScene?.()
                                        ?? globalThis.lgs?.scene
                                        ?? globalThis.lgs?.viewer?.scene
@@ -3124,7 +3171,62 @@ export const runReplayDeferredMp4Export = async ({
                                 maxMillis,
                                 signal,
                                 renderNow: flushReplayRenderTarget,
+                                requirePostRender: readinessPolicy === 'strict',
                             })
+                        let readinessOutcomeRecorded = false
+                        try {
+                            if (readinessPolicy === 'strict') {
+                                const readinessResult = await qualifyReplayExportFrameReadiness({
+                                    prepareForCapture: prepareReadiness,
+                                    policy: 'strict',
+                                    maxMillis,
+                                    maxRetries: REPLAY_EXPORT_STRICT_READINESS_MAX_RETRIES,
+                                    signal,
+                                    settled,
+                                    speedLevel,
+                                })
+                                if (readinessResult.timeouts > 0) {
+                                    recordingPerformance?.readinessOutcome('timeout', {
+                                        attempts: readinessResult.timeouts,
+                                    })
+                                    readinessOutcomeRecorded = true
+                                }
+                                if (readinessResult.status !== 'timeout') {
+                                    recordingPerformance?.readinessOutcome(readinessResult.status)
+                                    readinessOutcomeRecorded = true
+                                }
+                                if (readinessResult.status === 'failed' || readinessResult.status === 'cancelled') {
+                                    throw readinessResult.error
+                                }
+                                if (readinessResult.status === 'timeout') {
+                                    const frameLabel = Number.isInteger(Number(frame?.index))
+                                        ? Number(frame.index) + 1
+                                        : 'unknown'
+                                    const timeoutError = new Error(
+                                        `Strict Replay scene readiness timed out after ${readinessResult.attempts} bounded attempts `
+                                        + `at frame ${frameLabel}. Check network access, tile credentials, `
+                                        + 'and the selected Cesium detail level, or use Adaptive readiness.',
+                                    )
+                                    timeoutError.name = 'TimeoutError'
+                                    throw timeoutError
+                                }
+                            }
+                            else {
+                                const ready = await prepareReadiness() === true
+                                recordingPerformance?.readinessOutcome(ready ? 'ready' : 'timeout')
+                                readinessOutcomeRecorded = true
+                            }
+                        }
+                        catch (error) {
+                            if (!readinessOutcomeRecorded) {
+                                if (error?.name === 'AbortError' || signal?.aborted) {
+                                    recordingPerformance?.readinessOutcome('cancelled')
+                                }
+                                else if (error?.name !== 'TimeoutError') {
+                                    recordingPerformance?.readinessOutcome('failed')
+                                }
+                            }
+                            throw error
                         }
                     }
                 }
@@ -3179,7 +3281,7 @@ export const runReplayDeferredMp4Export = async ({
                                 height: composerHeight,
                                 fps: 0,
                                 outputDpr: composerOutputDpr,
-                                flushWebGLBuffer: flushReplayRenderTarget,
+                                flushWebGLBuffer: isolatedRenderHost ? null : flushReplayRenderTarget,
                                 continuousRendering: false,
                                 outputCanvas: canvas,
                                 recordingPerformance,
@@ -3229,10 +3331,10 @@ export const runReplayDeferredMp4Export = async ({
                             buildReplayVideoComposerOverlays({
                                 composer:      replayComposer,
                                 cropRect:      cropRect ?? {left: 0, top: 0, width: canvas.width, height: canvas.height},
-                                coordinateScale: isolatedRenderHost && cropRect && isolatedViewportDimensions
+                                coordinateScale: cropRect && (isolatedViewportDimensions || composerWidth > 0)
                                     ? {
-                                        x: isolatedViewportDimensions.width / Math.max(1, cropRect.width),
-                                        y: isolatedViewportDimensions.height / Math.max(1, cropRect.height),
+                                        x: (isolatedViewportDimensions?.width ?? composerWidth) / Math.max(1, cropRect.width),
+                                        y: (isolatedViewportDimensions?.height ?? composerHeight) / Math.max(1, cropRect.height),
                                     }
                                     : null,
                                 replay,

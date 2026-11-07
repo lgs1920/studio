@@ -518,6 +518,12 @@ ui:
     fps: 1             # 0:30, 1:45, 2:60 => VideoRecorder.FPS
     quality: 1         # 0: medium, 1: high, 2: Ultra high => VideoRecorder.QUALITY
     ratio: null        # 16x9,9x16 ...
+    renderHostMode: visible
+    resolutionProfile: automatic
+    customDimensions:
+      width: 1920
+      height: 1080
+    renderQuality: standard
 
   ## PWA
   pwa:

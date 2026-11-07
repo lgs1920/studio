@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-01
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,6 +36,79 @@ const REPLAY_IMAGERY_DISPLAY_PROPERTIES = [
     'maximumTerrainLevel',
 ]
 
+const REPLAY_GLOBE_ENVIRONMENT_PROPERTIES = [
+    'show', 'depthTestAgainstTerrain', 'enableLighting', 'maximumScreenSpaceError', 'baseColor',
+    'lambertDiffuseMultiplier', 'dynamicAtmosphereLighting', 'dynamicAtmosphereLightingFromSun',
+    'showGroundAtmosphere', 'atmosphereLightIntensity', 'atmosphereRayleighCoefficient',
+    'atmosphereMieCoefficient', 'atmosphereRayleighScaleHeight', 'atmosphereMieScaleHeight',
+    'atmosphereMieAnisotropy', 'lightingFadeOutDistance', 'lightingFadeInDistance',
+    'nightFadeOutDistance', 'nightFadeInDistance', 'showWaterEffect', 'shadows',
+    'atmosphereHueShift', 'atmosphereSaturationShift', 'atmosphereBrightnessShift',
+]
+const REPLAY_FOG_ENVIRONMENT_PROPERTIES = [
+    'enabled', 'renderable', 'density', 'heightScalar', 'maxHeight', 'visualDensityScalar',
+    'screenSpaceErrorFactor', 'minimumBrightness', 'heightFalloff',
+]
+const REPLAY_SKY_ATMOSPHERE_PROPERTIES = [
+    'show', 'perFragmentAtmosphere', 'atmosphereLightIntensity', 'atmosphereRayleighCoefficient',
+    'atmosphereMieCoefficient', 'atmosphereRayleighScaleHeight', 'atmosphereMieScaleHeight',
+    'atmosphereMieAnisotropy', 'hueShift', 'saturationShift', 'brightnessShift',
+]
+
+/** Capture serializable scene appearance values without retaining context-owned scene objects. */
+const captureCesiumProperties = (source, properties) => Object.fromEntries(
+    properties.flatMap(property => {
+        const value = source?.[property]
+        return value === undefined || typeof value === 'function'
+            ? []
+            : [[property, value?.clone?.() ?? value]]
+    }),
+)
+
+const captureReplaySceneEnvironment = scene => {
+    const sourceSkyBox = scene?.skyBox
+    const skyBoxSources = sourceSkyBox?.sources ?? null
+    const skyBoxSourceValues = skyBoxSources && typeof skyBoxSources === 'object'
+        ? Object.values(skyBoxSources)
+        : []
+    const skyBoxSupported = !sourceSkyBox
+        || (skyBoxSources !== null && skyBoxSourceValues.every(value => typeof value === 'string'))
+    const light = scene?.light
+    const lightType = light?.constructor?.name ?? null
+    const lightSupported = lightType === 'SunLight' || lightType === 'DirectionalLight'
+
+    return {
+        supported: {
+            skyBox: skyBoxSupported,
+            light: !light || lightSupported,
+        },
+        shadows: scene?.shadows === true,
+        backgroundColor: scene?.backgroundColor?.clone?.() ?? scene?.backgroundColor ?? null,
+        globe: captureCesiumProperties(scene?.globe, REPLAY_GLOBE_ENVIRONMENT_PROPERTIES),
+        fog: captureCesiumProperties(scene?.fog, REPLAY_FOG_ENVIRONMENT_PROPERTIES),
+        skyAtmosphere: scene?.skyAtmosphere
+            ? captureCesiumProperties(scene.skyAtmosphere, REPLAY_SKY_ATMOSPHERE_PROPERTIES)
+            : {show: false},
+        skyBox: skyBoxSupported && sourceSkyBox
+            ? {sources: {...skyBoxSources}, show: sourceSkyBox.show !== false}
+            : null,
+        light: lightSupported
+            ? {
+                type: lightType,
+                color: light.color?.clone?.() ?? light.color ?? null,
+                intensity: Number.isFinite(Number(light.intensity)) ? Number(light.intensity) : null,
+                direction: light.direction?.clone?.() ?? light.direction ?? null,
+            }
+            : null,
+        verticalExaggeration: Number.isFinite(Number(scene?.verticalExaggeration))
+            ? Number(scene.verticalExaggeration)
+            : 1,
+        verticalExaggerationRelativeHeight: Number.isFinite(Number(scene?.verticalExaggerationRelativeHeight))
+            ? Number(scene.verticalExaggerationRelativeHeight)
+            : 0,
+    }
+}
+
 /**
  * Read every item from a Cesium collection without retaining the collection.
  *
@@ -49,6 +122,49 @@ const replaySceneCollectionValues = collection => {
     }
 
     return Array.from({length}, (_value, index) => collection.get(index))
+}
+
+/**
+ * Identify viewer-owned content that the isolated Replay host cannot clone.
+ *
+ * @param {Object|null} viewer - Active Cesium viewer.
+ * @param {Object|null} base3dDefinition - Configured base tileset definition.
+ * @returns {Array<string>} Human-readable compatibility limitations.
+ */
+const findReplaySceneCompatibilityLimitations = (viewer, base3dDefinition, environment) => {
+    const scene = viewer?.scene
+    const primitives = replaySceneCollectionValues(scene?.primitives)
+    const tilesets = primitives.filter(primitive => primitive?.root && Number.isFinite(Number(primitive.maximumScreenSpaceError)))
+    const configuredTilesets = [
+        globalThis.lgs?.base3dTileset,
+        globalThis.lgs?.theTiles3DLayer,
+    ].filter(tileset => tilesets.includes(tileset))
+    const supportedBaseTileset = base3dDefinition
+        ? configuredTilesets[0] ?? (tilesets.length === 1 ? tilesets[0] : null)
+        : null
+    const unsupportedPrimitiveCount = primitives.filter(primitive => primitive !== supportedBaseTileset).length
+    const dataSources = replaySceneCollectionValues(viewer?.dataSources)
+        .filter(dataSource => !`${dataSource?.name ?? ''}`.startsWith('replay#'))
+    const entityCount = Array.isArray(viewer?.entities?.values) ? viewer.entities.values.length : 0
+    const limitations = []
+
+    if (unsupportedPrimitiveCount > 0) {
+        limitations.push(`${unsupportedPrimitiveCount} additional Cesium scene primitive(s) or tileset(s)`)
+    }
+    if (dataSources.length > 0) {
+        limitations.push(`${dataSources.length} non-Replay Cesium data source(s)`)
+    }
+    if (entityCount > 0) {
+        limitations.push(`${entityCount} viewer-owned Cesium entit${entityCount === 1 ? 'y' : 'ies'}`)
+    }
+    if (!environment.supported.skyBox) {
+        limitations.push('a sky box with non-URL or context-owned image sources')
+    }
+    if (!environment.supported.light) {
+        limitations.push('a custom Cesium light type')
+    }
+
+    return limitations
 }
 
 /**
@@ -92,6 +208,7 @@ export const captureReplaySceneDescriptor = ({
     if (!viewer || !scene) {
         return null
     }
+    const environment = captureReplaySceneEnvironment(scene)
 
     return {
         version: REPLAY_SCENE_DESCRIPTOR_VERSION,
@@ -102,21 +219,8 @@ export const captureReplaySceneDescriptor = ({
             .map(captureReplayImageryLayerDescriptor)
             .filter(Boolean),
         base3dDefinition: base3dDefinition ?? null,
-        environment: {
-            shadows: scene.shadows === true,
-            backgroundColor: scene.backgroundColor?.clone?.() ?? scene.backgroundColor ?? null,
-            globe: {
-                show: scene.globe?.show !== false,
-                depthTestAgainstTerrain: scene.globe?.depthTestAgainstTerrain === true,
-                enableLighting: scene.globe?.enableLighting === true,
-                baseColor: scene.globe?.baseColor?.clone?.() ?? scene.globe?.baseColor ?? null,
-            },
-            fog: {
-                enabled: scene.fog?.enabled !== false,
-                renderable: scene.fog?.renderable !== false,
-                density: scene.fog?.density ?? null,
-            },
-        },
+        compatibilityLimitations: findReplaySceneCompatibilityLimitations(viewer, base3dDefinition, environment),
+        environment,
     }
 }
 

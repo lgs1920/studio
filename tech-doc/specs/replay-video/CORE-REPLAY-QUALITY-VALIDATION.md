@@ -10,10 +10,11 @@ Date: 2026-11-06
 Basic and Expert configure the same Replay mechanism and use the active mode's
 camera settings. Capture paths consume that Replay state; they are not
 user-facing Replay modes. Linked Replay video uses the deterministic deferred
-MP4 exporter. Dry run and product export advance the main Studio Cesium viewer.
-Product export explicitly renders each frame during tile readiness and copies
-the main viewer's canvas into the video composer. Replay correctness is visual and
-temporal. Mock-only validation cannot establish
+MP4 exporter. Dry run advances the main Studio Cesium viewer. Standard / Fast
+product export explicitly renders the main viewer during tile readiness and
+copies its canvas into the video composer. Native HQ advances a separate Cesium
+renderer at the requested physical output resolution. Replay correctness is
+visual and temporal. Mock-only validation cannot establish
 that a generated video contains the trace, follows the camera, waits for the
 right scene, or preserves phase continuity. Apply this matrix proportionally to
 every replay change.
@@ -103,11 +104,11 @@ narrow crop, and at least one high-resolution output profile.
   durations. Check per-frame camera-anchor movement and heading, confirm the
   smoothing-pass offset stays within one quarter of the projected crop width,
   and confirm the trace and marker remain on the unmodified route sample.
-- Each product export frame applies its resolved camera command to the main
-  Cesium viewer before that viewer's canvas is copied into the output frame.
-- While recording, the main scene continues to display the current Replay
-  camera and trace; export cleanup restores the saved return view.
-- The product export uses the active Replay camera command, not a stale
+- In Standard / Fast mode, each product export frame applies its resolved camera
+  command to the main Cesium viewer before that viewer's canvas is composed.
+- While Standard export is recording, the main scene continues to display the
+  current Replay camera and trace; export cleanup restores the saved return view.
+- Both product export modes use the active Replay camera command, not a stale
   preparation pose.
 - Obsolete cleanup cannot move the camera after session replacement.
 
@@ -135,20 +136,35 @@ narrow crop, and at least one high-resolution output profile.
 
 ### Render target and lifecycle
 
-- Product export camera, scene, canvas, and replay trace resolve to the main
-  Studio viewer.
+- Interactive Replay, Dry run, and Standard product export camera, scene,
+  canvas, and replay trace resolve to the main Studio viewer.
 - The main Cesium scene remains in the application during recording and follows
   the same Replay frames used by the encoded video.
-- The canvas copied to each encoded frame is the main Cesium canvas after its
-  synchronous render boundary.
-- Basic and Expert recording suspend the main viewer's default render loop and explicitly
-  updates the viewer before each capture. Dynamic entity positions must reach
+- Standard mode copies the main Cesium canvas after its synchronous render
+  boundary. Native HQ submits a Cesium image rendered into its verified target
+  drawing buffer.
+- Standard recording suspends the main viewer's default render loop and
+  explicitly updates the viewer before each capture. Dynamic entity positions must reach
   that same frame without relying on a browser animation callback. Success,
   cancellation, and encoder failure restore the original loop setting. Pending
   tile waits must advance through bounded explicit renders with browser-task
   yields; cancellation removes pending render timers and event listeners.
-- Product recording does not allocate an isolated host or redirect the main
+- Standard recording does not allocate an isolated host or redirect the main
   Replay renderer.
+- Native HQ creates one isolated renderer per export session and reuses it for
+  every frame. Verify its camera, canvas and Replay trace all resolve to the
+  isolated target while the interactive camera remains byte-for-byte unchanged.
+- A 4K UHD export on a Full HD display must report and render a 3840 × 2160
+  Cesium drawing buffer for a 16:9 crop. Verify portrait and custom crops retain
+  their aspect ratio and that an unsupported drawing-buffer size fails before
+  any lower-resolution pixels are submitted.
+- Strict readiness must await visible terrain, imagery and 3D Tiles plus a
+  completed post-render event. A bounded timeout or tile failure must prevent
+  the current frame from reaching `CanvasSource`; cancellation must dispose the
+  host and context.
+- Verify Native HQ reports an explicit compatibility limitation for extra
+  scene primitives/tilesets, external data sources/entities, or unsupported
+  environment resources instead of omitting them from the export.
 - The recording monitor copies each composed frame before the exporter reuses
   its working canvas; the preview does not flash black between frames.
 - Recording while the browser window is fully covered still advances the main
@@ -211,6 +227,9 @@ The validation result must state what was inspected. “Tests pass” is not a
 substitute for visual evidence.
 
 ## Performance and responsiveness
+
+The matched performance matrix and current execution limits are recorded in
+[Native HQ performance report](CORE-REPLAY-NATIVE-HQ-PERFORMANCE-REPORT.md).
 
 - Each real Record export publishes one `[Replay video] Recording performance:`
   report and a console table after encoding cleanup, including graceful stop,

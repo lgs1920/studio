@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-06-30
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -87,6 +87,10 @@ export const ui = {
         ratio:   null,
         fps:     null,
         captureMode: 'speed',
+        renderHostMode: 'visible',
+        resolutionProfile: 'automatic',
+        customDimensions: {width: 1920, height: 1080},
+        renderQuality: 'standard',
         url:     null,
         editing:         false,
         timelinePreviewActive: false,
