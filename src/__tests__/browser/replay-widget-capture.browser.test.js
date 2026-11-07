@@ -8,18 +8,19 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {afterEach, expect, test, vi} from 'vitest'
-import {Cartesian3, CesiumWidget, Color, EllipsoidTerrainProvider} from 'cesium'
+import {Cartesian3, CesiumWidget, Color, EllipsoidTerrainProvider, SceneMode} from 'cesium'
 import {snapdom} from '@zumer/snapdom'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import {Widget2Canvas} from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 import {CanvasOverlayComposer} from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
+import {IsolatedReplayRenderHost} from '@Core/ui/replay/IsolatedReplayRenderHost'
 import {prepareReplaySceneTilesForCapture} from '@Core/ui/replay/ReplaySceneTileReadiness'
 import {ReplayDeferredExporter} from '@Core/ui/replay/ReplayDeferredExporter'
 
@@ -162,6 +163,100 @@ test('preserves Cesium crop pixels with direct composition', async ({skip}) => {
     direct.addOverlay(mirror.getCanvas(), {x: 8, y: 8, w: 120, h: 50})
     expect(await direct.renderFrame()).toBe(outputCanvas)
     expect(samePixels(readPixels(outputCanvas), referencePixels)).toBe(true)
+}, 60000)
+
+test('composes a high-density widget over the isolated Native HQ Cesium buffer', async () => {
+    vi.stubGlobal('CESIUM_BASE_URL', new URL('/node_modules/cesium/Build/Cesium/', location.href).href)
+    const host = new IsolatedReplayRenderHost({
+        dimensions: {width: 320, height: 180},
+        viewportDimensions: {width: 160, height: 90},
+        descriptor: {
+            sceneMode: SceneMode.SCENE3D,
+            mapProjection: null,
+            terrainProvider: new EllipsoidTerrainProvider(),
+            imageryLayers: [],
+            base3dDefinition: null,
+            compatibilityLimitations: [],
+            environment: {
+                shadows: false,
+                backgroundColor: Color.BLACK,
+                globe: {show: true, baseColor: Color.ROYALBLUE},
+                fog: {enabled: false},
+                skyAtmosphere: {show: false},
+            },
+        },
+        readiness: {enabled: false, policy: 'adaptive'},
+        createReadinessCoordinator: () => ({
+            prepareForCapture: async () => true,
+            dispose: () => {},
+            getMetrics: () => ({}),
+        }),
+    })
+    resources.push(() => host.destroy())
+    await host.initialize()
+
+    const nativeCanvas = host.canvas()
+    const nativeViewer = host.viewer()
+    expect(nativeCanvas).toMatchObject({width: 320, height: 180})
+    nativeViewer.scene.globe.baseColor = Color.ROYALBLUE
+    nativeViewer.camera.setView({destination: Cartesian3.fromDegrees(2, 46, 9000000)})
+    expect(await host.prepareForCapture({maxMillis: 1000})).toBe(true)
+
+    const sourceSnapshot = document.createElement('canvas')
+    sourceSnapshot.width = 320
+    sourceSnapshot.height = 180
+    sourceSnapshot.getContext('2d').drawImage(nativeCanvas, 0, 0)
+    const widget = createWidgetFixture()
+    widget.style.backgroundColor = 'rgb(255, 0, 0)'
+    const mirror = new Widget2Canvas(widget, {
+        refreshMode: 'manual',
+        captureWholeWidget: true,
+        scale: 1,
+        dpr: 1,
+        embedFonts: true,
+    })
+    resources.push(() => mirror.destroy())
+    await mirror.init()
+    const logicalWidgetSize = mirror.getCaptureGeometry()
+    mirror.setFrameDriven(true)
+    expect(mirror.setCapturePixelRatio(2)).toBe(true)
+    expect(await mirror.flush({onlyIfDirty: true})).toBe(true)
+    expect(mirror.getCanvas().width).toBe(Math.ceil(logicalWidgetSize.width * 2))
+
+    const outputCanvas = document.createElement('canvas')
+    document.body.append(outputCanvas)
+    resources.push(() => outputCanvas.remove())
+    const composer = new CanvasOverlayComposer(nativeCanvas, {
+        clip: {x: 0, y: 0, width: 160, height: 90},
+        width: 160,
+        height: 90,
+        outputDpr: 2,
+        continuousRendering: false,
+        outputCanvas,
+    })
+    resources.push(() => composer.dispose())
+    composer.beginUpdate()
+    composer.addOverlay(mirror.getCanvas(), {
+        x: 8,
+        y: 8,
+        w: 120,
+        h: 50,
+        blur: 2,
+        radius: 8,
+        border: 1,
+        shadowMargins: {top: 4, right: 4, bottom: 4, left: 4},
+    })
+    expect(await composer.renderFrame()).toBe(outputCanvas)
+
+    const nativePixels = readPixels(sourceSnapshot)
+    const composedPixels = readPixels(outputCanvas)
+    const pixelAt = (pixels, x, y, width) => pixels.slice(((y * width) + x) * 4, ((y * width) + x + 1) * 4)
+    expect(outputCanvas).toMatchObject({width: 320, height: 180})
+    expect(Array.from(pixelAt(composedPixels, 30, 30, 320))).not.toEqual(Array.from(pixelAt(nativePixels, 30, 30, 320)))
+    expect(Array.from(pixelAt(composedPixels, 310, 170, 320))).toEqual(Array.from(pixelAt(nativePixels, 310, 170, 320)))
+
+    mirror.setFrameDriven(false)
+    expect(await mirror.flush({onlyIfDirty: true})).toBe(true)
 }, 60000)
 
 test('encodes dynamic widget updates and disappearance into a real MP4', async ({skip}) => {

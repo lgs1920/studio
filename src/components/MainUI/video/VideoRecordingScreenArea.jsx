@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-30
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -312,7 +312,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 dimensions:   renderSpec.dimensions,
                 captureMode:  'deferred-master',
                 sourceCanvas: lgs.canvas,
-                renderHostMode: 'visible',
+                renderHostMode: renderSpec.renderHostMode ?? 'visible',
                 signal:       abortController.signal,
                 abortController,
                 mediaMetadata,

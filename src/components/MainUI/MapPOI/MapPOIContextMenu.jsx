@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,6 +19,7 @@ import {
     SCENE_MODE_2D,
 }                        from '@Core/constants'
 import { openPOIEditor } from '@Components/MainUI/MapPOI/openPOIEditor'
+import { addPOIToLibrary } from '@Components/MainUI/MapPOI/addPOIToLibrary'
 import { DEFAULT_PANORAMA_HEIGHT_OFFSET, DEFAULT_PANORAMA_PITCH, getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
 import { UI_ACTIONS } from '@Core/ui/metadata/uiActionCatalog'
 import { ELEVATION_UNITS, UnitUtils }       from '@Utils/UnitUtils'
@@ -99,6 +100,12 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
     /** Opens the POI editor drawer for the current POI. */
     const openEditDrawer = useCallback(async () => {
         await openPOIEditor(thePOI)
+        hideMenu()
+    }, [thePOI, hideMenu])
+
+    /** Save the temporary POI through the shared library conversion operation. */
+    const addPOIToLibraryFromMenu = useCallback(() => {
+        void addPOIToLibrary(thePOI)
         hideMenu()
     }, [thePOI, hideMenu])
 
@@ -224,7 +231,8 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
     const canRemove = currentPoi?.type !== POI_STARTER_TYPE &&
         currentPoi?.type !== POI_FLAG_START &&
         currentPoi?.type !== POI_FLAG_STOP
-    const canEdit = currentPoi?.type !== POI_TMP_TYPE
+    const canSaveAsStandard = Boolean(currentPoi?.id) && currentPoi?.type === POI_TMP_TYPE
+    const canEdit = Boolean(currentPoi?.id)
     const canMove = currentPoi?.type !== POI_TMP_TYPE
         && currentPoi?.latitude != null
         && currentPoi?.longitude != null
@@ -287,6 +295,12 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
                 {canRemove && (
                     <li onClick={removePOI}>
                         <WaIcon {...UI_ACTIONS.remove.icon}/>{UI_ACTIONS.remove.label}
+                    </li>
+                )}
+
+                {canSaveAsStandard && (
+                    <li onClick={addPOIToLibraryFromMenu}>
+                        <WaIcon {...UI_ACTIONS.addPOIToLibrary.icon}/>{UI_ACTIONS.addPOIToLibrary.label}
                     </li>
                 )}
 

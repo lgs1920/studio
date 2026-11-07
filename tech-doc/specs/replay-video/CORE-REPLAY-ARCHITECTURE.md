@@ -447,18 +447,39 @@ empty or stale.
 ### Render targets
 
 `ReplayRenderTarget` associates a replay session with an explicit viewer, scene,
-and canvas without replacing global Studio objects. Interactive playback, Dry
-run, and product MP4 export use the main Studio Cesium viewer. Product export
-applies every resolved Replay camera command to that viewer, synchronously
-renders during tile readiness, and copies the same main canvas into the video
-composer. The main scene therefore continues to display the advancing Replay
-while the recording monitor previews composed output frames.
+and canvas without replacing global Studio objects. Interactive playback and
+Dry run use the main Studio Cesium viewer. Product MP4 export defaults to
+Standard / Fast: it keeps the existing visible canvas, automatic resolution,
+and adaptive readiness behavior. It does not create an isolated WebGL context.
+The main scene continues to display Replay while the monitor previews composed
+output frames.
 
-`IsolatedReplayRenderHost` remains available to explicit off-screen render
-callers. It owns a no-loop `CesiumWidget`, a separate camera, and independent
-Cesium runtime resources. Its scene descriptor reproduces supported terrain,
-imagery, environment settings, and the active base 3D layer. Product recording
-does not allocate this host or redirect the main Replay renderer to it.
+Native HQ is an explicit product export mode. It creates one
+`IsolatedReplayRenderHost` for the export session, with a no-loop `CesiumWidget`,
+an independent camera, and a separate WebGL context. The host uses the requested
+physical output dimensions as its drawing buffer, independent of the display
+resolution, and applies the same canonical Replay frame intents and crop
+frustum. It never changes the interactive camera. The exporter verifies the
+Cesium drawing-buffer dimensions after resize and stops with an error if they do
+not match the requested output.
+
+Output profiles, FPS, encoding quality, Cesium LOD, and readiness are separate
+settings. Automatic resolution retains the existing pixel-budget policy. The
+1080p, 4K UHD, and Custom profiles preserve the crop aspect ratio and do not
+shrink as FPS rises. Portrait profiles use portrait bounds; custom dimensions
+are maximum bounds. Native HQ applies 3D Tiles maximum screen-space error 16,
+4, or 2 for Standard, High, or Maximum Cesium detail. The source dataset can
+still cap available detail. Standard export rejects a fixed output profile
+that would upscale the visible crop and recommends Native HQ.
+
+The isolated descriptor recreates terrain and imagery layers, the configured
+base 3D layer, supported environment and lighting values, and target-owned
+Replay traces and markers. Provider references are reused; imagery layers,
+tilesets, cameras, and WebGL objects are not shared between contexts. Extra
+scene primitives or tilesets, non-Replay data sources, viewer-owned entities,
+unsupported sky-box sources, and unsupported light types produce an explicit
+compatibility error. Widget and overlay composition still uses the existing
+logical Replay time and frame composer.
 
 Camera, trace, clip, visibility, prewarming, readiness, and capture operations
 must resolve the active session render target. They must not access the global
@@ -470,13 +491,16 @@ Transient slider requests apply immediately and coalesce to the latest request.
 A settled request uses `ReplaySceneFrameQualifier`, supports cancellation, and
 waits within bounded readiness budgets.
 
-Export scene readiness belongs to the active render target. Product MP4 export
-qualifies every frame on the main Studio viewer, while Dry run qualifies only
-its bounded phase/final checkpoints. A synchronous scene
-render supplies the post-render boundary during readiness instead of relying on
-the browser's animation-frame loop. Moving replay and clip frames use bounded
-moving-frame readiness; holds and final frames may request settled quality.
-Readiness delays export wall time but never changes logical video time.
+Export scene readiness belongs to the active render target. Standard export
+keeps adaptive bounded waits. Native HQ defaults to strict readiness and can be
+changed to Adaptive explicitly. Strict mode positions the deterministic frame,
+waits for visible terrain, imagery and 3D Tiles, and requires a completed
+`postRender` boundary before submission. A timeout is retried a bounded number
+of times and then stops export; tile failures and cancellation remain distinct
+outcomes. A successful unchanged camera footprint reuses readiness information
+while still requiring a fresh render boundary. Dry run qualifies only its
+bounded phase/final checkpoints. Readiness delays wall time but never changes
+logical video timestamps.
 
 ### Composition and encoding
 

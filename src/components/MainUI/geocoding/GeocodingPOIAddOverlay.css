@@ -1,0 +1,40 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: GeocodingPOIAddOverlay.css
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-11-07
+ * Last modified: 2026-11-07
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+.geocoding-poi-add-overlay-root {
+    position: absolute;
+    z-index: var(--lgs-ui-layer-zindex);
+    inset: 0;
+    pointer-events: none;
+
+    & .geocoding-poi-add-overlay-positioner {
+        position: absolute;
+        transform: translate(-50%, var(--lgs-gutter-xs));
+        pointer-events: none;
+    }
+
+    & .geocoding-poi-add-overlay-surface {
+        max-width: none;
+        padding: 0;
+        pointer-events: auto;
+
+        & wa-button {
+            display: inline-flex;
+            pointer-events: auto;
+            white-space: nowrap;
+        }
+    }
+}

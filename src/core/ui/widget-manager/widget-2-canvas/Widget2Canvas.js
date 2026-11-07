@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-14
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -335,6 +335,9 @@ export class Widget2Canvas {
         return scale * dpr
     }
 
+    /** Return the active physical capture density in pixels per logical CSS pixel. */
+    getCapturePixelRatio = () => this.#getCapturePixelRatio()
+
     /**
      * Select a temporary raster density for deterministic video capture.
      * @param {number|null} pixelRatio - Physical capture pixels per logical CSS pixel, or null to restore the base density.
@@ -354,6 +357,7 @@ export class Widget2Canvas {
         }
 
         this.#recordingPixelRatio = normalizedRatio
+        this.#rasterCache = new WeakMap()
         this.#markAllPartsDirty()
         this.#dirty = true
         this.#revision += 1
@@ -1055,6 +1059,7 @@ export class Widget2Canvas {
             revision: this.#revision,
             canvasConnected: Boolean(this.#canvas?.isConnected),
             canvasSize: this.#canvas ? {width: this.#canvas.width, height: this.#canvas.height} : null,
+            capturePixelRatio: this.#getCapturePixelRatio(),
             refreshError: this.#refreshError,
         }
     }

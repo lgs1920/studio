@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-09
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -447,7 +447,9 @@ describe('Widget2Canvas refresh modes', () => {
         mirror = new Widget2Canvas(target, {scale: 4, dpr: 1, refreshMode: 'manual', captureWholeWidget: true})
         await mirror.init()
         mirror.setFrameDriven(true)
+        expect(mirror.getCapturePixelRatio()).toBe(4)
         expect(mirror.setCapturePixelRatio(2)).toBe(true)
+        expect(mirror.getCapturePixelRatio()).toBe(2)
         await mirror.flush({onlyIfDirty: true})
 
         expect(snapdomMock.mock.calls.at(-1)[1]).toMatchObject({scale: 2, dpr: 1})
@@ -455,11 +457,41 @@ describe('Widget2Canvas refresh modes', () => {
         expect(mirror.getCanvas().height).toBe(100)
 
         mirror.setFrameDriven(false)
+        expect(mirror.getCapturePixelRatio()).toBe(4)
         await mirror.flush({onlyIfDirty: true})
 
         expect(snapdomMock.mock.calls.at(-1)[1]).toMatchObject({scale: 4, dpr: 1})
         expect(mirror.getCanvas().width).toBe(400)
         expect(mirror.getCanvas().height).toBe(200)
+    })
+
+    it('rerasterizes a cached DOM capture when the requested pixel density changes', async () => {
+        target?.remove?.()
+        target = document.createElement('div')
+        Object.defineProperties(target, {
+            offsetWidth:  {configurable: true, value: 100},
+            offsetHeight: {configurable: true, value: 50},
+        })
+        target.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 50})
+        document.body.appendChild(target)
+        const capture = {
+            meta: {w0: 100, h0: 50},
+            toCanvas: vi.fn(() => snapdomToCanvasMock(target, {scale: mirror.getCapturePixelRatio(), dpr: 1})),
+        }
+        snapdomMock
+            .mockImplementationOnce(async () => capture)
+            .mockImplementationOnce(async () => capture)
+
+        mirror = new Widget2Canvas(target, {scale: 1, dpr: 1, refreshMode: 'manual', captureWholeWidget: true})
+        await mirror.init()
+        expect(mirror.getCanvas()).toMatchObject({width: 100, height: 50})
+
+        mirror.setFrameDriven(true)
+        expect(mirror.setCapturePixelRatio(2)).toBe(true)
+        await mirror.flush({onlyIfDirty: true})
+
+        expect(capture.toCanvas).toHaveBeenCalledTimes(2)
+        expect(mirror.getCanvas()).toMatchObject({width: 200, height: 100})
     })
 
     it('keeps overflowing widget content in the visible canvas dimensions', async () => {

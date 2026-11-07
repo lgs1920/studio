@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-14
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -58,6 +58,12 @@ const HISTOGRAM_SCALE = 100
 /** Read the browser's monotonic clock, falling back to wall-clock time. */
 const defaultNow = () => globalThis.performance?.now?.() ?? Date.now()
 
+/** Read the non-standard Chromium heap metric when the browser exposes it. */
+const readUsedHeapBytes = () => {
+    const bytes = Number(globalThis.performance?.memory?.usedJSHeapSize)
+    return Number.isFinite(bytes) && bytes >= 0 ? bytes : null
+}
+
 /** Round diagnostic values without retaining unnecessary decimal precision. */
 const rounded = value => Math.round(value * 1000) / 1000
 
@@ -96,6 +102,20 @@ export const createReplayRecordingPerformance = ({now = defaultNow} = {}) => {
     let encodedPacketCount = 0
     let encodedPacketBytes = 0
     let recordedDurationMillis = 0
+    let totalExportStartedAt = null
+    let qualifiedFrames = 0
+    let readinessTimeouts = 0
+    let readinessFailures = 0
+    let readinessCancelled = 0
+    let peakSampledJsHeapBytes = null
+
+    /** Sample heap usage without retaining frame-level values. */
+    const sampleHeapUsage = () => {
+        const bytes = readUsedHeapBytes()
+        if (bytes !== null) {
+            peakSampledJsHeapBytes = Math.max(peakSampledJsHeapBytes ?? 0, bytes)
+        }
+    }
 
     /** Record one elapsed span, including spans that end in cancellation or error. */
     const record = (key, spanStartedAt) => {
@@ -122,6 +142,7 @@ export const createReplayRecordingPerformance = ({now = defaultNow} = {}) => {
     const start = context => {
         startedAt ??= now()
         metadata = {...metadata, ...context}
+        sampleHeapUsage()
     }
 
     /** Enrich the report with the selected encoder and output characteristics. */
@@ -129,7 +150,31 @@ export const createReplayRecordingPerformance = ({now = defaultNow} = {}) => {
         if (report) {
             return
         }
+        if (Number.isFinite(Number(context?.totalExportStartedAt))) {
+            totalExportStartedAt = Number(context.totalExportStartedAt)
+        }
         metadata = {...metadata, ...context}
+        delete metadata.totalExportStartedAt
+        sampleHeapUsage()
+    }
+
+    /** Count qualified scene frames and distinguish readiness exits. */
+    const readinessOutcome = (status, {attempts = 1} = {}) => {
+        if (report) {
+            return
+        }
+        if (status === 'ready') {
+            qualifiedFrames += 1
+        }
+        else if (status === 'timeout') {
+            readinessTimeouts += Math.max(1, Math.trunc(Number(attempts) || 1))
+        }
+        else if (status === 'failed') {
+            readinessFailures += 1
+        }
+        else if (status === 'cancelled') {
+            readinessCancelled += 1
+        }
     }
 
     /** Count successfully submitted timeline frames separately from keep-alives. */
@@ -143,6 +188,9 @@ export const createReplayRecordingPerformance = ({now = defaultNow} = {}) => {
         else {
             frameCount += 1
             recordedDurationMillis = Math.max(recordedDurationMillis, (timestamp + duration) * 1000)
+            if (frameCount % 30 === 0) {
+                sampleHeapUsage()
+            }
         }
     }
 
@@ -160,6 +208,7 @@ export const createReplayRecordingPerformance = ({now = defaultNow} = {}) => {
         if (report) {
             return report
         }
+        sampleHeapUsage()
         const wallMillis = Math.max(0, now() - (startedAt ?? now()))
         const pauseMillis = stages.get('pauseWait')?.totalMillis ?? 0
         const activeMillis = Math.max(0, wallMillis - pauseMillis)
@@ -170,12 +219,27 @@ export const createReplayRecordingPerformance = ({now = defaultNow} = {}) => {
             status,
             context: metadata,
             frameCount,
+            qualifiedFrames,
+            readinessTimeouts,
+            readinessFailures,
+            readinessCancelled,
             keepAliveFrameCount,
             encodedPacketCount,
             encodedPacketBytes,
             recordedDurationMillis: rounded(recordedDurationMillis),
             outputBytes,
             wallMillis: rounded(wallMillis),
+            totalExportWallMillis: rounded(totalExportStartedAt === null
+                ? wallMillis
+                : Math.max(0, now() - totalExportStartedAt)),
+            resourceMetrics: {
+                peakSampledJsHeapBytes,
+                jsHeapMetricAvailable: peakSampledJsHeapBytes !== null,
+                gpuMemoryBytes: null,
+                gpuUtilization: null,
+                knownWebglContextCount: metadata.knownWebglContextCount ?? null,
+                webglContextInventoryComplete: false,
+            },
             pauseMillis: rounded(pauseMillis),
             activeMillis: rounded(activeMillis),
             frameProductionFps: activeFrameLoopMillis > 0 ? rounded(frameCount * 1000 / activeFrameLoopMillis) : null,
@@ -210,5 +274,5 @@ export const createReplayRecordingPerformance = ({now = defaultNow} = {}) => {
         return report
     }
 
-    return {now, start, configure, record, frameSubmitted, packetEncoded, finish}
+    return {now, start, configure, record, readinessOutcome, frameSubmitted, packetEncoded, finish}
 }

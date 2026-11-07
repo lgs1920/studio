@@ -51,6 +51,15 @@ bun install
 bun run dev
 ```
 
+`bun install` also provides the pinned Chrome DevTools CLI for browser validation. In WSL, run the
+[WebGL preflight](skills/lgs-1920-studio-browser-webgl/SKILL.md) before browser interaction:
+
+```bash
+bun skills/lgs-1920-studio-browser-webgl/scripts/browser.mjs ensure
+```
+
+The wrapper finds the project CLI automatically, even when `chrome-devtools` is absent from the shell's `PATH`.
+
 Install the repository's Git hooks once after cloning:
 
 ```bash

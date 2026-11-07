@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-17
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -73,6 +73,7 @@ describe('ReplaySceneTileReadiness', () => {
             const pending = prepareReplaySceneTilesForCapture({scene, maxMillis: 200, renderNow})
             await vi.advanceTimersByTimeAsync(31)
             expect(renderNow).not.toHaveBeenCalled()
+            await vi.advanceTimersByTimeAsync(1)
             await vi.advanceTimersByTimeAsync(1)
             await expect(pending).resolves.toBe(true)
             expect(renderNow).toHaveBeenCalledTimes(2)
@@ -424,6 +425,134 @@ describe('ReplaySceneTileReadiness', () => {
         scene.globe.tilesLoaded = false
         tileLoadProgressEvent.emit(2)
         await expect(coordinator.prepareForCapture({maxMillis: 10})).resolves.toBe(false)
+        coordinator.dispose()
+    })
+
+    it('does not qualify a strict frame until a post-render boundary is observed', async () => {
+        vi.useFakeTimers()
+        const scene = {
+            globe: {tilesLoaded: true},
+            primitives: createCollection([]),
+            postRender: createEvent(),
+            requestRender: vi.fn(),
+        }
+        const coordinator = createReplaySceneTileReadinessCoordinator(scene, {
+            policy: 'strict',
+            requirePostRender: true,
+            knownFootprintRenderTimeoutMs: 10,
+            newFootprintReadinessTimeoutMs: 10,
+        })
+        try {
+            const readiness = coordinator.prepareForCapture({maxMillis: 10})
+            await vi.advanceTimersByTimeAsync(10)
+            await expect(readiness).resolves.toBe(false)
+            expect(scene.requestRender).toHaveBeenCalledOnce()
+        }
+        finally {
+            coordinator.dispose()
+            vi.useRealTimers()
+        }
+    })
+
+    it.each(['3D tiles', 'terrain tiles', '2D imagery tiles'])(
+        'rejects a strict frame when %s fail after postRender is raised',
+        async failureSource => {
+            vi.useFakeTimers()
+            const postRender = createEvent()
+            const tileFailed = createEvent()
+            const terrainFailureEvent = createEvent()
+            const imageryFailureEvent = createEvent()
+            const failureEvent = failureSource === '3D tiles'
+                ? tileFailed
+                : (failureSource === 'terrain tiles' ? terrainFailureEvent : imageryFailureEvent)
+            const tileset = {
+                show: true,
+                tilesLoaded: true,
+                tileFailed,
+            }
+            const terrainProvider = {errorEvent: terrainFailureEvent}
+            const imageryLayer = {
+                show: true,
+                errorEvent: createEvent(),
+                readyEvent: createEvent(),
+                imageryProvider: {errorEvent: imageryFailureEvent},
+            }
+            const scene = {
+                globe: {
+                    tilesLoaded: true,
+                    imageryLayers: createCollection([imageryLayer]),
+                    terrainProvider,
+                },
+                primitives: createCollection([tileset]),
+                postRender,
+                requestRender: vi.fn(),
+            }
+            try {
+                await expect(waitForReplaySceneTilesReady({
+                    scene,
+                    maxMillis: 100,
+                    requirePostRender: true,
+                    renderNow: () => {
+                        const removeLateFailure = postRender.addEventListener(() => {
+                            void Promise.resolve().then(() => failureEvent.emit({message: 'late tile failure'}))
+                        })
+                        postRender.emit(scene)
+                        removeLateFailure()
+                    },
+                })).rejects.toThrow(failureSource)
+                expect(postRender.listenerCount()).toBe(0)
+                expect(tileFailed.listenerCount()).toBe(0)
+                expect(terrainFailureEvent.listenerCount()).toBe(0)
+                expect(imageryFailureEvent.listenerCount()).toBe(0)
+                expect(imageryLayer.errorEvent.listenerCount()).toBe(0)
+                expect(imageryLayer.readyEvent.listenerCount()).toBe(0)
+                expect(vi.getTimerCount()).toBe(0)
+            }
+            finally {
+                vi.useRealTimers()
+            }
+        },
+    )
+
+    it('reports observable tile events and leaves request/cache-miss counts unavailable', () => {
+        const tileLoadProgressEvent = createEvent()
+        const loadProgress = createEvent()
+        const tileLoad = createEvent()
+        const tileUnload = createEvent()
+        const tileFailed = createEvent()
+        const tileset = {
+            show: true,
+            tilesLoaded: true,
+            loadProgress,
+            tileLoad,
+            tileUnload,
+            tileFailed,
+        }
+        const scene = {
+            globe: {tilesLoaded: true, tileLoadProgressEvent},
+            primitives: createCollection([tileset]),
+        }
+        const coordinator = createReplaySceneTileReadinessCoordinator(scene)
+
+        tileLoadProgressEvent.emit(4)
+        loadProgress.emit(7, 3)
+        tileLoad.emit()
+        tileUnload.emit()
+        tileFailed.emit()
+
+        expect(coordinator.getMetrics()).toMatchObject({
+            tilesetLoadEvents: 1,
+            tilesetUnloadEvents: 1,
+            tilesetFailureEvents: 1,
+            tilesetLoadProgressEvents: 1,
+            peakTilesetPendingRequests: 7,
+            peakTilesetProcessingCount: 3,
+            terrainQueueEvents: 1,
+            peakTerrainPendingRequests: 4,
+            visibleTilesetCount: 1,
+            requestCountAvailable: false,
+            cacheMissCountAvailable: false,
+        })
         coordinator.dispose()
     })
 })

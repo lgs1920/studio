@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-18
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -96,8 +96,6 @@ export class CanvasOverlayComposer {
         this.#ownsOutputCanvas = !(outputCanvas instanceof HTMLCanvasElement)
         this.#outputCanvas = this.#ownsOutputCanvas ? document.createElement('canvas') : outputCanvas
         this.#ctx = this.#outputCanvas.getContext('2d', {alpha: false, desynchronized: true})
-        this.#blurCanvas = document.createElement('canvas')
-        this.#blurCtx = this.#blurCanvas.getContext('2d', {alpha: false, desynchronized: true})
 
         this.#updateSourceDpr()
         this.#computeSourceRect()
@@ -106,7 +104,6 @@ export class CanvasOverlayComposer {
         this.#ctx.fillStyle = '#000000'
         this.#ctx.imageSmoothingEnabled = true
         this.#ctx.imageSmoothingQuality = 'high'
-        this.#blurCtx.imageSmoothingEnabled = false
         this.#running = true
         this.#loop()
     }
@@ -131,7 +128,7 @@ export class CanvasOverlayComposer {
         }
     }
 
-    /** Resize both backing stores and restore the logical output transform. */
+    /** Resize owned backing stores and restore the output transform. */
     #resizeOutputCanvas = () => {
         const physicalW = Math.round(this.#outW * this.#dpr)
         const physicalH = Math.round(this.#outH * this.#dpr)
@@ -141,10 +138,26 @@ export class CanvasOverlayComposer {
         this.#outputCanvas.style.width = `${this.#outW}px`
         this.#outputCanvas.style.height = `${this.#outH}px`
 
-        this.#blurCanvas.width = physicalW
-        this.#blurCanvas.height = physicalH
-
         this.#ctx.setTransform(this.#dpr, 0, 0, this.#dpr, 0, 0)
+        if (this.#blurCanvas) {
+            this.#blurCanvas.width = physicalW
+            this.#blurCanvas.height = physicalH
+            this.#blurCtx.imageSmoothingEnabled = false
+            this.#blurCtx.setTransform(1, 0, 0, 1, 0, 0)
+        }
+    }
+
+    /** Allocate the full-frame backdrop surface only when a blurred overlay needs it. */
+    #ensureBlurCanvas = () => {
+        if (this.#blurCanvas) {
+            return
+        }
+
+        this.#blurCanvas = document.createElement('canvas')
+        this.#blurCanvas.width = this.#outputCanvas.width
+        this.#blurCanvas.height = this.#outputCanvas.height
+        this.#blurCtx = this.#blurCanvas.getContext('2d', {alpha: false, desynchronized: true})
+        this.#blurCtx.imageSmoothingEnabled = false
         this.#blurCtx.setTransform(1, 0, 0, 1, 0, 0)
     }
 
@@ -327,6 +340,9 @@ export class CanvasOverlayComposer {
         overlay.contentWidth = logicalContentW
         overlay.contentHeight = logicalContentH
         overlay.blur = blur
+        if (blur > 0) {
+            this.#ensureBlurCanvas()
+        }
         overlay.blurPx = blur > 0 ? (blur * this.#dpr * cssScale) : 0
         overlay.radius = radius
         overlay.rad = (rotate * Math.PI) / 180

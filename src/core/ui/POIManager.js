@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-13
- * Last modified: 2026-11-04
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -366,6 +366,7 @@ export class POIManager {
     #journeyReferencePointCache = new Map()
     #journeySegmentCache = new Map()
     #locationUpdatePromises = new Map()
+    #promotionPromises = new Map()
 
     constructor() {
         if (POIManager.instance) {
@@ -457,20 +458,86 @@ export class POIManager {
     }
 
     /**
-     * Promote a temporary POI to the standard library type and persist it immediately.
+     * Persist one temporary POI as a standard POI while retaining its map identity.
      * @param {string|Object} poiOrId - POI identifier or POI object.
-     * @returns {Promise<Object|null>} The updated POI, or null when it no longer exists.
+     * @returns {Promise<{status: string, poi?: Object, nearbyPOI?: Object}>} Conversion result.
      */
-    promoteToStandardPOI = async (poiOrId) => {
+    addTemporaryPOIToLibrary = async (poiOrId) => {
         const poiId = typeof poiOrId === 'string' ? poiOrId : poiOrId?.id
         if (!poiId) {
-            return null
+            return {status: 'missing'}
         }
 
-        return this.updatePOI(poiId, {
-            category: POI_STANDARD_TYPE,
-            type:     POI_STANDARD_TYPE,
-        }, {immediate: true})
+        const pendingPromotion = this.#promotionPromises.get(poiId)
+        if (pendingPromotion) {
+            return pendingPromotion
+        }
+
+        const poi = this.list.get(poiId)
+        if (!poi) {
+            return {status: 'missing'}
+        }
+        if (poi.type === POI_STANDARD_TYPE) {
+            return {status: 'already-added', poi}
+        }
+        if (poi.type !== POI_TMP_TYPE) {
+            return {status: 'not-temporary', poi}
+        }
+
+        const nearbyPOI = this.findNearestPersistedPOIWithinDistance(poi, this.threshold, poiId)
+        if (nearbyPOI) {
+            return {status: 'duplicate', poi, nearbyPOI}
+        }
+
+        const promotion = (async () => {
+            const pendingWrite = this.#pendingWrites.get(poiId)
+            if (pendingWrite) {
+                clearTimeout(pendingWrite)
+                this.#pendingWrites.delete(poiId)
+            }
+
+            const standardPOI = {
+                ...poi,
+                category: poi.category || POI_STANDARD_TYPE,
+                newBadgeExpiresAt: Number.isFinite(poi.newBadgeExpiresAt)
+                    ? poi.newBadgeExpiresAt
+                    : Date.now() + POI_NEW_BADGE_DURATION,
+                type:     POI_STANDARD_TYPE,
+            }
+
+            // Persist a standard snapshot first so reactive UI only reports success after the write completes.
+            await this.persistToDatabase(standardPOI)
+            Object.assign(poi, {
+                category: standardPOI.category,
+                newBadgeExpiresAt: standardPOI.newBadgeExpiresAt,
+                type:     standardPOI.type,
+            })
+            this.list.set(poiId, poi)
+
+            return {status: 'added', poi}
+        })()
+
+        this.#promotionPromises.set(poiId, promotion)
+        try {
+            return await promotion
+        }
+        finally {
+            if (this.#promotionPromises.get(poiId) === promotion) {
+                this.#promotionPromises.delete(poiId)
+            }
+        }
+    }
+
+    /**
+     * Promote a temporary POI to the standard library type and persist it immediately.
+     * @param {string|Object} poiOrId - POI identifier or POI object.
+     * @returns {Promise<Object|null>} The saved POI, or null when conversion was rejected.
+     */
+    promoteToStandardPOI = async (poiOrId) => {
+        const result = await this.addTemporaryPOIToLibrary(poiOrId)
+        return result.status === 'added' || result.status === 'already-added'
+            ? result.poi
+            : null
     }
 
     isInitialized() {
@@ -534,7 +601,7 @@ export class POIManager {
             void this.ensurePOILocation(poi.id, {force: shouldForceLocationUpdate})
         }
 
-        if (!skipPersist) {
+        if (!skipPersist && poi.type !== POI_TMP_TYPE) {
             if (immediate || markedAsEdited) {
                 await this.persistToDatabase(poi)
             }
@@ -1114,6 +1181,32 @@ export class POIManager {
         let nearestDistance = Number.POSITIVE_INFINITY
 
         for (const poi of list.values()) {
+            const distance = this.haversineDistance(newPoi, poi)
+            if (Number.isFinite(distance) && distance <= threshold && distance < nearestDistance) {
+                nearestPOI = poi
+                nearestDistance = distance
+            }
+        }
+
+        return nearestPOI
+    }
+
+    /**
+     * Find the nearest persisted POI while excluding the candidate and unsaved markers.
+     * @param {Object} newPoi - POI coordinates to compare against saved POIs.
+     * @param {number} threshold - Maximum distance in metres.
+     * @param {string} excludedPOIId - POI identifier to omit from the comparison.
+     * @returns {Object|null} The nearest matching saved POI, or null when none is close enough.
+     */
+    findNearestPersistedPOIWithinDistance = (newPoi, threshold = this.threshold, excludedPOIId = null) => {
+        let nearestPOI = null
+        let nearestDistance = Number.POSITIVE_INFINITY
+
+        for (const poi of this.list.values()) {
+            if (!poi?.type || poi.type === POI_TMP_TYPE || poi.id === excludedPOIId) {
+                continue
+            }
+
             const distance = this.haversineDistance(newPoi, poi)
             if (Number.isFinite(distance) && distance <= threshold && distance < nearestDistance) {
                 nearestPOI = poi

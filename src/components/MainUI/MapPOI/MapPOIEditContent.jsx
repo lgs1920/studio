@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-25
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { MapPOICategorySelector } from '@Components/MainUI/MapPOI/MapPOICategorySelector'
 import { MapPOIDisplaySettings }  from '@Components/MainUI/MapPOI/MapPOIDisplaySettings'
 import { MapPOIEditPreview }      from '@Components/MainUI/MapPOI/MapPOIEditPreview'
+import { TemporaryPOIWarning } from '@Components/MainUI/MapPOI/TemporaryPOIWarning'
 import { usePOIPresentationClipboard } from '@Components/MainUI/MapPOI/poiPresentationClipboard'
 import {
     getPOIEditorPanelName, getPOIEditorTabFromPanelName, poiEditorTabSessionStore, setPOIEditorActiveTab,
@@ -803,6 +804,7 @@ export const MapPOIEditContent = memo(({poi}) => {
                                                               <div className="map-poi-edit-tab-scroll-area">
                                                                   <LGSScrollbars>
                                                                       <div className="edit-map-poi-wrapper map-poi-edit-tab-scroll-content">
+                                                                      <TemporaryPOIWarning poiId={id}/>
                                                                       <MapPOICategorySelector point={point} disabled={!visible}/>
                                                                       <WaInput appearance="filled"
                                                                           size="s"

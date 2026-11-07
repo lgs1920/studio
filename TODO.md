@@ -5,8 +5,9 @@
 
 ### Replay
 
-K'arrêt ne se fait pas si le poi complet (expanded ) apparit horz sone
+Validate 4K, 60 FPS, and related export configurations.
 
-### Snapdom
 
-Tester les modifs sur la branche
+#### Widgets
+
+Dans Basic Replay, les coordonnées et la taille des widgets Compass et Profile ne semblent pas être sauvegardées ou sont écrasées.

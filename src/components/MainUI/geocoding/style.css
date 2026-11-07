@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-21
- * Last modified: 2026-10-02
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -100,6 +100,8 @@
 
 #geocoder-search-location {
     flex-grow: 1;
+    /* Keep Web Awesome's autofill treatment neutral in both light and dark themes. */
+    --wa-color-brand-fill-quiet: var(--wa-color-neutral-fill-quiet);
 }
 
 #geocoder-search-location-submit {

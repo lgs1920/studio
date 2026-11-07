@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-26
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -119,10 +119,14 @@ export class IonLayerUtils {
         return IonImageryProvider.fromAssetId(id, {accessToken: token})
     }
 
-    static async createTileset(layer, {accessToken = getActiveToken()} = {}) {
+    static async createTileset(layer, {accessToken = getActiveToken(), maximumScreenSpaceError = null} = {}) {
         const kind = `${layer?.sceneKind ?? layer?.base3d?.kind ?? layer?.tiles3d?.kind ?? ''}`.toLowerCase()
         const assetId = Number(layer?.ionAssetId ?? layer?.assetId)
         const tilesetUrl = layer?.tiles3d?.url ?? layer?.url ?? layer?.tiles3d?.tilesetUrl ?? layer?.tilesetUrl
+        const configuredScreenSpaceError = Number(maximumScreenSpaceError)
+        const resolvedScreenSpaceError = Number.isFinite(configuredScreenSpaceError) && configuredScreenSpaceError > 0
+            ? configuredScreenSpaceError
+            : layer?.tiles3d?.maximumScreenSpaceError ?? layer?.maximumScreenSpaceError ?? 16
 
         if (kind === 'google-photorealistic'
             || kind === 'google-photorealistic-3d'
@@ -136,6 +140,7 @@ export class IonLayerUtils {
                     {onlyUsingWithGoogleGeocoder: true},
                     {
                         show: layer?.show ?? true,
+                        maximumScreenSpaceError: resolvedScreenSpaceError,
                     },
                 )
             }
@@ -150,7 +155,7 @@ export class IonLayerUtils {
             }
 
             return Cesium3DTileset.fromUrl(tilesetUrl, {
-                maximumScreenSpaceError: layer?.tiles3d?.maximumScreenSpaceError ?? layer?.maximumScreenSpaceError ?? 16,
+                maximumScreenSpaceError: resolvedScreenSpaceError,
                 show: layer?.show ?? true,
             })
         }
@@ -161,7 +166,7 @@ export class IonLayerUtils {
 
         const resource = await IonLayerUtils.ionResourceFromAssetId(assetId, accessToken)
         return Cesium3DTileset.fromUrl(resource, {
-            maximumScreenSpaceError: layer?.tiles3d?.maximumScreenSpaceError ?? layer?.maximumScreenSpaceError ?? 16,
+            maximumScreenSpaceError: resolvedScreenSpaceError,
             show: layer?.show ?? true,
         })
     }

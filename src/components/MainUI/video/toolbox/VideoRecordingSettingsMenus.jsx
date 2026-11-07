@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-12
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {CropRatioEditorToolbar} from '@Components/ToolsUI/cropper/widgets/CropRatioEditorToolbar'
+import {VideoExportRenderOptions} from './VideoExportRenderOptions'
 import {VideoPresetToolbar} from './VideoPresetToolbar'
 import {memo} from 'react'
 
@@ -54,12 +55,17 @@ export const VideoRecordingSettingsMenuContent = memo(({
                                        mainTheme={mainTheme}/>
     }
 
-    return <VideoPresetToolbar embedded
-                               inlineCustom={inlineCustom}
-                               compactBasic={compactBasic}
-                               basicDrawer={basicDrawer}
-                               idPrefix={inlineCustom ? 'timeline-video-preset' : 'video-preset'}
-                               mainTheme={mainTheme}/>
+    return (
+        <div className={`video-recording-settings-menu__preset ${mainTheme ? 'wa-theme-lgs1920' : 'wa-theme-lgs1920-on-map'}`}>
+            <VideoPresetToolbar embedded
+                                inlineCustom={inlineCustom}
+                                compactBasic={compactBasic}
+                                basicDrawer={basicDrawer}
+                                idPrefix={inlineCustom ? 'timeline-video-preset' : 'video-preset'}
+                                mainTheme={mainTheme}/>
+            {!basicDrawer && <VideoExportRenderOptions/>}
+        </div>
+    )
 })
 
 VideoRecordingSettingsMenuContent.displayName = 'VideoRecordingSettingsMenuContent'

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -70,6 +70,7 @@ import { createPortal } from 'react-dom'
 import { useSnapshot } from 'valtio'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import { VideoRecordingSettingsMenuContent } from './VideoRecordingSettingsMenus'
+import {VideoExportRenderOptions} from './VideoExportRenderOptions'
 import {BasicReplaySamplingSettings} from './BasicReplaySamplingSettings'
 import {BasicReplayAppearanceSettings} from './BasicReplayAppearanceSettings'
 import {BasicReplayPOISettings} from './BasicReplayPOISettings'
@@ -158,6 +159,7 @@ export const VideoRecordingSettingsToolbar = memo(({
     const video = useSnapshot($video)
     const [openPopup, setOpenPopup] = useState(null)
     const [popupDirections, setPopupDirections] = useState({ratio: 'bottom', preset: 'bottom'})
+    const [activeBasicSettingsTab, setActiveBasicSettingsTab] = useState('basic-replay-pois')
     const replaySettingsTriggerId = `replay-settings-trigger-${useId().replaceAll(':', '')}`
     const samplingIconTooltipId = `${replaySettingsTriggerId}-sampling`
     const _cropSyncPromise = useRef(null)
@@ -521,23 +523,20 @@ export const VideoRecordingSettingsToolbar = memo(({
         <div className="basic-replay-settings-scroll-content">
             <WaDivider className="basic-replay-settings-divider"/>
             <div className="basic-replay-settings-core">
-                <BasicReplaySettingsRow label="Ratio" icon="crop-simple">
-                    <VideoRecordingSettingsMenuContent menu="ratio"
-                                                       context={$cropper}
-                                                       cropzoneId={VIDEO_CROP_ZONE}
-                                                       unifiedChoices
-                                                       mainTheme/>
-                </BasicReplaySettingsRow>
                 {!dryRunEnabled && (
-                    <BasicReplaySettingsRow label="Quality" icon="ranking-star">
-                        <VideoRecordingSettingsMenuContent menu="preset"
-                                                           context={$cropper}
-                                                           cropzoneId={VIDEO_CROP_ZONE}
-                                                           compactBasic
-                                                           basicDrawer
-                                                           mainTheme/>
-                    </BasicReplaySettingsRow>
+                    <div className="basic-replay-settings-quality">
+                        <BasicReplaySettingsRow label="Quality" icon="ranking-star">
+                            <VideoRecordingSettingsMenuContent menu="preset"
+                                                               context={$cropper}
+                                                               cropzoneId={VIDEO_CROP_ZONE}
+                                                               compactBasic
+                                                               basicDrawer
+                                                               mainTheme/>
+                        </BasicReplaySettingsRow>
+                        <VideoExportRenderOptions basicReplay basicReplayGroup="quality"/>
+                    </div>
                 )}
+                <WaDivider className="basic-replay-settings-divider"/>
                 <BasicReplaySettingsRow label="Duration" icon="clock">
                     <div className="basic-replay-duration-buttons">
                         {BASIC_REPLAY_DURATIONS.map(duration => (
@@ -553,12 +552,28 @@ export const VideoRecordingSettingsToolbar = memo(({
                         ))}
                     </div>
                 </BasicReplaySettingsRow>
+                {!dryRunEnabled && <VideoExportRenderOptions basicReplay basicReplayGroup="duration"/>}
+                <section className="basic-replay-settings-video" aria-label="Video settings">
+                    <WaDivider className="basic-replay-settings-divider"/>
+                    <BasicReplaySettingsRow label="Ratio" icon="crop-simple">
+                        <VideoRecordingSettingsMenuContent menu="ratio"
+                                                           context={$cropper}
+                                                           cropzoneId={VIDEO_CROP_ZONE}
+                                                           unifiedChoices
+                                                           mainTheme/>
+                    </BasicReplaySettingsRow>
+                    {!dryRunEnabled && <VideoExportRenderOptions basicReplay basicReplayGroup="video"/>}
+                </section>
             </div>
             {basicPreparation && <WaDivider className="basic-replay-settings-divider"/>}
             {basicPreparation && <BasicReplayAppearanceSettings/>}
             {basicPreparation && <WaDivider className="basic-replay-settings-divider"/>}
             {basicPreparation && (
-                <WaTabGroup className="basic-replay-settings-tabs" active="basic-replay-pois">
+                <WaTabGroup
+                    className="basic-replay-settings-tabs"
+                    active={activeBasicSettingsTab}
+                    onWaTabShow={event => setActiveBasicSettingsTab(event.detail?.name ?? 'basic-replay-pois')}
+                >
                     <WaTab slot="nav" panel="basic-replay-pois">{UI_LABELS.pois}</WaTab>
                     <WaTab slot="nav" panel="basic-replay-widgets">{UI_LABELS.widgets}</WaTab>
                     <WaTab slot="nav" panel="basic-replay-stop-clip">{UI_LABELS.clips}</WaTab>

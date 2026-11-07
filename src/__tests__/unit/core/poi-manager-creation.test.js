@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-28
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {CURRENT_POI, POI_STANDARD_TYPE, POI_TMP_TYPE} from '@Core/constants'
+import {CURRENT_POI, POI_STANDARD_TYPE, POI_TMP_TYPE, POIS_STORE} from '@Core/constants'
 import {MapPOI} from '@Core/MapPOI'
 import {POIManager} from '@Core/ui/POIManager'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
@@ -42,6 +42,11 @@ beforeEach(() => {
                 association: {maxDistance: 1000},
             },
         },
+        db: {
+            lgs1920: {
+                put: vi.fn(async () => undefined),
+            },
+        },
         stores: {
             main: {
                 components: {
@@ -51,6 +56,9 @@ beforeEach(() => {
         },
     })
     vi.stubGlobal('__', {
+    app: {
+        deepClone: value => value,
+    },
         ui: {
             sceneManager: {
                 getHeightFromTerrain: vi.fn(async () => 128),
@@ -61,6 +69,7 @@ beforeEach(() => {
 
 afterEach(() => {
     POIManager.instance?.destroy()
+    vi.useRealTimers()
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
 })
@@ -138,7 +147,7 @@ describe('POIManager interactive creation defaults', () => {
 
     it('persists a later Border color through the standard POI update path', async () => {
         const manager = new POIManager()
-        const poi = manager.createPOI({id: 'border-color-poi'})
+        const poi = manager.createPOI({id: 'border-color-poi', type: POI_STANDARD_TYPE})
         manager.list.set(poi.id, poi)
         manager.persistToDatabase = vi.fn(async () => {})
 
@@ -189,6 +198,147 @@ describe('POIManager interactive creation defaults', () => {
             type:     POI_STANDARD_TYPE,
         })
 
-        expect(manager.persistToDatabase).toHaveBeenCalledWith(poi)
+        expect(manager.persistToDatabase).toHaveBeenCalledWith(expect.objectContaining({
+            id:       poi.id,
+            category: POI_STANDARD_TYPE,
+            type:     POI_STANDARD_TYPE,
+        }))
+    })
+
+    it('persists the same POI identity and geographic metadata before publishing its saved type', async () => {
+        const manager = new POIManager()
+        const poi = manager.createPOI({
+            id: 'temporary-with-metadata',
+            latitude: 48.8566,
+            longitude: 2.3522,
+            simulatedHeight: 42,
+            title: 'Paris',
+            description: 'Paris - France',
+            location: 'Paris',
+            country: 'France',
+            countryCode: 'FR',
+        })
+        manager.list.set(poi.id, poi)
+
+        const result = await manager.addTemporaryPOIToLibrary(poi.id)
+
+        expect(result).toEqual({status: 'added', poi})
+        expect(result.poi).toBe(manager.list.get(poi.id))
+        expect(poi).toMatchObject({
+            id: 'temporary-with-metadata',
+            latitude: 48.8566,
+            longitude: 2.3522,
+            simulatedHeight: 42,
+            title: 'Paris',
+            description: 'Paris - France',
+            location: 'Paris',
+            country: 'France',
+            countryCode: 'FR',
+            category: POI_STANDARD_TYPE,
+            type: POI_STANDARD_TYPE,
+        })
+        expect(lgs.db.lgs1920.put).toHaveBeenCalledOnce()
+        expect(lgs.db.lgs1920.put).toHaveBeenCalledWith(
+            poi.id,
+            expect.objectContaining({id: poi.id, type: POI_STANDARD_TYPE, title: 'Paris'}),
+            POIS_STORE,
+        )
+    })
+
+    it('does not treat another unsaved temporary marker as a duplicate', async () => {
+        const manager = new POIManager()
+        const first = manager.createPOI({id: 'temporary-first', latitude: 48.8566, longitude: 2.3522})
+        const second = manager.createPOI({id: 'temporary-second', latitude: 48.8566, longitude: 2.3522})
+        manager.list.set(first.id, first)
+        manager.list.set(second.id, second)
+
+        await expect(manager.addTemporaryPOIToLibrary(second.id)).resolves.toMatchObject({status: 'added'})
+        expect(second.type).toBe(POI_STANDARD_TYPE)
+        expect(first.type).toBe(POI_TMP_TYPE)
+    })
+
+    it('can convert an older temporary marker independently from the latest location', async () => {
+        const manager = new POIManager()
+        const older = manager.createPOI({id: 'older-temporary', latitude: 48.8566, longitude: 2.3522})
+        const latest = manager.createPOI({id: 'latest-temporary', latitude: 45.764, longitude: 4.8357})
+        manager.list.set(older.id, older)
+        manager.list.set(latest.id, latest)
+
+        await expect(manager.addTemporaryPOIToLibrary(latest.id)).resolves.toMatchObject({status: 'added'})
+        await expect(manager.addTemporaryPOIToLibrary(older.id)).resolves.toMatchObject({status: 'added'})
+
+        expect(manager.list.get(older.id).type).toBe(POI_STANDARD_TYPE)
+        expect(manager.list.get(latest.id).type).toBe(POI_STANDARD_TYPE)
+        expect(lgs.db.lgs1920.put).toHaveBeenCalledTimes(2)
+    })
+
+    it('rejects a nearby saved POI without changing the temporary marker', async () => {
+        const manager = new POIManager()
+        const savedPOI = manager.createPOI({
+            id: 'nearby-saved',
+            latitude: 48.8566,
+            longitude: 2.3522,
+            type: POI_STANDARD_TYPE,
+        })
+        const poi = manager.createPOI({id: 'temporary-nearby', latitude: 48.8566, longitude: 2.3522})
+        manager.list.set(savedPOI.id, savedPOI)
+        manager.list.set(poi.id, poi)
+
+        await expect(manager.addTemporaryPOIToLibrary(poi.id)).resolves.toEqual({
+            status: 'duplicate',
+            poi,
+            nearbyPOI: savedPOI,
+        })
+        expect(poi.type).toBe(POI_TMP_TYPE)
+        expect(lgs.db.lgs1920.put).not.toHaveBeenCalled()
+    })
+
+    it('coalesces repeated Add calls and returns already-added for later calls', async () => {
+        const manager = new POIManager()
+        const poi = manager.createPOI({id: 'temporary-repeat', latitude: 48.8566, longitude: 2.3522})
+        manager.list.set(poi.id, poi)
+        let resolveWrite
+        lgs.db.lgs1920.put.mockImplementation(() => new Promise(resolve => {
+            resolveWrite = resolve
+        }))
+
+        const first = manager.addTemporaryPOIToLibrary(poi.id)
+        const second = manager.addTemporaryPOIToLibrary(poi.id)
+        expect(lgs.db.lgs1920.put).toHaveBeenCalledOnce()
+        resolveWrite()
+
+        await expect(Promise.all([first, second])).resolves.toEqual([
+            {status: 'added', poi},
+            {status: 'added', poi},
+        ])
+        await expect(manager.addTemporaryPOIToLibrary(poi.id)).resolves.toEqual({status: 'already-added', poi})
+        expect(lgs.db.lgs1920.put).toHaveBeenCalledOnce()
+    })
+
+    it('keeps the POI temporary after persistence fails and permits a later retry', async () => {
+        const manager = new POIManager()
+        const poi = manager.createPOI({id: 'temporary-retry', latitude: 48.8566, longitude: 2.3522})
+        manager.list.set(poi.id, poi)
+        lgs.db.lgs1920.put.mockRejectedValueOnce(new Error('storage unavailable'))
+
+        await expect(manager.addTemporaryPOIToLibrary(poi.id)).rejects.toThrow('storage unavailable')
+        expect(poi.type).toBe(POI_TMP_TYPE)
+
+        await expect(manager.addTemporaryPOIToLibrary(poi.id)).resolves.toMatchObject({status: 'added'})
+        expect(poi.type).toBe(POI_STANDARD_TYPE)
+        expect(lgs.db.lgs1920.put).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not schedule database persistence for edits to a temporary POI', async () => {
+        vi.useFakeTimers()
+        const manager = new POIManager()
+        const poi = manager.createPOI({id: 'temporary-edit'})
+        manager.list.set(poi.id, poi)
+
+        await manager.updatePOI(poi.id, {title: 'Unsaved edit'})
+        vi.advanceTimersByTime(1000)
+
+        expect(poi.title).toBe('Unsaved edit')
+        expect(lgs.db.lgs1920.put).not.toHaveBeenCalled()
     })
 })

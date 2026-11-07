@@ -1,0 +1,48 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: LocationDisplayedToastContent.css
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-11-07
+ * Last modified: 2026-11-07
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+.location-displayed-toast-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: var(--lgs-gutter-s);
+
+    & .location-displayed-toast-message {
+        flex: 1 1 auto;
+        min-width: 0;
+        line-height: 1.4;
+        text-align: center;
+    }
+
+    & .location-displayed-toast-button {
+        flex: 0 0 auto;
+        align-self: center;
+        margin: 0;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 42rem) {
+    .location-displayed-toast-content {
+        align-items: stretch;
+        flex-direction: column;
+
+        & .location-displayed-toast-button {
+            align-self: flex-end;
+        }
+    }
+}

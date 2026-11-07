@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-03
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -83,6 +83,14 @@ export const UI_ACTIONS = Object.freeze({
     add: {
         label: 'Add',
         icon: UI_ICONS.add,
+    },
+    addPOIToLibrary: {
+        label: 'Add',
+        icon: iconProps('circle-plus'),
+    },
+    addPOIToLibraryFromEditor: {
+        label: 'Add it',
+        icon: iconProps('circle-plus'),
     },
     recenter: {
         label: 'Recenter',

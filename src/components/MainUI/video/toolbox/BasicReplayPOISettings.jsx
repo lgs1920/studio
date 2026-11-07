@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -253,10 +253,10 @@ export const BasicReplayPOISettings = () => {
                     />
                 </div>
             </div>
-            <div className="basic-replay-settings-row basic-replay-settings-row--split" role="group" aria-label="Duration">
+            <div className="basic-replay-settings-row basic-replay-settings-row--split basic-replay-poi-settings__duration-row" role="group" aria-label="Animation duration">
                 <div className="basic-replay-settings-row__legend">
                     <span className="basic-replay-settings-row__legend-icon-spacer" aria-hidden="true"/>
-                    <span>{'Duration'}</span>
+                    <span>{'Animation Duration'}</span>
                 </div>
                 <div className="basic-replay-settings-row__value basic-replay-settings-row__value--align-end">
                     <WaTooltip for="basic-replay-poi-duration" placement="top">
@@ -264,7 +264,7 @@ export const BasicReplayPOISettings = () => {
                     </WaTooltip>
                     <WaNumberInput
                         id="basic-replay-poi-duration"
-                        className="basic-replay-poi-settings__duration lgs--short-input"
+                        className="basic-replay-poi-settings__duration"
                         aria-label="Animation duration in seconds"
                         size="s"
                         appearance="filled"

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-26
- * Last modified: 2026-10-01
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,6 +33,21 @@ const normalizeDimensions = dimensions => {
     }
 
     return {width, height}
+}
+
+/**
+ * Resolve a canvas viewport in CSS pixels for crop projection.
+ *
+ * @param {HTMLCanvasElement|object|null} canvas - Visible source canvas.
+ * @returns {{width: number, height: number}|null} CSS viewport dimensions.
+ */
+export const replayCanvasCssViewportDimensions = canvas => {
+    const bounds = canvas?.getBoundingClientRect?.()
+    const boundsWidth = finiteNumber(bounds?.width, 0)
+    const boundsHeight = finiteNumber(bounds?.height, 0)
+    const width = boundsWidth > 0 ? boundsWidth : finiteNumber(canvas?.clientWidth)
+    const height = boundsHeight > 0 ? boundsHeight : finiteNumber(canvas?.clientHeight)
+    return normalizeDimensions({width, height})
 }
 
 const normalizeCropRect = (cropRect, viewport) => {
@@ -176,6 +191,25 @@ export const captureReplayCropProjection = ({
         key: projectionKey({planes: cropped, viewport, crop}),
     }
 }
+
+/**
+ * Capture a canvas crop projection using the canvas CSS viewport.
+ *
+ * Crop geometry is stored in CSS pixels, so this keeps projection dimensions
+ * independent from the canvas drawing-buffer scale and device pixel ratio.
+ *
+ * @param {Object} options - Camera, source canvas and crop dimensions.
+ * @returns {Object|null} Serializable crop projection definition.
+ */
+export const captureReplayCanvasCropProjection = ({
+                                                       camera = null,
+                                                       sourceCanvas = null,
+                                                       cropRect = null,
+                                                   } = {}) => captureReplayCropProjection({
+    camera,
+    sourceViewportDimensions: replayCanvasCssViewportDimensions(sourceCanvas),
+    cropRect,
+})
 
 /**
  * Create the Cesium frustum used by the isolated export camera.

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-10-01
- * Last modified: 2026-10-01
+ * Created on: 2026-08-24
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,6 +57,42 @@ describe('IsolatedReplayRenderHost', () => {
         expect(descriptor.imageryLayers[0].display).toMatchObject({alpha: 0.4, show: true})
     })
 
+    it('lists additional active Cesium resources that isolated rendering cannot reproduce', () => {
+        const baseTileset = {root: {}, maximumScreenSpaceError: 16}
+        const additionalTileset = {root: {}, maximumScreenSpaceError: 16}
+        const unsupportedPrimitive = {show: true}
+        const previousLgs = globalThis.lgs
+        globalThis.lgs = {base3dTileset: baseTileset}
+        try {
+            const descriptor = captureReplaySceneDescriptor({
+                viewer: {
+                    terrainProvider: null,
+                    imageryLayers: createCollection([]),
+                    dataSources: createCollection([
+                        {name: 'journey-track'},
+                        {name: 'replay#journey-a'},
+                    ]),
+                    entities: {values: [{id: 'external-entity'}]},
+                    scene: {
+                        primitives: createCollection([baseTileset, additionalTileset, unsupportedPrimitive]),
+                        globe: {},
+                        fog: {},
+                    },
+                },
+                base3dDefinition: {assetId: 1},
+            })
+
+            expect(descriptor.compatibilityLimitations).toEqual([
+                '2 additional Cesium scene primitive(s) or tileset(s)',
+                '1 non-Replay Cesium data source(s)',
+                '1 viewer-owned Cesium entity',
+            ])
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
     it('renders with an independent camera and destroys every owned resource', async () => {
         const interactiveCamera = {setView: vi.fn()}
         const cropProjection = captureReplayCropProjection({
@@ -78,6 +114,7 @@ describe('IsolatedReplayRenderHost', () => {
         const imageryLayers = {add: vi.fn()}
         const primitives = {add: vi.fn()}
         const readiness = {prepareForCapture: vi.fn(() => true), dispose: vi.fn()}
+        const createTileset = vi.fn(() => ({id: 'isolated-tileset'}))
         const widget = {
             camera: isolatedCamera,
             canvas: {width: 1920, height: 1080},
@@ -109,8 +146,9 @@ describe('IsolatedReplayRenderHost', () => {
             container,
             createWidget: vi.fn(() => widget),
             createImageryLayer: vi.fn(provider => ({imageryProvider: provider, alpha: 1})),
-            createTileset: vi.fn(() => ({id: 'isolated-tileset'})),
+            createTileset,
             createReadinessCoordinator: vi.fn(() => readiness),
+            maximumScreenSpaceError: 4,
             cropProjection,
         })
         const command = createReplayCameraCommand({
@@ -137,10 +175,111 @@ describe('IsolatedReplayRenderHost', () => {
         expect(isolatedCamera.setView).toHaveBeenCalledOnce()
         expect(interactiveCamera.setView).not.toHaveBeenCalled()
         expect(widget.render).toHaveBeenCalled()
+        expect(widget.resize).toHaveBeenCalledOnce()
         expect(primitives.add).toHaveBeenCalledWith({id: 'isolated-tileset'})
+        expect(createTileset).toHaveBeenCalledWith(descriptor.base3dDefinition, {
+            maximumScreenSpaceError: 4,
+        })
+        expect(rendered.canvasDimensions.actual).toMatchObject({width: 1920, height: 1080})
 
         host.destroy()
 
         expect(widget.destroy).toHaveBeenCalledOnce()
+    })
+
+    it('rejects a lower-resolution Cesium drawing buffer instead of accepting an upscale', async () => {
+        const widget = {
+            camera: {setView: vi.fn()},
+            canvas: {width: 1920, height: 1080},
+            scene: {
+                drawingBufferWidth: 1280,
+                drawingBufferHeight: 720,
+                primitives: {add: vi.fn()},
+                screenSpaceCameraController: {},
+            },
+            imageryLayers: {add: vi.fn()},
+            resize: vi.fn(),
+            render: vi.fn(),
+            destroy: vi.fn(),
+            isDestroyed: vi.fn(() => false),
+        }
+        const host = new IsolatedReplayRenderHost({
+            dimensions: {width: 1920, height: 1080},
+            descriptor: {
+                sceneMode: 3,
+                imageryLayers: [],
+                environment: {},
+                compatibilityLimitations: [],
+            },
+            container: {style: {}, remove: vi.fn()},
+            createWidget: vi.fn(() => widget),
+        })
+
+        await expect(host.initialize()).rejects.toThrow(
+            'Native Replay rendering requested 1920 × 1080 pixels, but Cesium created 1280 × 720',
+        )
+        host.destroy()
+        expect(widget.destroy).toHaveBeenCalledOnce()
+    })
+
+    it('reports unsupported active scene content before allocating a WebGL host', async () => {
+        const createWidget = vi.fn()
+        const host = new IsolatedReplayRenderHost({
+            dimensions: {width: 1920, height: 1080},
+            descriptor: {
+                compatibilityLimitations: ['one additional Cesium primitive'],
+            },
+            container: {style: {}, remove: vi.fn()},
+            createWidget,
+        })
+
+        await expect(host.initialize()).rejects.toThrow(
+            'Native Replay rendering cannot reproduce this scene: one additional Cesium primitive',
+        )
+        expect(createWidget).not.toHaveBeenCalled()
+    })
+
+    it('fails a pending capture on WebGL context loss and disposes the readiness listener', async () => {
+        const canvas = new EventTarget()
+        canvas.width = 320
+        canvas.height = 180
+        canvas.getContext = vi.fn(() => null)
+        const removeEventListener = vi.spyOn(canvas, 'removeEventListener')
+        const readiness = {
+            prepareForCapture: vi.fn(() => new Promise(() => {})),
+            dispose: vi.fn(),
+        }
+        const widget = {
+            camera: {setView: vi.fn()},
+            canvas,
+            scene: {
+                drawingBufferWidth: 320,
+                drawingBufferHeight: 180,
+                primitives: {add: vi.fn()},
+                screenSpaceCameraController: {},
+            },
+            imageryLayers: {add: vi.fn()},
+            resize: vi.fn(),
+            render: vi.fn(),
+            destroy: vi.fn(),
+            isDestroyed: vi.fn(() => false),
+        }
+        const host = new IsolatedReplayRenderHost({
+            dimensions: {width: 320, height: 180},
+            descriptor: {sceneMode: 3, imageryLayers: [], environment: {}, compatibilityLimitations: []},
+            container: {style: {}, remove: vi.fn()},
+            createWidget: vi.fn(() => widget),
+            createReadinessCoordinator: vi.fn(() => readiness),
+        })
+
+        await host.initialize()
+        const pendingCapture = host.prepareForCapture()
+        canvas.dispatchEvent(new Event('webglcontextlost', {cancelable: true}))
+        await expect(pendingCapture).rejects.toThrow('WebGL context was lost during export')
+
+        host.destroy()
+        expect(readiness.dispose).toHaveBeenCalledOnce()
+        expect(widget.destroy).toHaveBeenCalledOnce()
+        expect(removeEventListener).toHaveBeenCalledWith('webglcontextlost', expect.any(Function))
     })
 })

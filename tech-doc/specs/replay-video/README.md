@@ -16,6 +16,7 @@
 ## Validation
 
 - [Replay quality validation](CORE-REPLAY-QUALITY-VALIDATION.md)
+- [Native HQ performance report](CORE-REPLAY-NATIVE-HQ-PERFORMANCE-REPORT.md)
 - [Replay trace and marker visual validation](CORE-REPLAY-TRACE-MARKER-GLOW-NEON-VALIDATION.md)
 - [Video and replay test-suite failures — 2026-07-25](VIDEO_TEST_SUITE_FAILURES_2026-07-25.md)
 

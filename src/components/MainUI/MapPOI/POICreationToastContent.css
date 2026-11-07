@@ -1,0 +1,47 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: POICreationToastContent.css
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-11-07
+ * Last modified: 2026-11-07
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+.toast-action-stack.poi-creation-toast-content--inline-action {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--lgs-gutter);
+
+    & .poi-creation-toast-copy {
+        display: grid;
+        min-width: 0;
+        gap: var(--lgs-gutter-s);
+        overflow-wrap: anywhere;
+        line-height: 1.4;
+        text-align: center;
+    }
+
+    & .toast-action-button {
+        align-self: center;
+        margin: 0;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 42rem) {
+    .toast-action-stack.poi-creation-toast-content--inline-action {
+        grid-template-columns: minmax(0, 1fr);
+
+        & .toast-action-button {
+            justify-self: end;
+        }
+    }
+}

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-14
- * Last modified: 2026-10-22
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -129,5 +129,18 @@ describe('Replay recording performance', () => {
             wallMillis: 20,
         })
         expect(report.stages[0]).toMatchObject({key: 'encoderSubmission', count: 1, totalMillis: 20})
+    })
+
+    it('reports unavailable GPU metrics and the known WebGL context count explicitly', () => {
+        const performance = createReplayRecordingPerformance()
+        performance.configure({knownWebglContextCount: 2})
+
+        expect(performance.finish().resourceMetrics).toMatchObject({
+            jsHeapMetricAvailable: false,
+            gpuMemoryBytes: null,
+            gpuUtilization: null,
+            knownWebglContextCount: 2,
+            webglContextInventoryComplete: false,
+        })
     })
 })

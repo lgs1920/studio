@@ -11,6 +11,31 @@ WebGL or the Studio scene works.
 
 ## Prepare the browser before opening Studio
 
+### Configure the native CLI once
+
+Run `bun install` once from the repository root. The pinned `chrome-devtools-mcp` development dependency supplies
+the native CLI. The wrapper resolves `node_modules/.bin/chrome-devtools` relative to its own location and invokes
+it with its current JavaScript runtime, so neither a global CLI nor `node` on the agent's `PATH` is required.
+It works from another working directory too. Prefer the wrapper over a bare `chrome-devtools` command.
+
+Resolution order is an explicit `LGS1920_CHROME_DEVTOOLS_CLI` override, the installed project CLI, then
+`chrome-devtools` on the WSL `PATH` when the local dependency is absent. No package is downloaded at runtime.
+To override the project CLI, set the variable to a native executable file path, without arguments:
+
+```bash
+export LGS1920_CHROME_DEVTOOLS_CLI="/absolute/path/to/linux/chrome-devtools"
+```
+
+Persist that export in the shell initialization used by the agent, or its launch environment, and restart the
+agent session. Verify with the wrapper's `--version` command before `ensure`. Paths containing spaces are supported.
+An invalid explicit path fails immediately instead of silently selecting another CLI.
+
+In JetBrains, request `execute_tool(command="get_chrome_connect_cli")` to identify the bundled CLI. A returned
+Windows `.cmd` path does not supply a Linux CLI to WSL and must not be used for this preflight. Missing commands
+(`ENOENT`) and inaccessible executables (`EACCES`) are tooling failures, not evidence of broken WebGL. If no native
+Linux CLI is available, restore the project dependency with `bun install` before reporting missing tooling. Do not install a global package
+automatically, search IDE caches for substitutes, or switch to Windows Chrome or another profile to bypass it.
+
 Run from the repository root:
 
 ```bash

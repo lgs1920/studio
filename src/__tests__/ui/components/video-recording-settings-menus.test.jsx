@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-12
- * Last modified: 2026-10-24
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,6 +34,10 @@ vi.mock('@Components/MainUI/video/toolbox/VideoPresetToolbar', () => ({
     ),
 }))
 
+vi.mock('@Components/MainUI/video/toolbox/VideoExportRenderOptions', () => ({
+    VideoExportRenderOptions: () => <div data-testid="render-options"/>,
+}))
+
 import {VideoRecordingSettingsMenus} from '@Components/MainUI/video/toolbox/VideoRecordingSettingsMenus'
 
 describe('VideoRecordingSettingsMenus', () => {
@@ -52,5 +56,6 @@ describe('VideoRecordingSettingsMenus', () => {
         expect(screen.getByTestId('preset-menu-content')).toMatchObject({
             dataset: {embedded: 'true', inlineCustom: 'true', mainTheme: 'true'},
         })
+        expect(screen.getByTestId('render-options')).not.toBeNull()
     })
 })

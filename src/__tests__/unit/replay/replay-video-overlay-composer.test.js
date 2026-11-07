@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -541,13 +541,17 @@ describe('Replay widget frame capture', () => {
         expect(journeyRender).toHaveBeenCalledTimes(1)
     })
 
-    it('keeps the initialized raster density when flushing for an output DPR', async () => {
+    it('keeps a higher initialized raster density when flushing for a smaller output DPR', async () => {
         const widgetElement = document.createElement('div')
         const captureCanvas = document.createElement('canvas')
         captureCanvas.className = 'lgs-widget-canvas'
         widgetElement.append(captureCanvas)
         __.ui.widgetManager.getElementById.mockReturnValue(widgetElement)
-        const mirror = {setCapturePixelRatio: vi.fn(), setFrameDriven: vi.fn()}
+        const mirror = {
+            getCapturePixelRatio: () => 4,
+            setCapturePixelRatio: vi.fn(),
+            setFrameDriven: vi.fn(),
+        }
         vi.spyOn(Widget2Canvas, 'get').mockReturnValue(mirror)
         vi.spyOn(Widget2Canvas, 'flush').mockResolvedValue(true)
         const captureMirrors = new Set()
@@ -563,6 +567,56 @@ describe('Replay widget frame capture', () => {
         expect(mirror.setFrameDriven).toHaveBeenCalledWith(true)
         expect(captureMirrors.has(mirror)).toBe(true)
         expect(Widget2Canvas.flush).toHaveBeenCalledWith('custom-widget', {onlyIfDirty: true})
+    })
+
+    it('raises a low-density capture to the physical output density before flushing', async () => {
+        const widgetElement = document.createElement('div')
+        const captureCanvas = document.createElement('canvas')
+        captureCanvas.className = 'lgs-widget-canvas'
+        widgetElement.append(captureCanvas)
+        __.ui.widgetManager.getElementById.mockReturnValue(widgetElement)
+        let pixelRatio = 1
+        const mirror = {
+            getCapturePixelRatio: () => pixelRatio,
+            setCapturePixelRatio: vi.fn(value => { pixelRatio = Math.min(4, value) }),
+            setFrameDriven: vi.fn(),
+        }
+        vi.spyOn(Widget2Canvas, 'get').mockReturnValue(mirror)
+        vi.spyOn(Widget2Canvas, 'flush').mockResolvedValue(true)
+
+        await flushReplayVideoOverlayCanvases({
+            widgetKeys: ['custom-widget'],
+            outputDpr: 2.25,
+            captureMirrors: new Set(),
+            strict: true,
+        })
+
+        expect(mirror.setCapturePixelRatio).toHaveBeenCalledWith(2.25)
+        expect(pixelRatio).toBe(2.25)
+        expect(Widget2Canvas.flush).toHaveBeenCalledWith('custom-widget', {onlyIfDirty: true})
+    })
+
+    it('fails clearly when a widget capture density cap cannot meet the output density', async () => {
+        const widgetElement = document.createElement('div')
+        widgetElement.append(document.createElement('canvas'))
+        __.ui.widgetManager.getElementById.mockReturnValue(widgetElement)
+        let pixelRatio = 4
+        const mirror = {
+            getCapturePixelRatio: () => pixelRatio,
+            setCapturePixelRatio: vi.fn(value => { pixelRatio = Math.min(4, value) }),
+            setFrameDriven: vi.fn(),
+        }
+        vi.spyOn(Widget2Canvas, 'get').mockReturnValue(mirror)
+        const flush = vi.spyOn(Widget2Canvas, 'flush').mockResolvedValue(true)
+
+        await expect(flushReplayVideoOverlayCanvases({
+            widgetKeys: ['custom-widget'],
+            outputDpr: 5,
+            captureMirrors: new Set(),
+            strict: true,
+        })).rejects.toThrow('Replay widget custom-widget can be captured at 4 pixels per CSS pixel')
+
+        expect(flush).not.toHaveBeenCalled()
     })
 
     it('does no capture or discovery for an explicitly empty widget set', async () => {

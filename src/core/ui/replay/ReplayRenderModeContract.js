@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-01
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -77,6 +77,12 @@ const normalizeRenderSpec = renderSpec => {
         fps:              finiteNumber(renderSpec.fps),
         qualityIndex:     finiteNumber(renderSpec.qualityIndex),
         captureMode:      renderSpec.captureMode ?? null,
+        renderHostMode:   renderSpec.renderHostMode ?? 'visible',
+        resolutionProfile: renderSpec.resolutionProfile ?? 'automatic',
+        customDimensions: normalizeDimensions(renderSpec.customDimensions),
+        renderQuality:    renderSpec.renderQuality ?? 'standard',
+        maximumScreenSpaceError: finiteNumber(renderSpec.maximumScreenSpaceError, 16),
+        readinessPolicy:  renderSpec.readinessPolicy ?? 'adaptive',
         cropRect:         normalizeCropRect(renderSpec.cropRect),
         composerClip:     cloneValue(renderSpec.composerClip),
         dimensions:       normalizeDimensions(renderSpec.dimensions),
