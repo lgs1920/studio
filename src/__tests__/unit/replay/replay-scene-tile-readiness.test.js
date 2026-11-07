@@ -74,6 +74,7 @@ describe('ReplaySceneTileReadiness', () => {
             await vi.advanceTimersByTimeAsync(31)
             expect(renderNow).not.toHaveBeenCalled()
             await vi.advanceTimersByTimeAsync(1)
+            await vi.advanceTimersByTimeAsync(1)
             await expect(pending).resolves.toBe(true)
             expect(renderNow).toHaveBeenCalledTimes(2)
             expect(postRender.listenerCount()).toBe(0)
@@ -452,6 +453,66 @@ describe('ReplaySceneTileReadiness', () => {
             vi.useRealTimers()
         }
     })
+
+    it.each(['3D tiles', 'terrain tiles', '2D imagery tiles'])(
+        'rejects a strict frame when %s fail after postRender is raised',
+        async failureSource => {
+            vi.useFakeTimers()
+            const postRender = createEvent()
+            const tileFailed = createEvent()
+            const terrainFailureEvent = createEvent()
+            const imageryFailureEvent = createEvent()
+            const failureEvent = failureSource === '3D tiles'
+                ? tileFailed
+                : (failureSource === 'terrain tiles' ? terrainFailureEvent : imageryFailureEvent)
+            const tileset = {
+                show: true,
+                tilesLoaded: true,
+                tileFailed,
+            }
+            const terrainProvider = {errorEvent: terrainFailureEvent}
+            const imageryLayer = {
+                show: true,
+                errorEvent: createEvent(),
+                readyEvent: createEvent(),
+                imageryProvider: {errorEvent: imageryFailureEvent},
+            }
+            const scene = {
+                globe: {
+                    tilesLoaded: true,
+                    imageryLayers: createCollection([imageryLayer]),
+                    terrainProvider,
+                },
+                primitives: createCollection([tileset]),
+                postRender,
+                requestRender: vi.fn(),
+            }
+            try {
+                await expect(waitForReplaySceneTilesReady({
+                    scene,
+                    maxMillis: 100,
+                    requirePostRender: true,
+                    renderNow: () => {
+                        const removeLateFailure = postRender.addEventListener(() => {
+                            void Promise.resolve().then(() => failureEvent.emit({message: 'late tile failure'}))
+                        })
+                        postRender.emit(scene)
+                        removeLateFailure()
+                    },
+                })).rejects.toThrow(failureSource)
+                expect(postRender.listenerCount()).toBe(0)
+                expect(tileFailed.listenerCount()).toBe(0)
+                expect(terrainFailureEvent.listenerCount()).toBe(0)
+                expect(imageryFailureEvent.listenerCount()).toBe(0)
+                expect(imageryLayer.errorEvent.listenerCount()).toBe(0)
+                expect(imageryLayer.readyEvent.listenerCount()).toBe(0)
+                expect(vi.getTimerCount()).toBe(0)
+            }
+            finally {
+                vi.useRealTimers()
+            }
+        },
+    )
 
     it('reports observable tile events and leaves request/cache-miss counts unavailable', () => {
         const tileLoadProgressEvent = createEvent()

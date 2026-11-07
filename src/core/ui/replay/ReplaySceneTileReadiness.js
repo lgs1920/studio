@@ -376,6 +376,74 @@ const createTileFailureError = (failure, source) => {
 }
 
 /**
+ * Keep visible 3D tile and imagery provider failures observable during a render.
+ *
+ * @param {Array<object>} tilesets - Visible 3D tilesets.
+ * @param {Array<object>} imageryLayers - Visible imagery layers.
+ * @param {Function} onFailure - Failure callback.
+ * @param {object|null} terrainProvider - Visible globe terrain provider.
+ * @returns {Function} Listener cleanup callback.
+ */
+const subscribeToReplayTileFailures = (tilesets, imageryLayers, onFailure, terrainProvider = null) => {
+    const cleanup = []
+    const removeTerrainErrorListener = subscribeToEvent(
+        terrainProvider?.errorEvent,
+        failure => onFailure(createTileFailureError(failure, 'terrain tiles')),
+    )
+    if (removeTerrainErrorListener) {
+        cleanup.push(removeTerrainErrorListener)
+    }
+
+    tilesets.forEach(tileset => {
+        const removeListener = subscribeToEvent(
+            tileset?.tileFailed,
+            failure => onFailure(createTileFailureError(failure, '3D tiles')),
+        )
+        if (removeListener) {
+            cleanup.push(removeListener)
+        }
+    })
+
+    imageryLayers.forEach(layer => {
+        const subscribedProviderEvents = new Set()
+        const subscribeToProviderErrors = provider => {
+            const event = provider?.errorEvent
+            if (!event || subscribedProviderEvents.has(event)) {
+                return
+            }
+
+            subscribedProviderEvents.add(event)
+            const removeListener = subscribeToEvent(
+                event,
+                failure => onFailure(createTileFailureError(failure, '2D imagery tiles')),
+            )
+            if (removeListener) {
+                cleanup.push(removeListener)
+            }
+        }
+
+        const removeLayerErrorListener = subscribeToEvent(
+            layer?.errorEvent,
+            failure => onFailure(createTileFailureError(failure, '2D imagery tiles')),
+        )
+        if (removeLayerErrorListener) {
+            cleanup.push(removeLayerErrorListener)
+        }
+        subscribeToProviderErrors(layer?.imageryProvider)
+
+        const removeReadyListener = subscribeToEvent(
+            layer?.readyEvent,
+            provider => subscribeToProviderErrors(provider ?? layer?.imageryProvider),
+        )
+        if (removeReadyListener) {
+            cleanup.push(removeReadyListener)
+        }
+    })
+
+    return () => cleanup.splice(0).forEach(removeListener => removeListener?.())
+}
+
+/**
  * Disable movement-related 3D Tiles request deferral for the current capture.
  *
  * @param {Array<object>} tilesets - Visible tilesets.
@@ -455,7 +523,15 @@ export const prepareReplaySceneTileCache = (
  * @param {Function|null} renderNow - Optional synchronous draw for ready-view validation.
  * @returns {Promise<boolean>} Whether a post-render event was observed.
  */
-const waitForReplayPostRender = async (scene, timeoutMs, signal, renderNow = null) => {
+const waitForReplayPostRender = async (
+    scene,
+    timeoutMs,
+    signal,
+    renderNow = null,
+    tilesets = [],
+    imageryLayers = [],
+    terrainProvider = null,
+) => {
     if (signal?.aborted) {
         throw createAbortError()
     }
@@ -468,7 +544,10 @@ const waitForReplayPostRender = async (scene, timeoutMs, signal, renderNow = nul
 
     return await new Promise((resolve, reject) => {
         let settled = false
+        let postRenderObserved = false
+        let postRenderResolutionScheduled = false
         let timeoutId = null
+        let postRenderResolutionTimeoutId = null
         const cleanup = []
         const settle = callback => value => {
             if (settled) {
@@ -479,15 +558,29 @@ const waitForReplayPostRender = async (scene, timeoutMs, signal, renderNow = nul
             if (timeoutId !== null) {
                 clearTimeout(timeoutId)
             }
+            if (postRenderResolutionTimeoutId !== null) {
+                clearTimeout(postRenderResolutionTimeoutId)
+            }
             cleanup.splice(0).forEach(removeListener => removeListener?.())
             callback(value)
         }
         const resolveOnce = settle(resolve)
         const rejectOnce = settle(reject)
-        const postRenderListener = subscribeToEvent(scene.postRender, () => resolveOnce(true))
+        const postRenderListener = subscribeToEvent(scene.postRender, () => {
+            postRenderObserved = true
+            if (postRenderResolutionScheduled) {
+                return
+            }
+
+            postRenderResolutionScheduled = true
+            // Keep failure listeners through the full event dispatch and its
+            // queued work before treating this render as qualified.
+            postRenderResolutionTimeoutId = setTimeout(() => resolveOnce(true), 0)
+        })
         if (postRenderListener) {
             cleanup.push(postRenderListener)
         }
+        cleanup.push(subscribeToReplayTileFailures(tilesets, imageryLayers, rejectOnce, terrainProvider))
 
         if (signal) {
             const abortListener = () => rejectOnce(createAbortError())
@@ -498,7 +591,7 @@ const waitForReplayPostRender = async (scene, timeoutMs, signal, renderNow = nul
         timeoutId = setTimeout(() => resolveOnce(false), safeTimeoutMs)
         try {
             requestReplaySceneRender(scene)
-            if (!settled && typeof renderNow === 'function') {
+            if (!settled && !postRenderObserved && typeof renderNow === 'function') {
                 renderNow()
             }
         }
@@ -562,11 +655,13 @@ const waitForReplayTileSignal = async (scene, tilesets, imageryLayers, timeoutMs
             addEventListener(tileset.initialTilesLoaded, resolveOnce)
             addEventListener(tileset.tileLoad, resolveOnce)
             addEventListener(tileset.tileVisible, resolveOnce)
-            addEventListener(tileset.tileFailed, failure => rejectOnce(createTileFailureError(failure, '3D tiles')))
         })
-        imageryLayers.forEach(layer => {
-            addEventListener(layer.errorEvent, failure => rejectOnce(createTileFailureError(failure, '2D imagery tiles')))
-        })
+        cleanup.push(subscribeToReplayTileFailures(
+            tilesets,
+            imageryLayers,
+            rejectOnce,
+            scene?.globe?.show === false ? null : scene?.globe?.terrainProvider,
+        ))
 
         if (signal) {
             const abortListener = () => rejectOnce(createAbortError())
@@ -625,7 +720,15 @@ export const waitForReplaySceneTilesReady = async ({
         if (requirePostRender !== true) {
             return true
         }
-        return await waitForReplayPostRender(scene, safeMaxMillis, signal, renderNow)
+        return await waitForReplayPostRender(
+            scene,
+            safeMaxMillis,
+            signal,
+            renderNow,
+            tilesets,
+            imageryLayers,
+            scene?.globe?.show === false ? null : scene?.globe?.terrainProvider,
+        )
     }
 
     const refreshTileSources = () => {
@@ -635,7 +738,15 @@ export const waitForReplaySceneTilesReady = async ({
     }
 
     if (areReplaySceneTilesReady(scene, tilesets)) {
-        const rendered = await waitForReplayPostRender(scene, Math.max(0, deadline - Date.now()), signal, renderNow)
+        const rendered = await waitForReplayPostRender(
+            scene,
+            Math.max(0, deadline - Date.now()),
+            signal,
+            renderNow,
+            tilesets,
+            imageryLayers,
+            scene?.globe?.show === false ? null : scene?.globe?.terrainProvider,
+        )
         if (requirePostRender === true && !rendered) {
             return false
         }
@@ -650,7 +761,15 @@ export const waitForReplaySceneTilesReady = async ({
         }
 
         if (refreshTileSources()) {
-            const rendered = await waitForReplayPostRender(scene, Math.max(0, deadline - Date.now()), signal, renderNow)
+            const rendered = await waitForReplayPostRender(
+                scene,
+                Math.max(0, deadline - Date.now()),
+                signal,
+                renderNow,
+                tilesets,
+                imageryLayers,
+                scene?.globe?.show === false ? null : scene?.globe?.terrainProvider,
+            )
             if (requirePostRender === true && !rendered) {
                 return false
             }
