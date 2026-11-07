@@ -4999,3 +4999,35 @@
 ## 2026-11-07 — [`Merge remote-tracking branch 'origin/feature/cesium-native-hq-video-capture' into feature/cesium-native-hq-video-capture`](https://github.com/lgs1920/studio/commit/a18244deb0eb07670a9debcfaa5216d35075e371)
 
 - Recorded automatically from Git history.
+
+## 2026-11-07 — [`fix(replay): project crop in CSS viewport coordinates`](https://github.com/lgs1920/studio/commit/1774bd9a7f26f4c779922c257313409eaef5d737)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`fix(replay): reject strict frames after tile failures`](https://github.com/lgs1920/studio/commit/cb6e1600afa6e87eba747c6dd8402720a9d1e353)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`fix(replay): stop Native HQ export on context loss`](https://github.com/lgs1920/studio/commit/182b55fe1f31a1616903710cb1b9b3ddab9b4f61)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`feat(replay): add export controls to Basic Replay`](https://github.com/lgs1920/studio/commit/04d525656c8fc4a50e935236c842cb0249af39f8)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`fix: bundle and detect project Chrome DevTools CLI`](https://github.com/lgs1920/studio/commit/0807e764a6cc7a2b619b9ca6db6571bf6c4bdc77)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`feat(replay): refine basic replay settings`](https://github.com/lgs1920/studio/commit/aa25d0a3b73807c81215acc4abed519f767c783d)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`Chore: update dependencies`](https://github.com/lgs1920/studio/commit/1afa41ba4ce71713076ba98abeee6901c0040f72)
+
+- Recorded automatically from Git history.
+
+## 2026-11-07 — [`Merge remote-tracking branch 'origin/feature/cesium-native-hq-video-capture' into feature/cesium-native-hq-video-capture`](https://github.com/lgs1920/studio/commit/8d1f1f7a5183ce9f54d7355cae0f83799a987385)
+
+- Recorded automatically from Git history.
