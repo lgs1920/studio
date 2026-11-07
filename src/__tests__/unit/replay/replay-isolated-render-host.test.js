@@ -238,4 +238,48 @@ describe('IsolatedReplayRenderHost', () => {
         )
         expect(createWidget).not.toHaveBeenCalled()
     })
+
+    it('fails a pending capture on WebGL context loss and disposes the readiness listener', async () => {
+        const canvas = new EventTarget()
+        canvas.width = 320
+        canvas.height = 180
+        canvas.getContext = vi.fn(() => null)
+        const removeEventListener = vi.spyOn(canvas, 'removeEventListener')
+        const readiness = {
+            prepareForCapture: vi.fn(() => new Promise(() => {})),
+            dispose: vi.fn(),
+        }
+        const widget = {
+            camera: {setView: vi.fn()},
+            canvas,
+            scene: {
+                drawingBufferWidth: 320,
+                drawingBufferHeight: 180,
+                primitives: {add: vi.fn()},
+                screenSpaceCameraController: {},
+            },
+            imageryLayers: {add: vi.fn()},
+            resize: vi.fn(),
+            render: vi.fn(),
+            destroy: vi.fn(),
+            isDestroyed: vi.fn(() => false),
+        }
+        const host = new IsolatedReplayRenderHost({
+            dimensions: {width: 320, height: 180},
+            descriptor: {sceneMode: 3, imageryLayers: [], environment: {}, compatibilityLimitations: []},
+            container: {style: {}, remove: vi.fn()},
+            createWidget: vi.fn(() => widget),
+            createReadinessCoordinator: vi.fn(() => readiness),
+        })
+
+        await host.initialize()
+        const pendingCapture = host.prepareForCapture()
+        canvas.dispatchEvent(new Event('webglcontextlost', {cancelable: true}))
+        await expect(pendingCapture).rejects.toThrow('WebGL context was lost during export')
+
+        host.destroy()
+        expect(readiness.dispose).toHaveBeenCalledOnce()
+        expect(widget.destroy).toHaveBeenCalledOnce()
+        expect(removeEventListener).toHaveBeenCalledWith('webglcontextlost', expect.any(Function))
+    })
 })

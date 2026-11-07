@@ -225,6 +225,10 @@ export class IsolatedReplayRenderHost {
     #cropProjection
     #canvasDimensions = null
     #destroyed = false
+    #contextLostError = null
+    #contextLossPromise = null
+    #resolveContextLoss = null
+    #contextLossListener = null
 
     /**
      * Create an isolated render host without allocating Cesium resources yet.
@@ -275,6 +279,63 @@ export class IsolatedReplayRenderHost {
     }
 
     /**
+     * Record a fatal context loss and wake any capture waiting for tile readiness.
+     *
+     * @returns {Error} Context-loss failure.
+     */
+    #recordContextLoss = () => {
+        if (!this.#contextLostError) {
+            this.#contextLostError = new Error(
+                'The Native Replay WebGL context was lost during export. Retry or use Standard export.',
+            )
+            this.#resolveContextLoss?.(this.#contextLostError)
+        }
+
+        return this.#contextLostError
+    }
+
+    /**
+     * Reject work once the isolated WebGL context has been lost.
+     *
+     * @returns {void}
+     * @throws {Error} Context-loss failure.
+     */
+    #assertContextAvailable = () => {
+        if (this.#contextLostError) {
+            throw this.#contextLostError
+        }
+
+        const canvas = this.#widget?.canvas
+        const context = canvas?.getContext?.('webgl2') ?? canvas?.getContext?.('webgl') ?? null
+        if (context?.isContextLost?.()) {
+            throw this.#recordContextLoss()
+        }
+    }
+
+    /**
+     * Await scene readiness while allowing WebGL context loss to fail the capture immediately.
+     *
+     * @param {Promise<*>} operation - Readiness operation.
+     * @returns {Promise<*>} Readiness result.
+     * @throws {Error} Context-loss failure.
+     */
+    #awaitContextSafe = async operation => {
+        this.#assertContextAvailable()
+        if (!this.#contextLossPromise) {
+            const result = await operation
+            this.#assertContextAvailable()
+            return result
+        }
+
+        const result = await Promise.race([
+            operation,
+            this.#contextLossPromise.then(error => { throw error }),
+        ])
+        this.#assertContextAvailable()
+        return result
+    }
+
+    /**
      * Initialize the isolated widget and clone active scene layers.
      *
      * @returns {Promise<IsolatedReplayRenderHost>} Initialized host.
@@ -310,6 +371,13 @@ export class IsolatedReplayRenderHost {
             shouldAnimate: false,
             shadows: this.#descriptor.environment?.shadows === true,
         })
+        if (this.#widget.canvas?.addEventListener) {
+            this.#contextLossPromise = new Promise(resolve => {
+                this.#resolveContextLoss = resolve
+            })
+            this.#contextLossListener = () => this.#recordContextLoss()
+            this.#widget.canvas.addEventListener('webglcontextlost', this.#contextLossListener)
+        }
         this.#widget.resolutionScale = Math.max(
             1,
             this.#dimensions.width / this.#viewportDimensions.width,
@@ -336,6 +404,7 @@ export class IsolatedReplayRenderHost {
                 tileset?.destroy?.()
                 throw new DOMException('Replay export host initialization was aborted', 'AbortError')
             }
+            this.#assertContextAvailable()
             if (tileset && 'maximumScreenSpaceError' in tileset) {
                 tileset.maximumScreenSpaceError = this.#maximumScreenSpaceError
             }
@@ -345,7 +414,9 @@ export class IsolatedReplayRenderHost {
         applyReplayHostEnvironment(this.#widget.scene, this.#descriptor)
         this.#widget.resize?.()
         this.#applyCropFrustum()
+        this.#assertContextAvailable()
         this.#widget.render?.()
+        this.#assertContextAvailable()
         this.#canvasDimensions = verifyReplayHostCanvasDimensions(this.#widget.canvas, this.#widget.scene, this.#dimensions)
         this.#readinessCoordinator = this.#createReadinessCoordinator(
             this.#widget.scene,
@@ -424,15 +495,16 @@ export class IsolatedReplayRenderHost {
         }
 
         this.#applyCropFrustum()
-        const ready = this.#readinessCoordinator?.prepareForCapture
-            ? await this.#readinessCoordinator.prepareForCapture({
+        const ready = await this.#awaitContextSafe(this.#readinessCoordinator?.prepareForCapture
+            ? this.#readinessCoordinator.prepareForCapture({
                 maxMillis,
                 signal,
                 settled,
                 speedLevel,
             })
-            : true
+            : Promise.resolve(true))
         this.#widget.render?.()
+        this.#assertContextAvailable()
         return {intent, appliedFrame, ready, canvasDimensions: this.#canvasDimensions}
     }
 
@@ -454,15 +526,16 @@ export class IsolatedReplayRenderHost {
         }
 
         this.#applyCropFrustum()
-        const ready = this.#readinessCoordinator?.prepareForCapture
-            ? await this.#readinessCoordinator.prepareForCapture({
+        const ready = await this.#awaitContextSafe(this.#readinessCoordinator?.prepareForCapture
+            ? this.#readinessCoordinator.prepareForCapture({
                 maxMillis,
                 signal,
                 settled,
                 speedLevel,
             })
-            : true
+            : Promise.resolve(true))
         this.#widget.render?.()
+        this.#assertContextAvailable()
         return ready
     }
 
@@ -477,6 +550,12 @@ export class IsolatedReplayRenderHost {
         }
 
         this.#destroyed = true
+        if (this.#contextLossListener) {
+            this.#widget?.canvas?.removeEventListener?.('webglcontextlost', this.#contextLossListener)
+        }
+        this.#contextLossListener = null
+        this.#contextLossPromise = null
+        this.#resolveContextLoss = null
         this.#readinessCoordinator?.dispose?.()
         this.#readinessCoordinator = null
         if (this.#widget && this.#widget.isDestroyed?.() !== true) {
