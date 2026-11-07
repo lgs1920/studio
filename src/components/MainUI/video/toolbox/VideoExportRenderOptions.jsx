@@ -36,7 +36,7 @@ const VIDEO_RENDER_PORTRAIT_DIMENSIONS = Object.freeze({width: 1080, height: 192
  * Render and persist independent Cesium export settings.
  * @param {Object} props - Export settings presentation properties.
  * @param {boolean} [props.basicReplay=false] - Render compact choice buttons for Basic Replay.
- * @param {'all'|'quality'|'video'} [props.basicReplayGroup='all'] - Basic Replay settings group to render.
+ * @param {'all'|'quality'|'video'|'duration'} [props.basicReplayGroup='all'] - Basic Replay settings group to render.
  * @returns {JSX.Element} Export renderer controls.
  */
 export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayGroup = 'all'} = {}) => {
@@ -44,6 +44,8 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
     const $settings = lgs.settings.ui.video
     const video = useSnapshot($video)
     const settings = useSnapshot($settings)
+    const layers = useSnapshot(lgs.settings.layers ?? $settings)
+    const hasSelected3DTiles = Boolean(layers.base3d || layers.tiles3d)
     const videoRatioValue = video.ratio?.value ?? video.ratio
     const videoRatio = lgs.configuration?.videoFormats?.find(format => format.value === videoRatioValue)
     const configuredAspectRatio = Number(videoRatio?.aspectRatio ?? video.ratio?.aspectRatio)
@@ -161,9 +163,9 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
 
     const basicChoices = [
         {
-            group: 'video',
-            label: 'Mode',
-            icon: 'desktop',
+            group: 'quality',
+            label: 'Render',
+            icon: 'paintbrush-fine',
             value: renderHostMode,
             choices: [
                 {value: REPLAY_VIDEO_RENDER_HOST_MODES.STANDARD, label: 'Standard'},
@@ -188,19 +190,19 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
         },
         {
             group: 'quality',
-            label: 'Map detail',
-            icon: 'glasses-round',
+            label: 'Building detail',
+            icon: 'building',
             value: renderQuality,
+            visible: renderHostMode === REPLAY_VIDEO_RENDER_HOST_MODES.NATIVE_HQ && hasSelected3DTiles,
             choices: [
                 {value: REPLAY_VIDEO_RENDER_QUALITIES.STANDARD, label: 'Standard'},
                 {value: REPLAY_VIDEO_RENDER_QUALITIES.HIGH, label: 'High'},
                 {value: REPLAY_VIDEO_RENDER_QUALITIES.MAXIMUM, label: 'Maximum'},
             ],
             onSelect: value => updateSetting('renderQuality', value),
-            disabled: renderHostMode !== REPLAY_VIDEO_RENDER_HOST_MODES.NATIVE_HQ,
         },
         {
-            group: 'quality',
+            group: 'duration',
             label: 'Map loading',
             icon: 'spinner-scale',
             value: readinessPolicy,
@@ -211,14 +213,17 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
             onSelect: value => updateSetting('readinessPolicy', value),
         },
     ]
-    const basicGroupChoices = basicReplayGroup === 'all'
-        ? basicChoices
-        : basicChoices.filter(choice => choice.group === basicReplayGroup)
+    const basicGroupChoices = basicChoices.filter(choice => (
+        (basicReplayGroup === 'all' || choice.group === basicReplayGroup)
+        && choice.visible !== false
+    ))
     const basicSectionLabel = basicReplayGroup === 'quality'
-        ? 'Map quality settings'
+        ? 'Video and map quality settings'
         : basicReplayGroup === 'video'
-            ? 'Video settings'
-            : 'Replay export settings'
+            ? 'Video output settings'
+            : basicReplayGroup === 'duration'
+                ? 'Map loading settings'
+                : 'Replay export settings'
 
     /**
      * Render one Basic Replay choice group using the shared video preset buttons.

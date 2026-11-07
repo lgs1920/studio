@@ -551,6 +551,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                         ))}
                     </div>
                 </BasicReplaySettingsRow>
+                {!dryRunEnabled && <VideoExportRenderOptions basicReplay basicReplayGroup="duration"/>}
                 <section className="basic-replay-settings-video" aria-label="Video settings">
                     <WaDivider className="basic-replay-settings-divider"/>
                     <BasicReplaySettingsRow label="Ratio" icon="crop-simple">
