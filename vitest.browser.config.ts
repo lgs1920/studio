@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-13
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,13 +20,15 @@ import mdPlugin, {Mode} from 'vite-plugin-markdown'
 import {playwright} from '@vitest/browser-playwright'
 import {fileURLToPath} from 'url'
 
-const chromiumWebGLArgs = [
-    '--enable-webgl',
-    '--ignore-gpu-blocklist',
-    '--use-gl=angle',
-    '--use-angle=swiftshader-webgl',
-    '--enable-unsafe-swiftshader',
-]
+const chromiumWebGLArgs = process.env.LGS1920_VITEST_NATIVE_GPU === '1'
+    ? ['--enable-webgl', '--ignore-gpu-blocklist']
+    : [
+        '--enable-webgl',
+        '--ignore-gpu-blocklist',
+        '--use-gl=angle',
+        '--use-angle=swiftshader-webgl',
+        '--enable-unsafe-swiftshader',
+    ]
 const browserLaunchEnv = {...process.env}
 
 delete browserLaunchEnv.DISPLAY
