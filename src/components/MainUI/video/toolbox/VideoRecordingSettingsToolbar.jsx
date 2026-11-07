@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -70,6 +70,7 @@ import { createPortal } from 'react-dom'
 import { useSnapshot } from 'valtio'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import { VideoRecordingSettingsMenuContent } from './VideoRecordingSettingsMenus'
+import {VideoExportRenderOptions} from './VideoExportRenderOptions'
 import {BasicReplaySamplingSettings} from './BasicReplaySamplingSettings'
 import {BasicReplayAppearanceSettings} from './BasicReplayAppearanceSettings'
 import {BasicReplayPOISettings} from './BasicReplayPOISettings'
@@ -521,22 +522,18 @@ export const VideoRecordingSettingsToolbar = memo(({
         <div className="basic-replay-settings-scroll-content">
             <WaDivider className="basic-replay-settings-divider"/>
             <div className="basic-replay-settings-core">
-                <BasicReplaySettingsRow label="Ratio" icon="crop-simple">
-                    <VideoRecordingSettingsMenuContent menu="ratio"
-                                                       context={$cropper}
-                                                       cropzoneId={VIDEO_CROP_ZONE}
-                                                       unifiedChoices
-                                                       mainTheme/>
-                </BasicReplaySettingsRow>
                 {!dryRunEnabled && (
-                    <BasicReplaySettingsRow label="Quality" icon="ranking-star">
-                        <VideoRecordingSettingsMenuContent menu="preset"
-                                                           context={$cropper}
-                                                           cropzoneId={VIDEO_CROP_ZONE}
-                                                           compactBasic
-                                                           basicDrawer
-                                                           mainTheme/>
-                    </BasicReplaySettingsRow>
+                    <div className="basic-replay-settings-quality">
+                        <BasicReplaySettingsRow label="Quality" icon="ranking-star">
+                            <VideoRecordingSettingsMenuContent menu="preset"
+                                                               context={$cropper}
+                                                               cropzoneId={VIDEO_CROP_ZONE}
+                                                               compactBasic
+                                                               basicDrawer
+                                                               mainTheme/>
+                        </BasicReplaySettingsRow>
+                        <VideoExportRenderOptions basicReplay basicReplayGroup="quality"/>
+                    </div>
                 )}
                 <BasicReplaySettingsRow label="Duration" icon="clock">
                     <div className="basic-replay-duration-buttons">
@@ -553,6 +550,17 @@ export const VideoRecordingSettingsToolbar = memo(({
                         ))}
                     </div>
                 </BasicReplaySettingsRow>
+                <section className="basic-replay-settings-video" aria-labelledby="basic-replay-settings-video-title">
+                    <h3 id="basic-replay-settings-video-title" className="basic-replay-settings-video__heading">{'Video settings'}</h3>
+                    <BasicReplaySettingsRow label="Ratio" icon="crop-simple">
+                        <VideoRecordingSettingsMenuContent menu="ratio"
+                                                           context={$cropper}
+                                                           cropzoneId={VIDEO_CROP_ZONE}
+                                                           unifiedChoices
+                                                           mainTheme/>
+                    </BasicReplaySettingsRow>
+                    {!dryRunEnabled && <VideoExportRenderOptions basicReplay basicReplayGroup="video"/>}
+                </section>
             </div>
             {basicPreparation && <WaDivider className="basic-replay-settings-divider"/>}
             {basicPreparation && <BasicReplayAppearanceSettings/>}

@@ -63,7 +63,7 @@ export const VideoRecordingSettingsMenuContent = memo(({
                                 basicDrawer={basicDrawer}
                                 idPrefix={inlineCustom ? 'timeline-video-preset' : 'video-preset'}
                                 mainTheme={mainTheme}/>
-            <VideoExportRenderOptions/>
+            {!basicDrawer && <VideoExportRenderOptions/>}
         </div>
     )
 })

@@ -19,6 +19,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
 
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
+    WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaNumberInput: ({label, value, onChange, ...props}) => (
         <label>
             {label}
@@ -26,10 +27,11 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
         </label>
     ),
     WaOption: ({children, value}) => <option value={value}>{children}</option>,
-    WaSelect: ({label, value, onChange, children, disabled}) => (
+    WaSelect: ({label, value, onChange, children, disabled, hint}) => (
         <label>
             {label}
             <select aria-label={label} value={value} onChange={onChange} disabled={disabled}>{children}</select>
+            {hint && <span>{hint}</span>}
         </label>
     ),
 }))
@@ -55,13 +57,19 @@ describe('VideoExportRenderOptions', () => {
         const settings = globalThis.lgs.settings.ui.video
 
         expect(screen.getByLabelText('Export renderer').value).toBe('visible')
+        await waitFor(() => {
+            expect(video.readinessPolicy).toBe('adaptive')
+            expect(settings.readinessPolicy).toBe('adaptive')
+        })
+        expect(screen.getByLabelText('Tile readiness').value).toBe('adaptive')
+        expect(screen.getByText(/Automatic uses an output pixel budget affected by the selected FPS and encoding quality/)).not.toBeNull()
         await act(async () => {
             fireEvent.change(screen.getByLabelText('Export renderer'), {target: {value: 'isolated'}})
             await Promise.resolve()
         })
         expect(video.renderHostMode).toBe('isolated')
         expect(settings.renderHostMode).toBe('isolated')
-        await waitFor(() => expect(screen.getByLabelText('Tile readiness').value).toBe('strict'))
+        await waitFor(() => expect(screen.getByLabelText('Tile readiness').value).toBe('adaptive'))
 
         await act(async () => {
             fireEvent.change(screen.getByLabelText('Output resolution'), {target: {value: 'custom'}})
@@ -84,5 +92,22 @@ describe('VideoExportRenderOptions', () => {
         expect(video.readinessPolicy).toBe('adaptive')
         expect(settings.readinessPolicy).toBe('adaptive')
         await waitFor(() => expect(screen.getByLabelText('Tile readiness').value).toBe('adaptive'))
+    })
+
+    it('restores and persists an explicit readiness policy in Standard mode', async () => {
+        globalThis.lgs.settings.ui.video.readinessPolicy = 'strict'
+        render(<VideoExportRenderOptions/>)
+
+        expect(screen.getByLabelText('Export renderer').value).toBe('visible')
+        expect(screen.getByLabelText('Tile readiness').value).toBe('strict')
+        await waitFor(() => expect(globalThis.lgs.stores.ui.video.readinessPolicy).toBe('strict'))
+        expect(globalThis.lgs.settings.ui.video.readinessPolicy).toBe('strict')
+    })
+
+    it('explains the Automatic budget in the compact Basic Replay controls', () => {
+        render(<VideoExportRenderOptions basicReplay/>)
+
+        expect(screen.getByRole('group', {name: 'Map loading'})).not.toBeNull()
+        expect(screen.getByText(/Automatic uses a pixel budget affected by frame rate and encoding quality/)).not.toBeNull()
     })
 })

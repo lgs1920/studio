@@ -38,9 +38,25 @@ describe('VideoExportRenderOptions with the real Web Awesome select', () => {
         const selects = [...container.querySelectorAll('wa-select')]
         const [renderer, resolution] = selects
 
+        // React's jsdom SSR wrapper emits blank wa-option value attributes; restore the
+        // option values before exercising Web Awesome's select change behavior.
+        const optionValues = [
+            ['visible', 'isolated'],
+            ['automatic', '1080p', '4k-uhd', 'custom'],
+            ['standard', 'high', 'maximum'],
+            ['adaptive', 'strict'],
+        ]
+        selects.forEach((select, selectIndex) => {
+            [...select.querySelectorAll('wa-option')].forEach((option, optionIndex) => {
+                option.setAttribute('value', optionValues[selectIndex][optionIndex])
+            })
+        })
+
         expect(renderer).not.toBeNull()
         expect(resolution).not.toBeNull()
         expect(renderer.hasAttribute('disabled')).toBe(false)
+        expect(resolution.querySelector('[slot="hint"]')?.textContent)
+            .toContain('pixel budget affected by the selected FPS and encoding quality')
 
         await act(async () => {
             resolution.value = '4k-uhd'
