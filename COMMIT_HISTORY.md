@@ -5055,3 +5055,14 @@
 ## 2026-11-07 — [`fix(replay): hide automatic resolution hints`](https://github.com/lgs1920/studio/commit/059fa003f8ce541e772d2029f83991ea450cf4dd)
 
 - Recorded automatically from Git history.
+
+## 2026-11-07 — [`docs: specify automatic POI slowdown visualization for Basic and Expert (#564)`](https://github.com/lgs1920/studio/commit/3f1071e6927fae0884ed684e2f93c31bf00bcd81)
+
+- * docs: specify automatic POI slowdown timeline for Basic and Expert
+- * docs: update commit history
+- ---------
+- Co-authored-by: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+
+## 2026-11-07 — [`Merge branch '1.0.0' into feature/cesium-native-hq-video-capture`](https://github.com/lgs1920/studio/commit/c8d533333bdd79a2fbfd9b6f912511a662cef2b3)
+
+- Recorded automatically from Git history.
