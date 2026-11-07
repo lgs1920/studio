@@ -2061,6 +2061,7 @@ describe('ReplayDeferredExporter', () => {
         const sourceCanvas = document.createElement('canvas')
         sourceCanvas.width = 320
         sourceCanvas.height = 180
+        sourceCanvas.getBoundingClientRect = () => ({left: 0, top: 0, width: 320, height: 180})
         const camera = {
             heading: 0.5,
             pitch: -0.5,

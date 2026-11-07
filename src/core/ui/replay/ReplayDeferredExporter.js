@@ -75,7 +75,7 @@ import {
     IsolatedReplayRenderHost,
 }                              from '@Core/ui/replay/IsolatedReplayRenderHost'
 import {
-    captureReplayCropProjection,
+    captureReplayCanvasCropProjection,
 }                              from '@Core/ui/replay/ReplayCropFrustum'
 import {
     captureReplaySceneDescriptor,
@@ -2663,19 +2663,17 @@ export const runReplayDeferredMp4Export = async ({
     }
     const readinessPolicy = outputRenderSpec?.readinessPolicy
                             ?? (selectedRenderHostMode === 'isolated' ? 'strict' : 'adaptive')
-    const sourceViewportDimensions = outputRenderSpec?.sourceCanvasDimensions
-                                     ?? {
-                                         width:  Number(sourceCanvas?.width) || 0,
-                                         height: Number(sourceCanvas?.height) || 0,
-                                     }
-    const cropProjection = captureReplayCropProjection({
+    const cropProjection = captureReplayCanvasCropProjection({
         camera: globalThis.lgs?.camera
                 ?? replayMode?.cesiumViewer?.()?.camera
                 ?? globalThis.lgs?.viewer?.camera
                 ?? null,
-        sourceViewportDimensions,
+        sourceCanvas,
         cropRect: outputRenderSpec?.cropRect ?? null,
     })
+    if (selectedRenderHostMode === 'isolated' && outputRenderSpec?.cropRect && !cropProjection) {
+        throw new Error('Native HQ could not derive the Replay crop projection from the source canvas CSS viewport.')
+    }
 
     const originalProgress = finiteNumber(controller?.progress, null)
     const originalPaused = Boolean(controller?.paused)

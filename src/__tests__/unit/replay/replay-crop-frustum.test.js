@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-26
+ * Last modified: 2026-11-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import {OrthographicOffCenterFrustum, PerspectiveFrustum} from 'cesium'
 import {describe, expect, it} from 'vitest'
 
 import {
+    captureReplayCanvasCropProjection,
     captureReplayCropProjection,
     createReplayCropFrustum,
 } from '@Core/ui/replay/ReplayCropFrustum'
@@ -103,5 +104,55 @@ describe('ReplayCropFrustum', () => {
 
         expect(projection.crop).toEqual({left: 90, top: 90, width: 10, height: 10})
         expect(projection.key).toBeTruthy()
+    })
+
+    it('keeps an offset crop projection identical across drawing-buffer DPR values', () => {
+        const sourceFrustum = new PerspectiveFrustum({
+            fov:          Math.PI / 3,
+            aspectRatio:  1.5,
+            near:         1,
+            far:          10000,
+        })
+        const cssViewport = {width: 1200, height: 800}
+        const cropRect = {left: 137, top: 91, width: 640, height: 360}
+        const projections = [1, 1.5, 2].map(dpr => {
+            const canvas = {
+                width: Math.round(cssViewport.width * dpr),
+                height: Math.round(cssViewport.height * dpr),
+                getBoundingClientRect: () => cssViewport,
+            }
+
+            return captureReplayCanvasCropProjection({
+                camera: {frustum: sourceFrustum},
+                sourceCanvas: canvas,
+                cropRect,
+            })
+        })
+
+        projections.forEach(projection => {
+            expect(projection).toMatchObject({
+                viewport: cssViewport,
+                crop: cropRect,
+            })
+        })
+        expect(projections[1]).toEqual(projections[0])
+        expect(projections[2]).toEqual(projections[0])
+    })
+
+    it('does not infer CSS viewport dimensions from an intrinsic drawing buffer', () => {
+        const projection = captureReplayCanvasCropProjection({
+            camera: {
+                frustum: new PerspectiveFrustum({
+                    fov:          Math.PI / 3,
+                    aspectRatio:  1.5,
+                    near:         1,
+                    far:          10000,
+                }),
+            },
+            sourceCanvas: {width: 2400, height: 1600},
+            cropRect: {left: 137, top: 91, width: 640, height: 360},
+        })
+
+        expect(projection).toBeNull()
     })
 })
