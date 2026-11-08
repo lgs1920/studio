@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-07
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,6 +42,12 @@ const matrix = [
         expected: {width: 1920, height: 1080},
     },
     {
+        name: 'Native HQ 720p landscape', mode: REPLAY_VIDEO_RENDER_HOST_MODES.NATIVE_HQ, crop: {width: 1280, height: 720}, dpr: 1,
+        profile: REPLAY_VIDEO_RESOLUTION_PROFILES.HD_720, fps: 30, qualityIndex: 0,
+        lod: REPLAY_VIDEO_RENDER_QUALITIES.STANDARD, readiness: REPLAY_VIDEO_READINESS_POLICIES.ADAPTIVE,
+        expected: {width: 1280, height: 720},
+    },
+    {
         name: 'Native HQ 1080p landscape', mode: REPLAY_VIDEO_RENDER_HOST_MODES.NATIVE_HQ, crop: {width: 1920, height: 1080}, dpr: 1,
         profile: REPLAY_VIDEO_RESOLUTION_PROFILES.FULL_HD, fps: 30, qualityIndex: 1,
         lod: REPLAY_VIDEO_RENDER_QUALITIES.STANDARD, readiness: REPLAY_VIDEO_READINESS_POLICIES.ADAPTIVE,
@@ -49,7 +55,7 @@ const matrix = [
     },
     {
         name: 'Native HQ QHD landscape', mode: REPLAY_VIDEO_RENDER_HOST_MODES.NATIVE_HQ, crop: {width: 2560, height: 1440}, dpr: 1,
-        profile: REPLAY_VIDEO_RESOLUTION_PROFILES.CUSTOM, customDimensions: {width: 2560, height: 1440}, fps: 45, qualityIndex: 1,
+        profile: REPLAY_VIDEO_RESOLUTION_PROFILES.QHD_1440, fps: 45, qualityIndex: 1,
         lod: REPLAY_VIDEO_RENDER_QUALITIES.HIGH, readiness: REPLAY_VIDEO_READINESS_POLICIES.STRICT, expected: {width: 2560, height: 1440},
     },
     {
@@ -72,11 +78,18 @@ const matrix = [
     },
     {
         name: 'Native HQ QHD portrait at 60 FPS', mode: REPLAY_VIDEO_RENDER_HOST_MODES.NATIVE_HQ, crop: {width: 1440, height: 2560}, dpr: 1,
-        profile: REPLAY_VIDEO_RESOLUTION_PROFILES.CUSTOM, customDimensions: {width: 1440, height: 2560}, fps: 60, qualityIndex: 1,
+        profile: REPLAY_VIDEO_RESOLUTION_PROFILES.QHD_1440, fps: 60, qualityIndex: 1,
         lod: REPLAY_VIDEO_RENDER_QUALITIES.HIGH, readiness: REPLAY_VIDEO_READINESS_POLICIES.STRICT, expected: {width: 1440, height: 2560},
     },
     {
         name: 'Native HQ 4K portrait', mode: REPLAY_VIDEO_RENDER_HOST_MODES.NATIVE_HQ, crop: {width: 2160, height: 3840}, dpr: 1,
+        profile: REPLAY_VIDEO_RESOLUTION_PROFILES.UHD_4K, fps: 30, qualityIndex: 2,
+        lod: REPLAY_VIDEO_RENDER_QUALITIES.MAXIMUM, readiness: REPLAY_VIDEO_READINESS_POLICIES.STRICT,
+        expected: {width: 2160, height: 3840},
+    },
+    {
+        name: 'Native HQ 4K portrait with rounded CSS crop bounds', mode: REPLAY_VIDEO_RENDER_HOST_MODES.NATIVE_HQ,
+        crop: {width: 674, height: 1199}, ratio: '9x16', dpr: 1,
         profile: REPLAY_VIDEO_RESOLUTION_PROFILES.UHD_4K, fps: 30, qualityIndex: 2,
         lod: REPLAY_VIDEO_RENDER_QUALITIES.MAXIMUM, readiness: REPLAY_VIDEO_READINESS_POLICIES.STRICT,
         expected: {width: 2160, height: 3840},
@@ -120,6 +133,7 @@ const resolveMatrixRenderSpec = entry => {
     const video = {
         fps: REPLAY_VIDEO_FPS.indexOf(entry.fps),
         quality: entry.qualityIndex,
+        ratio: entry.ratio,
         renderHostMode: entry.mode,
         resolutionProfile: entry.profile,
         customDimensions: entry.customDimensions,
@@ -190,9 +204,16 @@ test.skipIf(!matrixEnabled)('renders, composites and encodes the nine Native HQ 
             let sourceCanvas
             let actualCesiumDimensions
             if (entry.mode === REPLAY_VIDEO_RENDER_HOST_MODES.NATIVE_HQ) {
+                const viewportDpr = Math.max(1, Math.min(
+                    spec.dimensions.width / entry.crop.width,
+                    spec.dimensions.height / entry.crop.height,
+                ))
                 isolatedHost = new IsolatedReplayRenderHost({
                     dimensions: spec.dimensions,
-                    viewportDimensions: spec.dimensions,
+                    viewportDimensions: {
+                        width: spec.dimensions.width / viewportDpr,
+                        height: spec.dimensions.height / viewportDpr,
+                    },
                     descriptor: createLocalSceneDescriptor(),
                     maximumScreenSpaceError: spec.maximumScreenSpaceError,
                     readiness: {enabled: true, policy: spec.readinessPolicy},
