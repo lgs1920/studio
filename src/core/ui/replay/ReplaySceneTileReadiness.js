@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-17
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -297,27 +297,6 @@ export const getVisibleReplayTilesets = scene => {
 }
 
 /**
- * Resolve visible imagery layers attached to a collection.
- *
- * @param {object|null} collection - Cesium imagery layer collection.
- * @returns {Array<object>} Visible imagery layers.
- */
-const getVisibleImageryLayers = collection => collectionValues(collection)
-    .filter(layer => layer?.show !== false)
-
-/**
- * Resolve all visible imagery layers used by the globe and visible tilesets.
- *
- * @param {object|null} scene - Cesium scene.
- * @param {Array<object>} tilesets - Visible 3D tilesets.
- * @returns {Array<object>} Visible imagery layers.
- */
-const getVisibleReplayImageryLayers = (scene, tilesets) => [
-    ...getVisibleImageryLayers(scene?.globe?.imageryLayers),
-    ...tilesets.flatMap(tileset => getVisibleImageryLayers(tileset?.imageryLayers)),
-]
-
-/**
  * Determine whether all currently requested scene tiles are ready.
  *
  * Cesium exposes the globe and 3D tileset readiness as view-based booleans.
@@ -360,7 +339,7 @@ const subscribeToEvent = (event, listener) => {
 }
 
 /**
- * Build a descriptive error from a Cesium tile or imagery failure event.
+ * Build a descriptive error from a Cesium terrain or 3D tile failure event.
  *
  * @param {object|string|Error|null} failure - Cesium failure payload.
  * @param {string} source - Failure source label.
@@ -376,15 +355,14 @@ const createTileFailureError = (failure, source) => {
 }
 
 /**
- * Keep visible 3D tile and imagery provider failures observable during a render.
+ * Keep visible terrain and 3D tile failures observable during a render.
  *
  * @param {Array<object>} tilesets - Visible 3D tilesets.
- * @param {Array<object>} imageryLayers - Visible imagery layers.
  * @param {Function} onFailure - Failure callback.
  * @param {object|null} terrainProvider - Visible globe terrain provider.
  * @returns {Function} Listener cleanup callback.
  */
-const subscribeToReplayTileFailures = (tilesets, imageryLayers, onFailure, terrainProvider = null) => {
+const subscribeToReplayTileFailures = (tilesets, onFailure, terrainProvider = null) => {
     const cleanup = []
     const removeTerrainErrorListener = subscribeToEvent(
         terrainProvider?.errorEvent,
@@ -401,42 +379,6 @@ const subscribeToReplayTileFailures = (tilesets, imageryLayers, onFailure, terra
         )
         if (removeListener) {
             cleanup.push(removeListener)
-        }
-    })
-
-    imageryLayers.forEach(layer => {
-        const subscribedProviderEvents = new Set()
-        const subscribeToProviderErrors = provider => {
-            const event = provider?.errorEvent
-            if (!event || subscribedProviderEvents.has(event)) {
-                return
-            }
-
-            subscribedProviderEvents.add(event)
-            const removeListener = subscribeToEvent(
-                event,
-                failure => onFailure(createTileFailureError(failure, '2D imagery tiles')),
-            )
-            if (removeListener) {
-                cleanup.push(removeListener)
-            }
-        }
-
-        const removeLayerErrorListener = subscribeToEvent(
-            layer?.errorEvent,
-            failure => onFailure(createTileFailureError(failure, '2D imagery tiles')),
-        )
-        if (removeLayerErrorListener) {
-            cleanup.push(removeLayerErrorListener)
-        }
-        subscribeToProviderErrors(layer?.imageryProvider)
-
-        const removeReadyListener = subscribeToEvent(
-            layer?.readyEvent,
-            provider => subscribeToProviderErrors(provider ?? layer?.imageryProvider),
-        )
-        if (removeReadyListener) {
-            cleanup.push(removeReadyListener)
         }
     })
 
@@ -529,7 +471,6 @@ const waitForReplayPostRender = async (
     signal,
     renderNow = null,
     tilesets = [],
-    imageryLayers = [],
     terrainProvider = null,
 ) => {
     if (signal?.aborted) {
@@ -580,7 +521,7 @@ const waitForReplayPostRender = async (
         if (postRenderListener) {
             cleanup.push(postRenderListener)
         }
-        cleanup.push(subscribeToReplayTileFailures(tilesets, imageryLayers, rejectOnce, terrainProvider))
+        cleanup.push(subscribeToReplayTileFailures(tilesets, rejectOnce, terrainProvider))
 
         if (signal) {
             const abortListener = () => rejectOnce(createAbortError())
@@ -606,13 +547,12 @@ const waitForReplayPostRender = async (
  *
  * @param {object|null} scene - Cesium scene.
  * @param {Array<object>} tilesets - Visible 3D tilesets.
- * @param {Array<object>} imageryLayers - Visible imagery layers.
  * @param {number} timeoutMs - Maximum wait duration.
  * @param {AbortSignal|null} signal - Optional cancellation signal.
  * @param {Function|null} renderNow - Optional explicit render while loading progresses.
  * @returns {Promise<void>} Promise resolved after a readiness opportunity.
  */
-const waitForReplayTileSignal = async (scene, tilesets, imageryLayers, timeoutMs, signal, renderNow = null) => {
+const waitForReplayTileSignal = async (scene, tilesets, timeoutMs, signal, renderNow = null) => {
     if (signal?.aborted) {
         throw createAbortError()
     }
@@ -658,7 +598,6 @@ const waitForReplayTileSignal = async (scene, tilesets, imageryLayers, timeoutMs
         })
         cleanup.push(subscribeToReplayTileFailures(
             tilesets,
-            imageryLayers,
             rejectOnce,
             scene?.globe?.show === false ? null : scene?.globe?.terrainProvider,
         ))
@@ -687,9 +626,10 @@ const waitForReplayTileSignal = async (scene, tilesets, imageryLayers, timeoutMs
 /**
  * Wait until the Cesium scene has loaded and rendered the current view tiles.
  *
- * The check covers the globe's 2D imagery/terrain queue and every visible 3D
- * tileset. A post-render boundary is required after readiness so the captured
- * canvas cannot observe tile content that is loaded but not yet displayed.
+ * The check covers the globe's imagery/terrain queue and every visible 3D
+ * tileset. Cesium treats a failed imagery request as terminal and renders the
+ * globe without that tile, so imagery errors do not invalidate an export frame.
+ * A post-render boundary ensures loaded content is displayed before capture.
  *
  * @param {object} options - Readiness wait options.
  * @param {object|null} [options.scene=null] - Cesium scene.
@@ -698,7 +638,7 @@ const waitForReplayTileSignal = async (scene, tilesets, imageryLayers, timeoutMs
  * @param {Function|null} [options.renderNow=null] - Synchronous draw after tile readiness.
  * @param {boolean} [options.requirePostRender=false] - Require a completed post-render event.
  * @returns {Promise<boolean>} True when ready, false when the frame timeout expires.
- * @throws {Error} When tile loading fails or the wait is aborted.
+ * @throws {Error} When terrain or 3D tile loading fails, or the wait is aborted.
  */
 export const waitForReplaySceneTilesReady = async ({
                                                        scene = null,
@@ -714,8 +654,6 @@ export const waitForReplaySceneTilesReady = async ({
     const safeMaxMillis = Math.max(0, Math.trunc(Number(maxMillis) || 0))
     const deadline = Date.now() + safeMaxMillis
     let tilesets = getVisibleReplayTilesets(scene)
-    let imageryLayers = getVisibleReplayImageryLayers(scene, tilesets)
-
     if (!scene.globe && tilesets.length === 0) {
         if (requirePostRender !== true) {
             return true
@@ -726,14 +664,12 @@ export const waitForReplaySceneTilesReady = async ({
             signal,
             renderNow,
             tilesets,
-            imageryLayers,
             scene?.globe?.show === false ? null : scene?.globe?.terrainProvider,
         )
     }
 
     const refreshTileSources = () => {
         tilesets = getVisibleReplayTilesets(scene)
-        imageryLayers = getVisibleReplayImageryLayers(scene, tilesets)
         return areReplaySceneTilesReady(scene, tilesets)
     }
 
@@ -744,7 +680,6 @@ export const waitForReplaySceneTilesReady = async ({
             signal,
             renderNow,
             tilesets,
-            imageryLayers,
             scene?.globe?.show === false ? null : scene?.globe?.terrainProvider,
         )
         if (requirePostRender === true && !rendered) {
@@ -767,7 +702,6 @@ export const waitForReplaySceneTilesReady = async ({
                 signal,
                 renderNow,
                 tilesets,
-                imageryLayers,
                 scene?.globe?.show === false ? null : scene?.globe?.terrainProvider,
             )
             if (requirePostRender === true && !rendered) {
@@ -780,7 +714,7 @@ export const waitForReplaySceneTilesReady = async ({
         }
 
         const remainingMs = Math.max(0, deadline - Date.now())
-        await waitForReplayTileSignal(scene, tilesets, imageryLayers, remainingMs, signal, renderNow)
+        await waitForReplayTileSignal(scene, tilesets, remainingMs, signal, renderNow)
     }
 
     return false
@@ -800,7 +734,7 @@ export const waitForReplaySceneTilesReady = async ({
  * @param {Function|null} [options.renderNow=null] - Synchronous draw after tile readiness.
  * @param {boolean} [options.requirePostRender=false] - Require a completed post-render event.
  * @returns {Promise<boolean>} True when ready, false when the frame timeout expires.
- * @throws {Error} When tile loading fails or the wait is aborted.
+ * @throws {Error} When terrain or 3D tile loading fails, or the wait is aborted.
  */
 export const prepareReplaySceneTilesForCapture = async ({
                                                            scene = null,

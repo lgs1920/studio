@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-17
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -454,33 +454,25 @@ describe('ReplaySceneTileReadiness', () => {
         }
     })
 
-    it.each(['3D tiles', 'terrain tiles', '2D imagery tiles'])(
+    it.each(['3D tiles', 'terrain tiles'])(
         'rejects a strict frame when %s fail after postRender is raised',
         async failureSource => {
             vi.useFakeTimers()
             const postRender = createEvent()
             const tileFailed = createEvent()
             const terrainFailureEvent = createEvent()
-            const imageryFailureEvent = createEvent()
             const failureEvent = failureSource === '3D tiles'
                 ? tileFailed
-                : (failureSource === 'terrain tiles' ? terrainFailureEvent : imageryFailureEvent)
+                : terrainFailureEvent
             const tileset = {
                 show: true,
                 tilesLoaded: true,
                 tileFailed,
             }
             const terrainProvider = {errorEvent: terrainFailureEvent}
-            const imageryLayer = {
-                show: true,
-                errorEvent: createEvent(),
-                readyEvent: createEvent(),
-                imageryProvider: {errorEvent: imageryFailureEvent},
-            }
             const scene = {
                 globe: {
                     tilesLoaded: true,
-                    imageryLayers: createCollection([imageryLayer]),
                     terrainProvider,
                 },
                 primitives: createCollection([tileset]),
@@ -503,9 +495,6 @@ describe('ReplaySceneTileReadiness', () => {
                 expect(postRender.listenerCount()).toBe(0)
                 expect(tileFailed.listenerCount()).toBe(0)
                 expect(terrainFailureEvent.listenerCount()).toBe(0)
-                expect(imageryFailureEvent.listenerCount()).toBe(0)
-                expect(imageryLayer.errorEvent.listenerCount()).toBe(0)
-                expect(imageryLayer.readyEvent.listenerCount()).toBe(0)
                 expect(vi.getTimerCount()).toBe(0)
             }
             finally {
@@ -513,6 +502,50 @@ describe('ReplaySceneTileReadiness', () => {
             }
         },
     )
+
+    it('allows a strict frame to render when a 2D imagery tile fails', async () => {
+        vi.useFakeTimers()
+        const postRender = createEvent()
+        const imageryFailureEvent = createEvent()
+        const imageryLayer = {
+            show: true,
+            errorEvent: createEvent(),
+            readyEvent: createEvent(),
+            imageryProvider: {errorEvent: imageryFailureEvent},
+        }
+        const scene = {
+            globe: {
+                tilesLoaded: true,
+                imageryLayers: createCollection([imageryLayer]),
+            },
+            primitives: createCollection([]),
+            postRender,
+            requestRender: vi.fn(),
+        }
+
+        try {
+            const readiness = waitForReplaySceneTilesReady({
+                scene,
+                maxMillis: 100,
+                requirePostRender: true,
+                renderNow: () => {
+                    imageryFailureEvent.emit({message: 'Failed to obtain image tile X: 33741 Y: 23597 Level: 16.'})
+                    postRender.emit(scene)
+                },
+            })
+            await vi.advanceTimersByTimeAsync(0)
+
+            await expect(readiness).resolves.toBe(true)
+            expect(postRender.listenerCount()).toBe(0)
+            expect(imageryFailureEvent.listenerCount()).toBe(0)
+            expect(imageryLayer.errorEvent.listenerCount()).toBe(0)
+            expect(imageryLayer.readyEvent.listenerCount()).toBe(0)
+            expect(vi.getTimerCount()).toBe(0)
+        }
+        finally {
+            vi.useRealTimers()
+        }
+    })
 
     it('reports observable tile events and leaves request/cache-miss counts unavailable', () => {
         const tileLoadProgressEvent = createEvent()
