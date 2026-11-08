@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-24
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,11 +16,12 @@
 
 /* oxlint-disable react/only-export-components */
 
-import { useEffect, useRef }     from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { SECOND }                from '@Core/constants'
+import { UI_ACTIONS, UI_ICONS }  from '@Core/ui/metadata/uiActionCatalog'
 import parse                     from 'html-react-parser'
 import { toast, ToastContainer } from 'react-toastify'
-import { WaCallout, WaIcon }     from '@awesome.me/webawesome/dist/react'
+import { WaCallout, WaCopyButton, WaIcon } from '@awesome.me/webawesome/dist/react'
 import 'react-toastify/dist/ReactToastify.css'
 
 export const LGS_INFORMATION_TOAST = 'primary'
@@ -136,11 +137,14 @@ const renderContent = (content) => {
     return (typeof content === 'string') ? parse(content) : content
 }
 
+/** Render one application toast and expose copy feedback on error messages. */
 export const CalloutToast = ({message, type = LGS_INFORMATION_TOAST}) => {
+    const copyTargetId = `lgs-toast-message-${useId().replace(/:/g, '')}`
     const normalizedMessage = normalizeMessage(message)
     const caption = renderContent(normalizedMessage.caption)
     const text = renderContent(normalizedMessage.text)
     const toastClass = LGS_TOAST_CLASSES[type] || LGS_TOAST_CLASSES[LGS_INFORMATION_TOAST]
+    const shouldShowCopyButton = type === LGS_ERROR_TOAST && Boolean(caption || text)
 
     return (
         <WaCallout
@@ -154,8 +158,33 @@ export const CalloutToast = ({message, type = LGS_INFORMATION_TOAST}) => {
                 name={LGS_TOAST_ICONS[type] || LGS_TOAST_ICONS[LGS_INFORMATION_TOAST]}
                 variant="regular"
             />
-            {caption && <div className="toast-caption">{caption}</div>}
-            {text && <div className="toast-text">{text}</div>}
+            {shouldShowCopyButton ? (
+                <div className="lgs-toast-message-layout">
+                    <div id={copyTargetId} className="lgs-toast-copy-target">
+                        {caption && <div className="toast-caption">{caption}</div>}
+                        {caption && text && '\n'}
+                        {text && <div className="toast-text">{text}</div>}
+                    </div>
+                    <WaCopyButton
+                        className="lgs-toast-copy-button"
+                        from={copyTargetId}
+                        copyLabel={UI_ACTIONS.copyToastMessage.label}
+                        successLabel={UI_ACTIONS.toastMessageCopied.label}
+                        errorLabel={UI_ACTIONS.toastMessageCopyFailed.label}
+                        tooltip="full"
+                        tooltipPlacement="top"
+                    >
+                        <WaIcon slot="copy-icon" size="s" {...UI_ACTIONS.copyToastMessage.icon}/>
+                        <WaIcon slot="success-icon" size="s" {...UI_ICONS.success}/>
+                        <WaIcon slot="error-icon" size="s" {...UI_ICONS.error}/>
+                    </WaCopyButton>
+                </div>
+            ) : (
+                <>
+                    {caption && <div className="toast-caption">{caption}</div>}
+                    {text && <div className="toast-text">{text}</div>}
+                </>
+            )}
         </WaCallout>
     )
 }
