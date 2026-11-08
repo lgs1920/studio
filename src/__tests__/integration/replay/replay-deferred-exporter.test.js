@@ -2393,7 +2393,7 @@ describe('ReplayDeferredExporter', () => {
             positionCartographic: {longitude: 1, latitude: 0.5, height: 1000},
         }
         const mainScene = {mode: 3, camera, globe: {}, fog: {}}
-        const isolatedScene = {mode: 3, camera: {}, globe: {}, fog: {}, render: vi.fn()}
+        const isolatedScene = {mode: 3, camera: {}, globe: {tilesLoaded: false}, fog: {}, render: vi.fn()}
         const viewer = {
             scene: mainScene,
             camera,
@@ -2480,7 +2480,9 @@ describe('ReplayDeferredExporter', () => {
             isolatedRenderHostFactory,
         })).rejects.toMatchObject({
             name: 'TimeoutError',
-            message: expect.stringContaining('Strict Replay scene readiness timed out after 3 bounded attempts'),
+            message: expect.stringMatching(
+                /Strict Replay scene readiness timed out after 3 bounded attempts.*terrain\/imagery tile queue still pending/,
+            ),
         })
 
         expect(isolatedRenderHost.prepareForCapture).toHaveBeenCalledTimes(3)

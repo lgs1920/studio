@@ -60,6 +60,7 @@ import {
 }                              from '@Core/ui/replay/ReplayRecordingMonitor'
 import {
     createReplaySceneTileReadinessCoordinator,
+    describeReplaySceneTileReadiness,
     prepareReplaySceneTileCache,
     prepareReplaySceneTilesForCapture,
     resolveReplayTileSpeedLevel,
@@ -3231,10 +3232,17 @@ export const runReplayDeferredMp4Export = async ({
                                     const frameLabel = Number.isInteger(Number(frame?.index))
                                         ? Number(frame.index) + 1
                                         : 'unknown'
+                                    const readinessScene = selectedRenderHostMode === 'isolated'
+                                        ? isolatedRenderHost?.renderTarget?.()?.scene ?? replayMode?.cesiumScene?.()
+                                        : replayMode?.cesiumScene?.()
+                                          ?? globalThis.lgs?.scene
+                                          ?? globalThis.lgs?.viewer?.scene
+                                    const readinessDetail = describeReplaySceneTileReadiness(readinessScene)
                                     const timeoutError = new Error(
                                         `Strict Replay scene readiness timed out after ${readinessResult.attempts} bounded attempts `
                                         + `at frame ${frameLabel}. Check network access, tile credentials, `
-                                        + 'and the selected Cesium detail level, or use Adaptive readiness.',
+                                        + 'and the selected Cesium detail level, or use Adaptive readiness. '
+                                        + readinessDetail,
                                     )
                                     timeoutError.name = 'TimeoutError'
                                     throw timeoutError

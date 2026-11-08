@@ -280,18 +280,38 @@ const collectionValues = collection => {
 }
 
 /**
+ * Determine whether visible imagery contributes work to the combined globe tile queue.
+ *
+ * @param {object|null} scene - Cesium scene.
+ * @returns {boolean} Whether at least one imagery layer is visible.
+ */
+const hasVisibleReplayImageryLayer = scene => collectionValues(scene?.globe?.imageryLayers)
+    .some(layer => layer?.show !== false && Number(layer?.alpha ?? 1) > 0)
+
+/**
+ * Subscribe to failures from currently visible 2D imagery layers.
+ *
+ * @param {object|null} scene - Cesium scene.
+ * @param {Function} onFailure - Imagery failure callback.
+ * @returns {Function} Listener cleanup callback.
+ */
+const subscribeToReplayImageryFailures = (scene, onFailure) => {
+    const cleanup = collectionValues(scene?.globe?.imageryLayers)
+        .filter(layer => layer?.show !== false && Number(layer?.alpha ?? 1) > 0)
+        .map(layer => subscribeToEvent(layer?.imageryProvider?.errorEvent, onFailure))
+        .filter(Boolean)
+
+    return () => cleanup.splice(0).forEach(removeListener => removeListener?.())
+}
+
+/**
  * Resolve visible 3D tilesets from the active scene primitive collection.
  *
  * @param {object|null} scene - Cesium scene.
  * @returns {Array<object>} Visible tileset-like primitives.
  */
 export const getVisibleReplayTilesets = scene => {
-    const candidates = [
-        ...collectionValues(scene?.primitives),
-        globalThis.lgs?.base3dTileset,
-        globalThis.lgs?.theTiles3DLayer,
-    ]
-    return [...new Set(candidates)]
+    return [...new Set(collectionValues(scene?.primitives))]
         .filter(primitive => primitive?.show !== false)
         .filter(primitive => typeof primitive?.tilesLoaded === 'boolean')
 }
@@ -300,8 +320,6 @@ export const getVisibleReplayTilesets = scene => {
  * Determine whether all currently requested scene tiles are ready.
  *
  * Cesium exposes the globe and 3D tileset readiness as view-based booleans.
- * They include the content needed by the current camera view, which is a
- * conservative readiness gate for a crop taken from that view.
  *
  * @param {object|null} scene - Cesium scene.
  * @param {Array<object>|null} [tilesets=null] - Visible tilesets.
@@ -316,6 +334,50 @@ export const areReplaySceneTilesReady = (scene, tilesets = null) => {
     const globeReady = scene.globe?.show === false || scene.globe?.tilesLoaded !== false
     const tilesetsReady = visibleTilesets.every(tileset => tileset.tilesLoaded !== false)
     return globeReady && tilesetsReady
+}
+
+/**
+ * Describe which scene-owned tile queues remain unready after a bounded wait.
+ *
+ * @param {object|null} scene - Cesium scene used for the export frame.
+ * @returns {string} Safe readiness detail for an export error message.
+ */
+export const describeReplaySceneTileReadiness = scene => {
+    if (!scene) {
+        return 'No Cesium scene was available for readiness diagnostics.'
+    }
+
+    const details = []
+    if (scene.globe?.show === false) {
+        details.push('globe hidden')
+    }
+    else {
+        details.push(scene.globe?.tilesLoaded === false
+            ? 'terrain/imagery tile queue still pending'
+            : 'terrain/imagery tile queue ready')
+    }
+
+    const visibleTilesets = getVisibleReplayTilesets(scene)
+    const pendingTilesets = visibleTilesets
+        .map((tileset, index) => ({tileset, index}))
+        .filter(({tileset}) => tileset.tilesLoaded === false)
+    if (pendingTilesets.length > 0) {
+        const labels = pendingTilesets.map(({tileset, index}) => {
+            const name = tileset.name || tileset.constructor?.name || `3D Tileset ${index + 1}`
+            const sse = Number(tileset.maximumScreenSpaceError)
+            return Number.isFinite(sse) ? `${name} (SSE ${sse})` : name
+        })
+        details.push(`${pendingTilesets.length} visible 3D Tileset(s) still pending: ${labels.join(', ')}`)
+    }
+    else {
+        details.push(`visible 3D Tilesets ready (${visibleTilesets.length})`)
+    }
+
+    if (areReplaySceneTilesReady(scene, visibleTilesets)) {
+        details.push('Cesium tile queues currently report ready; strict frame qualification did not complete')
+    }
+
+    return `Readiness detail: ${details.join('; ')}.`
 }
 
 /**
@@ -640,13 +702,13 @@ const waitForReplayTileSignal = async (scene, tilesets, timeoutMs, signal, rende
  * @returns {Promise<boolean>} True when ready, false when the frame timeout expires.
  * @throws {Error} When terrain or 3D tile loading fails, or the wait is aborted.
  */
-export const waitForReplaySceneTilesReady = async ({
-                                                       scene = null,
-                                                       maxMillis = 5000,
-                                                       signal = null,
-                                                       renderNow = null,
-                                                       requirePostRender = false,
-                                                   } = {}) => {
+const waitForReplaySceneTilesReadyUntilDeadline = async ({
+                                                             scene = null,
+                                                             maxMillis = 5000,
+                                                             signal = null,
+                                                             renderNow = null,
+                                                             requirePostRender = false,
+                                                         } = {}) => {
     if (!scene) {
         return requirePostRender !== true
     }
@@ -714,10 +776,91 @@ export const waitForReplaySceneTilesReady = async ({
         }
 
         const remainingMs = Math.max(0, deadline - Date.now())
+        if (remainingMs === 0) {
+            break
+        }
         await waitForReplayTileSignal(scene, tilesets, remainingMs, signal, renderNow)
     }
 
     return false
+}
+
+/**
+ * Wait for scene readiness and permit a rendered frame when 2D imagery remains pending.
+ *
+ * Cesium combines terrain and imagery work in Globe.tilesLoaded. Strict mode
+ * waits for the configured bounded interval, then permits visible 2D imagery
+ * to remain incomplete if the terrain provider is initialized and all visible
+ * 3D Tilesets are ready. Explicit terrain and 3D tile failures remain fatal.
+ *
+ * @param {object} options - Readiness wait options.
+ * @param {object|null} [options.scene=null] - Cesium scene.
+ * @param {number} [options.maxMillis=5000] - Maximum tile-wait duration.
+ * @param {AbortSignal|null} [options.signal=null] - Optional cancellation signal.
+ * @param {Function|null} [options.renderNow=null] - Synchronous draw for the current view.
+ * @param {boolean} [options.requirePostRender=false] - Require a completed post-render event.
+ * @param {Function|null} [options.onIncompleteImagery=null] - Report a qualified frame with pending imagery.
+ * @returns {Promise<boolean>} Whether the current scene frame is qualified.
+ * @throws {Error} When terrain or 3D tile loading fails, or the wait is aborted.
+ */
+export const waitForReplaySceneTilesReady = async ({
+                                                       scene = null,
+                                                       maxMillis = 5000,
+                                                       signal = null,
+                                                       renderNow = null,
+                                                       requirePostRender = false,
+                                                       onIncompleteImagery = null,
+                                                   } = {}) => {
+    let imageryFailureCount = 0
+    let firstImageryFailure = null
+    const removeImageryFailureListeners = requirePostRender === true
+        ? subscribeToReplayImageryFailures(scene, failure => {
+            imageryFailureCount += 1
+            firstImageryFailure ??= failure
+        })
+        : () => {}
+
+    try {
+        const ready = await waitForReplaySceneTilesReadyUntilDeadline({
+            scene,
+            maxMillis,
+            signal,
+            renderNow,
+            requirePostRender,
+        })
+        if (ready || requirePostRender !== true || !hasVisibleReplayImageryLayer(scene) || signal?.aborted) {
+            return ready
+        }
+
+        const tilesets = getVisibleReplayTilesets(scene)
+        const terrainProvider = scene?.globe?.show === false ? null : scene?.globe?.terrainProvider
+        const tilesetsReady = tilesets.every(tileset => tileset.tilesLoaded !== false)
+        if (!tilesetsReady || terrainProvider?.ready === false) {
+            return false
+        }
+
+        const renderQualified = await waitForReplayPostRender(
+            scene,
+            Math.max(100, Math.min(DEFAULT_KNOWN_FOOTPRINT_RENDER_TIMEOUT_MS, Math.trunc(Number(maxMillis) || 0))),
+            signal,
+            renderNow,
+            tilesets,
+            terrainProvider,
+        )
+        if (!renderQualified || !tilesets.every(tileset => tileset.tilesLoaded !== false)) {
+            return false
+        }
+
+        onIncompleteImagery?.({
+            count: imageryFailureCount,
+            failure: firstImageryFailure,
+            pending: scene?.globe?.tilesLoaded === false,
+        })
+        return true
+    }
+    finally {
+        removeImageryFailureListeners()
+    }
 }
 
 /**
@@ -733,6 +876,7 @@ export const waitForReplaySceneTilesReady = async ({
  * @param {boolean} [options.disableMovementRequestDeferral=true] - Disable 3D request deferral for a new tileset source.
  * @param {Function|null} [options.renderNow=null] - Synchronous draw after tile readiness.
  * @param {boolean} [options.requirePostRender=false] - Require a completed post-render event.
+ * @param {Function|null} [options.onIncompleteImagery=null] - Report a frame qualified with pending imagery.
  * @returns {Promise<boolean>} True when ready, false when the frame timeout expires.
  * @throws {Error} When terrain or 3D tile loading fails, or the wait is aborted.
  */
@@ -743,6 +887,7 @@ export const prepareReplaySceneTilesForCapture = async ({
                                                            disableMovementRequestDeferral = true,
                                                            renderNow = null,
                                                            requirePostRender = false,
+                                                           onIncompleteImagery = null,
                                                        } = {}) => {
     if (!scene || signal?.aborted) {
         if (signal?.aborted) {
@@ -760,7 +905,14 @@ export const prepareReplaySceneTilesForCapture = async ({
         prepareTilesets()
     }
     try {
-        return await waitForReplaySceneTilesReady({scene, maxMillis, signal, renderNow, requirePostRender})
+        return await waitForReplaySceneTilesReady({
+            scene,
+            maxMillis,
+            signal,
+            renderNow,
+            requirePostRender,
+            onIncompleteImagery,
+        })
     }
     finally {
         removePrepareListener?.()
@@ -808,9 +960,12 @@ export const createReplaySceneTileReadinessCoordinator = (
     let sourcesInitialized = false
     let sourceGeneration = 0
     let preparedSourceGeneration = null
+    let imageryFallbackActive = false
     let sourceCleanup = []
     const readyFootprints = new Map()
     const sourceMetrics = {
+        incompleteImageryFallbacks: 0,
+        failedImageryRequests: 0,
         tilesetLoadEvents: 0,
         tilesetUnloadEvents: 0,
         tilesetFailureEvents: 0,
@@ -820,6 +975,7 @@ export const createReplaySceneTileReadinessCoordinator = (
         terrainQueueEvents: 0,
         peakTerrainPendingRequests: 0,
     }
+    const incompleteImageryFootprints = new Set()
     const readinessOptions = normalizeReplaySceneTileReadinessOptions({
                                                                           enabled,
                                                                           policy,
@@ -871,6 +1027,11 @@ export const createReplaySceneTileReadinessCoordinator = (
                 invalidate()
             }
         })
+        addListener(scene.globe?.imageryLayersUpdatedEvent, () => {
+            imageryFallbackActive = false
+            incompleteImageryFootprints.clear()
+            invalidate()
+        })
         tilesets.forEach(tileset => {
             addListener(tileset.loadProgress, (pendingRequests = 0, processing = 0) => {
                 sourceMetrics.tilesetLoadProgressEvents += 1
@@ -915,6 +1076,8 @@ export const createReplaySceneTileReadinessCoordinator = (
         refreshSources()
         const footprintKey = replayCameraFootprintKey(scene)
         const knownVersion = footprintKey === null ? null : readyFootprints.get(footprintKey)
+        const imageryFallbackForFootprint = footprintKey !== null
+            && incompleteImageryFootprints.has(footprintKey)
         const disableMovementRequestDeferral = preparedSourceGeneration !== sourceGeneration
         const safeKnownTimeout = readinessOptions.knownFootprintTimeoutMs
         const effectiveMaxMillis = resolveReplayTileReadinessBudget({
@@ -923,11 +1086,27 @@ export const createReplaySceneTileReadinessCoordinator = (
                                                                          settled,
                                                                          speedLevel,
                                                                      })
+        const boundedImageryMaxMillis = imageryFallbackActive
+            && requirePostRender === true
+            && hasVisibleReplayImageryLayer(scene)
+            && !imageryFallbackForFootprint
+            ? Math.min(effectiveMaxMillis, DEFAULT_POLL_INTERVAL_MS)
+            : effectiveMaxMillis
 
         if (knownVersion === invalidationVersion) {
-            const rendered = await waitForReplayPostRender(scene, safeKnownTimeout, signal, renderNow)
+            const rendered = await waitForReplayPostRender(
+                scene,
+                safeKnownTimeout,
+                signal,
+                renderNow,
+                getVisibleReplayTilesets(scene),
+                scene?.globe?.show === false ? null : scene?.globe?.terrainProvider,
+            )
             refreshSources()
-            if (rendered && areReplaySceneTilesReady(scene)
+            const readySources = imageryFallbackForFootprint
+                ? getVisibleReplayTilesets(scene).every(tileset => tileset.tilesLoaded !== false)
+                : areReplaySceneTilesReady(scene)
+            if (rendered && readySources
                 && replayCameraFootprintKey(scene) === footprintKey
                 && readyFootprints.get(footprintKey) === invalidationVersion) {
                 return true
@@ -939,11 +1118,27 @@ export const createReplaySceneTileReadinessCoordinator = (
 
         const ready = await prepareReplaySceneTilesForCapture({
             scene,
-            maxMillis: effectiveMaxMillis,
+            maxMillis: boundedImageryMaxMillis,
             signal,
             disableMovementRequestDeferral,
             renderNow,
             requirePostRender,
+            onIncompleteImagery: ({count = 0, failure = null} = {}) => {
+                imageryFallbackActive = true
+                sourceMetrics.incompleteImageryFallbacks += 1
+                sourceMetrics.failedImageryRequests += count
+                if (sourceMetrics.incompleteImageryFallbacks === 1) {
+                    console.warn(
+                        '[Replay video] Strict readiness continued after its bounded 2D imagery wait. '
+                        + 'The output may contain missing map tiles.',
+                        {failedImageryRequests: count, firstFailure: failure?.message ?? null},
+                    )
+                }
+                if (footprintKey === null) {
+                    return
+                }
+                incompleteImageryFootprints.add(footprintKey)
+            },
         })
         preparedSourceGeneration = sourceGeneration
         refreshSources()
@@ -964,6 +1159,7 @@ export const createReplaySceneTileReadinessCoordinator = (
         disposed = true
         cleanupSources()
         readyFootprints.clear()
+        incompleteImageryFootprints.clear()
     }
 
     const getMetrics = () => ({
