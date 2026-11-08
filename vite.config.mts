@@ -27,6 +27,7 @@ import serveStatic from 'serve-static'
 
 const DEV_PROXY_USER_AGENT = 'LGS1920 Studio Dev Proxy (studio@lgs1920.fr)'
 const DEV_PROXY_ALLOWED_TARGETS = new Set([
+    'https://photon.komoot.io:443',
     'https://wms.pcn.minambiente.it:443',
     'http://wms.pcn.minambiente.it:80',
 ])
