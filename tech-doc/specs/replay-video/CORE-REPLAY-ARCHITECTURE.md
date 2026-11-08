@@ -455,8 +455,13 @@ The main scene continues to display Replay while the monitor previews composed
 output frames.
 
 Native HQ is an explicit product export mode. It creates one
-`IsolatedReplayRenderHost` for the export session, with a no-loop `CesiumWidget`,
-an independent camera, and a separate WebGL context. The host uses the requested
+`IsolatedReplayRenderHost` for the export session, with a no-loop `Viewer`, an
+independent camera, and a separate WebGL context. The Viewer provides its own
+`DataSourceDisplay` so reconstructed Studio entities, POIs, and Replay geometry
+are updated by the deterministic export render loop. The session owns a separate
+`JourneyReplayCesiumRenderer` for that target; switching to Native HQ never
+retargets or clears the renderer used by the visible Studio viewer. The host
+uses the requested
 physical output dimensions as its drawing buffer, independent of the display
 resolution, and applies the same canonical Replay frame intents and crop
 frustum. It never changes the interactive camera. The exporter verifies the
@@ -465,21 +470,24 @@ not match the requested output.
 
 Output profiles, FPS, encoding quality, Cesium LOD, and readiness are separate
 settings. Automatic resolution retains the existing pixel-budget policy. The
-1080p, 4K UHD, and Custom profiles preserve the crop aspect ratio and do not
-shrink as FPS rises. Portrait profiles use portrait bounds; custom dimensions
-are maximum bounds. Native HQ applies 3D Tiles maximum screen-space error 16,
+720p, 1080p, 1440p, 4K UHD, and Custom profiles preserve the crop aspect ratio
+and do not shrink as FPS rises. Portrait profiles use portrait bounds; custom
+dimensions are maximum bounds. Native HQ applies 3D Tiles maximum screen-space error 16,
 4, or 2 for Standard, High, or Maximum Cesium detail. The source dataset can
 still cap available detail. Standard export rejects a fixed output profile
 that would upscale the visible crop and recommends Native HQ.
 
-The isolated descriptor recreates terrain and imagery layers, the configured
-base 3D layer, supported environment and lighting values, and target-owned
-Replay traces and markers. Provider references are reused; imagery layers,
-tilesets, cameras, and WebGL objects are not shared between contexts. Extra
-scene primitives or tilesets, non-Replay data sources, viewer-owned entities,
-unsupported sky-box sources, and unsupported light types produce an explicit
-compatibility error. Widget and overlay composition still uses the existing
-logical Replay time and frame composer.
+The isolated descriptor recreates terrain and imagery layers, configured 3D
+layers, supported environment and lighting values, visible non-Replay Studio
+tracks, eligible POIs, and target-owned Replay traces and markers. Cesium-owned
+entity clusters are renderer infrastructure and are not treated as unsupported
+scene content. Required visible objects without a reconstruction strategy
+produce an explicit compatibility error. Provider references are reused;
+imagery layers, tilesets, cameras, data sources, and WebGL objects are not shared
+between contexts. Widget and overlay composition still uses the existing
+logical Replay time and frame composer. Native export preserves the prepared
+camera's world-space pose when initializing its isolated camera, then applies
+each canonical Replay camera frame to that target.
 
 Camera, trace, clip, visibility, prewarming, readiness, and capture operations
 must resolve the active session render target. They must not access the global
@@ -611,8 +619,11 @@ Picture-in-Picture before terminal cleanup.
 - One logical timestamp resolves one complete visual frame.
 - Playback, capture, and scrub consume the same canonical camera contract.
 - Deferred-export camera and trace updates are independent of wall-clock pacing.
-- Product MP4 export resolves and applies each frame camera command on the main
-  Studio viewer before copying its canvas into the video composer.
+- Standard MP4 export resolves and applies each frame camera command on the
+  main Studio viewer before copying its canvas into the video composer.
+- Native HQ applies each frame camera command and Replay geometry to its
+  isolated Viewer without sharing its renderer with the visible viewer, then
+  restores the visible Replay preview after cleanup.
 - An explicitly isolated render target never moves the interactive Studio
   camera.
 - A render owner writes camera and entities only to its active render target.

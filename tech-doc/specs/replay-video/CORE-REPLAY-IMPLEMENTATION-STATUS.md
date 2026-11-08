@@ -170,15 +170,16 @@ Basic/Expert support is present but incomplete:
 - Standard / Fast remains the default MP4 path: it uses the visible Cesium
   canvas, automatic resolution, adaptive tile readiness, and allocates no extra
   WebGL context. Native HQ is an explicit second path that creates one isolated
-  no-loop `CesiumWidget` per export, renders at the requested physical drawing
-  buffer size, applies the export SSE policy, and leaves the interactive camera
-  alone.
-- Native HQ supports Automatic, 1080p, 4K UHD, and custom output bounds. Explicit
-  profiles are independent of FPS, keep the crop aspect ratio, verify the actual
-  Cesium drawing-buffer dimensions, and reject visible-canvas upscaling. Scene
-  descriptors recreate terrain, imagery, the configured base 3D layer, supported
-  atmosphere and lighting values, and target-owned Replay trace/marker entities.
-  Unsupported active scene content fails with a compatibility explanation.
+  no-loop `Viewer` per export, with its own `DataSourceDisplay` for reconstructed
+  scene entities. It renders at the requested physical drawing-buffer size,
+  applies the export SSE policy, and leaves the interactive camera alone.
+- Native HQ supports Automatic, 720p, 1080p, 1440p, 4K UHD, and custom output
+  bounds. Explicit profiles are independent of FPS, keep the crop aspect ratio,
+  verify the actual Cesium drawing-buffer dimensions and reject visible-canvas
+  upscaling. Scene descriptors recreate terrain, imagery, configured 3D layers,
+  supported atmosphere and lighting values, visible background tracks, eligible
+  POIs, and target-owned Replay trace/marker entities. Unsupported active scene
+  content fails with a compatibility explanation.
 - Native HQ defaults to strict readiness: visible tile resources and a completed
   Cesium `postRender` boundary are required before a frame is submitted. Strict
   timeout, failure, and cancellation outcomes are separate and retry counts are
