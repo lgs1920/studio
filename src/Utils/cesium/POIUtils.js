@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-03-01
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -254,24 +254,34 @@ export class POIUtils {
      *
      * @returns Entity container (DataSource or EntityCollection)
      */
-    static getEntityContainer = (poi) => {
-        if (poi.parent && poi.parent !== GLOBAL_PARENT) {
-            let file
-            switch ((poi.parent.match(/#/g) || []).length) {
+    /** Resolve the Cesium DataSource name that owns a Journey or track POI. */
+    static getDataSourceName = poi => {
+        const parent = poi?.parent
+        if (parent && parent !== GLOBAL_PARENT) {
+            switch ((parent.match(/#/g) || []).length) {
                 case 1: { // Journey
-                    const [name, type] = poi.parent.split('#')
-                    file = `${name}#${type}`
-                    break
+                    const [name, type] = parent.split('#')
+                    return `${name}#${type}`
                 }
                 default: { // Track
-                    const [, name, type] = poi.parent.split('#')
-                    file = `${name}#${type}`
+                    const [, name, type] = parent.split('#')
+                    return `${name}#${type}`
                 }
             }
-            const custom = lgs.viewer.dataSources.getByName(file)
+        }
+
+        return null
+    }
+
+    /** Resolve the entity collection for a POI in the selected viewer. */
+    static getEntityContainer = (poi, viewer = globalThis.lgs?.viewer) => {
+        const dataSourceName = POIUtils.getDataSourceName(poi)
+        if (dataSourceName) {
+            const custom = viewer?.dataSources?.getByName?.(dataSourceName)
             return custom?.[0]?.entities ?? null
         }
-        return lgs.viewer.entities
+
+        return viewer?.entities ?? null
     }
 
     /**
@@ -424,6 +434,9 @@ export class POIUtils {
      * @param {boolean} [options.skipDuplicateCleanup=false] - Skip scanning other entity containers for duplicates.
      * @param {VerticalOrigin} [options.verticalOrigin=VerticalOrigin.CENTER] - Billboard origin used for this draw.
      * @param {boolean} [options.clearImage=false] - Explicitly clear an existing billboard image and reset its geometry.
+     * @param {Object|null} [options.renderTarget=null] - Isolated viewer and scene that own the entity.
+     * @param {boolean|null} [options.effectiveVisibility=null] - Captured visibility to preserve for an export snapshot.
+     * @param {Object|null} [options.billboardOverrides=null] - Captured constant billboard styling from the source scene.
      *
      * @returns {Promise<Entity|null>} A promise that resolves to the created Cesium Entity, or null if no container is
      *     found.
@@ -432,12 +445,17 @@ export class POIUtils {
         skipDuplicateCleanup = false,
         clearImage = false,
         verticalOrigin = VerticalOrigin.CENTER,
+        renderTarget = null,
+        effectiveVisibility = null,
+        billboardOverrides = null,
     } = {}) => {
         const hasImageUpdate = (poi.image !== undefined && poi.image !== null) || clearImage
         // Default dimensions if poi.image is undefined
         const width = clearImage ? 32 : poi.image?.width ?? 32
         const height = clearImage ? 32 : poi.image?.height ?? 32
-        const visible = POIUtils.setPOIVisibility(poi, parentVisibility)
+        const visible = effectiveVisibility === null
+            ? POIUtils.setPOIVisibility(poi, parentVisibility)
+            : effectiveVisibility === true
         const heightReference = __.ui.sceneManager.noRelief()
                                    ? HeightReference.NONE
                                    : HeightReference.CLAMP_TO_GROUND
@@ -469,14 +487,19 @@ export class POIUtils {
             disableDepthTestDistance: 0,
             show:            visible,
         };
+        Object.assign(billboard, billboardOverrides ?? {})
+
+        if (billboard.pixelOffset && !(billboard.pixelOffset instanceof Cartesian2)) {
+            billboard.pixelOffset = new Cartesian2(billboard.pixelOffset.x ?? 0, billboard.pixelOffset.y ?? 0)
+        }
 
         // Get entity container
-        const container = POIUtils.getEntityContainer(poi)
+        const container = POIUtils.getEntityContainer(poi, renderTarget?.viewer ?? globalThis.lgs?.viewer)
         if (!container) {
             return null
         }
 
-        const removedFromOtherContainers = skipDuplicateCleanup
+        const removedFromOtherContainers = skipDuplicateCleanup || renderTarget
             ? false
             : POIUtils.removeEntityFromOtherContainers(poi, container)
 
@@ -532,13 +555,13 @@ export class POIUtils {
             }
 
             if (changed) {
-                POIUtils.requestRender()
+                POIUtils.requestRender(renderTarget?.scene)
             }
         }
         else {
             // Create new entity
             container.add({...options, billboard: new BillboardGraphics(billboard)})
-            POIUtils.requestRender()
+            POIUtils.requestRender(renderTarget?.scene)
         }
 
         return entity || container.getById(poi.id)

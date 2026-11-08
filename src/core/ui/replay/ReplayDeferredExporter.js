@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -670,11 +670,37 @@ const roundFocusValue = value => {
     return numeric === null ? null : Math.round(numeric * 1000) / 1000
 }
 
+/** Preserve the source camera's world-space pose for isolated export setup. */
+const normalizeReplayWorldPose = worldPose => {
+    if (!worldPose || typeof worldPose !== 'object') {
+        return null
+    }
+
+    /** Normalize one finite Cartesian vector from the source camera pose. */
+    const normalizeVector = vector => {
+        const values = ['x', 'y', 'z'].map(component => finiteNumber(vector?.[component], null))
+        return values.every(value => value !== null)
+            ? {x: values[0], y: values[1], z: values[2]}
+            : null
+    }
+    const position = normalizeVector(worldPose.position)
+    const direction = normalizeVector(worldPose.direction)
+    const up = normalizeVector(worldPose.up)
+    const transform = Array.isArray(worldPose.transform)
+        ? worldPose.transform.map(value => finiteNumber(value, null))
+        : null
+
+    return position && direction && up && transform?.length === 16 && transform.every(value => value !== null)
+        ? {position, direction, up, transform}
+        : null
+}
+
 const normalizeReplayCameraStateSnapshot = cameraState => {
     if (!cameraState || typeof cameraState !== 'object') {
         return null
     }
 
+    const worldPose = normalizeReplayWorldPose(cameraState?.worldPose)
     return {
         destination: {
             longitude: roundFocusValue(cameraState?.destination?.longitude),
@@ -687,6 +713,7 @@ const normalizeReplayCameraStateSnapshot = cameraState => {
             roll:    roundFocusValue(cameraState?.orientation?.roll),
         },
         altitude: roundFocusValue(cameraState?.altitude),
+        ...(worldPose ? {worldPose} : {}),
     }
 }
 
@@ -2797,6 +2824,10 @@ export const runReplayDeferredMp4Export = async ({
             })
         }
 
+        if (selectedRenderHostMode === 'isolated') {
+            replayMode?.refresh?.({camera: false, forceGeometry: true})
+        }
+
 
         if (selectedRenderHostMode === 'isolated') {
             const isolatedHostSupported = typeof replayMode?.setRenderTarget === 'function'
@@ -2806,7 +2837,7 @@ export const runReplayDeferredMp4Export = async ({
                 throw new Error('Isolated Replay rendering is required, but this Replay session cannot use an isolated render target.')
             }
 
-            const descriptor = captureReplaySceneDescriptor()
+            const descriptor = captureReplaySceneDescriptor({journey})
             if (!descriptor) {
                 throw new Error('Isolated Replay rendering requires an active Cesium scene.')
             }
@@ -3580,6 +3611,9 @@ export const runReplayDeferredMp4Export = async ({
         await cleanup('isolated-render-host', () => isolatedRenderHost?.destroy?.())
         isolatedRenderHost = null
         await cleanup('playback-scene', () => replayMode?.restorePlaybackScene?.({force: true}))
+        if (selectedRenderHostMode === 'isolated') {
+            await cleanup('replay-preview', () => replayMode?.refresh?.({camera: false, forceGeometry: true}))
+        }
         await cleanup('replay-store', () => {
             if (replay && originalReplayState) {
                 Object.assign(replay, originalReplayState)

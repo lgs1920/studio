@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-01
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,8 @@
  * isolated render workflows install an owner-scoped target so camera and trace writes
  * remain separate from the visible map.
  */
+
+import {JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 
 const replayRenderTargets = new WeakMap()
 
@@ -51,6 +53,14 @@ export const setReplayRenderTarget = (owner, target = null) => {
  * @returns {Object|null} Active target.
  */
 export const replayRenderTargetFor = owner => replayRenderTargets.get(owner) ?? null
+
+/** Resolve the renderer that owns geometry for the active replay target. */
+export const replayRendererFor = owner => {
+    const state = owner?.[JOURNEY_REPLAY_INTERNAL_STATE]
+    return replayRenderTargetFor(owner)
+        ? state?.exportRenderer ?? state?.renderer ?? null
+        : state?.renderer ?? null
+}
 
 /**
  * Clear a replay render target without removing a newer replacement.

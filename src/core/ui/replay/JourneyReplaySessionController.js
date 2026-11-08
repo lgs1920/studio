@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -1274,7 +1274,17 @@ export class JourneyReplaySessionController {
      * @returns {Object|null} Installed target.
      */
     setRenderTarget = (target = null) => {
-        this[JOURNEY_REPLAY_INTERNAL_STATE].renderer?.setRenderTarget?.(target)
+        const state = this[JOURNEY_REPLAY_INTERNAL_STATE]
+        const activeTarget = replayRenderTargetFor(this)
+        if (activeTarget === target) {
+            return activeTarget
+        }
+
+        JourneyReplayVisibilityController.disposeReplayPOIEntityLookup(this)
+        state.exportRenderer?.clear?.()
+        state.exportRenderer = target
+            ? new JourneyReplayCesiumRenderer({renderTarget: target})
+            : null
         return setReplayRenderTarget(this, target)
     }
 
@@ -1286,10 +1296,14 @@ export class JourneyReplaySessionController {
      */
     clearRenderTarget = (expectedTarget = null) => {
         const activeTarget = replayRenderTargetFor(this)
-        const cleared = clearReplayRenderTarget(this, expectedTarget)
-        if (cleared && activeTarget) {
-            this[JOURNEY_REPLAY_INTERNAL_STATE].renderer?.setRenderTarget?.(null)
+        if (!activeTarget || (expectedTarget && activeTarget !== expectedTarget)) {
+            return false
         }
+
+        JourneyReplayVisibilityController.disposeReplayPOIEntityLookup(this)
+        this[JOURNEY_REPLAY_INTERNAL_STATE].exportRenderer?.clear?.()
+        this[JOURNEY_REPLAY_INTERNAL_STATE].exportRenderer = null
+        const cleared = clearReplayRenderTarget(this, expectedTarget)
         return cleared
     }
 

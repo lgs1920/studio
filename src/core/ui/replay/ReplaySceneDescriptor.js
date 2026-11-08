@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,11 @@
  * Runtime descriptor used to reproduce the interactive Cesium scene in an
  * isolated replay render host.
  */
+
+import {POIUtils} from '@Utils/cesium/POIUtils'
+import {getTrackRenderContent} from '@Utils/cesium/trackRenderSmoothing'
+import {normalizeTrackRenderStyle} from '@Utils/cesium/trackRenderStyle'
+import {getJourneyReplayHideOtherJourneys} from '@Core/ui/JourneyVisibility'
 
 export const REPLAY_SCENE_DESCRIPTOR_VERSION = 1
 
@@ -124,38 +129,253 @@ const replaySceneCollectionValues = collection => {
     return Array.from({length}, (_value, index) => collection.get(index))
 }
 
-/**
- * Identify viewer-owned content that the isolated Replay host cannot clone.
- *
- * @param {Object|null} viewer - Active Cesium viewer.
- * @param {Object|null} base3dDefinition - Configured base tileset definition.
- * @returns {Array<string>} Human-readable compatibility limitations.
- */
-const findReplaySceneCompatibilityLimitations = (viewer, base3dDefinition, environment) => {
-    const scene = viewer?.scene
-    const primitives = replaySceneCollectionValues(scene?.primitives)
-    const tilesets = primitives.filter(primitive => primitive?.root && Number.isFinite(Number(primitive.maximumScreenSpaceError)))
-    const configuredTilesets = [
-        globalThis.lgs?.base3dTileset,
-        globalThis.lgs?.theTiles3DLayer,
-    ].filter(tileset => tilesets.includes(tileset))
-    const supportedBaseTileset = base3dDefinition
-        ? configuredTilesets[0] ?? (tilesets.length === 1 ? tilesets[0] : null)
-        : null
-    const unsupportedPrimitiveCount = primitives.filter(primitive => primitive !== supportedBaseTileset).length
-    const dataSources = replaySceneCollectionValues(viewer?.dataSources)
-        .filter(dataSource => !`${dataSource?.name ?? ''}`.startsWith('replay#'))
-    const entityCount = Array.isArray(viewer?.entities?.values) ? viewer.entities.values.length : 0
-    const limitations = []
+/** Read a Cesium property while retaining plain values used by test fixtures. */
+const readReplayEntityProperty = property => typeof property?.getValue === 'function'
+    ? property.getValue()
+    : property
 
-    if (unsupportedPrimitiveCount > 0) {
-        limitations.push(`${unsupportedPrimitiveCount} additional Cesium scene primitive(s) or tileset(s)`)
+/** Clone plain application data before retaining it for one deterministic export. */
+const cloneReplayApplicationData = value => {
+    try {
+        return JSON.parse(JSON.stringify(value))
     }
-    if (dataSources.length > 0) {
-        limitations.push(`${dataSources.length} non-Replay Cesium data source(s)`)
+    catch {
+        return null
     }
-    if (entityCount > 0) {
-        limitations.push(`${entityCount} viewer-owned Cesium entit${entityCount === 1 ? 'y' : 'ies'}`)
+}
+
+/** Freeze a cloned application-data tree without freezing live Cesium providers. */
+const freezeReplayApplicationData = value => {
+    if (!value || typeof value !== 'object' || Object.isFrozen(value)) {
+        return value
+    }
+    const prototype = Object.getPrototypeOf(value)
+    if (!Array.isArray(value) && prototype !== Object.prototype && prototype !== null) {
+        return value
+    }
+
+    Object.values(value).forEach(freezeReplayApplicationData)
+    return Object.freeze(value)
+}
+
+/** Capture constant billboard display values without retaining live graphics properties. */
+const captureReplayPOIBillboard = entity => {
+    const billboard = entity?.billboard
+    if (!billboard) {
+        return null
+    }
+
+    const properties = [
+        'width', 'height', 'scale', 'horizontalOrigin', 'verticalOrigin', 'heightReference',
+        'disableDepthTestDistance', 'rotation', 'alignedAxis', 'color', 'sizeInMeters',
+        'scaleByDistance', 'translucencyByDistance', 'distanceDisplayCondition', 'eyeOffset',
+    ]
+    const result = Object.fromEntries(properties.flatMap(property => {
+        const value = readReplayEntityProperty(billboard[property])
+        return value === undefined || value === null || typeof value === 'function'
+            ? []
+            : [[property, value?.clone?.() ?? value]]
+    }))
+    const pixelOffset = readReplayEntityProperty(billboard.pixelOffset)
+    if (Number.isFinite(Number(pixelOffset?.x)) && Number.isFinite(Number(pixelOffset?.y))) {
+        result.pixelOffset = {x: Number(pixelOffset.x), y: Number(pixelOffset.y)}
+    }
+
+    return result
+}
+
+/** Snapshot visible Studio POI models without carrying live Cesium entities across contexts. */
+const captureReplayPOIDescriptors = viewer => {
+    const poiList = globalThis.__?.ui?.poiManager?.list
+        ?? globalThis.lgs?.stores?.main?.components?.pois?.list
+    const values = typeof poiList?.values === 'function' ? Array.from(poiList.values()) : []
+
+    return values.flatMap(poi => {
+        const model = cloneReplayApplicationData(poi)
+        if (!model?.id || !Number.isFinite(Number(model.longitude)) || !Number.isFinite(Number(model.latitude))) {
+            return []
+        }
+
+        const entity = POIUtils.getEntityContainer(poi, viewer)?.getById?.(poi.id)
+        const sourceImage = readReplayEntityProperty(entity?.billboard?.image) ?? poi.image?.src
+        if (sourceImage !== undefined && sourceImage !== null) {
+            model.image = {
+                ...(model.image ?? {}),
+                src: sourceImage,
+                width: model.image?.width ?? readReplayEntityProperty(entity?.billboard?.width) ?? sourceImage.width,
+                height: model.image?.height ?? readReplayEntityProperty(entity?.billboard?.height) ?? sourceImage.height,
+            }
+        }
+        const entityVisible = POIUtils.isPOIVisibleOnMap(
+            poi,
+            entity ? readReplayEntityProperty(entity.show) !== false : poi.visible !== false,
+        )
+
+        return [Object.freeze({
+            poi: freezeReplayApplicationData(model),
+            visible: entityVisible,
+            dataSourceName: POIUtils.getDataSourceName(poi),
+            billboard: freezeReplayApplicationData(captureReplayPOIBillboard(entity)),
+        })]
+    })
+}
+
+/** Snapshot currently visible non-Replay tracks outside the journey animated by Replay. */
+const captureReplayBackgroundTracks = (viewer, replayJourney) => {
+    const journeys = globalThis.lgs?.journeys
+    const journeyValues = typeof journeys?.values === 'function' ? Array.from(journeys.values()) : []
+    const hideOtherJourneys = getJourneyReplayHideOtherJourneys()
+
+    return journeyValues.flatMap(journey => {
+        if (!journey?.slug || journey.slug === replayJourney?.slug
+            || journey.visible === false
+            || (hideOtherJourneys && journey.slug !== replayJourney?.slug)) {
+            return []
+        }
+
+        return Array.from(journey.tracks?.values?.() ?? []).flatMap(track => {
+            if (!track?.slug || track.visible === false) {
+                return []
+            }
+
+            const source = viewer?.dataSources?.getByName?.(track.slug)?.[0]
+            if (!source || source.show === false || !track.content?.geometry) {
+                return []
+            }
+
+            const content = cloneReplayApplicationData(getTrackRenderContent(track, {forRender: true}))
+            if (!content?.geometry) {
+                return []
+            }
+
+            return [Object.freeze({
+                slug: track.slug,
+                name: track.title ?? track.slug,
+                content: freezeReplayApplicationData(content),
+                style: freezeReplayApplicationData(normalizeTrackRenderStyle(track.renderStyle, {
+                    color: track.color,
+                    thickness: track.thickness,
+                })),
+            })]
+        })
+    })
+}
+
+/** Return the visible non-POI entity IDs owned by a Cesium collection. */
+const visibleNonPOIEntityIds = (collection, knownPOIIds) => (collection?.values ?? [])
+    .filter(entity => readReplayEntityProperty(entity?.show) !== false && !knownPOIIds.has(`${entity?.id ?? ''}`))
+    .map(entity => `${entity?.id ?? entity?.name ?? entity?.constructor?.name ?? 'unknown entity'}`)
+
+/** Identify visible scene objects that cannot be reconstructed from Studio data. */
+const findReplaySceneCompatibilityLimitations = (
+    viewer,
+    base3dDefinition,
+    additional3dDefinition,
+    environment,
+    poiDescriptors,
+    trackDescriptors,
+    replayJourney,
+) => {
+    const scene = viewer?.scene
+    const supportedTilesets = new Set([
+        base3dDefinition ? globalThis.lgs?.base3dTileset : null,
+        additional3dDefinition ? globalThis.lgs?.theTiles3DLayer : null,
+    ].filter(Boolean))
+    const knownPOIIds = new Set(poiDescriptors.map(({poi}) => `${poi.id}`))
+    const knownTrackSlugs = new Set(
+        Array.from(globalThis.lgs?.journeys?.values?.() ?? [])
+            .flatMap(journey => Array.from(journey?.tracks?.values?.() ?? []))
+            .map(track => `${track?.slug ?? ''}`)
+            .filter(Boolean),
+    )
+    const replayTrackSlugs = new Set(Array.from(replayJourney?.tracks?.values?.() ?? []).map(track => `${track?.slug ?? ''}`))
+    const capturedTrackSlugs = new Set(trackDescriptors.map(({slug}) => `${slug}`))
+    const hideOtherJourneys = getJourneyReplayHideOtherJourneys()
+    const excludedTrackSlugs = new Set(
+        Array.from(globalThis.lgs?.journeys?.values?.() ?? []).flatMap(journey => (
+            Array.from(journey?.tracks?.values?.() ?? [])
+                .filter(track => journey?.slug === replayJourney?.slug
+                    || journey?.visible === false
+                    || track?.visible === false
+                    || (hideOtherJourneys && journey?.slug !== replayJourney?.slug))
+                .map(track => `${track?.slug ?? ''}`)
+        )),
+    )
+    const limitations = []
+    const unsupportedPrimitives = []
+    // Cesium adds one EntityCluster per DataSource to scene.primitives; the isolated
+    // CesiumWidget creates fresh clusters for the reconstructed export data sources.
+    const generatedEntityPrimitiveNames = new Set([
+        'BillboardCollection',
+        'EntityCluster',
+        'LabelCollection',
+        'PointPrimitiveCollection',
+    ])
+
+    const inspectPrimitive = primitive => {
+        if (!primitive || primitive.show === false || supportedTilesets.has(primitive)) {
+            return
+        }
+
+        const type = primitive.constructor?.name ?? 'Cesium primitive'
+        if (generatedEntityPrimitiveNames.has(type)) {
+            return
+        }
+        if (type === 'PrimitiveCollection') {
+            const children = replaySceneCollectionValues(primitive)
+            if (children.length > 0 && children.every(child => generatedEntityPrimitiveNames.has(child?.constructor?.name))) {
+                return
+            }
+            children.forEach(inspectPrimitive)
+            return
+        }
+
+        unsupportedPrimitives.push(`${type}${primitive.id ? ` (${primitive.id})` : ''}`)
+    }
+
+    replaySceneCollectionValues(scene?.primitives).forEach(inspectPrimitive)
+    if (unsupportedPrimitives.length > 0) {
+        limitations.push(`required visible Cesium primitive(s) cannot be reconstructed: ${unsupportedPrimitives.join(', ')}`)
+    }
+
+    const knownDataSourceNames = new Set([
+        ...journeySourceNames(),
+        ...knownTrackSlugs,
+    ])
+    const unsupportedDataSources = replaySceneCollectionValues(viewer?.dataSources).flatMap(dataSource => {
+        if (!dataSource || dataSource.show === false || `${dataSource.name ?? ''}`.startsWith('replay#')) {
+            return []
+        }
+        const name = `${dataSource.name ?? ''}`
+        if (knownTrackSlugs.has(name)) {
+            if (capturedTrackSlugs.has(name) || replayTrackSlugs.has(name) || excludedTrackSlugs.has(name)) {
+                return []
+            }
+        }
+        else if (journeySourceNames().includes(name)) {
+            const entityIds = visibleNonPOIEntityIds(dataSource.entities, knownPOIIds)
+            return entityIds.length > 0
+                ? [`${name} [${entityIds.join(', ')}]`]
+                : []
+        }
+        else if (!knownDataSourceNames.has(name)) {
+            const entityIds = visibleNonPOIEntityIds(dataSource.entities, knownPOIIds)
+            return entityIds.length > 0
+                ? [`${name || dataSource.constructor?.name || 'unnamed data source'} [${entityIds.join(', ')}]`]
+                : []
+        }
+        const entityIds = visibleNonPOIEntityIds(dataSource.entities, knownPOIIds)
+        return entityIds.length > 0
+            ? [`${name || dataSource.constructor?.name || 'unnamed data source'} [${entityIds.join(', ')}]`]
+            : []
+    })
+    if (unsupportedDataSources.length > 0) {
+        limitations.push(`required visible Cesium data source(s) cannot be reconstructed: ${unsupportedDataSources.join('; ')}`)
+    }
+
+    const unsupportedViewerEntities = visibleNonPOIEntityIds(viewer?.entities, knownPOIIds)
+    if (unsupportedViewerEntities.length > 0) {
+        limitations.push(`required visible viewer entity/entities cannot be reconstructed: ${unsupportedViewerEntities.join(', ')}`)
     }
     if (!environment.supported.skyBox) {
         limitations.push('a sky box with non-URL or context-owned image sources')
@@ -165,6 +385,13 @@ const findReplaySceneCompatibilityLimitations = (viewer, base3dDefinition, envir
     }
 
     return limitations
+}
+
+/** Resolve the source names used for journey-owned POI data sources. */
+const journeySourceNames = () => {
+    const journeys = globalThis.lgs?.journeys
+    const values = typeof journeys?.values === 'function' ? Array.from(journeys.values()) : []
+    return values.map(journey => `${journey.slug ?? ''}`).filter(Boolean)
 }
 
 /**
@@ -203,12 +430,20 @@ const captureReplayImageryLayerDescriptor = layer => {
 export const captureReplaySceneDescriptor = ({
     viewer = globalThis.lgs?.viewer ?? null,
     base3dDefinition = globalThis.lgs?.stores?.main?.theBase3DLayer ?? null,
+    additional3dDefinition = globalThis.lgs?.stores?.main?.theTiles3DLayer ?? null,
+    journey = globalThis.lgs?.stores?.main?.theJourney ?? globalThis.lgs?.theJourney ?? null,
 } = {}) => {
     const scene = viewer?.scene
     if (!viewer || !scene) {
         return null
     }
     const environment = captureReplaySceneEnvironment(scene)
+    const poiDescriptors = captureReplayPOIDescriptors(viewer)
+    const trackDescriptors = captureReplayBackgroundTracks(viewer, journey)
+    const capturedBase3dDefinition = freezeReplayApplicationData(cloneReplayApplicationData(base3dDefinition))
+    const additional3dDefinitions = additional3dDefinition
+        ? [freezeReplayApplicationData(cloneReplayApplicationData(additional3dDefinition))].filter(Boolean)
+        : []
 
     return {
         version: REPLAY_SCENE_DESCRIPTOR_VERSION,
@@ -218,8 +453,19 @@ export const captureReplaySceneDescriptor = ({
         imageryLayers: replaySceneCollectionValues(viewer.imageryLayers)
             .map(captureReplayImageryLayerDescriptor)
             .filter(Boolean),
-        base3dDefinition: base3dDefinition ?? null,
-        compatibilityLimitations: findReplaySceneCompatibilityLimitations(viewer, base3dDefinition, environment),
+        base3dDefinition: capturedBase3dDefinition,
+        additional3dDefinitions,
+        poiDescriptors,
+        trackDescriptors,
+        compatibilityLimitations: findReplaySceneCompatibilityLimitations(
+            viewer,
+            capturedBase3dDefinition,
+            additional3dDefinitions[0] ?? null,
+            environment,
+            poiDescriptors,
+            trackDescriptors,
+            journey,
+        ),
         environment,
     }
 }

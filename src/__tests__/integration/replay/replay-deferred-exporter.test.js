@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -770,6 +770,12 @@ describe('ReplayDeferredExporter', () => {
                 destination: {longitude: 2, latitude: 48, height: 900},
                 orientation: {heading: 0.8, pitch: -0.5, roll: 0},
                 altitude: 900,
+                worldPose: {
+                    position: {x: 1, y: 2, z: 3},
+                    direction: {x: -1, y: -2, z: -3},
+                    up: {x: 0, y: 0, z: 1},
+                    transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+                },
             },
         }
         const controller = {
@@ -823,6 +829,12 @@ describe('ReplayDeferredExporter', () => {
                 destination: {longitude: 2, latitude: 48, height: 900},
                 orientation: {heading: 0.8, pitch: -0.5, roll: 0},
                 altitude: 900,
+                worldPose: {
+                    position: {x: 1, y: 2, z: 3},
+                    direction: {x: -1, y: -2, z: -3},
+                    up: {x: 0, y: 0, z: 1},
+                    transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+                },
             },
             recordingSync: true,
             visibleOverlayIds: ['compass-widget#1'],

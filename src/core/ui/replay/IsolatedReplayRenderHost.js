@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,9 +18,14 @@
  * Isolated Cesium render host for deterministic Replay export frames.
  */
 
-import {CesiumWidget, DirectionalLight, ImageryLayer, SkyAtmosphere, SkyBox, SunLight} from 'cesium'
+import {
+    CustomDataSource, DirectionalLight, GeoJsonDataSource, ImageryLayer, JulianDate, SkyAtmosphere, SkyBox, SunLight,
+    Viewer,
+} from 'cesium'
 
 import {IonLayerUtils} from '@Utils/cesium/IonLayerUtils'
+import {POIUtils} from '@Utils/cesium/POIUtils'
+import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {applyReplayCesiumCameraCommand} from './ReplayCesiumCameraAdapter'
 import {replayCameraCommandFromIntent} from './ReplayCameraCommand'
 import {
@@ -206,7 +211,7 @@ const applyReplayHostEnvironment = (scene, descriptor) => {
 }
 
 /**
- * Own a hidden CesiumWidget with no default render loop or interactive camera.
+ * Own a hidden Cesium Viewer with no default render loop or interactive camera.
  */
 export class IsolatedReplayRenderHost {
     #dimensions
@@ -220,6 +225,9 @@ export class IsolatedReplayRenderHost {
     #createWidget
     #createImageryLayer
     #createTileset
+    #createDataSource
+    #loadTrackDataSource
+    #drawPOI
     #maximumScreenSpaceError
     #createReadinessCoordinator
     #cropProjection
@@ -242,9 +250,29 @@ export class IsolatedReplayRenderHost {
         container = null,
         readiness = {},
         maximumScreenSpaceError = 16,
-        createWidget = (element, options) => new CesiumWidget(element, options),
+        createWidget = (element, options) => new Viewer(element, {
+            ...options,
+            animation: false,
+            baseLayerPicker: false,
+            fullscreenButton: false,
+            geocoder: false,
+            homeButton: false,
+            infoBox: false,
+            navigationHelpButton: false,
+            sceneModePicker: false,
+            selectionIndicator: false,
+            timeline: false,
+            vrButton: false,
+        }),
         createImageryLayer = provider => new ImageryLayer(provider),
         createTileset = (definition, options) => IonLayerUtils.createTileset(definition, options),
+        createDataSource = name => new CustomDataSource(name),
+        loadTrackDataSource = async (track, options) => {
+            const dataSource = new GeoJsonDataSource(track.slug)
+            await dataSource.load(track.content, options)
+            return dataSource
+        },
+        drawPOI = (poi, options) => POIUtils.draw(poi, true, options),
         createReadinessCoordinator = createReplaySceneTileReadinessCoordinator,
         cropProjection = null,
     } = {}) {
@@ -258,6 +286,9 @@ export class IsolatedReplayRenderHost {
         this.#createWidget = createWidget
         this.#createImageryLayer = createImageryLayer
         this.#createTileset = createTileset
+        this.#createDataSource = createDataSource
+        this.#loadTrackDataSource = loadTrackDataSource
+        this.#drawPOI = drawPOI
         this.#createReadinessCoordinator = createReadinessCoordinator
         this.#cropProjection = cropProjection
     }
@@ -312,6 +343,88 @@ export class IsolatedReplayRenderHost {
         }
     }
 
+    /** Rebuild captured Studio POIs and visible background tracks in the owned viewer. */
+    #createReplaySceneContent = async () => {
+        const viewer = this.#widget
+        const renderTarget = {viewer, scene: viewer?.scene, canvas: viewer?.canvas}
+        if (!viewer) {
+            return
+        }
+
+        const poiDescriptors = this.#descriptor.poiDescriptors ?? []
+        const trackDescriptors = this.#descriptor.trackDescriptors ?? []
+        if ((poiDescriptors.length > 0 || trackDescriptors.length > 0) && !viewer.dataSources) {
+            throw new Error('Native HQ requires a Viewer with DataSourceDisplay to reconstruct Studio POIs and tracks.')
+        }
+        const dataSourceNames = new Set(poiDescriptors.map(descriptor => descriptor.dataSourceName).filter(Boolean))
+        for (const name of dataSourceNames) {
+            if (viewer.dataSources?.getByName?.(name)?.length) {
+                continue
+            }
+            await viewer.dataSources.add(this.#createDataSource(name))
+            this.#assertContextAvailable()
+        }
+
+        for (const descriptor of poiDescriptors) {
+            const entity = await this.#drawPOI(descriptor.poi, {
+                renderTarget,
+                skipDuplicateCleanup: true,
+                effectiveVisibility: descriptor.visible === true,
+                billboardOverrides: descriptor.billboard,
+            })
+            if (!entity) {
+                throw new Error(`Native Replay could not reconstruct POI "${descriptor.poi?.id ?? 'unknown'}".`)
+            }
+        }
+
+        for (const track of trackDescriptors) {
+            const style = track.style ?? {}
+            const dataSource = await this.#loadTrackDataSource(track, {
+                clampToGround: true,
+                stroke: TrackUtils.cssColor(style.color),
+                strokeWidth: style.farPixelWidth,
+            })
+            if (!dataSource) {
+                throw new Error(`Native Replay could not reconstruct visible track "${track.slug}".`)
+            }
+
+            dataSource.show = true
+            const entities = dataSource.entities?.values ?? []
+            entities.forEach((entity, index) => {
+                const polyline = entity?.polyline
+                if (!polyline) {
+                    return
+                }
+
+                const positions = typeof polyline.positions?.getValue === 'function'
+                    ? polyline.positions.getValue(JulianDate.now())
+                    : polyline.positions
+                if (style.underlay?.enabled && Array.isArray(positions)) {
+                    const underlay = dataSource.entities.add({
+                        id: `${track.slug}#native-hq-underlay#${index}`,
+                        polyline: {
+                            positions,
+                            clampToGround: true,
+                            material: TrackUtils.cssColor(style.underlay.color),
+                            width: style.underlay.pixelWidth,
+                            zIndex: 0,
+                        },
+                    })
+                    if (underlay?.polyline) {
+                        underlay.polyline.zIndex = 0
+                    }
+                }
+
+                polyline.material = TrackUtils.createTrackMaterial(style)
+                polyline.width = style.farPixelWidth
+                polyline.clampToGround = true
+                polyline.zIndex = 1
+            })
+            await viewer.dataSources.add(dataSource)
+            this.#assertContextAvailable()
+        }
+    }
+
     /**
      * Await scene readiness while allowing WebGL context loss to fail the capture immediately.
      *
@@ -352,13 +465,13 @@ export class IsolatedReplayRenderHost {
         }
         if (this.#descriptor.compatibilityLimitations?.length) {
             throw new Error(
-                'Native Replay rendering cannot reproduce this scene: '
+                'Native HQ cannot reconstruct required visible scene content: '
                 + this.#descriptor.compatibilityLimitations.join('; ')
-                + '. Remove those scene items or use Standard export.',
+                + '. Hide or remove the listed unsupported content, then retry or select Standard export.',
             )
         }
 
-        this.#container ??= createReplayHostContainer(this.#viewportDimensions)
+        this.#container ??= createReplayHostContainer(this.#dimensions)
         this.#widget = this.#createWidget(this.#container, {
             baseLayer: false,
             terrainProvider: this.#descriptor.terrainProvider ?? undefined,
@@ -378,10 +491,9 @@ export class IsolatedReplayRenderHost {
             this.#contextLossListener = () => this.#recordContextLoss()
             this.#widget.canvas.addEventListener('webglcontextlost', this.#contextLossListener)
         }
-        this.#widget.resolutionScale = Math.max(
-            1,
-            this.#dimensions.width / this.#viewportDimensions.width,
-        )
+        // Keep CSS layout integral and map one CSS pixel to one requested output pixel.
+        // Scaling a fractional crop-sized container can make Cesium truncate one axis.
+        this.#widget.resolutionScale = 1
         if (this.#widget.scene?.screenSpaceCameraController) {
             const cameraController = this.#widget.scene.screenSpaceCameraController
             cameraController.enableInputs = false
@@ -396,8 +508,15 @@ export class IsolatedReplayRenderHost {
             this.#widget.imageryLayers?.add?.(layer)
         }
 
-        if (this.#descriptor.base3dDefinition) {
-            const tileset = await this.#createTileset(this.#descriptor.base3dDefinition, {
+        const tilesetDefinitions = [
+            this.#descriptor.base3dDefinition,
+            ...(this.#descriptor.additional3dDefinitions ?? []),
+        ].filter((definition, index, definitions) => definition
+            && definitions.findIndex(candidate => definition.id != null
+                ? candidate?.id === definition.id
+                : candidate === definition) === index)
+        for (const definition of tilesetDefinitions) {
+            const tileset = await this.#createTileset(definition, {
                 maximumScreenSpaceError: this.#maximumScreenSpaceError,
             })
             if (this.#destroyed) {
@@ -408,10 +527,20 @@ export class IsolatedReplayRenderHost {
             if (tileset && 'maximumScreenSpaceError' in tileset) {
                 tileset.maximumScreenSpaceError = this.#maximumScreenSpaceError
             }
+            if (tileset && definition.show === false) {
+                tileset.show = false
+            }
             this.#widget.scene?.primitives?.add?.(tileset)
         }
 
         applyReplayHostEnvironment(this.#widget.scene, this.#descriptor)
+        if (this.#descriptor.base3dDefinition?.base3d?.showGlobe === false && this.#widget.scene?.globe) {
+            this.#widget.scene.globe.show = false
+        }
+        if (this.#descriptor.base3dDefinition?.base3d?.showTerrain === false && this.#widget.scene?.globe) {
+            this.#widget.scene.globe.depthTestAgainstTerrain = false
+        }
+        await this.#createReplaySceneContent()
         this.#widget.resize?.()
         this.#applyCropFrustum()
         this.#assertContextAvailable()
@@ -463,6 +592,10 @@ export class IsolatedReplayRenderHost {
             viewer: this.#widget,
             scene:  this.#widget.scene,
             canvas: this.#widget.canvas,
+            viewportDimensions: {
+                width: this.#viewportDimensions.width,
+                height: this.#viewportDimensions.height,
+            },
             cropProjection: this.#cropProjection,
         }
         : null

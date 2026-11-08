@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,6 +35,7 @@ import {
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {currentReplayJourney} from './ReplayUserModeConstants'
 import {createReplayPOIEntityLookup} from './ReplayPOIEntityLookup'
+import {replayRenderTargetFor} from './ReplayRenderTarget'
 import {subscribe} from 'valtio'
 
 const requestStopClipPOIMaskFrame = callback => {
@@ -69,9 +70,20 @@ const observeStopClipPOIListChanges = state => {
 }
 
 /** Return the lookup cache owned by the current Replay session and viewer. */
+export const disposeReplayPOIEntityLookup = mode => {
+    const state = mode?.[JOURNEY_REPLAY_INTERNAL_STATE]
+    if (!state?.replayPOIEntityLookup) {
+        return false
+    }
+
+    state.replayPOIEntityLookup.dispose()
+    state.replayPOIEntityLookup = null
+    return true
+}
+
 const replayPOIEntityLookup = mode => {
     const state = mode?.[JOURNEY_REPLAY_INTERNAL_STATE]
-    const viewer = globalThis.lgs?.viewer
+    const viewer = replayRenderTargetFor(mode)?.viewer ?? globalThis.lgs?.viewer
     if (!state || !viewer) {
         state?.replayPOIEntityLookup?.dispose()
         if (state) {
@@ -85,7 +97,7 @@ const replayPOIEntityLookup = mode => {
         || lookup.scene !== viewer.scene
         || lookup.entities !== viewer.entities
         || lookup.dataSources !== viewer.dataSources)) {
-        lookup.dispose()
+        disposeReplayPOIEntityLookup(mode)
         lookup = null
     }
     if (!lookup) {
@@ -103,8 +115,11 @@ const replayPOIEntityLookup = mode => {
  * @param {boolean} visible - Whether persisted-visible tracks should render.
  * @returns {void} No return value.
  */
-const setJourneyReplayTraceVisibility = (journey, visible) => {
+const setJourneyReplayTraceVisibility = (mode, journey, visible) => {
     const tracks = journey?.tracks
+    if (replayRenderTargetFor(mode)) {
+        return
+    }
     if (typeof tracks?.values !== 'function' || !globalThis.lgs?.viewer?.dataSources) {
         return
     }
@@ -151,8 +166,10 @@ export const hideOtherJourneysVisibility = (mode) => {
         }
 
         state.hiddenJourneyVisibility.set(journey.slug, true)
-        setJourneyReplayTraceVisibility(journey, false)
-        TrackUtils.updatePOIsVisibility(journey, false)
+        if (!replayRenderTargetFor(mode)) {
+            setJourneyReplayTraceVisibility(mode, journey, false)
+            TrackUtils.updatePOIsVisibility(journey, false)
+        }
     }
 
     globalThis.lgs?.scene?.requestRender?.()
@@ -161,6 +178,10 @@ export const hideOtherJourneysVisibility = (mode) => {
 export const hideCurrentJourneyVisibility = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+
+        if (replayRenderTargetFor(mode)) {
+            return
+        }
 
         const journey = currentReplayJourney()
         if (!journey) {
@@ -188,6 +209,10 @@ export const persistCurrentJourneyVisibility =  (mode, journey) => {
 export const restoreCurrentJourneyVisibility = (mode, {restorePOIs = true} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+
+        if (replayRenderTargetFor(mode)) {
+            return
+        }
 
         const journey = currentReplayJourney()
         if (!journey) {
@@ -624,6 +649,10 @@ export const preserveCurrentJourneyPOIVisibility =  (mode, journey) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
+        if (replayRenderTargetFor(mode)) {
+            return
+        }
+
         if (!globalThis.lgs?.viewer?.dataSources) {
             return
         }
@@ -672,6 +701,10 @@ export const preserveCurrentJourneyPOIVisibility =  (mode, journey) => {
 
 export const restoreCurrentJourneyPolylineVisibility = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+
+        if (replayRenderTargetFor(mode)) {
+            return
+        }
 
         if (state.hiddenCurrentJourneyPolylines.size === 0) {
             return
@@ -723,6 +756,11 @@ export const restoreOtherJourneysVisibility = (mode, {respectReplaySetting = tru
         return
     }
 
+    if (replayRenderTargetFor(mode)) {
+        state.hiddenJourneyVisibility.clear()
+        return
+    }
+
     if (respectReplaySetting && getJourneyReplayHideOtherJourneys()) {
         call?.hideOtherJourneysVisibility?.()
         return
@@ -744,7 +782,7 @@ export const restoreOtherJourneysVisibility = (mode, {respectReplaySetting = tru
             continue
         }
 
-        setJourneyReplayTraceVisibility(journey, true)
+        setJourneyReplayTraceVisibility(mode, journey, true)
         TrackUtils.updatePOIsVisibility(journey, journey.visible !== false && journey.POIsVisible !== false)
     }
 

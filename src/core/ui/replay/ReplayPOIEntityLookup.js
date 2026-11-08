@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-31
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,6 +35,9 @@ export const createReplayPOIEntityLookup = viewer => {
 
     /** Invalidate POIs whose entity identity was added or removed. */
     const onCollectionChanged = (collection, added = [], removed = []) => {
+        if (disposed) {
+            return
+        }
         const affected = [...added, ...removed]
         if (affected.length === 0) {
             entries.clear()
@@ -56,6 +59,9 @@ export const createReplayPOIEntityLookup = viewer => {
 
     /** Remove listeners for entity collections no longer owned by the viewer. */
     const syncEntityCollections = () => {
+        if (disposed) {
+            return
+        }
         const currentCollections = new Set([viewer?.entities])
         const sourceCount = Number(dataSources?.length) || 0
         for (let index = 0; index < sourceCount; index += 1) {
@@ -74,6 +80,9 @@ export const createReplayPOIEntityLookup = viewer => {
 
     /** Clear cached entity lists when the viewer's data source set changes. */
     const onDataSourcesChanged = () => {
+        if (disposed) {
+            return
+        }
         entries.clear()
         syncEntityCollections()
     }
@@ -97,7 +106,7 @@ export const createReplayPOIEntityLookup = viewer => {
             return []
         }
 
-        const owningContainer = POIUtils.getEntityContainer(poi)
+        const owningContainer = POIUtils.getEntityContainer(poi, viewer)
         const cached = entries.get(poi.id)
         if (cached && cached.parent === poi.parent && cached.owningContainer === owningContainer) {
             entries.delete(poi.id)
