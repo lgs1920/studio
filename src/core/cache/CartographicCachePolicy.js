@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-08
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,10 +27,10 @@ export const normalizeTileCacheBudget = value => (
 
 /** Identify Google content even when Cesium exposes it through an Ion asset URL. */
 const isGoogleLayer = (provider, layer) => {
-    const identity = [provider.id, provider.name, layer.id, layer.sceneKind, layer.imageryKind, layer.base3d?.kind, layer.tiles3d?.kind]
+    const identity = [provider?.id, provider?.name, layer?.id, layer?.sceneKind, layer?.imageryKind, layer?.base3d?.kind, layer?.tiles3d?.kind]
         .map(value => `${value ?? ''}`.toLowerCase())
         .join(' ')
-    return /google|photorealistic/.test(identity) || /google\.com\/(?:maps|earth)/i.test(layer.url ?? '')
+    return /google|photorealistic/.test(identity) || /google\.com\/(?:maps|earth)/i.test(layer?.url ?? '')
 }
 
 /** Replace template variables before resolving a provider URL without retaining credentials. */
@@ -58,8 +58,10 @@ const sourceRule = (url, kind, mode, provider, layer) => {
 /** Build credential-free routing rules from the configured cartographic catalog. */
 export const buildTileCacheRules = (providers = [], origin = 'https://studio.invalid') => {
     const rules = []
-    for (const provider of providers) {
-        for (const layer of provider.layers ?? []) {
+    for (const provider of Array.isArray(providers) ? providers : []) {
+        if (!provider || typeof provider !== 'object') continue
+        for (const layer of Array.isArray(provider.layers) ? provider.layers : []) {
+            if (!layer || typeof layer !== 'object') continue
             const providerId = provider.id ?? provider.name ?? 'configured-provider'
             if (isGoogleLayer(provider, layer)) {
                 const assetId = Number(layer.ionAssetId ?? layer.assetId)
