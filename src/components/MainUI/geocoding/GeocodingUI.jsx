@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-21
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -284,7 +284,17 @@ export const GeocodingUI = () => {
                     [latitude, longitude] = convert(address.current.value).decimalCoordinates.split(regex)
                 }
 
-                await displayLocation(turf.point([longitude * 1, latitude * 1]))
+                const longitudeValue = Number(longitude)
+                const latitudeValue = Number(latitude)
+                const reverseFeature = await __.ui.geocoder.getReverseGeocodingFeature({
+                    longitude: longitudeValue,
+                    latitude:  latitudeValue,
+                })
+                const coordinateLabel = `${latitudeValue}, ${longitudeValue}`
+                await displayLocation(reverseFeature ?? turf.point(
+                    [longitudeValue, latitudeValue],
+                    {name: coordinateLabel},
+                ))
                 return
             }
 
@@ -302,7 +312,7 @@ export const GeocodingUI = () => {
                 results.forEach((value, key) => {
                     store.list.set(key, value)
                 })
-                store.dialog.moreResults = results.size === __.ui.geocoder.limit
+                store.dialog.moreResults = __.ui.geocoder.hasMoreResults
                 return
             }
 

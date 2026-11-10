@@ -469,12 +469,10 @@ ui:
 
   ## Geocoder
   geocoder:
-    url: https://nominatim.openstreetmap.org
-    proxy: /proxy.php?csurl=
-    search: search
+    url: https://photon.komoot.io
+    search: api/
     reverse: reverse
     limit: 7 # results per query
-    email: studio@lgs1920.fr
     minQuery: 3 # characters
 
   ## Toolbars

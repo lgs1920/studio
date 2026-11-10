@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-19
- * Last modified: 2026-10-28
+ * Last modified: 2026-11-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,9 +17,13 @@
 import { POI_FLAG_START, POI_FLAG_STOP } from '@Core/constants'
 import { featureEach }                   from '@turf/meta'
 
-const CITY_FIELDS = ['city', 'town', 'village', 'municipality', 'hamlet', 'county', 'state']
+const CITY_FIELDS = ['city', 'town', 'village', 'municipality', 'hamlet', 'locality', 'district', 'county', 'state']
 const COMMUNE_FIELDS = ['city', 'town', 'village', 'municipality', 'hamlet']
 const REVERSE_GEOCODING_RETRY_DELAY = 60_000
+const PHOTON_MAX_RESULTS = 50
+
+/** Resolve the browser language in the short form Photon accepts. */
+const getPhotonLanguage = () => normalizePlaceName(globalThis.navigator?.language).split('-')[0].toLowerCase() || 'en'
 
 const finiteCoordinate = value => {
     const number = Number(value)
@@ -142,7 +146,7 @@ export const cityFromGeocodingFeature = feature => {
     const result = firstGeocodingFeature(feature)
     const properties = result?.properties ?? result ?? {}
     const address = properties.address ?? {}
-    const city = CITY_FIELDS.map(field => normalizePlaceName(address[field])).find(Boolean)
+    const city = CITY_FIELDS.map(field => normalizePlaceName(address[field] ?? properties[field])).find(Boolean)
 
     if (city) {
         return city
@@ -155,6 +159,68 @@ export const cityFromGeocodingFeature = feature => {
     return fallback ?? ''
 }
 
+/**
+ * Format a Photon feature as a readable address without repeating identical fields.
+ * @param {Object} feature - A Photon GeoJSON feature.
+ * @returns {string} The most detailed available place label.
+ */
+export const geocodingFeatureLabel = feature => {
+    const result = firstGeocodingFeature(feature)
+    const properties = result?.properties ?? result ?? {}
+    const address = properties.address ?? {}
+    const houseNumber = normalizePlaceName(properties.housenumber ?? address.house_number)
+    const street = normalizePlaceName(properties.street ?? address.road ?? address.street)
+    const postcode = normalizePlaceName(properties.postcode ?? address.postcode)
+    const locality = CITY_FIELDS
+        .slice(0, 7)
+        .map(field => normalizePlaceName(properties[field] ?? address[field]))
+        .find(Boolean)
+    const addressLine = [houseNumber, street].filter(Boolean).join(' ')
+    const localityLine = [postcode, locality].filter(Boolean).join(' ')
+    const values = [
+        properties.name,
+        addressLine,
+        localityLine,
+        properties.suburb ?? address.suburb,
+        properties.county ?? address.county,
+        properties.state ?? address.state,
+        properties.country ?? address.country,
+    ]
+    const labels = []
+    const seen = new Set()
+
+    values.forEach(value => {
+        const label = normalizePlaceName(value)
+        const key = label.toLocaleLowerCase()
+
+        if (label && !seen.has(key)) {
+            labels.push(label)
+            seen.add(key)
+        }
+    })
+
+    return labels.join(', ') || normalizePlaceName(properties.display_name)
+}
+
+/** Build a stable key for Photon features with an OSM or coordinate fallback. */
+const geocodingFeatureKey = feature => {
+    const properties = feature?.properties ?? {}
+
+    if (properties.osm_type && properties.osm_id !== undefined && properties.osm_id !== null) {
+        return `${properties.osm_type}:${properties.osm_id}`
+    }
+    if (properties.place_id !== undefined && properties.place_id !== null) {
+        return String(properties.place_id)
+    }
+
+    const coordinates = feature?.geometry?.coordinates
+    if (Array.isArray(coordinates) && coordinates.every(Number.isFinite)) {
+        return coordinates.join(':')
+    }
+
+    return geocodingFeatureLabel(feature)
+}
+
 export const locationDetailsFromGeocodingFeature = feature => {
     const result = firstGeocodingFeature(feature)
     const properties = result?.properties ?? result ?? {}
@@ -162,8 +228,8 @@ export const locationDetailsFromGeocodingFeature = feature => {
 
     return {
         location:    cityFromGeocodingFeature(feature),
-        country:     normalizePlaceName(address.country),
-        countryCode: normalizeCountryCode(address.country_code),
+        country:     normalizePlaceName(properties.country ?? address.country),
+        countryCode: normalizeCountryCode(properties.countrycode ?? properties.country_code ?? address.country_code),
     }
 }
 
@@ -195,19 +261,17 @@ const locationCoordinatesFromList = coordinates => {
  */
 export class Geocoder {
 
-    excludePlaces = []
     results = new Map()
     limit = 0
-    email
     url
-    proxy
+    hasMoreResults = false
     #search
     #reverse
+    #searchQuery = ''
+    #searchLimit = 0
     #reverseFeatureCache = new Map()
     #reverseLocationUnavailableUntil = 0
     #lastReverseLocationWarningAt = 0
-    format
-    license
 
     /**
      * Converts coordinates to Degree-Minute-Second format.
@@ -224,12 +288,10 @@ export class Geocoder {
         }
 
         this.url = lgs.settings.ui.geocoder.url
-        this.proxy = lgs.servers?.studio?.proxy || lgs.settings.ui.geocoder.proxy || ''
         this.limit = lgs.settings.ui.geocoder.limit
-        this.email = lgs.settings.ui.geocoder.email
         this.#search = lgs.settings.ui.geocoder.search
         this.#reverse = lgs.settings.ui.geocoder.reverse
-        this.format = 'geojson'
+        this.#searchLimit = this.limit
 
         this.init()
 
@@ -237,11 +299,14 @@ export class Geocoder {
     }
 
     /**
-     * Initializes the geocoder by resetting excludePlaces and results.
+     * Resets search results and pagination state.
+     * @returns {void}
      */
     init = () => {
-        this.excludePlaces.length = 0
         this.results.clear()
+        this.hasMoreResults = false
+        this.#searchQuery = ''
+        this.#searchLimit = this.limit
     }
 
     /**
@@ -250,34 +315,31 @@ export class Geocoder {
      * @returns {Promise<Map|Object>} A Map of GeoJSON features or an error object.
      */
     search = async (location) => {
-        // Build the query
-        const url = new URL(`${this.url}/${this.#search}`)
-        // Add the searched location
-        url.searchParams.append('q', location)
-        url.searchParams.append('limit', this.limit)
-        url.searchParams.append('format', this.format)
-        url.searchParams.append('email', this.email)
-        url.searchParams.append('dedupe', 1)
-        url.searchParams.append('namedetails', 1)
-        url.searchParams.append('addressdetails', 1)
+        const query = normalizePlaceName(location)
 
-        // Add exclude place
-        if (this.excludePlaces.length > 0) {
-            url.searchParams.append('exclude_place_ids', this.excludePlaces.join(','))
+        if (query === this.#searchQuery && this.#searchLimit < PHOTON_MAX_RESULTS) {
+            // Photon has no exclusion-ID or offset parameter, so request a larger prefix for each continuation.
+            this.#searchLimit = Math.min(this.#searchLimit + this.limit, PHOTON_MAX_RESULTS)
+        }
+        else {
+            this.#searchQuery = query
+            this.#searchLimit = Math.min(this.limit, PHOTON_MAX_RESULTS)
         }
 
-        // Time to query the geocoder
+        const url = new URL(`${this.url}/${this.#search}`)
+        url.searchParams.set('q', query)
+        url.searchParams.set('limit', String(this.#searchLimit))
+        url.searchParams.set('lang', getPhotonLanguage())
+        url.searchParams.set('dedupe', '1')
+
         this.results.clear()
+        this.hasMoreResults = false
         try {
             const features = await this.fetch(url)
             featureEach(features, (feature) => {
-                this.results.set(feature.properties.place_id, feature)
-                // We exclude this result for the next time
-                if (!this.excludePlaces.includes(feature.properties.place_id)) {
-                    this.excludePlaces.push(feature.properties.place_id)
-                }
+                this.results.set(geocodingFeatureKey(feature), feature)
             })
-            this.license = features.licence
+            this.hasMoreResults = this.results.size === this.#searchLimit && this.#searchLimit < PHOTON_MAX_RESULTS
         }
         catch (error) {
             console.error(error)
@@ -308,6 +370,30 @@ export class Geocoder {
         return details.location
     }
 
+    /**
+     * Retrieve the nearest Photon feature for coordinates while preserving the input point.
+     * @param {{longitude: number, latitude: number}|number[]} coordinate - Coordinates to reverse-geocode.
+     * @returns {Promise<Object|null>} A Photon feature or null when none is available.
+     */
+    getReverseGeocodingFeature = async (coordinate) => {
+        coordinate = normalizeCoordinate(coordinate)
+        if (!coordinate || this.#isReverseLocationUnavailable()) {
+            return null
+        }
+
+        const feature = await this.#getCoordinateFeature(coordinate)
+        if (!feature) {
+            return null
+        }
+
+        return {
+            ...feature,
+            type:       'Feature',
+            geometry:   {type: 'Point', coordinates: [coordinate.longitude, coordinate.latitude]},
+            properties: feature.properties ?? {},
+        }
+    }
+
     getCoordinateLocationDetails = async (coordinate) => {
         coordinate = normalizeCoordinate(coordinate)
 
@@ -336,17 +422,16 @@ export class Geocoder {
 
         const feature = await this.#getCoordinateFeature(coordinate)
         const properties = firstGeocodingFeature(feature)?.properties ?? {}
-        const displayName = normalizePlaceName(properties.display_name)
-        const address = properties.address ?? {}
-        const commune = COMMUNE_FIELDS.map(field => normalizePlaceName(address[field])).find(Boolean)
-        const displayLabel = displayName.split(',')[0].trim()
+        const featureLabel = geocodingFeatureLabel(feature)
+        const commune = COMMUNE_FIELDS.map(field => normalizePlaceName(properties[field] ?? properties.address?.[field])).find(Boolean)
+        const displayLabel = featureLabel.split(',')[0].trim()
         const title = [properties.name, commune, displayLabel]
             .map(normalizePlaceName)
             .find(candidate => candidate && !isTechnicalPlaceName(candidate)) ?? ''
 
         return {
             title,
-            description: displayName.split(', ').join(' - '),
+            description: featureLabel.split(', ').join(' - '),
         }
     }
 
@@ -387,16 +472,15 @@ export class Geocoder {
     /** Fetch the configured reverse-geocoding feature for a coordinate. */
     #fetchReverseFeature = async ({longitude, latitude}) => {
         const url = new URL(`${this.url}/${this.#reverse}`)
-        url.searchParams.append('lon', longitude)
-        url.searchParams.append('lat', latitude)
-        url.searchParams.append('format', this.format)
-        url.searchParams.append('email', this.email)
-        url.searchParams.append('addressdetails', 1)
-        url.searchParams.append('namedetails', 1)
-        // Building-level results include names for POIs while keeping address fields available for city extraction.
-        url.searchParams.append('zoom', 18)
+        url.searchParams.set('lon', String(longitude))
+        url.searchParams.set('lat', String(latitude))
+        url.searchParams.set('limit', '1')
+        url.searchParams.set('lang', getPhotonLanguage())
 
-        return this.fetch(url)
+        const response = await this.fetch(url)
+        const feature = firstGeocodingFeature(response)
+
+        return feature?.type === 'Feature' ? feature : null
     }
 
     /**
@@ -461,15 +545,8 @@ export class Geocoder {
      * @returns {Promise<Object>} The API response data.
      */
     fetch = async (url) => {
-        const response = await lgs.axios.get(this.#getFetchUrl(url))
+        const response = await lgs.axios.get(url.toString())
         return response.data
-    }
-
-    #getFetchUrl = url => {
-        const targetUrl = url instanceof URL ? url.toString() : String(url)
-        const proxyUrl = normalizePlaceName(this.proxy)
-
-        return proxyUrl ? `${proxyUrl}${encodeURIComponent(targetUrl)}` : targetUrl
     }
 
     #isReverseLocationUnavailable = () => Date.now() < this.#reverseLocationUnavailableUntil

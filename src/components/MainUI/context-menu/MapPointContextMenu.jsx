@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-27
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -126,12 +126,13 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
             }
 
             const updates = {}
-            const title = details.title || currentPOI.location
+            const coordinateLabel = `${currentPOI.latitude}, ${currentPOI.longitude}`
+            const title = details?.title || currentPOI.location || coordinateLabel
             if (String(currentPOI.title ?? '').trim().toLowerCase() === DEFAULT_POI_TITLE.toLowerCase() && title) {
                 updates.title = title
             }
-            if (!String(currentPOI.description ?? '').trim() && details.description) {
-                updates.description = details.description
+            if (!String(currentPOI.description ?? '').trim()) {
+                updates.description = details?.description || coordinateLabel
             }
 
             if (Object.keys(updates).length > 0) {
