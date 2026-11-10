@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-11-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ import {
 import { MapPOI }                                  from '@Core/MapPOI'
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
 import { Export }                                  from '@Core/ui/Export'
+import { geocodingFeatureLabel }                   from '@Core/ui/Geocoder'
 import { POIUtils }                                from '@Utils/cesium/POIUtils'
 import { KM }                                      from '@Utils/UnitUtils'
 import { Cartesian3 }                              from 'cesium'
@@ -862,14 +863,23 @@ export class POIManager {
             })
     }
 
+    /**
+     * Creates a POI from a geocoding feature, using its address or coordinates as display fallbacks.
+     *
+     * @param {Object} json - GeoJSON point feature from Photon or a coordinate fallback.
+     * @param {boolean} [simulate=false] - Whether to resolve simulated terrain height.
+     * @returns {Promise<Object>} The initialized point of interest.
+     */
     getPointFromGeoJson = async (json, simulate = false) => {
+        const longitude = json.geometry.coordinates[0]
+        const latitude = json.geometry.coordinates[1]
+        const featureLabel = geocodingFeatureLabel(json)
+        const coordinateLabel = `${latitude}, ${longitude}`
         const point = {
-            longitude:   json.geometry.coordinates[0],
-            latitude:    json.geometry.coordinates[1],
-            title:       json.properties.name ?? '',
-            description: json.properties.display_name
-                         ? json.properties.display_name.split(', ').join(' - ')
-                         : '',
+            longitude,
+            latitude,
+            title:       normalizeText(json.properties?.name) || featureLabel.split(', ')[0] || coordinateLabel,
+            description: (featureLabel || coordinateLabel).split(', ').join(' - '),
             color:       lgs.darkContrastColor,
             bgColor:     lgs.colors.poiDefaultBackground,
         }
@@ -877,8 +887,8 @@ export class POIManager {
             try {
                 point.simulatedHeight = await this.getHeightFromTerrain({
                                                                             coordinates: {
-                                                                                longitude: json.geometry.coordinates[0],
-                                                                                latitude:  json.geometry.coordinates[1],
+                                                                                longitude,
+                                                                                latitude,
                                                                             },
                                                                         })
             }

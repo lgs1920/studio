@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2025-01-21
+ * Last modified: 2026-11-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import {
     WaCallout, WaCard, WaIcon,
 }                                  from '@web.awesome.me/webawesome-pro/dist/react'
+import { geocodingFeatureLabel }   from '@Core/ui/Geocoder'
 import { useLayoutEffect, useRef } from 'react'
 import { useSnapshot }             from 'valtio/index'
 import { LGSScrollbars }           from '../LGSScrollbars'
@@ -44,7 +45,7 @@ export const SelectLocation = ({select}) => {
                                     onClick={() => select(key)}
                                 >
                                         <span lassName="select-location-item-label">
-                                            {value.properties.display_name}
+                                            {geocodingFeatureLabel(value)}
                                         </span>
                                     <WaIcon name="chevron-right" variant="regular"/>
                                 </WaCard>

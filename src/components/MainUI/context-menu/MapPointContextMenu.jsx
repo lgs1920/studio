@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-27
- * Last modified: 2026-09-13
+ * Last modified: 2026-11-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -58,21 +58,43 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
         await openPOIEditor(poiId)
     }, [])
 
+    /**
+     * Creates a context-menu POI with Photon-derived title and address details when available.
+     *
+     * @returns {Promise<void>} Completion after the POI creation attempt.
+     */
     const createPOI = useCallback(async () => {
         if (!target) {
             return
         }
 
+        const coordinateLabel = `${target.latitude}, ${target.longitude}`
+        let geocodedPoint = null
+
+        try {
+            const reverseFeature = await __.ui.geocoder.getReverseGeocodingFeature({
+                                                                                      longitude: target.longitude,
+                                                                                      latitude:  target.latitude,
+                                                                                  })
+            if (reverseFeature) {
+                geocodedPoint = await __.ui.poiManager.getPointFromGeoJson(reverseFeature)
+            }
+        }
+        catch {
+            geocodedPoint = null
+        }
+
         const poi = new MapPOI({
+                                   ...(geocodedPoint ?? {}),
                                    bgColor:         lgs.colors.poiDefaultBackground,
                                    category:        POI_STANDARD_TYPE,
                                    color:           lgs.colors.poiDefault,
-                                   description:     '',
+                                   description:     geocodedPoint?.description || coordinateLabel,
                                    height:          null,
                                    latitude:        target.latitude,
                                    longitude:       target.longitude,
                                    simulatedHeight: target.simulatedHeight ?? target.height ?? 0,
-                                   title:           DEFAULT_POI_TITLE,
+                                   title:           geocodedPoint?.title || coordinateLabel || DEFAULT_POI_TITLE,
                                    type:            POI_STANDARD_TYPE,
                                })
 

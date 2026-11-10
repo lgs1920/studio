@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2025-01-21
+ * Last modified: 2026-11-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -86,26 +86,33 @@ export const GeocodingUI = () => {
     }
 
     const showPOI = async (geoPoint) => {
-        __.ui.poiManager.getPointFromGeoJson(geoPoint, true).then(point => {
-            __.ui.sceneManager.focus(point, {
-                target:     point,
-                lookAt:     true,
-                infinite:   false,
-                rotate:     lgs.settings.ui.poi.rotate,
-                rpm:        lgs.settings.ui.poi.rpm,
-                flyingTime: 2,
-                callback: async (poi) => {
-                    const newPoi = await __.ui.poiManager.add(poi)
-                    if (newPoi) {
-                        return true
-                    }
-                    UIToast.warning({
-                                        caption: 'POI not created !',
-                                        text:    'This location is too closed to an existing POI!',
-                                    })
-                    return false
-                },
-            })
+        const point = await __.ui.poiManager.getPointFromGeoJson(geoPoint, true)
+        const coordinateLabel = `${point.latitude}, ${point.longitude}`
+        const poiTitle = point.title || coordinateLabel
+        const poiDescription = point.description || coordinateLabel
+
+        __.ui.sceneManager.focus(point, {
+            target:     point,
+            lookAt:     true,
+            infinite:   false,
+            rotate:     lgs.settings.ui.poi.rotate,
+            rpm:        lgs.settings.ui.poi.rpm,
+            flyingTime: 2,
+            callback: async (focusedPoint) => {
+                const newPoi = await __.ui.poiManager.add({
+                    ...focusedPoint,
+                    title:       focusedPoint.title || poiTitle,
+                    description: focusedPoint.description || poiDescription,
+                })
+                if (newPoi) {
+                    return true
+                }
+                UIToast.warning({
+                                    caption: 'POI not created !',
+                                    text:    'This location is too closed to an existing POI!',
+                                })
+                return false
+            },
         })
 
         requestClose()
@@ -136,7 +143,14 @@ export const GeocodingUI = () => {
                     [latitude, longitude] = convert(address.current.value).decimalCoordinates.split(regex)
                 }
 
-                await showPOI(turf.point([longitude * 1, latitude * 1]))
+                const longitudeValue = Number(longitude)
+                const latitudeValue = Number(latitude)
+                const reverseFeature = await __.ui.geocoder.getReverseGeocodingFeature({
+                                                                                         longitude: longitudeValue,
+                                                                                         latitude:  latitudeValue,
+                                                                                     })
+                const coordinateLabel = `${latitudeValue}, ${longitudeValue}`
+                await showPOI(reverseFeature ?? turf.point([longitudeValue, latitudeValue], {name: coordinateLabel}))
                 return
             }
 
@@ -154,7 +168,7 @@ export const GeocodingUI = () => {
                 results.forEach((value, key) => {
                     store.list.set(key, value)
                 })
-                store.dialog.moreResults = results.size === __.ui.geocoder.limit
+                store.dialog.moreResults = __.ui.geocoder.hasMoreResults
                 return
             }
 
