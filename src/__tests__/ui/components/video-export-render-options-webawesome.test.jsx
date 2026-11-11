@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-07
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,16 +33,16 @@ describe('VideoExportRenderOptions with the real Web Awesome select', () => {
         globalThis.lgs = undefined
     })
 
-    it('keeps Native HQ selectable after choosing 4K UHD and exports the exact profile', async () => {
+    it('persists the new resolution profiles and keeps Native HQ selectable', async () => {
         const {container} = render(<VideoExportRenderOptions/>)
         const selects = [...container.querySelectorAll('wa-select')]
-        const [renderer, resolution] = selects
+        const [resolution, renderer] = selects
 
         // React's jsdom SSR wrapper emits blank wa-option value attributes; restore the
         // option values before exercising Web Awesome's select change behavior.
         const optionValues = [
+            ['720p', '1080p', '1440p', '4k-uhd', 'automatic', 'custom'],
             ['visible', 'isolated'],
-            ['automatic', '1080p', '4k-uhd', 'custom'],
             ['standard', 'high', 'maximum'],
             ['adaptive', 'strict'],
         ]
@@ -56,6 +56,27 @@ describe('VideoExportRenderOptions with the real Web Awesome select', () => {
         expect(resolution).not.toBeNull()
         expect(renderer.hasAttribute('disabled')).toBe(false)
         expect(resolution.querySelector('[slot="hint"]')).toBeNull()
+
+        await act(async () => {
+            resolution.value = '720p'
+            resolution.dispatchEvent(new Event('change', {bubbles: true, composed: true}))
+        })
+        await waitFor(() => expect(lgs.settings.ui.video.resolutionProfile).toBe('720p'))
+
+        await act(async () => {
+            resolution.value = '1440p'
+            resolution.dispatchEvent(new Event('change', {bubbles: true, composed: true}))
+        })
+        await waitFor(() => expect(lgs.settings.ui.video.resolutionProfile).toBe('1440p'))
+        lgs.stores.ui.video.ratio = '9x16'
+        const portraitRenderSpec = buildReplayVideoRenderSpec({
+            cropRect: {left: 0, top: 0, width: 563, height: 1001},
+            sourceCanvas: {width: 900, height: 1600},
+            video: lgs.stores.ui.video,
+            settings: lgs.settings.ui.video,
+        })
+        expect(portraitRenderSpec.dimensions).toEqual({width: 1440, height: 2560})
+        lgs.stores.ui.video.ratio = '16x9'
 
         await act(async () => {
             resolution.value = '4k-uhd'

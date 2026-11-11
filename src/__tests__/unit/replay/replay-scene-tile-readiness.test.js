@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-17
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import {
     areReplaySceneTilesReady,
     createReplaySceneTileReadinessCoordinator,
+    describeReplaySceneTileReadiness,
     normalizeReplaySceneTileReadinessOptions,
     prepareReplaySceneTileCache,
     prepareReplaySceneTilesForCapture,
@@ -325,6 +326,55 @@ describe('ReplaySceneTileReadiness', () => {
         await expect(readiness).resolves.toBe(true)
     })
 
+    it('checks only tilesets owned by the scene being captured', () => {
+        const previousLgs = globalThis.lgs
+        const visibleTileset = {show: true, tilesLoaded: true}
+        const interactiveTileset = {show: true, tilesLoaded: false}
+        globalThis.lgs = {base3dTileset: interactiveTileset}
+
+        try {
+            const isolatedScene = {
+                globe: {tilesLoaded: true},
+                primitives: createCollection([visibleTileset]),
+            }
+
+            expect(areReplaySceneTilesReady(isolatedScene)).toBe(true)
+
+            visibleTileset.tilesLoaded = false
+            expect(areReplaySceneTilesReady(isolatedScene)).toBe(false)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('describes pending queues in the scene being captured without exposing provider URLs', () => {
+        const previousLgs = globalThis.lgs
+        class Cesium3DTileset {}
+        const pendingTileset = Object.assign(new Cesium3DTileset(), {
+            show: true,
+            tilesLoaded: false,
+            maximumScreenSpaceError: 2,
+            url: 'https://tiles.example.test/secret-token/tileset.json',
+        })
+        globalThis.lgs = {base3dTileset: {show: true, tilesLoaded: false}}
+
+        try {
+            const scene = {
+                globe: {tilesLoaded: true},
+                primitives: createCollection([pendingTileset]),
+            }
+
+            expect(describeReplaySceneTileReadiness(scene)).toBe(
+                'Readiness detail: terrain/imagery tile queue ready; '
+                + '1 visible 3D Tileset(s) still pending: Cesium3DTileset (SSE 2).',
+            )
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
     it('ignores hidden 3D tilesets', async () => {
         const scene = {
             globe: {tilesLoaded: true},
@@ -454,33 +504,25 @@ describe('ReplaySceneTileReadiness', () => {
         }
     })
 
-    it.each(['3D tiles', 'terrain tiles', '2D imagery tiles'])(
+    it.each(['3D tiles', 'terrain tiles'])(
         'rejects a strict frame when %s fail after postRender is raised',
         async failureSource => {
             vi.useFakeTimers()
             const postRender = createEvent()
             const tileFailed = createEvent()
             const terrainFailureEvent = createEvent()
-            const imageryFailureEvent = createEvent()
             const failureEvent = failureSource === '3D tiles'
                 ? tileFailed
-                : (failureSource === 'terrain tiles' ? terrainFailureEvent : imageryFailureEvent)
+                : terrainFailureEvent
             const tileset = {
                 show: true,
                 tilesLoaded: true,
                 tileFailed,
             }
             const terrainProvider = {errorEvent: terrainFailureEvent}
-            const imageryLayer = {
-                show: true,
-                errorEvent: createEvent(),
-                readyEvent: createEvent(),
-                imageryProvider: {errorEvent: imageryFailureEvent},
-            }
             const scene = {
                 globe: {
                     tilesLoaded: true,
-                    imageryLayers: createCollection([imageryLayer]),
                     terrainProvider,
                 },
                 primitives: createCollection([tileset]),
@@ -503,9 +545,6 @@ describe('ReplaySceneTileReadiness', () => {
                 expect(postRender.listenerCount()).toBe(0)
                 expect(tileFailed.listenerCount()).toBe(0)
                 expect(terrainFailureEvent.listenerCount()).toBe(0)
-                expect(imageryFailureEvent.listenerCount()).toBe(0)
-                expect(imageryLayer.errorEvent.listenerCount()).toBe(0)
-                expect(imageryLayer.readyEvent.listenerCount()).toBe(0)
                 expect(vi.getTimerCount()).toBe(0)
             }
             finally {
@@ -513,6 +552,190 @@ describe('ReplaySceneTileReadiness', () => {
             }
         },
     )
+
+    it.each([
+        ['tile failure', true],
+        ['tile request timeout', false],
+    ])('allows a rendered strict frame after a bounded 2D imagery %s', async (_case, emitFailure) => {
+        vi.useFakeTimers()
+        const postRender = createEvent()
+        const imageryFailureEvent = createEvent()
+        const imageryLayer = {
+            show: true,
+            errorEvent: createEvent(),
+            readyEvent: createEvent(),
+            imageryProvider: {errorEvent: imageryFailureEvent},
+        }
+        const scene = {
+            globe: {
+                tilesLoaded: false,
+                terrainProvider: {ready: true},
+                imageryLayers: createCollection([imageryLayer]),
+            },
+            primitives: createCollection([]),
+            postRender,
+            requestRender: vi.fn(),
+        }
+        let renderCount = 0
+
+        try {
+            const readiness = waitForReplaySceneTilesReady({
+                scene,
+                maxMillis: 32,
+                requirePostRender: true,
+                renderNow: () => {
+                    renderCount += 1
+                    if (emitFailure && renderCount === 1) {
+                        imageryFailureEvent.emit({message: 'Failed to obtain image tile X: 33741 Y: 23597 Level: 16.'})
+                    }
+                    if (renderCount > 1) {
+                        postRender.emit(scene)
+                    }
+                },
+            })
+            await vi.advanceTimersByTimeAsync(132)
+
+            await expect(readiness).resolves.toBe(true)
+            expect(scene.globe.tilesLoaded).toBe(false)
+            expect(postRender.listenerCount()).toBe(0)
+            expect(imageryFailureEvent.listenerCount()).toBe(0)
+            expect(imageryLayer.errorEvent.listenerCount()).toBe(0)
+            expect(imageryLayer.readyEvent.listenerCount()).toBe(0)
+            expect(vi.getTimerCount()).toBe(0)
+        }
+        finally {
+            vi.useRealTimers()
+        }
+    })
+
+    it('keeps Strict blocked when terrain is pending without visible 2D imagery', async () => {
+        vi.useFakeTimers()
+        const scene = {
+            globe: {tilesLoaded: false, terrainProvider: {ready: true}},
+            primitives: createCollection([]),
+            postRender: createEvent(),
+            requestRender: vi.fn(),
+        }
+
+        try {
+            const readiness = waitForReplaySceneTilesReady({
+                scene,
+                maxMillis: 32,
+                requirePostRender: true,
+                renderNow: () => scene.postRender.emit(scene),
+            })
+            await vi.advanceTimersByTimeAsync(32)
+
+            await expect(readiness).resolves.toBe(false)
+            expect(scene.postRender.listenerCount()).toBe(0)
+            expect(vi.getTimerCount()).toBe(0)
+        }
+        finally {
+            vi.useRealTimers()
+        }
+    })
+
+    it('keeps Strict blocked when a visible 3D Tileset remains pending beside WMTS imagery', async () => {
+        vi.useFakeTimers()
+        const imageryFailureEvent = createEvent()
+        const tileset = {show: true, tilesLoaded: false}
+        const scene = {
+            globe: {
+                tilesLoaded: false,
+                terrainProvider: {ready: true},
+                imageryLayers: createCollection([{show: true, imageryProvider: {errorEvent: imageryFailureEvent}}]),
+            },
+            primitives: createCollection([tileset]),
+            postRender: createEvent(),
+            requestRender: vi.fn(),
+        }
+
+        try {
+            const readiness = waitForReplaySceneTilesReady({
+                scene,
+                maxMillis: 32,
+                requirePostRender: true,
+                renderNow: () => imageryFailureEvent.emit({message: 'WMTS tile unavailable'}),
+            })
+            await vi.advanceTimersByTimeAsync(32)
+
+            await expect(readiness).resolves.toBe(false)
+            expect(imageryFailureEvent.listenerCount()).toBe(0)
+            expect(scene.postRender.listenerCount()).toBe(0)
+            expect(vi.getTimerCount()).toBe(0)
+        }
+        finally {
+            vi.useRealTimers()
+        }
+    })
+
+    it('reuses the incomplete-imagery result for later frames at the same camera footprint', async () => {
+        vi.useFakeTimers()
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+        const postRender = createEvent()
+        const imageryFailureEvent = createEvent()
+        const scene = {
+            globe: {
+                tilesLoaded: false,
+                terrainProvider: {ready: true},
+                imageryLayers: createCollection([{
+                    show: true,
+                    imageryProvider: {errorEvent: imageryFailureEvent},
+                }]),
+            },
+            mode: 3,
+            camera: {
+                positionWC: {x: 1000, y: 2000, z: 3000},
+                directionWC: {x: 0, y: 0, z: -1},
+                upWC: {x: 0, y: 1, z: 0},
+                frustum: {
+                    fov: 1,
+                    near: 1,
+                    far: 100000,
+                    replayCropProjectionKey: 'crop-wmts',
+                },
+            },
+            drawingBufferWidth: 640,
+            drawingBufferHeight: 360,
+            postRender,
+            primitives: createCollection([]),
+            requestRender: vi.fn(),
+        }
+        let renderCount = 0
+        const renderNow = vi.fn(() => {
+            renderCount += 1
+            if (renderCount === 1) {
+                imageryFailureEvent.emit({message: 'WMTS tile unavailable'})
+            }
+            else {
+                postRender.emit(scene)
+            }
+        })
+        const coordinator = createReplaySceneTileReadinessCoordinator(scene, {
+            policy: 'strict',
+            requirePostRender: true,
+            knownFootprintRenderTimeoutMs: 10,
+            renderNow,
+        })
+
+        try {
+            const firstFrame = coordinator.prepareForCapture({maxMillis: 32})
+            await vi.advanceTimersByTimeAsync(132)
+            await expect(firstFrame).resolves.toBe(true)
+
+            const nextFrame = coordinator.prepareForCapture({maxMillis: 32})
+            await vi.advanceTimersByTimeAsync(0)
+            await expect(nextFrame).resolves.toBe(true)
+            expect(renderNow).toHaveBeenCalledTimes(3)
+            expect(coordinator.getMetrics()).toMatchObject({incompleteImageryFallbacks: 1, failedImageryRequests: 1})
+            expect(warn).toHaveBeenCalledOnce()
+        }
+        finally {
+            coordinator.dispose()
+            warn.mockRestore()
+            vi.useRealTimers()
+        }
+    })
 
     it('reports observable tile events and leaves request/cache-miss counts unavailable', () => {
         const tileLoadProgressEvent = createEvent()

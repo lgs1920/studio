@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-18
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -343,7 +343,7 @@ export const POI_CATEGORY_ICONS = new Map([
                                               [POI_STANDARD_TYPE, 'flag-swallowtail'],
                                               [POI_FLAG_START, 'flag-pennant'],
                                               [POI_FLAG_STOP, 'flag-pennant'],
-                                              ['shelter', 'house-blank'],
+                                              ['shelter', 'person-shelter'],
                                               ['refuge', 'house-bed.svg'],
                                               ['building', 'building'],
                                               ['viewpoint', 'telescope'],
@@ -357,20 +357,25 @@ export const POI_CATEGORY_ICONS = new Map([
                                               ['ruins', 'ruins.svg'],
                                               ['campground', 'campground'],
                                               ['picnic-area', 'table-picnic'],
+                                              ['barbecue', 'grill-fire'],
                                               ['drinking-water', 'faucet-drip'],
                                               ['source', 'droplet'],
+                                              ['hot-spring', 'droplet-degree'],
                                               ['restroom', 'restroom'],
                                               ['cafe', 'mug-hot'],
                                               ['restaurant', 'utensils'],
                                               ['trailhead', 'sign-post'],
+                                              ['trail-junction', 'signs-post'],
                                               ['train-stop', 'train'],
                                               ['bus-stop', 'bus-stop'],
                                               ['cable-car', 'cable-car'],
+                                              ['aerial-way', 'cable-car'],
                                               ['winter-station', 'snowflake'],
                                               ['hazard', 'triangle-exclamation'],
                                               ['first-aid', 'kit-medical'],
                                               ['photo-spot', 'camera'],
                                               ['waterfall', 'water'],
+                                              ['swimming', 'person-swimming-water'],
                                               ['bridge', 'bridge'],
                                               ['shop', 'basket-shopping'],
                                               ['bivouac', 'tent'],

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-14
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -102,6 +102,7 @@ describe('Replay recording performance', () => {
         now = 27
         performance.record('cesiumRender', 7)
         now = 32
+        performance.record('sceneTilePrewarm', 12)
         performance.record('sceneTileReadiness', 7)
         now = 42
         performance.record('frameRendering', 0)
@@ -111,6 +112,7 @@ describe('Replay recording performance', () => {
         expect(report.stages).toEqual(expect.arrayContaining([
             expect.objectContaining({key: 'frameRendering', kind: 'context', totalMillis: 42}),
             expect.objectContaining({key: 'replayFrameUpdate', kind: 'scope', totalMillis: 7}),
+            expect.objectContaining({key: 'sceneTilePrewarm', kind: 'scope', totalMillis: 20}),
             expect.objectContaining({key: 'sceneTileReadiness', kind: 'scope', totalMillis: 25}),
             expect.objectContaining({key: 'cesiumRender', kind: 'detail', totalMillis: 20}),
         ]))

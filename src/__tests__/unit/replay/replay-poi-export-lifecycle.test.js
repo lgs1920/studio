@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-29
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,10 @@ import {POIUtils} from '@Utils/cesium/POIUtils'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {
     closeJourneyReplayOpenedPOIsBeforeStopClips, restoreNearbyPOIsAfterPlayback, syncNearbyPOIsForSample,
+    updatePOIExpandedState,
 } from '@Core/ui/replay/JourneyReplaySessionPOIController'
+import {setReplayRenderTarget, clearReplayRenderTarget} from '@Core/ui/replay/ReplayRenderTarget'
+import {syncCapturedReplayPOIToTarget} from '@Core/ui/replay/ReplayPOICaptureBridge'
 import {renderReplayExportFrame} from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
 import {buildReplayVideoTimeline, resolveReplayVideoFramePhase} from '@Core/ui/replay/ReplayVideoTimeline'
 import {resetRuntimeProgress} from '@Core/ui/replay/JourneyReplayRuntime'
@@ -69,6 +72,112 @@ afterEach(() => {
 })
 
 describe('Replay POI fixed-frame lifecycle', () => {
+    it('holds a Native HQ frame update until the expanded POI bitmap reaches the isolated scene', async () => {
+        const poi = {
+            id: 'native-hq-animated-poi',
+            longitude: 2,
+            latitude: 48,
+            visible: true,
+            expanded: false,
+            image: {src: 'collapsed', width: 40, height: 40},
+        }
+        const entities = new Map()
+        const target = {
+            viewer: {
+                entities: {
+                    getById: id => entities.get(id),
+                    add: entity => {entities.set(entity.id, entity); return entity},
+                },
+                dataSources: {length: 0},
+            },
+            scene: {requestRender: vi.fn()},
+            canvas: {width: 1920, height: 1080},
+        }
+        const state = {replayPoiTriggered: new Set([poi.id])}
+        const mode = {[JOURNEY_REPLAY_INTERNAL_STATE]: state, [JOURNEY_REPLAY_INTERNAL_CALL]: {}}
+        const updatePOI = vi.fn(async (_id, updates) => {
+            Object.assign(poi, updates)
+            queueMicrotask(() => {
+                poi.image = {src: 'expanded-capture', width: 180, height: 120}
+                void syncCapturedReplayPOIToTarget({poi, expanded: true, effectiveVisibility: true})
+            })
+            return poi
+        })
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {userMode: 'expert'}}},
+            stores: {main: {components: {pois: {list: new Map([[poi.id, poi]])}}}},
+        })
+        vi.stubGlobal('__', {
+            ui: {
+                sceneManager: {noRelief: () => true},
+                poiManager: {updatePOI},
+            },
+        })
+        setReplayRenderTarget(mode, target)
+
+        try {
+            await expect(updatePOIExpandedState(mode, poi.id, true)).resolves.toBe(poi)
+            const entity = entities.get(poi.id)
+            expect(entity).toBeDefined()
+            expect(entity.billboard.image.getValue()).toBe('expanded-capture')
+            expect(updatePOI).toHaveBeenCalledWith(poi.id, {expanded: true}, expect.objectContaining({skipPersist: true}))
+        }
+        finally {
+            clearReplayRenderTarget(mode, target)
+        }
+    })
+
+    it('refreshes the Native HQ POI bitmap when replay expands an already-expanded UI POI', async () => {
+        const poi = {
+            id: 'already-expanded-native-hq-poi',
+            longitude: 2,
+            latitude: 48,
+            visible: true,
+            expanded: true,
+            image: {src: 'stale-expanded-capture', width: 120, height: 80},
+        }
+        const entities = new Map()
+        const target = {
+            viewer: {
+                entities: {
+                    getById: id => entities.get(id),
+                    add: entity => {entities.set(entity.id, entity); return entity},
+                },
+                dataSources: {length: 0},
+            },
+            scene: {requestRender: vi.fn()},
+            canvas: {width: 1920, height: 1080},
+        }
+        const state = {replayPoiTriggered: new Set([poi.id])}
+        const mode = {[JOURNEY_REPLAY_INTERNAL_STATE]: state, [JOURNEY_REPLAY_INTERNAL_CALL]: {}}
+        const updatePOI = vi.fn(async () => poi)
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {userMode: 'expert'}}},
+            stores: {main: {components: {pois: {list: new Map([[poi.id, poi]])}}}},
+        })
+        vi.stubGlobal('__', {
+            ui: {
+                sceneManager: {noRelief: () => true},
+                poiManager: {updatePOI},
+            },
+        })
+        setReplayRenderTarget(mode, target)
+
+        try {
+            const update = updatePOIExpandedState(mode, poi.id, true)
+            await Promise.resolve()
+            poi.image = {src: 'fresh-expanded-capture', width: 180, height: 120}
+            await syncCapturedReplayPOIToTarget({poi, expanded: true, effectiveVisibility: true})
+            await expect(update).resolves.toBe(poi)
+
+            expect(entities.get(poi.id)?.billboard.image.getValue()).toBe('fresh-expanded-capture')
+            expect(updatePOI).not.toHaveBeenCalled()
+        }
+        finally {
+            clearReplayRenderTarget(mode, target)
+        }
+    })
+
     it.each(['basic', 'expert'])('restores the pre-preparation POIs after an export handoff in %s mode', userMode => {
         const pois = [
             {id: 'initially-shown', visible: true, replay: {visible: false}},

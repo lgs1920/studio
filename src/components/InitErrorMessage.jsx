@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-08-11
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,7 +39,7 @@ export const InitErrorMessage = ({error}) => {
     const errorMessage = String(error?.message ?? error?.cause?.message ?? error ?? 'Unknown initialization error')
     const errorMessageHtml = sanitizeErrorHtml(errorMessage)
     const errorStack = String(error?.stack ?? '')
-    const studioName = lgs?.servers?.studio?.name ?? 'LGS1920'
+    const studioName = globalThis.lgs?.servers?.studio?.name ?? 'LGS1920 Development Studio'
     const diagnostic = collectErrorDiagnostic({
         error,
         suggestedFix: 'Reload Studio. If the problem persists, contact Studio support.',

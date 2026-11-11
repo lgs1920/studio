@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-14
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { DYNAMIC_WIDGET_PART, LGS_WIDGET_SCALE_BASE, STATIC_WIDGET_PART } from '@Core/constants'
+import { DYNAMIC_WIDGET_PART, STATIC_WIDGET_PART } from '@Core/constants'
 import { snapdom }                                 from '@zumer/snapdom'
 
 const REPLAY_CAPTURE_TRANSFORM_SELECTOR = '[data-replay-capture-transform="true"]'
@@ -339,7 +339,7 @@ export class Widget2Canvas {
     getCapturePixelRatio = () => this.#getCapturePixelRatio()
 
     /**
-     * Select a temporary raster density for deterministic video capture.
+     * Select the exact temporary raster density requested for deterministic video capture.
      * @param {number|null} pixelRatio - Physical capture pixels per logical CSS pixel, or null to restore the base density.
      * @returns {boolean} Whether the active capture density changed.
      */
@@ -348,7 +348,7 @@ export class Widget2Canvas {
                           * (Number(this.#options.dpr) > 0 ? Number(this.#options.dpr) : 1)
         const requestedRatio = Number(pixelRatio)
         const nextRatio = Number.isFinite(requestedRatio) && requestedRatio > 0
-                          ? Math.min(LGS_WIDGET_SCALE_BASE, requestedRatio)
+                          ? requestedRatio
                           : null
         const normalizedRatio = nextRatio && Math.abs(nextRatio - baseRatio) > 0.0001 ? nextRatio : null
 

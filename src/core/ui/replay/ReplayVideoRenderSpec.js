@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -72,7 +72,9 @@ const VIDEO_AUTOMATIC_STANDARD_DIMENSIONS = Object.freeze({
 
 export const REPLAY_VIDEO_RESOLUTION_PROFILES = Object.freeze({
     AUTOMATIC: 'automatic',
+    HD_720: '720p',
     FULL_HD: '1080p',
+    QHD_1440: '1440p',
     UHD_4K: '4k-uhd',
     CUSTOM: 'custom',
 })
@@ -127,6 +129,42 @@ const greatestCommonDivisor = (left, right) => {
 }
 
 /**
+ * Resolve a locked video-format aspect ratio as reduced integer components.
+ *
+ * @param {string|Object|null} formatRatio - Selected format identifier or ratio.
+ * @returns {{width: number, height: number}|null} Reduced ratio or null for free formats.
+ */
+const resolveFormatAspectComponents = formatRatio => {
+    const ratioValue = `${formatRatio?.value ?? formatRatio ?? ''}`
+        .trim()
+        .toLowerCase()
+        .replace(':', 'x')
+    const match = ratioValue.match(/^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/)
+    if (match) {
+        const width = Number(match[1])
+        const height = Number(match[2])
+        if (width > 0 && height > 0) {
+            const scale = 1_000_000
+            const integerWidth = Math.round(width * scale)
+            const integerHeight = Math.round(height * scale)
+            const divisor = greatestCommonDivisor(integerWidth, integerHeight)
+            return {width: integerWidth / divisor, height: integerHeight / divisor}
+        }
+    }
+
+    if (formatRatio?.locked === true) {
+        const aspectRatio = Number(formatRatio.aspectRatio)
+        if (Number.isFinite(aspectRatio) && aspectRatio > 0) {
+            const scale = 1_000_000
+            const divisor = greatestCommonDivisor(Math.round(aspectRatio * scale), scale)
+            return {width: Math.round(aspectRatio * scale) / divisor, height: scale / divisor}
+        }
+    }
+
+    return null
+}
+
+/**
  * Resolve a standard automatic resolution family from the selected format or crop.
  * Free, square, and other custom formats intentionally retain their computed ratio.
  *
@@ -165,29 +203,41 @@ const resolveAutomaticStandardDimensions = ({width, height, format}) => {
 }
 
 /**
- * Fit an explicit resolution profile inside its requested bounds while preserving crop aspect.
+ * Fit an explicit resolution profile inside its requested bounds while preserving the selected
+ * locked format ratio, or the measured crop ratio for free-format crops.
  *
- * @param {Object} options - Crop, profile and custom resolution values.
+ * @param {Object} options - Crop, format, profile and custom resolution values.
  * @returns {Object} Even physical output dimensions.
  */
-const resolveProfileDimensions = ({crop, profile, customDimensions}) => {
+const resolveProfileDimensions = ({crop, formatRatio, profile, customDimensions}) => {
     const cropWidth = Math.max(2, Number(crop?.width) || 1920)
     const cropHeight = Math.max(2, Number(crop?.height) || 1080)
-    const aspectRatio = cropWidth / cropHeight
-    const profileBounds = profile === REPLAY_VIDEO_RESOLUTION_PROFILES.FULL_HD
-        ? {width: aspectRatio >= 1 ? 1920 : 1080, height: aspectRatio >= 1 ? 1080 : 1920}
-        : profile === REPLAY_VIDEO_RESOLUTION_PROFILES.UHD_4K
-          ? {width: aspectRatio >= 1 ? 3840 : 2160, height: aspectRatio >= 1 ? 2160 : 3840}
-          : null
+    const formatAspect = resolveFormatAspectComponents(formatRatio)
+    const aspectRatio = formatAspect ? formatAspect.width / formatAspect.height : cropWidth / cropHeight
+    const landscape = aspectRatio >= 1
+    const profileBounds = {
+        [REPLAY_VIDEO_RESOLUTION_PROFILES.HD_720]: landscape
+            ? {width: 1280, height: 720}
+            : {width: 720, height: 1280},
+        [REPLAY_VIDEO_RESOLUTION_PROFILES.FULL_HD]: landscape
+            ? {width: 1920, height: 1080}
+            : {width: 1080, height: 1920},
+        [REPLAY_VIDEO_RESOLUTION_PROFILES.QHD_1440]: landscape
+            ? {width: 2560, height: 1440}
+            : {width: 1440, height: 2560},
+        [REPLAY_VIDEO_RESOLUTION_PROFILES.UHD_4K]: landscape
+            ? {width: 3840, height: 2160}
+            : {width: 2160, height: 3840},
+    }[profile] ?? null
     const bounds = profileBounds
         ? profileBounds
         : {
             width: Math.max(2, Number(customDimensions?.width) || 1920),
             height: Math.max(2, Number(customDimensions?.height) || 1080),
         }
-    const divisor = greatestCommonDivisor(cropWidth, cropHeight)
-    const aspectWidth = cropWidth / divisor
-    const aspectHeight = cropHeight / divisor
+    const divisor = formatAspect ? 1 : greatestCommonDivisor(cropWidth, cropHeight)
+    const aspectWidth = formatAspect?.width ?? cropWidth / divisor
+    const aspectHeight = formatAspect?.height ?? cropHeight / divisor
     const maxMultiple = Math.floor(Math.min(bounds.width / aspectWidth, bounds.height / aspectHeight))
     const evenMultiple = Math.floor(maxMultiple / 2) * 2
     if (evenMultiple < 2) {
@@ -378,32 +428,33 @@ export const buildReplayVideoRenderSpec = ({
                                 ?? settings?.captureMode
                                 ?? 'speed'
     const requestedResolutionProfile = resolutionProfile
-                                       ?? video?.resolutionProfile
                                        ?? settings?.resolutionProfile
+                                       ?? video?.resolutionProfile
                                        ?? REPLAY_VIDEO_RESOLUTION_PROFILES.AUTOMATIC
     const selectedResolutionProfile = Object.values(REPLAY_VIDEO_RESOLUTION_PROFILES).includes(requestedResolutionProfile)
         ? requestedResolutionProfile
         : REPLAY_VIDEO_RESOLUTION_PROFILES.AUTOMATIC
     const selectedRenderHostMode = renderHostMode
-                                   ?? video?.renderHostMode
                                    ?? settings?.renderHostMode
+                                   ?? video?.renderHostMode
                                    ?? REPLAY_VIDEO_RENDER_HOST_MODES.STANDARD
     const selectedRenderQuality = renderQuality
-                                  ?? video?.renderQuality
                                   ?? settings?.renderQuality
+                                  ?? video?.renderQuality
                                   ?? REPLAY_VIDEO_RENDER_QUALITIES.STANDARD
     const selectedReadinessPolicy = readinessPolicy
-                                    ?? video?.readinessPolicy
                                     ?? settings?.readinessPolicy
+                                    ?? video?.readinessPolicy
                                     ?? null
     const savedCustomDimensions = customDimensions
-                                  ?? video?.customDimensions
                                   ?? settings?.customDimensions
+                                  ?? video?.customDimensions
                                   ?? null
     const profiledDimensions = selectedResolutionProfile === REPLAY_VIDEO_RESOLUTION_PROFILES.AUTOMATIC
         ? null
         : resolveProfileDimensions({
             crop: normalizedCrop ?? sourceCanvas,
+            formatRatio: video?.ratio ?? settings?.ratio ?? null,
             profile: selectedResolutionProfile,
             customDimensions: savedCustomDimensions,
         })

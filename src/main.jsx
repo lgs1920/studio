@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,14 +29,62 @@ const markStartup = name => {
 
 markStartup('main-bootstrap-start')
 
+let reactRoot = null
+
+/** Render a visible startup failure even when React bootstrap has not mounted. */
+const renderBootstrapFailure = async error => {
+    console.log('[LGS1920][Startup] Bootstrap failed before the app was ready.', {
+        error,
+        message: error?.message ?? String(error),
+        stack: error?.stack ?? null,
+        cause: error?.cause ?? null,
+    })
+    document.body.classList.remove('lgs-app-booting')
+
+    const rootElement = document.getElementById('lgs1920-container') ?? document.body
+    try {
+        const [{createRoot}, {InitErrorMessage}] = await Promise.all([
+            import('react-dom/client'),
+            import('@Components/InitErrorMessage'),
+        ])
+        reactRoot ??= createRoot(rootElement)
+        reactRoot.render(<InitErrorMessage error={error}/>)
+    }
+    catch (dialogError) {
+        console.error('[LGS1920][Startup] Unable to render the React startup dialog.', {
+            error,
+            dialogError,
+        })
+
+        const dialog = document.createElement('dialog')
+        dialog.setAttribute('open', '')
+        dialog.setAttribute('role', 'alertdialog')
+        dialog.setAttribute('aria-modal', 'true')
+        dialog.className = 'lgs-error-dialog'
+
+        const heading = document.createElement('h1')
+        heading.textContent = `${globalThis.lgs?.servers?.studio?.name ?? 'LGS1920 Development Studio'} stopped!`
+        const message = document.createElement('p')
+        message.textContent = error?.message ?? String(error)
+        const details = document.createElement('pre')
+        details.textContent = error?.stack ?? ''
+
+        dialog.append(heading, message, details)
+        rootElement.replaceChildren(dialog)
+    }
+}
+
 /**
  * Patch pour Shoelace ResizeObserver bug
  * https://github.com/shoelace-style/shoelace/issues/1690
  */
-const originalUnobserve = ResizeObserver.prototype.unobserve
-ResizeObserver.prototype.unobserve = function (target) {
-    if (target && target instanceof Element) {
-        originalUnobserve.call(this, target)
+const resizeObserverPrototype = globalThis.ResizeObserver?.prototype
+const originalUnobserve = resizeObserverPrototype?.unobserve
+if (typeof originalUnobserve === 'function') {
+    resizeObserverPrototype.unobserve = function (target) {
+        if (target && typeof Element !== 'undefined' && target instanceof Element) {
+            originalUnobserve.call(this, target)
+        }
     }
 }
 
@@ -122,12 +170,14 @@ const bootstrap = async () => {
         {LGS1920Context},
         {AppUtils},
         {ensureViewerBaseWithRetry},
+        {StartupErrorBoundary},
     ] = await Promise.all([
         import('react-dom/client'),
         import('@Components/LGS1920.jsx'),
         import('@Core/LGS1920Context'),
         import('@Utils/AppUtils'),
         import('@Components/cesium/Viewer'),
+        import('@Components/StartupErrorBoundary'),
     ])
 
     AppUtils.setTheme(localStorage.getItem('theme') || 'system')
@@ -140,18 +190,23 @@ const bootstrap = async () => {
         await ensureViewerBaseWithRetry()
     }
     catch (error) {
-        console.error('[LGS1920][Cesium] Early viewer bootstrap failed; startup will retry.', error)
+        console.error('[LGS1920][Cesium] Viewer bootstrap failed; stopping startup.', error)
+        await renderBootstrapFailure(error)
+        return
     }
 
     /**
      * Let's go
      */
-    createRoot(document.getElementById('lgs1920-container')).render(
-        <LGS1920/>,
+    reactRoot = createRoot(document.getElementById('lgs1920-container'))
+    reactRoot.render(
+        <StartupErrorBoundary>
+            <LGS1920/>
+        </StartupErrorBoundary>,
     )
     markStartup('react-mounted')
 }
 
 void bootstrap().catch(error => {
-    console.error('[LGS1920] Bootstrap failed:', error)
+    void renderBootstrapFailure(error)
 })

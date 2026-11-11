@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-10
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -371,6 +371,14 @@
         gap: var(--lgs-gutter-s);
     }
 
+    & .video-export-render-options__row--resolution {
+        grid-template-columns: minmax(0, 1fr);
+
+        & .video-export-render-options__value {
+            width: 100%;
+        }
+    }
+
     & .video-export-render-options__label {
         display: flex;
         align-items: center;
@@ -421,7 +429,7 @@
 
     & .video-export-render-options__choices--resolution {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         width: 100%;
     }
 
@@ -433,6 +441,10 @@
     & .video-export-render-options__choices wa-button::part(base) {
         max-width: 100%;
         white-space: normal;
+    }
+
+    & .video-export-render-options__choices--resolution wa-button::part(base) {
+        white-space: nowrap;
     }
 
     & .video-export-render-options__dimension-field {
@@ -1513,6 +1525,16 @@
     flex: 1 1 auto;
     min-width: 0;
     width: auto;
+}
+
+#video-preview-dialog {
+    & .video-file-tag-button {
+        flex: 0 0 auto;
+    }
+
+    & .video-file-tag-button::part(button) {
+        white-space: nowrap;
+    }
 }
 
 #video-preview-dialog .video-file-label {

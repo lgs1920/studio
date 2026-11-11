@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,6 +29,7 @@ import {poiCaptureSurfaceStore, usePOICaptureSurface} from '@Components/MainUI/M
 import { ICONS_PATH, WIDGET_SYSTEM_FONT_STACK }     from '@Core/constants'
 import { MapPOI }                                  from '@Core/MapPOI'
 import { UI_ICONS }                                from '@Core/ui/metadata/uiActionCatalog'
+import {syncCapturedReplayPOIToTarget} from '@Core/ui/replay/ReplayPOICaptureBridge'
 import { POIUtils }                                from '@Utils/cesium/POIUtils'
 import { poiCanvasImageCache }                      from '@Components/MainUI/MapPOI/poiCanvasImageCache'
 import {getPOICanvasRenderPriority} from '@Components/MainUI/MapPOI/poiCanvasRenderPriority'
@@ -343,6 +344,24 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                   pointCountryCode,
               ])
 
+    /** Draw the captured POI on the map and, when requested, the Native HQ renderer. */
+    const drawCapturedPOI = useCallback(async mapPOI => {
+        await mapPOI.utils.draw(mapPOI)
+        const currentPoint = $pois.list.get(pointId)
+        if (!currentPoint) {
+            return
+        }
+        const currentPresentation = resolveReplayPOIPresentation(currentPoint)
+        const effectiveVisibility = currentPresentation.active
+            ? currentPresentation.visible
+            : POIUtils.isPOIVisibleOnMap(currentPoint, currentPresentation.visible)
+        await syncCapturedReplayPOIToTarget({
+            poi: mapPOI,
+            expanded: currentPoint.expanded === true,
+            effectiveVisibility,
+        })
+    }, [$pois, pointId])
+
     /** Synchronizes DOM content to map canvas */
     const renderToCanvas = useCallback(({priority = false} = {}) => {
         const element = _poiCanvasCaptureSurface.current
@@ -458,7 +477,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                         height: cachedCanvas.height,
                     }
                     mapPOI.pixelOffset = cachedCanvas.pixelOffset
-                    await mapPOI.utils.draw(mapPOI)
+                    await drawCapturedPOI(mapPOI)
                 })
                 .catch(error => console.error(`Error reusing POI ${pointId} canvas:`, error))
                 .finally(() => {
@@ -525,7 +544,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                         height: sharedCanvas.height,
                     }
                     mapPOI.pixelOffset = sharedCanvas.pixelOffset
-                    await mapPOI.utils.draw(mapPOI)
+                    await drawCapturedPOI(mapPOI)
                 }
                 catch (error) {
                     console.error(`Error reusing POI ${pointId} canvas:`, error)
@@ -656,7 +675,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                     height,
                 }
                 mapPOI.pixelOffset = pixelOffset
-                await mapPOI.utils.draw(mapPOI)
+                await drawCapturedPOI(mapPOI)
             }
             catch (error) {
                 console.error(`Error rendering POI ${pointId} to canvas:`, error)
@@ -675,7 +694,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                 }
             },
         })
-    }, [captureSurfaceActive, isEmbedded, managedCaptureSurface, point?.expanded, replayActive, replayAnimationActive, replayMasked,
+    }, [captureSurfaceActive, drawCapturedPOI, isEmbedded, managedCaptureSurface, point?.expanded, replayActive, replayAnimationActive, replayMasked,
         hiddenBecauseTooClose, pointId, $pois, leaderCaptureBleed, poiVisualSignature])
 
     useEffect(() => {

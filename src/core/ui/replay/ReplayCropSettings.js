@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,18 +19,33 @@ import {VIDEO_CROP_ZONE} from '@Core/constants'
 /** Serialize writes for each Journey so older crop edits cannot finish after newer edits. */
 const cropWrites = new WeakMap()
 
+/** Resolve the exact aspect ratio encoded by a standard WxH format identifier. */
+const aspectRatioFromFormatValue = value => {
+    const match = `${value ?? ''}`.trim().toLowerCase().replace(':', 'x').match(/^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/)
+    const width = Number(match?.[1])
+    const height = Number(match?.[2])
+    return width > 0 && height > 0 ? width / height : null
+}
+
 /** Normalize the Journey-owned crop dimensions and ratio, rejecting invalid stored sizes. */
 export const normalizeReplayCropZone = value => {
     if (!Number.isFinite(value?.width) || !Number.isFinite(value?.height)
         || value.width <= 0 || value.height <= 0) {
         return null
     }
+    const ratioValue = typeof value.ratio?.value === 'string' ? value.ratio.value : 'free'
+    const lockedAspectRatio = value.ratio?.locked === true
+        ? aspectRatioFromFormatValue(ratioValue)
+          ?? (Number.isFinite(value.ratio?.aspectRatio) && value.ratio.aspectRatio > 0
+              ? value.ratio.aspectRatio
+              : value.width / value.height)
+        : value.width / value.height
     return {
         width: value.width,
         height: value.height,
         ratio: {
-            value: typeof value.ratio?.value === 'string' ? value.ratio.value : 'free',
-            aspectRatio: value.width / value.height,
+            value: ratioValue,
+            aspectRatio: lockedAspectRatio,
             locked: value.ratio?.locked === true,
         },
     }

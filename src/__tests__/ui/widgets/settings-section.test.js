@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-10-20
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -373,6 +373,45 @@ describe('SettingsSection', () => {
             size:       540,
             dimensions: {width: 620, height: 280},
         })
+    })
+
+    it('restores saved video export choices over UI template defaults', async () => {
+        const section = new SettingsSection('ui')
+        const savedVideo = {
+            fps: 1,
+            quality: 1,
+            ratio: '16x9',
+            renderHostMode: 'isolated',
+            resolutionProfile: '4k-uhd',
+            customDimensions: {width: 3840, height: 2160},
+            renderQuality: 'maximum',
+            readinessPolicy: 'strict',
+        }
+        lgs.configuration.ui = {
+            profile: {liveData: false},
+            video: {
+                fps: 1,
+                quality: 1,
+                ratio: '16x9',
+                renderHostMode: 'visible',
+                resolutionProfile: 'automatic',
+                customDimensions: {width: 1920, height: 1080},
+                renderQuality: 'standard',
+            },
+        }
+        lgs.db.settings.get.mockResolvedValue({
+            profile: {liveData: false},
+            video: savedVideo,
+        })
+
+        await section.init()
+
+        expect(section.content.video).toEqual(savedVideo)
+        expect(lgs.db.settings.put).toHaveBeenCalledWith(
+            'ui',
+            expect.objectContaining({video: savedVideo}),
+            SETTINGS_STORE,
+        )
     })
 
     it('keeps replay excluded but still syncs its clips subtree', () => {

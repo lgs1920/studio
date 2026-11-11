@@ -344,12 +344,18 @@ poi:
     # Picnic Area
     - title: Picnic Area
       slug: picnic-area
+    # Barbecue
+    - title: Barbecue
+      slug: barbecue
     # Water Point
     - title: Water Point
       slug: drinking-water
     # Natural Spring
     - title: Natural Spring
       slug: source
+    # Hot Spring
+    - title: Hot Spring
+      slug: hot-spring
     # Restroom
     - title: Restroom
       slug: restroom
@@ -362,6 +368,9 @@ poi:
     # Trailhead
     - title: Trailhead
       slug: trailhead
+    # Trail Junction
+    - title: Trail Junction
+      slug: trail-junction
     # Train Stop
     - title: Train Stop
       slug: train-stop
@@ -371,6 +380,9 @@ poi:
     # Cable Car
     - title: Cable Car
       slug: cable-car
+    # Aerial Way
+    - title: Aerial Way
+      slug: aerial-way
     # Winter Station
     - title: Winter Station
       slug: winter-station
@@ -386,6 +398,9 @@ poi:
     # Waterfall
     - title: Waterfall
       slug: waterfall
+    # Swimming
+    - title: Swimming
+      slug: swimming
     # Bridge
     - title: Bridge
       slug: bridge

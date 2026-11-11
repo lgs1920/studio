@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-07
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -65,10 +65,10 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
     const defaultCustomDimensions = customDimensionsOrientation === 'portrait'
         ? VIDEO_RENDER_PORTRAIT_DIMENSIONS
         : VIDEO_RENDER_DEFAULTS.customDimensions
-    const renderHostMode = video.renderHostMode ?? settings.renderHostMode ?? VIDEO_RENDER_DEFAULTS.renderHostMode
-    const resolutionProfile = video.resolutionProfile ?? settings.resolutionProfile ?? VIDEO_RENDER_DEFAULTS.resolutionProfile
-    const renderQuality = video.renderQuality ?? settings.renderQuality ?? VIDEO_RENDER_DEFAULTS.renderQuality
-    const configuredReadinessPolicy = [video.readinessPolicy, settings.readinessPolicy].find(value => (
+    const renderHostMode = settings.renderHostMode ?? video.renderHostMode ?? VIDEO_RENDER_DEFAULTS.renderHostMode
+    const resolutionProfile = settings.resolutionProfile ?? video.resolutionProfile ?? VIDEO_RENDER_DEFAULTS.resolutionProfile
+    const renderQuality = settings.renderQuality ?? video.renderQuality ?? VIDEO_RENDER_DEFAULTS.renderQuality
+    const configuredReadinessPolicy = [settings.readinessPolicy, video.readinessPolicy].find(value => (
         Object.values(REPLAY_VIDEO_READINESS_POLICIES).includes(value)
     ))
     const readinessPolicy = configuredReadinessPolicy ?? (
@@ -76,7 +76,7 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
             ? REPLAY_VIDEO_READINESS_POLICIES.STRICT
             : REPLAY_VIDEO_READINESS_POLICIES.ADAPTIVE
     )
-    const customDimensions = video.customDimensions ?? settings.customDimensions ?? defaultCustomDimensions
+    const customDimensions = settings.customDimensions ?? video.customDimensions ?? defaultCustomDimensions
     const _previousRatioOrientation = useRef(null)
     const _previousResolutionProfile = useRef(null)
 
@@ -88,6 +88,16 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
             }
             if ($video[key] === undefined || $video[key] === null) {
                 $video[key] = key === 'customDimensions' ? {...$settings[key]} : $settings[key]
+            }
+            else if (key === 'customDimensions') {
+                const storedDimensions = $settings[key]
+                if (Number($video[key]?.width) !== Number(storedDimensions?.width)
+                    || Number($video[key]?.height) !== Number(storedDimensions?.height)) {
+                    $video[key] = {...storedDimensions}
+                }
+            }
+            else if ($video[key] !== $settings[key]) {
+                $video[key] = $settings[key]
             }
         })
         const ratioOrientationChanged = _previousRatioOrientation.current !== customDimensionsOrientation
@@ -125,6 +135,9 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
         basicReplayGroup,
         customDimensionsOrientation,
         defaultCustomDimensions,
+        customDimensions,
+        renderHostMode,
+        renderQuality,
         readinessPolicy,
         resolutionProfile,
     ])
@@ -157,6 +170,22 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
 
     const basicChoices = [
         {
+            group: 'video',
+            label: 'Size',
+            icon: 'expand',
+            value: resolutionProfile,
+            choices: [
+                {value: REPLAY_VIDEO_RESOLUTION_PROFILES.HD_720, label: '720p'},
+                {value: REPLAY_VIDEO_RESOLUTION_PROFILES.FULL_HD, label: '1080p'},
+                {value: REPLAY_VIDEO_RESOLUTION_PROFILES.QHD_1440, label: '1440p'},
+                {value: REPLAY_VIDEO_RESOLUTION_PROFILES.UHD_4K, label: '4K'},
+                {value: REPLAY_VIDEO_RESOLUTION_PROFILES.AUTOMATIC, label: 'Automatic'},
+                {value: REPLAY_VIDEO_RESOLUTION_PROFILES.CUSTOM, label: 'Custom'},
+            ],
+            onSelect: value => updateSetting('resolutionProfile', value),
+            choicesClassName: 'video-export-render-options__choices--resolution',
+        },
+        {
             group: 'quality',
             label: 'Render',
             icon: 'paintbrush-fine',
@@ -166,20 +195,6 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
                 {value: REPLAY_VIDEO_RENDER_HOST_MODES.NATIVE_HQ, label: 'High quality'},
             ],
             onSelect: value => updateSetting('renderHostMode', value),
-        },
-        {
-            group: 'video',
-            label: 'Size',
-            icon: 'expand',
-            value: resolutionProfile,
-            choices: [
-                {value: REPLAY_VIDEO_RESOLUTION_PROFILES.AUTOMATIC, label: 'Automatic'},
-                {value: REPLAY_VIDEO_RESOLUTION_PROFILES.FULL_HD, label: '1080p'},
-                {value: REPLAY_VIDEO_RESOLUTION_PROFILES.UHD_4K, label: '4K'},
-                {value: REPLAY_VIDEO_RESOLUTION_PROFILES.CUSTOM, label: 'Custom'},
-            ],
-            onSelect: value => updateSetting('resolutionProfile', value),
-            choicesClassName: 'video-export-render-options__choices--resolution',
         },
         {
             group: 'quality',
@@ -257,7 +272,7 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
                 <div className="video-export-render-options__basic-rows">
                         {basicGroupChoices.map(({label, icon, value, choices, onSelect, disabled, choicesClassName}) => (
                         <Fragment key={label}>
-                            <div className="video-export-render-options__row" role="group" aria-label={label}>
+                            <div className={`video-export-render-options__row${label === 'Size' ? ' video-export-render-options__row--resolution' : ''}`} role="group" aria-label={label}>
                                     <div className="video-export-render-options__label">
                                         <WaIcon name={icon} variant="regular" label=""/>
                                         <span>{label}</span>
@@ -296,6 +311,19 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
                 </div>
             ) : (
                 <>
+                    <WaSelect label="Output resolution"
+                              label-at-start
+                              size="s"
+                              appearance="filled"
+                              value={resolutionProfile}
+                              onChange={event => updateSetting('resolutionProfile', event.target.value)}>
+                        <WaOption value={REPLAY_VIDEO_RESOLUTION_PROFILES.HD_720}>{'720p'}</WaOption>
+                        <WaOption value={REPLAY_VIDEO_RESOLUTION_PROFILES.FULL_HD}>{'1080p'}</WaOption>
+                        <WaOption value={REPLAY_VIDEO_RESOLUTION_PROFILES.QHD_1440}>{'1440p'}</WaOption>
+                        <WaOption value={REPLAY_VIDEO_RESOLUTION_PROFILES.UHD_4K}>{'4K UHD'}</WaOption>
+                        <WaOption value={REPLAY_VIDEO_RESOLUTION_PROFILES.AUTOMATIC}>{'Automatic'}</WaOption>
+                        <WaOption value={REPLAY_VIDEO_RESOLUTION_PROFILES.CUSTOM}>{'Custom'}</WaOption>
+                    </WaSelect>
                     <WaSelect label="Export renderer"
                               label-at-start
                               size="s"
@@ -304,17 +332,6 @@ export const VideoExportRenderOptions = memo(({basicReplay = false, basicReplayG
                               onChange={event => updateSetting('renderHostMode', event.target.value)}>
                         <WaOption value={REPLAY_VIDEO_RENDER_HOST_MODES.STANDARD}>{'Standard / Fast'}</WaOption>
                         <WaOption value={REPLAY_VIDEO_RENDER_HOST_MODES.NATIVE_HQ}>{'Native HQ'}</WaOption>
-                    </WaSelect>
-                    <WaSelect label="Output resolution"
-                              label-at-start
-                              size="s"
-                              appearance="filled"
-                              value={resolutionProfile}
-                              onChange={event => updateSetting('resolutionProfile', event.target.value)}>
-                        <WaOption value={REPLAY_VIDEO_RESOLUTION_PROFILES.AUTOMATIC}>{'Automatic'}</WaOption>
-                        <WaOption value={REPLAY_VIDEO_RESOLUTION_PROFILES.FULL_HD}>{'1080p'}</WaOption>
-                        <WaOption value={REPLAY_VIDEO_RESOLUTION_PROFILES.UHD_4K}>{'4K UHD'}</WaOption>
-                        <WaOption value={REPLAY_VIDEO_RESOLUTION_PROFILES.CUSTOM}>{'Custom'}</WaOption>
                     </WaSelect>
                     {resolutionProfile === REPLAY_VIDEO_RESOLUTION_PROFILES.CUSTOM && (
                         <div className="video-export-render-options__dimensions" role="group" aria-label="Custom output bounds">

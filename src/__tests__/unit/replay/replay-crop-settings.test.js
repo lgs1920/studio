@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -60,6 +60,22 @@ describe('Journey Replay crop persistence', () => {
         restoreJourneyReplayCrop(config, journey)
         expect(config.cropDimensions).toEqual({left: 0, top: 75, width: 800, height: 450})
         expect(journey.replay.cropZone).toEqual(crop(1920, 1080))
+    })
+
+    it('preserves the selected locked format ratio when crop dimensions are pixel-rounded', () => {
+        const roundedCrop = {
+            width: 674,
+            height: 1199,
+            ratio: {value: '9x16', aspectRatio: 674 / 1199, locked: true},
+        }
+        const normalized = normalizeReplayCropZone(roundedCrop)
+        const journey = {slug: 'portrait', replay: {cropZone: roundedCrop}}
+        const config = {id: 'video-crop-zone', container: {getBoundingClientRect: () => ({width: 800, height: 1400})}}
+
+        expect(normalized.ratio.aspectRatio).toBe(9 / 16)
+        restoreJourneyReplayCrop(config, journey)
+        expect(config.ratio.aspectRatio).toBe(9 / 16)
+        expect(lgs.stores.ui.video.cropper.aspectRatio).toBe(9 / 16)
     })
 
     it('saves completed edits to their owner and ignores stale updates after a Journey switch', async () => {

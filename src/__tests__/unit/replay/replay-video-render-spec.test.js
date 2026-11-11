@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-07
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -48,6 +48,36 @@ describe('Replay video render profiles', () => {
         expect(spec.dimensions).toEqual({width: automatic.targetWidth, height: automatic.targetHeight})
         expect(spec.renderHostMode).toBe(REPLAY_VIDEO_RENDER_HOST_MODES.STANDARD)
         expect(spec.readinessPolicy).toBe(REPLAY_VIDEO_READINESS_POLICIES.ADAPTIVE)
+    })
+
+    it('uses saved export choices when the runtime store still contains its startup defaults', () => {
+        const spec = buildReplayVideoRenderSpec({
+            cropRect: {left: 0, top: 0, width: 1920, height: 1080},
+            video: {
+                renderHostMode: REPLAY_VIDEO_RENDER_HOST_MODES.STANDARD,
+                resolutionProfile: REPLAY_VIDEO_RESOLUTION_PROFILES.AUTOMATIC,
+                customDimensions: {width: 1920, height: 1080},
+                renderQuality: REPLAY_VIDEO_RENDER_QUALITIES.STANDARD,
+                readinessPolicy: REPLAY_VIDEO_READINESS_POLICIES.ADAPTIVE,
+            },
+            settings: {
+                renderHostMode: REPLAY_VIDEO_RENDER_HOST_MODES.NATIVE_HQ,
+                resolutionProfile: REPLAY_VIDEO_RESOLUTION_PROFILES.UHD_4K,
+                customDimensions: {width: 3840, height: 2160},
+                renderQuality: REPLAY_VIDEO_RENDER_QUALITIES.MAXIMUM,
+                readinessPolicy: REPLAY_VIDEO_READINESS_POLICIES.STRICT,
+            },
+            sourceCanvas: {width: 1920, height: 1080},
+        })
+
+        expect(spec).toMatchObject({
+            renderHostMode: REPLAY_VIDEO_RENDER_HOST_MODES.NATIVE_HQ,
+            resolutionProfile: REPLAY_VIDEO_RESOLUTION_PROFILES.UHD_4K,
+            dimensions: {width: 3840, height: 2160},
+            renderQuality: REPLAY_VIDEO_RENDER_QUALITIES.MAXIMUM,
+            maximumScreenSpaceError: 2,
+            readinessPolicy: REPLAY_VIDEO_READINESS_POLICIES.STRICT,
+        })
     })
 
     it.each([
@@ -126,7 +156,7 @@ describe('Replay video render profiles', () => {
         expect(custom.targetWidth / custom.targetHeight).toBeCloseTo(0.8, 2)
     })
 
-    it('keeps 1080p and 4K UHD physical output dimensions independent of FPS', () => {
+    it('keeps 720p, 1080p, 1440p and 4K UHD dimensions independent of FPS', () => {
         const cropRect = {left: 0, top: 0, width: 1600, height: 900}
         const build = (resolutionProfile, fps) => buildReplayVideoRenderSpec({
             cropRect,
@@ -139,10 +169,18 @@ describe('Replay video render profiles', () => {
             sourceCanvas: {width: 1920, height: 1080},
         })
 
+        expect(build(REPLAY_VIDEO_RESOLUTION_PROFILES.HD_720, 3).dimensions)
+            .toEqual({width: 1280, height: 720})
+        expect(build(REPLAY_VIDEO_RESOLUTION_PROFILES.HD_720, 2).dimensions)
+            .toEqual({width: 1280, height: 720})
         expect(build(REPLAY_VIDEO_RESOLUTION_PROFILES.FULL_HD, 3).dimensions)
             .toEqual({width: 1920, height: 1080})
         expect(build(REPLAY_VIDEO_RESOLUTION_PROFILES.FULL_HD, 2).dimensions)
             .toEqual({width: 1920, height: 1080})
+        expect(build(REPLAY_VIDEO_RESOLUTION_PROFILES.QHD_1440, 3).dimensions)
+            .toEqual({width: 2560, height: 1440})
+        expect(build(REPLAY_VIDEO_RESOLUTION_PROFILES.QHD_1440, 2).dimensions)
+            .toEqual({width: 2560, height: 1440})
         expect(build(REPLAY_VIDEO_RESOLUTION_PROFILES.UHD_4K, 3).dimensions)
             .toEqual({width: 3840, height: 2160})
         expect(build(REPLAY_VIDEO_RESOLUTION_PROFILES.UHD_4K, 2).dimensions)
@@ -167,6 +205,41 @@ describe('Replay video render profiles', () => {
         expect(portrait.dimensions).toEqual({width: 1080, height: 1920})
         expect(custom.dimensions).toEqual({width: 1152, height: 1920})
         expect(custom.dimensions.width * 5).toBe(custom.dimensions.height * 3)
+    })
+
+    it.each([
+        [REPLAY_VIDEO_RESOLUTION_PROFILES.HD_720, {width: 720, height: 1280}],
+        [REPLAY_VIDEO_RESOLUTION_PROFILES.FULL_HD, {width: 1080, height: 1920}],
+        [REPLAY_VIDEO_RESOLUTION_PROFILES.QHD_1440, {width: 1440, height: 2560}],
+        [REPLAY_VIDEO_RESOLUTION_PROFILES.UHD_4K, {width: 2160, height: 3840}],
+    ])('uses the locked 9x16 format for %s when CSS crop rounding shifts its measured ratio', (profile, expected) => {
+        const spec = buildReplayVideoRenderSpec({
+            cropRect: {left: 3, top: 11, width: 674, height: 1199},
+            video: {
+                ratio: '9x16',
+                renderHostMode: REPLAY_VIDEO_RENDER_HOST_MODES.NATIVE_HQ,
+                resolutionProfile: profile,
+            },
+            sourceCanvas: {width: 900, height: 1600},
+        })
+
+        expect(spec.dimensions).toEqual(expected)
+    })
+
+    it('resolves the explicit 1440p profile to QHD dimensions in landscape and portrait', () => {
+        const build = (ratio, cropRect) => buildReplayVideoRenderSpec({
+            cropRect,
+            video: {
+                ratio,
+                resolutionProfile: REPLAY_VIDEO_RESOLUTION_PROFILES.QHD_1440,
+            },
+            sourceCanvas: {width: 1920, height: 1080},
+        })
+
+        expect(build('16x9', {left: 0, top: 0, width: 1001, height: 563}).dimensions)
+            .toEqual({width: 2560, height: 1440})
+        expect(build('9x16', {left: 0, top: 0, width: 563, height: 1001}).dimensions)
+            .toEqual({width: 1440, height: 2560})
     })
 
     it('maps the independent Cesium quality and readiness choices to export policy', () => {

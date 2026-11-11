@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-31
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,18 @@ export const createReplayPOIEntityLookup = viewer => {
     const dataSources = viewer?.dataSources
     let disposed = false
 
+    /** Stop observing Cesium collections after their owning viewer begins teardown. */
+    const releaseSubscriptions = () => {
+        if (disposed) {
+            return
+        }
+        disposed = true
+        staticEventRemovers.splice(0).forEach(remove => remove())
+        entityCollectionRemovers.forEach(remove => remove())
+        entityCollectionRemovers.clear()
+        entries.clear()
+    }
+
     /** Remove one lookup result after an entity collection mutation. */
     const invalidateEntity = entity => {
         if (entity?.id) {
@@ -35,6 +47,9 @@ export const createReplayPOIEntityLookup = viewer => {
 
     /** Invalidate POIs whose entity identity was added or removed. */
     const onCollectionChanged = (collection, added = [], removed = []) => {
+        if (disposed) {
+            return
+        }
         const affected = [...added, ...removed]
         if (affected.length === 0) {
             entries.clear()
@@ -56,10 +71,24 @@ export const createReplayPOIEntityLookup = viewer => {
 
     /** Remove listeners for entity collections no longer owned by the viewer. */
     const syncEntityCollections = () => {
-        const currentCollections = new Set([viewer?.entities])
-        const sourceCount = Number(dataSources?.length) || 0
-        for (let index = 0; index < sourceCount; index += 1) {
-            currentCollections.add(dataSources.get(index)?.entities)
+        if (disposed) {
+            return
+        }
+        let currentCollections
+        try {
+            currentCollections = new Set([viewer?.entities])
+            const sourceCount = Number(dataSources?.length) || 0
+            for (let index = 0; index < sourceCount; index += 1) {
+                currentCollections.add(dataSources.get(index)?.entities)
+            }
+        }
+        catch (error) {
+            // Cesium destroys Viewer-owned accessors before DataSourceCollection emits its final removals.
+            console.warn('[Replay] POI entity lookup detached during Cesium viewer teardown.', {
+                message: error?.message ?? String(error),
+            })
+            releaseSubscriptions()
+            return
         }
 
         for (const [collection, remove] of entityCollectionRemovers) {
@@ -74,6 +103,9 @@ export const createReplayPOIEntityLookup = viewer => {
 
     /** Clear cached entity lists when the viewer's data source set changes. */
     const onDataSourcesChanged = () => {
+        if (disposed) {
+            return
+        }
         entries.clear()
         syncEntityCollections()
     }
@@ -97,7 +129,7 @@ export const createReplayPOIEntityLookup = viewer => {
             return []
         }
 
-        const owningContainer = POIUtils.getEntityContainer(poi)
+        const owningContainer = POIUtils.getEntityContainer(poi, viewer)
         const cached = entries.get(poi.id)
         if (cached && cached.parent === poi.parent && cached.owningContainer === owningContainer) {
             entries.delete(poi.id)
@@ -134,14 +166,7 @@ export const createReplayPOIEntityLookup = viewer => {
 
     /** Release all Cesium event listeners and cached entity references. */
     const dispose = () => {
-        if (disposed) {
-            return
-        }
-        disposed = true
-        staticEventRemovers.splice(0).forEach(remove => remove())
-        entityCollectionRemovers.forEach(remove => remove())
-        entityCollectionRemovers.clear()
-        entries.clear()
+        releaseSubscriptions()
     }
 
     return {viewer, scene: viewer?.scene, entities: viewer?.entities, dataSources, get, dispose}

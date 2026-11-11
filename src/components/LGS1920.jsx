@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -96,6 +96,13 @@ export const LGS1920 = () => {
     }, [])
 
     const handleAppSurfaceError = useCallback(error => {
+        console.log('[LGS1920][Startup] Cesium surface initialization failed.', {
+            step: 'cesium-surface',
+            error,
+            message: error?.message ?? String(error),
+            stack: error?.stack ?? null,
+            cause: error?.cause ?? null,
+        })
         console.error('[LGS1920] Cesium surface failed to become ready:', error)
         setInitError(error)
         setInitStatus(false)
@@ -122,6 +129,13 @@ export const LGS1920 = () => {
             return initResult
         }
         catch (error) {
+            console.log('[LGS1920][Startup] Application initialization failed.', {
+                step: 'application',
+                error,
+                message: error?.message ?? String(error),
+                stack: error?.stack ?? null,
+                cause: error?.cause ?? null,
+            })
             return {status: false, error}
         }
     }, [])
@@ -322,6 +336,13 @@ export const LGS1920 = () => {
                 setInitError(initResult.error)
 
                 if (!initResult.status) {
+                    console.log('[LGS1920][Startup] Application initialization returned a failure.', {
+                        step: 'application',
+                        error: initResult.error,
+                        message: initResult.error?.message ?? String(initResult.error),
+                        stack: initResult.error?.stack ?? null,
+                        cause: initResult.error?.cause ?? null,
+                    })
                     setInitStatus(false)
                     document.body.classList.remove('lgs-app-booting')
                     UIToast.error({
@@ -374,6 +395,13 @@ export const LGS1920 = () => {
                 console.log(`Connected to backend ${lgs.versions.backend}.`)
             }
             catch (error) {
+                console.log('[LGS1920][Startup] Initialization failed.', {
+                    step: initializationStep,
+                    error,
+                    message: error?.message ?? String(error),
+                    stack: error?.stack ?? null,
+                    cause: error?.cause ?? null,
+                })
                 UIToast.error({
                                   caption: 'LGS1920 was stopped due to errors!',
                                   text: 'We\'re sorry' + '\n' + error.message + '\n' + error.stack,

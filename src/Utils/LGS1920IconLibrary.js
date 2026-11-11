@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-11
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,7 +21,8 @@ import {
 } from '@fortawesome/pro-regular-svg-icons'
 import {
     faArrowsLeftRight, faArrowsUpDown, faBasketShopping, faBottleWater, faBridge, faBusStop, faCableCar,
-    faCamera, faDroplet, faFaucetDrip, faKitMedical, faLasso, faLocationDot, faLocationPin, faMugHot, faRestroom, faSignPost,
+    faCamera, faDroplet, faDropletDegree, faFaucetDrip, faGrillFire, faKitMedical, faLasso, faLocationDot, faLocationPin,
+    faMugHot, faPersonShelter, faPersonSwimmingWater, faRestroom, faSignPost, faSignsPost,
     faSnowflake, faSquareDashed, faMagnifyingGlassMinus, faMagnifyingGlassPlus, faArrowRotateLeft, faArrowRotateRight,
     faSquareFull, faTent, faTrain, faTriangleExclamation, faUtensils, faWater,
 } from '@fortawesome/pro-solid-svg-icons'
@@ -46,11 +47,16 @@ export const LGS1920_ICON_KITS = [
             faCableCar,
             faCamera,
             faDroplet,
+            faDropletDegree,
             faFaucetDrip,
+            faGrillFire,
             faKitMedical,
             faMugHot,
+            faPersonShelter,
+            faPersonSwimmingWater,
             faRestroom,
             faSignPost,
+            faSignsPost,
             faSnowflake,
             faTent,
             faTrain,

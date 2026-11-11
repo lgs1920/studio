@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-03
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -82,6 +82,10 @@ export const UI_ACTIONS = Object.freeze({
     },
     add: {
         label: 'Add',
+        icon: UI_ICONS.add,
+    },
+    addVideoTags: {
+        label: 'Add Tags',
         icon: UI_ICONS.add,
     },
     addPOIToLibrary: {
@@ -307,6 +311,18 @@ export const UI_ACTIONS = Object.freeze({
     copyCoordinates: {
         label: 'Copy Coords',
         icon: UI_ICONS.copyCoordinates,
+    },
+    copyToastMessage: {
+        label: 'Copy error message',
+        icon: UI_ICONS.copyCoordinates,
+    },
+    toastMessageCopied: {
+        label: 'Error message copied',
+        icon: UI_ICONS.success,
+    },
+    toastMessageCopyFailed: {
+        label: 'Could not copy error message',
+        icon: UI_ICONS.error,
     },
     copyPOIStyle: {
         label: 'Copy POI style',

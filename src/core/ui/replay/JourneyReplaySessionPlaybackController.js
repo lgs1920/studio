@@ -8,20 +8,35 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {captureReplayEntryCameraState, replayOwnedCameraFor} from './ReplayCameraOwnership'
-import {replayCameraFor} from './ReplayRenderTarget'
+import {replayCameraFor, replayRendererFor, replayRenderTargetFor} from './ReplayRenderTarget'
 import {
     createBasicReplayTraceFocusClips,
     BASIC_REPLAY_TRACE_FOCUS_INSTANCE_ID,
 } from './JourneyReplayBasicFocus'
 import {getBasicReplaySettings} from './ReplayModeSettings'
 import {fixPathRevisionKey} from '@Utils/cesium/fixPathCorrections'
+
+/** Return the export renderer and the main-scene mirror while Native HQ is active. */
+const replayExportRenderersFor = mode => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const exportRenderer = replayRendererFor(mode)
+    const mainRenderer = replayRenderTargetFor(mode) ? state?.renderer : null
+    return mainRenderer && mainRenderer !== exportRenderer
+        ? [exportRenderer, mainRenderer].filter(Boolean)
+        : [exportRenderer].filter(Boolean)
+}
+
+/** Apply one canonical export trace update to each active Replay rendering surface. */
+const updateReplayExportRenderers = (mode, options) => {
+    replayExportRenderersFor(mode).forEach(renderer => renderer.update(options))
+}
 
 
 /**
@@ -663,7 +678,7 @@ export const leaveReplayPreparation = (mode) => {
     }
     call.stopCameraLiveSyncLoop?.()
     call.setContinuousRender?.(false)
-    state.renderer?.clear?.()
+    replayRendererFor(mode)?.clear?.()
     call.restoreOtherJourneysVisibility?.()
     call.restoreCurrentJourneyVisibility?.()
     call.setJourneyReplayOrbitAllowed?.(true)
@@ -744,7 +759,7 @@ export const start = (mode, options = {}) => {
         call.cancelPendingSceneRestore()
     }
     const replaySessionLease = beginReplaySessionOwnership(mode, {source: 'interactive'})
-    state.renderer.clear()
+    replayRendererFor(mode).clear()
     call.bindCesiumCameraBridge()
     state.deferPlaybackCameraRestore = false
     state.suppressPlaybackCameraSync = false
@@ -1028,6 +1043,16 @@ export const preparePlaybackSceneForExport = async (mode, {
                                         },
                                         altitude: finiteNumber(cameraState?.altitude, null),
                                         pivot: cameraState?.pivot ? {...cameraState.pivot} : null,
+                                        worldPose: cameraState?.worldPose
+                                            ? {
+                                                position: {...cameraState.worldPose.position},
+                                                direction: {...cameraState.worldPose.direction},
+                                                up: {...cameraState.worldPose.up},
+                                                transform: Array.isArray(cameraState.worldPose.transform)
+                                                    ? [...cameraState.worldPose.transform]
+                                                    : null,
+                                            }
+                                            : null,
                                     }
                                     : null
         call.captureCameraState({sample})
@@ -1056,7 +1081,7 @@ export const preparePlaybackSceneForExport = async (mode, {
             journey.visible = true
             journey.updateVisibility?.(true)
 
-            if (startClips.length === 0) {
+            if (startClips.length === 0 && !providedCameraState) {
                 call.placeCameraAtPlaybackStart(sample, safeProgress, {
                     preserveScreenPosition: true,
                     desiredPosition: journeyReplayStartPosition(journey, isJourneyReplayBasicMode() ? 'basic' : 'expert'),
@@ -1065,7 +1090,8 @@ export const preparePlaybackSceneForExport = async (mode, {
             }
         }
 
-        state.replayEntryCameraState = captureReplayEntryCameraState(replayCameraFor(mode))
+        state.replayEntryCameraState = providedCameraState
+            ?? captureReplayEntryCameraState(replayCameraFor(mode))
         traceReplayCameraTransfer({
             mode,
             journey,
@@ -1085,13 +1111,14 @@ export const preparePlaybackSceneForExport = async (mode, {
             call.hideOtherJourneysVisibility()
         }
         if (sampler?.hasSamples) {
-            state.renderer.show({
+            const rendererOptions = {
                 sampler,
                 options: {smoothedGuide: call.smoothedGuide()},
-            })
+            }
+            replayExportRenderersFor(mode).forEach(renderer => renderer.show(rendererOptions))
         }
         if (hideReplayMarker) {
-            state.renderer.hideCursor?.()
+            replayExportRenderersFor(mode).forEach(renderer => renderer.hideCursor?.())
         }
 
         const runtimeStore = replayStore()
@@ -1189,14 +1216,14 @@ export const refresh = (mode, {
             call.configure({progress})
             sample = state.controller.currentSample()
             if (sample && state.sampler) {
-                state.renderer.show({
+                replayRendererFor(mode).show({
                     sampler: state.sampler,
                     options: {smoothedGuide: call.smoothedGuide()},
                 })
             }
         }
         if (sample && state.sampler) {
-            state.renderer.update({
+            replayRendererFor(mode).update({
                 sample,
                 sampler: state.sampler,
                 forceGeometry,
@@ -1451,7 +1478,7 @@ export const renderReplayExportFrame = async (mode, {
                 state.renderingReplayExportFrame = false
             }
             if (sample && state.sampler) {
-                state.renderer.update({
+                updateReplayExportRenderers(mode, {
                     sample,
                     sampler:       state.sampler,
                     // Dry runs preserve frame state while following the interactive geometry cadence.
@@ -1500,6 +1527,7 @@ export const renderReplayExportFrame = async (mode, {
                         sample,
                     })
                 }
+                state.lastReplayLogicalFrame = logicalFrame
             }
             return sample
         }
@@ -1545,7 +1573,7 @@ export const renderReplayExportFrame = async (mode, {
             })
         }
         if (sample && state.sampler) {
-            state.renderer.update({
+            updateReplayExportRenderers(mode, {
                 sample,
                 sampler:               state.sampler,
                 forceGeometry:         forceTraceGeometry,

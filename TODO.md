@@ -5,7 +5,7 @@
 
 ### Replay
 
-Validate 4K, 60 FPS, and related export configurations.
+- Verify that Native HQ exports animate POIs in browser playback.
 
 
 #### Widgets

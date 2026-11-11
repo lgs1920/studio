@@ -8,18 +8,19 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-07
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react'
+import {act, cleanup, fireEvent, render, screen, waitFor, within} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
 
 vi.mock('@awesome.me/webawesome/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
+    WaIcon: () => null,
     WaNumberInput: ({label, value, onChange, ...props}) => (
         <label>
             {label}
@@ -49,6 +50,23 @@ describe('VideoExportRenderOptions', () => {
     afterEach(() => {
         cleanup()
         globalThis.lgs = undefined
+    })
+
+    it('orders named resolution presets before Automatic and Custom in the compact selector', async () => {
+        render(<VideoExportRenderOptions basicReplay basicReplayGroup="video"/>)
+
+        const sizeGroup = screen.getByRole('group', {name: 'Size'})
+        const buttons = within(sizeGroup).getAllByRole('button')
+        expect(buttons.map(button => button.textContent)).toEqual([
+            '720p', '1080p', '1440p', '4K', 'Automatic', 'Custom',
+        ])
+
+        await act(async () => {
+            fireEvent.click(buttons[0])
+            await Promise.resolve()
+        })
+        expect(globalThis.lgs.stores.ui.video.resolutionProfile).toBe('720p')
+        expect(globalThis.lgs.settings.ui.video.resolutionProfile).toBe('720p')
     })
 
     it('persists renderer, resolution, LOD and readiness choices', async () => {
@@ -102,6 +120,38 @@ describe('VideoExportRenderOptions', () => {
         expect(screen.getByLabelText('Tile readiness').value).toBe('strict')
         await waitFor(() => expect(globalThis.lgs.stores.ui.video.readinessPolicy).toBe('strict'))
         expect(globalThis.lgs.settings.ui.video.readinessPolicy).toBe('strict')
+    })
+
+    it('restores persisted export choices over the runtime store defaults', async () => {
+        Object.assign(globalThis.lgs.stores.ui.video, {
+            renderHostMode: 'visible',
+            resolutionProfile: 'automatic',
+            customDimensions: {width: 1920, height: 1080},
+            renderQuality: 'standard',
+        })
+        Object.assign(globalThis.lgs.settings.ui.video, {
+            renderHostMode: 'isolated',
+            resolutionProfile: '4k-uhd',
+            customDimensions: {width: 3840, height: 2160},
+            renderQuality: 'maximum',
+            readinessPolicy: 'strict',
+        })
+
+        render(<VideoExportRenderOptions/>)
+
+        expect(screen.getByLabelText('Export renderer').value).toBe('isolated')
+        expect(screen.getByLabelText('Output resolution').value).toBe('4k-uhd')
+        expect(screen.getByLabelText('Cesium detail').value).toBe('maximum')
+        expect(screen.getByLabelText('Tile readiness').value).toBe('strict')
+        await waitFor(() => {
+            expect(globalThis.lgs.stores.ui.video).toMatchObject({
+                renderHostMode: 'isolated',
+                resolutionProfile: '4k-uhd',
+                customDimensions: {width: 3840, height: 2160},
+                renderQuality: 'maximum',
+                readinessPolicy: 'strict',
+            })
+        })
     })
 
     it('explains the Automatic budget in the compact Basic Replay controls', () => {

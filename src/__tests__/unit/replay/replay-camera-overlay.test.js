@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -240,6 +240,18 @@ describe('replay camera diagnostics overlay', () => {
             visible: false,
             updateVisibility: vi.fn(),
         }
+        const worldPose = {
+            position: {x: 1, y: 2, z: 3},
+            direction: {x: -1, y: -2, z: -3},
+            up: {x: 0, y: 0, z: 1},
+            transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+        }
+        const cameraState = {
+            destination: {longitude: 2, latitude: 48, height: 900},
+            orientation: {heading: 0.8, pitch: -0.5, roll: 0},
+            altitude: 900,
+            worldPose,
+        }
         const state = {
             controller: {progress: 0},
             renderer: {
@@ -258,6 +270,7 @@ describe('replay camera diagnostics overlay', () => {
             resetCameraInterpolationState: vi.fn(),
             clipListForSlot: vi.fn(() => []),
             captureCameraState: vi.fn(),
+            restoreCameraState: vi.fn(),
             captureJourneyReplayDrawerStateBeforePlayback: vi.fn(),
             capturePlaybackCameraSettings: vi.fn(),
             placeCameraAtPlaybackStart: vi.fn(),
@@ -286,6 +299,7 @@ describe('replay camera diagnostics overlay', () => {
         await preparePlaybackSceneForExport(mode, {
             journey,
             hideOtherJourneys: false,
+            cameraState,
         })
 
         if (userMode === 'basic') {
@@ -295,6 +309,12 @@ describe('replay camera diagnostics overlay', () => {
             expect(call.hideOtherJourneysVisibility).not.toHaveBeenCalled()
         }
         expect(setVisible).toHaveBeenCalledWith(true)
+        expect(call.restoreCameraState).toHaveBeenCalledWith(expect.objectContaining({
+            clear: false,
+            cameraState: expect.objectContaining({worldPose}),
+        }))
+        expect(call.placeCameraAtPlaybackStart).not.toHaveBeenCalled()
+        expect(state.replayEntryCameraState).toEqual(cameraState)
         expect(updateOverlay).toHaveBeenCalledWith(expect.objectContaining({
             ...settings.camera.hysteresis,
             easing: userMode === 'basic' ? REPLAY_BASIC_CAMERA_MIN_EASING : settings.camera.hysteresis.easing,

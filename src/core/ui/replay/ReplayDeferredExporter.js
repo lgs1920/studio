@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -60,6 +60,7 @@ import {
 }                              from '@Core/ui/replay/ReplayRecordingMonitor'
 import {
     createReplaySceneTileReadinessCoordinator,
+    describeReplaySceneTileReadiness,
     prepareReplaySceneTileCache,
     prepareReplaySceneTilesForCapture,
     resolveReplayTileSpeedLevel,
@@ -75,7 +76,7 @@ import {
     IsolatedReplayRenderHost,
 }                              from '@Core/ui/replay/IsolatedReplayRenderHost'
 import {
-    captureReplayCanvasCropProjection,
+    captureReplayCanvasCropProjection, replayCanvasCssViewportDimensions,
 }                              from '@Core/ui/replay/ReplayCropFrustum'
 import {
     captureReplaySceneDescriptor,
@@ -88,6 +89,8 @@ import {
 }                              from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import {createReplayRecordingPerformance} from '@Core/ui/replay/ReplayRecordingPerformance'
 import {acquireReplayExportRenderLoop} from '@Core/ui/replay/ReplayExportRenderLoop'
+import {acquireVisibleViewerExportGpuBudget} from '@Core/ui/replay/ReplayExportGpuBudget'
+import {createReplayTilePrewarmer} from '@Core/ui/replay/ReplayTilePrewarmer'
 import {
     REPLAY_VIDEO_FPS, resolveReplayVideoQualityLevel,
 }                              from '@Core/ui/replay/ReplayVideoSettings'
@@ -362,34 +365,33 @@ const isReplayDryRunTileReadinessCheckpoint = ({frame = null, phase = null} = {}
 const defaultIsolatedReplayRenderHostFactory = options => new IsolatedReplayRenderHost(options)
 
 /**
- * Pre-warm a small rolling prefix of the export camera path through Cesium.
+ * Create a rolling prewarmer for the export camera path.
  *
  * The active scene camera is moved sequentially because Cesium can only
- * calculate view-dependent tile requests for one active camera. The initial
- * replay pose is restored before the first encoded frame, so pre-warming never
- * changes the exported timeline or the user camera state.
+ * calculate view-dependent tile requests for one active camera. Every warmup
+ * window restores its current timeline frame before export rendering continues.
  *
  * @param {object} options - Pre-warm options.
- * @param {object|null} options.plan - Deferred export plan.
- * @param {object|null} options.replay - Replay store.
- * @param {object|null} options.controller - Replay controller.
- * @param {object|null} options.replayMode - Replay mode facade.
- * @param {object|null} options.coordinator - Tile readiness coordinator.
- * @param {number} options.lookaheadMs - Camera tile preloading horizon.
- * @param {boolean} options.dryRun - Whether to use the lighter dry-run trace cadence.
- * @param {AbortSignal|null} options.signal - Optional cancellation signal.
- * @returns {Promise<void>} Promise resolved when pre-warming is complete.
+ * @param {object|null} [options.plan=null] - Deferred export plan.
+ * @param {object|null} [options.replay=null] - Replay store.
+ * @param {object|null} [options.controller=null] - Replay controller.
+ * @param {object|null} [options.replayMode=null] - Replay mode facade.
+ * @param {object|null} [options.coordinator=null] - Tile readiness coordinator.
+ * @param {number} [options.lookaheadMs=1000] - Camera tile preloading horizon.
+ * @param {boolean} [options.dryRun=false] - Whether to use the lighter dry-run trace cadence.
+ * @param {AbortSignal|null} [options.signal=null] - Optional cancellation signal.
+ * @returns {Promise<object|null>} Rolling prewarmer, or null when unavailable.
  */
-const prewarmReplayScenePrefix = async ({
-                                           plan = null,
-                                           replay = null,
-                                           controller = null,
-                                           replayMode = null,
-                                           coordinator = null,
-                                           lookaheadMs = REPLAY_TILE_PREWARM_LOOKAHEAD_MS,
-                                           dryRun = false,
-                                           signal = null,
-                                       } = {}) => {
+const createReplaySceneTilePrewarmer = async ({
+                                                  plan = null,
+                                                  replay = null,
+                                                  controller = null,
+                                                  replayMode = null,
+                                                  coordinator = null,
+                                                  lookaheadMs = REPLAY_TILE_PREWARM_LOOKAHEAD_MS,
+                                                  dryRun = false,
+                                                  signal = null,
+                                              } = {}) => {
     const scene = replayMode?.cesiumScene?.()
                   ?? globalThis.lgs?.scene
                   ?? globalThis.lgs?.viewer?.scene
@@ -398,9 +400,10 @@ const prewarmReplayScenePrefix = async ({
         || !coordinator
         || typeof replayMode?.renderReplayExportFrame !== 'function'
         || !plan?.videoTimeline
+        || !Number.isFinite(Number(lookaheadMs))
         || Number(lookaheadMs) <= 0
         || Number(plan.videoTimeline.durationMillis) <= 0) {
-        return
+        return null
     }
 
     const timeline = new ReplayFrameTimeline({
@@ -408,69 +411,93 @@ const prewarmReplayScenePrefix = async ({
         fps: plan.videoTimeline.fps,
         direction: 1,
     })
-    const firstFrame = timeline.frameAtIndex(0)
-    const firstPhase = resolveReplayExportFramePhase({plan, frame: firstFrame})
     const safeLookaheadMs = Math.min(
         timeline.durationMillis,
         Math.max(0, Number(lookaheadMs) || 0),
     )
-    const sampleCount = Math.min(
-        REPLAY_TILE_PREWARM_MAX_SAMPLES,
-        Math.max(1, Math.ceil(safeLookaheadMs / REPLAY_TILE_PREWARM_STEP_MS)),
-    )
-    const sampleStepMs = safeLookaheadMs / sampleCount
     let prewarmed = 0
 
-    replayVideoTraceDebug('export.tile-prewarm.start', {
-        lookaheadMs,
-        stepMs: sampleStepMs,
-        sampleCount,
-    })
-    try {
-        for (let sampleIndex = 1; sampleIndex <= sampleCount; sampleIndex += 1) {
-            if (signal?.aborted) {
-                throw new DOMException('The export tile pre-warm was aborted.', 'AbortError')
-            }
-
-            const futureFrame = timeline.frameAtTimeMs(sampleIndex * sampleStepMs)
-            const futurePhase = resolveReplayExportFramePhase({plan, frame: futureFrame})
-            await replayMode.renderReplayExportFrame({
-                phase: futurePhase,
-                frame: resolveReplayExportSourceFrame(futureFrame, futurePhase),
-                plan,
-                replay,
-                controller,
-                dryRun,
-            })
-            await coordinator.prepareForCapture({
-                maxMillis: 100,
-                signal,
-            })
-            prewarmed += 1
-        }
-    }
-    catch (error) {
-        if (signal?.aborted) {
-            throw error
-        }
-
-        replayVideoTraceDebug('export.tile-prewarm.error', {
-            message: error?.message ?? String(error),
-            prewarmed,
-        })
-    }
-    finally {
+    /** Render one future Replay timeline view on the export target. */
+    const renderPrewarmFrame = async futureFrame => {
+        const futurePhase = resolveReplayExportFramePhase({plan, frame: futureFrame})
         await replayMode.renderReplayExportFrame({
-            phase: firstPhase,
-            frame: resolveReplayExportSourceFrame(firstFrame, firstPhase),
+            phase: futurePhase,
+            frame: resolveReplayExportSourceFrame(futureFrame, futurePhase),
             plan,
             replay,
             controller,
             dryRun,
         })
-        replayVideoTraceDebug('export.tile-prewarm.end', {
-            prewarmed,
+        await coordinator.prepareForCapture({
+            maxMillis: 100,
+            signal,
         })
+        prewarmed += 1
+    }
+
+    /** Restore the timeline frame that must render after a prewarm window. */
+    const restorePrewarmAnchor = async anchorFrame => {
+        const anchorPhase = resolveReplayExportFramePhase({plan, frame: anchorFrame})
+        await replayMode.renderReplayExportFrame({
+            phase: anchorPhase,
+            frame: resolveReplayExportSourceFrame(anchorFrame, anchorPhase),
+            plan,
+            replay,
+            controller,
+            dryRun,
+        })
+    }
+
+    const prewarmer = createReplayTilePrewarmer({
+        timeline,
+        lookaheadMs: safeLookaheadMs,
+        stepMs: REPLAY_TILE_PREWARM_STEP_MS,
+        maxSamples: REPLAY_TILE_PREWARM_MAX_SAMPLES,
+        prewarmFrame: renderPrewarmFrame,
+        restoreFrame: restorePrewarmAnchor,
+        signal,
+        onError: error => replayVideoTraceDebug('export.tile-prewarm.error', {
+            message: error?.message ?? String(error),
+            prewarmed,
+        }),
+    })
+    if (!prewarmer) {
+        return null
+    }
+
+    replayVideoTraceDebug('export.tile-prewarm.start', {
+        lookaheadMs: safeLookaheadMs,
+        stepMs: REPLAY_TILE_PREWARM_STEP_MS,
+        sampleCount: Math.min(
+            REPLAY_TILE_PREWARM_MAX_SAMPLES,
+            Math.max(1, Math.ceil(safeLookaheadMs / REPLAY_TILE_PREWARM_STEP_MS)),
+        ),
+    })
+    try {
+        await prewarmer.prewarmInitial()
+    }
+    finally {
+        replayVideoTraceDebug('export.tile-prewarm.end', {prewarmed})
+    }
+
+    /** Refill the ahead window and report its progress when it is refreshed. */
+    const prewarmBeforeFrame = async frame => {
+        const previousState = prewarmer.getState()
+        const refreshed = await prewarmer.prewarmBeforeFrame(frame)
+        if (refreshed) {
+            replayVideoTraceDebug('export.tile-prewarm.window', {
+                anchorTimeMs: Number(frame?.frameTimeMs) || 0,
+                previousThroughMs: previousState.prewarmedThroughMs,
+                prewarmedThroughMs: prewarmer.getState().prewarmedThroughMs,
+                totalSamples: prewarmed,
+            })
+        }
+        return refreshed
+    }
+
+    return {
+        prewarmBeforeFrame,
+        dispose: prewarmer.dispose,
     }
 }
 
@@ -670,11 +697,37 @@ const roundFocusValue = value => {
     return numeric === null ? null : Math.round(numeric * 1000) / 1000
 }
 
+/** Preserve the source camera's world-space pose for isolated export setup. */
+const normalizeReplayWorldPose = worldPose => {
+    if (!worldPose || typeof worldPose !== 'object') {
+        return null
+    }
+
+    /** Normalize one finite Cartesian vector from the source camera pose. */
+    const normalizeVector = vector => {
+        const values = ['x', 'y', 'z'].map(component => finiteNumber(vector?.[component], null))
+        return values.every(value => value !== null)
+            ? {x: values[0], y: values[1], z: values[2]}
+            : null
+    }
+    const position = normalizeVector(worldPose.position)
+    const direction = normalizeVector(worldPose.direction)
+    const up = normalizeVector(worldPose.up)
+    const transform = Array.isArray(worldPose.transform)
+        ? worldPose.transform.map(value => finiteNumber(value, null))
+        : null
+
+    return position && direction && up && transform?.length === 16 && transform.every(value => value !== null)
+        ? {position, direction, up, transform}
+        : null
+}
+
 const normalizeReplayCameraStateSnapshot = cameraState => {
     if (!cameraState || typeof cameraState !== 'object') {
         return null
     }
 
+    const worldPose = normalizeReplayWorldPose(cameraState?.worldPose)
     return {
         destination: {
             longitude: roundFocusValue(cameraState?.destination?.longitude),
@@ -687,6 +740,10 @@ const normalizeReplayCameraStateSnapshot = cameraState => {
             roll:    roundFocusValue(cameraState?.orientation?.roll),
         },
         altitude: roundFocusValue(cameraState?.altitude),
+        ...(cameraState?.pivot && typeof cameraState.pivot === 'object'
+            ? {pivot: {...cameraState.pivot}}
+            : {}),
+        ...(worldPose ? {worldPose} : {}),
     }
 }
 
@@ -2467,6 +2524,8 @@ export const resolveReplayDeferredExportPlan = ({
                                                     replay = defaultReplayStore(),
                                                     journey = defaultJourney(),
                                                     controller = defaultReplayController(),
+                                                    cameraState = null,
+                                                    renderHostMode = null,
                                                     fps = defaultReplayExportFps(),
                                                     label = null,
                                                     metadata = null,
@@ -2498,10 +2557,12 @@ export const resolveReplayDeferredExportPlan = ({
         dimensions: requestedDimensions,
         fps,
         captureMode: requestedCaptureMode,
+        renderHostMode,
     })
     const currentContext = captureReplayDeferredExportContext({
         replay,
         controller,
+        cameraState: currentRenderSpec?.renderHostMode === 'isolated' ? cameraState : null,
         dimensions: requestedDimensions,
         captureMode: requestedCaptureMode,
         fps,
@@ -2546,6 +2607,7 @@ export const resolveReplayDeferredExportPlan = ({
         metadata,
         mediaMetadata,
         dimensions: requestedDimensions,
+        renderSpec: currentRenderSpec,
         captureMode: requestedCaptureMode,
         sourceCanvas,
         context: currentContext,
@@ -2599,10 +2661,16 @@ export const runReplayDeferredMp4Export = async ({
     const existingPlan = replay?.deferredExportPlan ?? null
     const requestedDimensions = dimensions ?? existingPlan?.dimensions ?? null
     const requestedCaptureMode = captureMode ?? existingPlan?.captureMode ?? null
+    const previewCamera = globalThis.lgs?.viewer?.camera ?? globalThis.lgs?.camera ?? null
+    const previewCameraState = replayMode?.captureCameraSnapshot?.({
+        camera: previewCamera,
+    }) ?? null
     const basePlan = resolveReplayDeferredExportPlan({
         replay,
         journey,
         controller,
+        cameraState: previewCameraState,
+        renderHostMode,
         fps,
         label,
         metadata,
@@ -2702,11 +2770,13 @@ export const runReplayDeferredMp4Export = async ({
     const overlayMetricsCache = new Map()
     let restoreReplaySceneTileCache = null
     let replaySceneTileReadinessCoordinator = null
+    let replaySceneTilePrewarmer = null
     let replaySceneTileReadinessOptions = null
     let isolatedRenderHost = null
     let isolatedRenderTarget = null
     let isolatedViewportDimensions = null
     let isolatedCanvasDimensions = null
+    let restoreVisibleViewerExportGpuBudget = null
     let previousReplayExportFrame = null
     let previousReplayExportSample = null
     const exportStartedAt = runtimeNow()
@@ -2797,6 +2867,10 @@ export const runReplayDeferredMp4Export = async ({
             })
         }
 
+        if (selectedRenderHostMode === 'isolated') {
+            replayMode?.refresh?.({camera: false, forceGeometry: true})
+        }
+
 
         if (selectedRenderHostMode === 'isolated') {
             const isolatedHostSupported = typeof replayMode?.setRenderTarget === 'function'
@@ -2806,7 +2880,7 @@ export const runReplayDeferredMp4Export = async ({
                 throw new Error('Isolated Replay rendering is required, but this Replay session cannot use an isolated render target.')
             }
 
-            const descriptor = captureReplaySceneDescriptor()
+            const descriptor = captureReplaySceneDescriptor({journey})
             if (!descriptor) {
                 throw new Error('Isolated Replay rendering requires an active Cesium scene.')
             }
@@ -2814,21 +2888,26 @@ export const runReplayDeferredMp4Export = async ({
             const cropRect = outputRenderSpec?.cropRect
                              ?? normalizeReplayVideoCropRect(plan.runtime?.context?.cropRect ?? replay?.videoCropRect ?? null)
             try {
-                const outputDpr = cropRect
-                    ? Math.max(1, Math.min(
-                        outputDimensions.width / Math.max(1, cropRect.width),
-                        outputDimensions.height / Math.max(1, cropRect.height),
-                    ))
-                    : 1
+                restoreVisibleViewerExportGpuBudget = acquireVisibleViewerExportGpuBudget(
+                    globalThis.lgs?.viewer ?? null,
+                )
+                const sourceViewport = replayCanvasCssViewportDimensions(sourceCanvas)
+                const poiReferenceWidth = cropRect?.width ?? sourceViewport?.width ?? outputDimensions.width
+                const poiReferenceHeight = cropRect?.height ?? sourceViewport?.height ?? outputDimensions.height
+                const poiPixelScale = Math.min(
+                    outputDimensions.width / Math.max(1, poiReferenceWidth),
+                    outputDimensions.height / Math.max(1, poiReferenceHeight),
+                )
                 isolatedViewportDimensions = {
-                    width: outputDimensions.width / outputDpr,
-                    height: outputDimensions.height / outputDpr,
+                    width: cropRect?.width ?? sourceViewport?.width ?? outputDimensions.width,
+                    height: cropRect?.height ?? sourceViewport?.height ?? outputDimensions.height,
                 }
                 isolatedRenderHost = isolatedRenderHostFactory({
                     dimensions: outputDimensions,
                     viewportDimensions: isolatedViewportDimensions,
                     descriptor,
                     cropProjection,
+                    poiPixelScale,
                     maximumScreenSpaceError: outputRenderSpec?.maximumScreenSpaceError ?? 16,
                     readiness: {
                         ...normalizeJourneyReplayReadiness(
@@ -2953,6 +3032,10 @@ export const runReplayDeferredMp4Export = async ({
                 readiness: replayReadiness,
                 camera:    replayCamera,
             }
+            if (isolatedRenderHost) {
+                // Start the prepared camera's tile requests before export widgets finish preparing.
+                flushReplayRenderTarget()
+            }
             await delay(0)
             scenePrepared = true
         }
@@ -2982,7 +3065,7 @@ export const runReplayDeferredMp4Export = async ({
                 throw new Error('Replay timeline widgets did not become ready before capture.')
             }
         }
-        await prewarmReplayScenePrefix({
+        replaySceneTilePrewarmer = await createReplaySceneTilePrewarmer({
             plan,
             replay,
             controller,
@@ -3068,10 +3151,14 @@ export const runReplayDeferredMp4Export = async ({
                 if (signal?.aborted) {
                     throw new DOMException('The Replay export was aborted.', 'AbortError')
                 }
-                const frameUpdateStartedAt = recordingPerformance?.now() ?? (isDryRun ? runtimeNow() : 0)
-
                 const phase = resolveReplayExportFramePhase({plan, frame})
                 const sourceFrame = resolveReplayExportSourceFrame(frame, phase)
+                const tilePrewarmStartedAt = recordingPerformance?.now() ?? (isDryRun ? runtimeNow() : 0)
+                const tilePrewarmed = await replaySceneTilePrewarmer?.prewarmBeforeFrame(frame)
+                if (tilePrewarmed) {
+                    recordingPerformance?.record('sceneTilePrewarm', tilePrewarmStartedAt)
+                }
+                const frameUpdateStartedAt = recordingPerformance?.now() ?? (isDryRun ? runtimeNow() : 0)
                 replayVideoTraceDebug('camera.export-frame', {
                     frameIndex:    frame?.index ?? null,
                     frameTimeMs:   frame?.frameTimeMs ?? null,
@@ -3106,6 +3193,9 @@ export const runReplayDeferredMp4Export = async ({
                 }
                 finally {
                     recordingPerformance?.record('replayFrameUpdate', frameUpdateStartedAt)
+                }
+                if (selectedRenderHostMode === 'isolated') {
+                    replayMode?.syncVisibleCameraToRenderTarget?.()
                 }
                 const widgetStateStartedAt = recordingPerformance?.now() ?? (isDryRun ? runtimeNow() : 0)
                 if (isDryRun) {
@@ -3200,10 +3290,17 @@ export const runReplayDeferredMp4Export = async ({
                                     const frameLabel = Number.isInteger(Number(frame?.index))
                                         ? Number(frame.index) + 1
                                         : 'unknown'
+                                    const readinessScene = selectedRenderHostMode === 'isolated'
+                                        ? isolatedRenderHost?.renderTarget?.()?.scene ?? replayMode?.cesiumScene?.()
+                                        : replayMode?.cesiumScene?.()
+                                          ?? globalThis.lgs?.scene
+                                          ?? globalThis.lgs?.viewer?.scene
+                                    const readinessDetail = describeReplaySceneTileReadiness(readinessScene)
                                     const timeoutError = new Error(
                                         `Strict Replay scene readiness timed out after ${readinessResult.attempts} bounded attempts `
                                         + `at frame ${frameLabel}. Check network access, tile credentials, `
-                                        + 'and the selected Cesium detail level, or use Adaptive readiness.',
+                                        + 'and the selected Cesium detail level, or use Adaptive readiness. '
+                                        + readinessDetail,
                                     )
                                     timeoutError.name = 'TimeoutError'
                                     throw timeoutError
@@ -3254,13 +3351,12 @@ export const runReplayDeferredMp4Export = async ({
                 {
                     const cropRect = outputRenderSpec?.cropRect
                                      ?? normalizeReplayVideoCropRect(plan.runtime?.context?.cropRect ?? replay?.videoCropRect ?? null)
-                    const composerClip = isolatedRenderHost && isolatedViewportDimensions
-                        ? {
-                            x: 0,
-                            y: 0,
-                            width: isolatedViewportDimensions.width,
-                            height: isolatedViewportDimensions.height,
-                        }
+                    // Native HQ has already applied the crop in its camera frustum
+                    // and rendered that crop across the full physical output canvas.
+                    // Clipping it again in preview-space dimensions zooms progressively
+                    // further into the frame as output resolution increases.
+                    const composerClip = isolatedRenderHost
+                        ? null
                         : outputRenderSpec?.composerClip
                           ?? replayVideoComposerClipFromCropRect(cropRect)
                     const composerOutputDpr = outputRenderSpec?.outputDpr
@@ -3516,6 +3612,8 @@ export const runReplayDeferredMp4Export = async ({
         }
 
         // Restore normal scene scheduling before any other teardown can fail.
+        await cleanup('tile-prewarmer', () => replaySceneTilePrewarmer?.dispose?.())
+        replaySceneTilePrewarmer = null
         await cleanup('viewer-render-loop', () => exportRenderLoop?.release())
         exportRenderLoop = null
         await cleanup('sample-worker', () => replayFrameSampleWorker?.dispose?.())
@@ -3579,13 +3677,30 @@ export const runReplayDeferredMp4Export = async ({
         }
         await cleanup('isolated-render-host', () => isolatedRenderHost?.destroy?.())
         isolatedRenderHost = null
+        await cleanup('visible-viewer-gpu-budget', () => restoreVisibleViewerExportGpuBudget?.())
+        restoreVisibleViewerExportGpuBudget = null
         await cleanup('playback-scene', () => replayMode?.restorePlaybackScene?.({force: true}))
+        if (selectedRenderHostMode === 'isolated') {
+            await cleanup('replay-preview', () => replayMode?.refresh?.({camera: false, forceGeometry: true}))
+        }
         await cleanup('replay-store', () => {
             if (replay && originalReplayState) {
                 Object.assign(replay, originalReplayState)
             }
         })
         await cleanup('preparation-refresh', () => globalThis.__?.ui?.replay?.refresh?.({camera: true, suppressMoveEvents: true}))
+        if (selectedRenderHostMode === 'isolated') {
+            await cleanup('visible-camera', () => {
+                const camera = globalThis.lgs?.viewer?.camera ?? globalThis.lgs?.camera ?? null
+                replayMode?.restoreCameraState?.({
+                    clear: false,
+                    cameraState: previewCameraState,
+                    targetCamera: camera,
+                })
+                const visibleScene = globalThis.lgs?.viewer?.scene ?? globalThis.lgs?.scene
+                visibleScene?.requestRender?.()
+            })
+        }
         await cleanup('tile-cache', () => restoreReplaySceneTileCache?.())
         restoreReplaySceneTileCache = null
         await cleanup('frame-composer', () => replayComposer?.dispose?.())

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,8 +33,14 @@ const {FakeViewer, fakeCanvasEventManager} = vi.hoisted(() => {
 
     class FakeViewer {
         static instances = []
+        static constructionAttempts = 0
+        static constructionError = null
 
         constructor(container) {
+            FakeViewer.constructionAttempts += 1
+            if (FakeViewer.constructionError) {
+                throw FakeViewer.constructionError
+            }
             this.container = container
             this.destroyed = false
             this.camera = {changed: createEvent()}
@@ -76,6 +82,20 @@ const {FakeViewer, fakeCanvasEventManager} = vi.hoisted(() => {
         fakeCanvasEventManager: vi.fn(),
     }
 })
+
+class FakeResizeObserver {
+    static instances = []
+
+    constructor(callback) {
+        this.callback = callback
+        this.targets = []
+        FakeResizeObserver.instances.push(this)
+    }
+
+    observe = target => this.targets.push(target)
+
+    disconnect = vi.fn()
+}
 
 vi.mock('cesium', async importOriginal => {
     const actual = await importOriginal()
@@ -135,6 +155,10 @@ describe('Cesium viewer lifecycle', () => {
             ui: {cameraManager: {raiseUpdateEvent: vi.fn()}},
         }
         FakeViewer.instances.length = 0
+        FakeViewer.constructionAttempts = 0
+        FakeViewer.constructionError = null
+        FakeResizeObserver.instances.length = 0
+        vi.stubGlobal('ResizeObserver', FakeResizeObserver)
         fakeCanvasEventManager.mockClear()
     })
 
@@ -143,6 +167,7 @@ describe('Cesium viewer lifecycle', () => {
         globalThis.lgs = undefined
         globalThis.__ = undefined
         globalThis.document = undefined
+        vi.unstubAllGlobals()
         vi.useRealTimers()
         vi.restoreAllMocks()
     })
@@ -190,6 +215,16 @@ describe('Cesium viewer lifecycle', () => {
 
         expect(viewer).toBe(globalThis.lgs.viewer)
         expect(FakeViewer.instances).toHaveLength(1)
+    })
+
+    it('does not retry a Cesium viewer construction failure', async () => {
+        const error = new Error('WebGL context initialization failed')
+        FakeViewer.constructionError = error
+
+        await expect(ensureViewerBaseWithRetry({attempts: 4, delayMs: 0})).rejects.toBe(error)
+
+        expect(FakeViewer.constructionAttempts).toBe(1)
+        expect(FakeViewer.instances).toHaveLength(0)
     })
 
     it('recreates a destroyed viewer and reattaches lifecycle handlers', () => {
@@ -255,6 +290,34 @@ describe('Cesium viewer lifecycle', () => {
         expect(viewer.useDefaultRenderLoop).toBe(true)
         expect(viewer.forceResize).toHaveBeenCalledTimes(4)
         expect(viewer.scene.requestRender).toHaveBeenCalledTimes(4)
+    })
+
+    it('pauses rendering at zero size and resumes after the viewer surface is restored', async () => {
+        vi.useFakeTimers()
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        vi.spyOn(console, 'warn').mockImplementation(() => {})
+        const viewer = ensureViewerBase()
+        const resizeObserver = FakeResizeObserver.instances.at(-1)
+        viewer.useDefaultRenderLoop = true
+
+        container.clientWidth = 0
+        container.clientHeight = 0
+        resizeObserver.callback()
+
+        expect(viewer.useDefaultRenderLoop).toBe(false)
+
+        viewer.scene.renderError.raise(viewer.scene, new Error('zero-sized framebuffer'))
+        await vi.advanceTimersByTimeAsync(0)
+
+        expect(viewer.useDefaultRenderLoop).toBe(false)
+
+        container.clientWidth = 1920
+        container.clientHeight = 1080
+        resizeObserver.callback()
+        await vi.advanceTimersByTimeAsync(0)
+
+        expect(viewer.useDefaultRenderLoop).toBe(true)
+        expect(viewer.forceResize).toHaveBeenCalledTimes(2)
     })
 
     it('resumes rendering after the WebGL context is restored', async () => {

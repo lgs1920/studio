@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-14
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ const STAGES = {
     frameResolution: ['Frame sample / intent resolution', 'scope'],
     frameRendering: ['Whole frame rendering (before encoding)', 'context'],
     replayFrameUpdate: ['Replay camera / trace update', 'scope'],
+    sceneTilePrewarm: ['Future scene tile prewarming', 'scope'],
     sceneTileReadiness: ['Scene tile readiness / render wait', 'scope'],
     cesiumRender: ['Cesium synchronous scene render', 'detail'],
     widgetStatePublication: ['Widget frame publication / synchronous commit', 'scope'],

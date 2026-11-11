@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@
  */
 
 import {acquireReplayCameraOwnership, releaseReplayCameraOwnership, replayOwnedCameraFor, replayReturnCameraStateFor} from './ReplayCameraOwnership'
-import {replayCameraFor} from './ReplayRenderTarget'
+import {replayCameraFor, replayRendererFor, replayRenderTargetFor} from './ReplayRenderTarget'
 import { REPLAY_DRAWER }                                                               from '@Core/constants'
 import {
     getJourneyReplayHideOtherJourneys,
@@ -217,7 +217,7 @@ export const restorePlaybackScene = (mode, {force = false} = {}) => {
             return state.sceneRestorePromise
         }
 
-        state.renderer.clear()
+        replayRendererFor(mode).clear()
         // `restorePlaybackSceneInternal` owns the state promise and clears it
         // after focus and camera restoration have both completed. Keep that
         // identity intact so its finalizer cannot be skipped by this wrapper.
@@ -535,6 +535,44 @@ export const captureCameraSnapshot = (mode, {camera = replayCameraFor(mode), sam
     }
 }
 
+/**
+ * Mirror the active isolated Replay camera into Studio's visible viewer.
+ *
+ * The export camera owns the frame's position and orientation. Keep the
+ * visible viewer's own frustum so its image scale remains tied to the visible
+ * viewport instead of the Native HQ output dimensions. The visible camera is
+ * restored to its pre-export snapshot by the exporter during cleanup.
+ *
+ * @param {object} mode - Replay session mode.
+ * @returns {boolean} Whether the visible camera was updated.
+ */
+export const syncVisibleCameraToRenderTarget = (mode) => {
+    const target = replayRenderTargetFor(mode)
+    const sourceCamera = target?.viewer?.camera ?? target?.camera ?? target?.scene?.camera
+    const visibleCamera = globalThis.lgs?.viewer?.camera ?? globalThis.lgs?.camera
+    if (!sourceCamera || !visibleCamera || sourceCamera === visibleCamera) {
+        return false
+    }
+
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    // Camera.changed is raised by Cesium on the next render. Keep the
+    // export-driven camera updates from being interpreted as manual UI edits.
+    state.suppressPlaybackCameraSync = true
+
+    visibleCamera.cancelFlight?.()
+    visibleCamera.lookAtTransform(Matrix4.clone(sourceCamera.transform))
+    visibleCamera.setView({
+        destination: Cartesian3.clone(sourceCamera.positionWC),
+        orientation: {
+            direction: Cartesian3.clone(sourceCamera.directionWC),
+            up: Cartesian3.clone(sourceCamera.upWC),
+        },
+    })
+    const visibleScene = globalThis.lgs?.viewer?.scene ?? globalThis.lgs?.scene
+    visibleScene?.requestRender?.()
+    return true
+}
+
 /** Save the current camera pose and acquire the camera lease for Replay. */
 export const captureCameraState = (mode, {sample = null} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -649,7 +687,7 @@ export const restorePlaybackSceneInternal = (mode, ) => {
         call.stopReplayCameraAltitudeTracking?.()
         // Clear the replay renderer before focus and visibility restoration so
         // normal completion and premature aborts cannot leave replay graphics visible.
-        state.renderer.clear()
+        replayRendererFor(mode).clear()
         state.sceneRestoreDeferred = false
         call.removeToleranceZoneOverlay()
         call.restoreOtherJourneysVisibility()
@@ -838,7 +876,7 @@ export const abortPlaybackAfterListenerError = (mode, error) => {
         call.cancelActiveCameraFlight()
         state.controller.stop({emit: false, clearProgress: false})
         call.setContinuousRender(false)
-        state.renderer.clear()
+        replayRendererFor(mode).clear()
         state.sceneRestoreDeferred = false
         state.sceneRestorePromise = null
         state.deferPlaybackCameraRestore = false
@@ -982,7 +1020,7 @@ export const bindRenderer = (mode, ) => {
                     call.startReplayCameraAltitudeTracking()
                     traceStep('set-continuous-render.end')
                     traceStep('renderer.show.begin')
-                    state.renderer.show({
+                    replayRendererFor(mode).show({
                         sampler: detail.sampler,
                         options: {smoothedGuide: call.smoothedGuide()},
                     })
@@ -992,7 +1030,7 @@ export const bindRenderer = (mode, ) => {
                                         ?? currentJourneyReplaySample(state.controller)
 
                     traceStep('renderer.update.begin')
-                    state.renderer.update({
+                    replayRendererFor(mode).update({
                         ...detail,
                         forceGeometry: true,
                         syncCursorToTrace: true,
@@ -1069,7 +1107,7 @@ export const bindRenderer = (mode, ) => {
                         playbackProgress,
                         playbackProgressKey,
                     })
-                    state.renderer.update({
+                    replayRendererFor(mode).update({
                         ...detail,
                         sampler: state.sampler,
                         allowPlaybackGeometryUpdate: true,
@@ -1126,7 +1164,7 @@ export const bindRenderer = (mode, ) => {
                 state.lastPlaybackUpdateProgressKey = null
                 call.setContinuousRender(false)
                 try {
-                    state.renderer.update({
+                    replayRendererFor(mode).update({
                         ...detail,
                         forceGeometry: true,
                         freezeDynamic: true,
@@ -1145,7 +1183,7 @@ export const bindRenderer = (mode, ) => {
                 try {
                     state.lastPlaybackUpdateProgressKey = null
                     call.setContinuousRender(true)
-                    state.renderer.update({
+                    replayRendererFor(mode).update({
                         ...detail,
                         forceGeometry: true,
                         showTrace: isJourneyReplayTraceActive(),
@@ -1174,7 +1212,7 @@ export const bindRenderer = (mode, ) => {
                 state.clipSequenceToken++
                 call.stopStopClipPOIMaskLoop()
                 call.setContinuousRender(false)
-                state.renderer.clear()
+                replayRendererFor(mode).clear()
                 call.restoreOtherJourneysVisibility()
                 call.restoreCurrentJourneyVisibility({restorePOIs: false})
                 call.setJourneyReplayOrbitAllowed(true)
@@ -1287,7 +1325,7 @@ export const bindRenderer = (mode, ) => {
                 }
 
                 try {
-                    state.renderer.update({
+                    replayRendererFor(mode).update({
                         ...detail,
                         sampler:               state.sampler,
                         forceGeometry:         true,
