@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-11
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -49,6 +49,35 @@ const describeCesiumError = error => ({
     stack:   error?.stack,
 })
 
+/** Detect a viewer surface whose CSS layout cannot produce a WebGL framebuffer. */
+const hasZeroSizedViewerSurface = viewer => [viewer?.container, viewer?.scene?.canvas]
+    .filter(Boolean)
+    .some(surface => {
+        const bounds = surface.getBoundingClientRect?.()
+        const width = Number(surface.clientWidth ?? bounds?.width)
+        const height = Number(surface.clientHeight ?? bounds?.height)
+        return Number.isFinite(width) && width <= 0 || Number.isFinite(height) && height <= 0
+    })
+
+/** Detect a WebGL context that currently exposes no drawable framebuffer. */
+const hasZeroSizedDrawingBuffer = viewer => {
+    const width = Number(viewer?.scene?.drawingBufferWidth)
+    const height = Number(viewer?.scene?.drawingBufferHeight)
+    return Number.isFinite(width) && width <= 0 || Number.isFinite(height) && height <= 0
+}
+
+/** Pause Cesium's automatic loop until its observed surface can render again. */
+const pauseViewerForZeroSizedSurface = viewer => {
+    const lifecycle = viewerLifecycle
+    if (!lifecycle || lifecycle.viewer !== viewer || viewer.useDefaultRenderLoop !== true) {
+        return false
+    }
+
+    lifecycle.renderPausedForZeroSize = true
+    viewer.useDefaultRenderLoop = false
+    return true
+}
+
 /**
  * Releases pending recovery work and listeners owned by the previous viewer.
  *
@@ -85,6 +114,7 @@ const resetViewerLifecycle = viewer => {
         renderRecoveryAttempts:      0,
         renderRecoveryTimer:          null,
         webglContextLost:             false,
+        renderPausedForZeroSize:      false,
         renderScheduler:              null,
         renderSchedulerScene:         null,
         disposers:                    [],
@@ -157,7 +187,13 @@ const scheduleViewerRecovery = (viewer, {countAttempt = true} = {}) => {
             return
         }
 
+        if (hasZeroSizedViewerSurface(viewer)) {
+            pauseViewerForZeroSizedSurface(viewer)
+            return
+        }
+
         viewer.useDefaultRenderLoop = true
+        lifecycle.renderPausedForZeroSize = false
         viewer.forceResize?.()
         requestSceneRender(viewer.scene)
         console.warn('[LGS1920][Cesium] Render loop recovery requested.', {
@@ -263,6 +299,16 @@ const attachViewerDiagnostics = viewer => {
                 sceneDestroyed: renderScene?.isDestroyed?.(),
                 error:         describeCesiumError(error),
             })
+            if (hasZeroSizedViewerSurface(viewer)) {
+                pauseViewerForZeroSizedSurface(viewer)
+                console.warn('[LGS1920][Cesium] Render loop paused until the viewer surface has non-zero dimensions.')
+                return
+            }
+            if (hasZeroSizedDrawingBuffer(viewer)) {
+                pauseViewerForZeroSizedSurface(viewer)
+                scheduleViewerRecovery(viewer)
+                return
+            }
             scheduleViewerRecovery(viewer)
         })
 
@@ -277,6 +323,7 @@ const attachViewerDiagnostics = viewer => {
                     viewerLifecycle.renderRecoveryTimer = null
                 }
                 viewerLifecycle.renderRecoveryAttempts = 0
+                viewerLifecycle.renderPausedForZeroSize = false
             }
         })
         if (typeof removePostRenderListener === 'function') {
@@ -313,6 +360,36 @@ const attachViewerDiagnostics = viewer => {
         viewerLifecycle.canvasErrorListenersAttached = true
     }
 
+    const handleViewerSurfaceResize = () => {
+        const lifecycle = viewerLifecycle
+        if (lifecycle?.viewer !== viewer || isViewerDestroyed(viewer)) {
+            return
+        }
+
+        if (hasZeroSizedViewerSurface(viewer)) {
+            pauseViewerForZeroSizedSurface(viewer)
+            return
+        }
+
+        if (lifecycle.renderPausedForZeroSize && !lifecycle.webglContextLost) {
+            scheduleViewerRecovery(viewer, {countAttempt: false})
+        }
+    }
+    if (typeof globalThis.ResizeObserver === 'function') {
+        const resizeObserver = new globalThis.ResizeObserver(handleViewerSurfaceResize)
+        if (viewer.container) {
+            resizeObserver.observe(viewer.container)
+        }
+        if (scene.canvas && scene.canvas !== viewer.container) {
+            resizeObserver.observe(scene.canvas)
+        }
+        viewerLifecycle.disposers.push(() => resizeObserver.disconnect())
+    }
+    else if (globalThis.window?.addEventListener) {
+        globalThis.window.addEventListener('resize', handleViewerSurfaceResize)
+        viewerLifecycle.disposers.push(() => globalThis.window?.removeEventListener?.('resize', handleViewerSurfaceResize))
+    }
+
     viewer.forceResize?.()
     requestSceneRender(scene)
 }
@@ -345,7 +422,8 @@ export const ensureViewerBaseWithRetry = async ({attempts = 4, delayMs = 100} = 
         }
         catch (error) {
             lastError = error
-            if (attempt === attempts - 1) {
+            const containerUnavailable = error?.message === '[LGS1920][Cesium] The #cesium-viewer container is missing.'
+            if (attempt === attempts - 1 || !containerUnavailable) {
                 break
             }
 

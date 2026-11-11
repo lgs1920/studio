@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-10-29
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -836,10 +836,53 @@ const installWidgetKeyboardShortcuts = () => {
     return () => target.removeEventListener('keydown', listener, {capture: true})
 }
 
-export const SHORTCUTS = await fetch(SHORTCUTS_CATALOG, {cache: 'no-store'})
-    .then(res => res.text())
-    .then(text => YAML.parse(text),
-    )
+const loadShortcutCatalog = async () => {
+    let catalogUrl = null
+    let response = null
+
+    try {
+        catalogUrl = new URL(
+            `/${SHORTCUTS_CATALOG}`,
+            globalThis.location?.origin ?? globalThis.document?.baseURI ?? 'http://localhost',
+        )
+        response = await fetch(catalogUrl, {cache: 'no-store'})
+        if (response.ok === false) {
+            throw new Error(`Shortcut catalog request failed with HTTP ${response.status}.`)
+        }
+
+        const parsed = YAML.parse(await response.text())
+        if (!Array.isArray(parsed)) {
+            throw new TypeError(`Shortcut catalog must contain a YAML list; received ${parsed === null ? 'null' : typeof parsed}.`)
+        }
+        const invalidShortcutIndex = parsed.findIndex(shortcut => !shortcut
+            || typeof shortcut !== 'object'
+            || typeof shortcut.id !== 'string'
+            || !Array.isArray(shortcut.keys))
+        if (invalidShortcutIndex !== -1) {
+            throw new TypeError(`Shortcut catalog entry ${invalidShortcutIndex + 1} must include an ID and a key list.`)
+        }
+
+        console.log('[LGS1920][Shortcuts] Shortcut catalog loaded.', {
+            url: catalogUrl.toString(),
+            count: parsed.length,
+        })
+        return parsed
+    }
+    catch (error) {
+        console.log('[LGS1920][Shortcuts] Shortcut catalog load failed; shortcuts are disabled for this session.', {
+            url: response?.url || catalogUrl?.toString() || SHORTCUTS_CATALOG,
+            status: response?.status ?? null,
+            contentType: response?.headers?.get?.('content-type') ?? null,
+            error,
+            message: error?.message ?? String(error),
+            stack: error?.stack ?? null,
+            cause: error?.cause ?? null,
+        })
+        return []
+    }
+}
+
+export const SHORTCUTS = await loadShortcutCatalog()
 
 const SHORTCUT_ACTIONS = {
     'journey-import':       openJourneyImporter,
