@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-04
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,8 @@ import { RecordingInfo } from '@Components/MainUI/video/RecordingInfo'
 import { LGSPopup }      from '@Components/LGSPopup'
 import {ReplayMediaCapture} from '@Core/ui/replay/ReplayMediaCapture'
 import { REPLAY_DEFERRED_EXPORT_READY_EVENT } from '@Core/ui/replay/ReplayRecordingMonitor'
+import {REPLAY_VIDEO_RESOLUTION_PROFILES} from '@Core/ui/replay/ReplayVideoRenderSpec'
+import {rewriteReplayVideoMetadata} from '@Core/ui/replay/ReplayMediaMetadata'
 import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
 import { UI_ACTIONS, UI_ICONS } from '@Core/ui/metadata/uiActionCatalog'
 import {
@@ -38,6 +40,18 @@ import './style.css'
 
 const DEFAULT_VIDEO_FILENAME = 'video'
 const DEFAULT_IMAGE_FILENAME = 'record'
+const VIDEO_RESOLUTION_PROFILE_LABELS = Object.freeze({
+    [REPLAY_VIDEO_RESOLUTION_PROFILES.HD_720]: '720p',
+    [REPLAY_VIDEO_RESOLUTION_PROFILES.FULL_HD]: '1080p',
+    [REPLAY_VIDEO_RESOLUTION_PROFILES.QHD_1440]: '1440p',
+    [REPLAY_VIDEO_RESOLUTION_PROFILES.UHD_4K]: '4K',
+})
+const STANDARD_VIDEO_RESOLUTION_LABELS = Object.freeze({
+    720:  '720p',
+    1080: '1080p',
+    1440: '1440p',
+    2160: '4K',
+})
 
 /**
  * Keep Unicode letters in a media filename while removing unsafe characters.
@@ -89,11 +103,41 @@ const buildMediaFilename = (stem, extension, fallback = DEFAULT_VIDEO_FILENAME) 
     `${sanitizeFilenameStem(stem, fallback)}.${normalizeExtension(extension)}`
 )
 
+/**
+ * Convert a display label into a lowercase filename tag.
+ * @param {string} value - User-facing format or resolution label.
+ * @returns {string} A filesystem-safe, hyphen-separated tag.
+ */
+const filenameTagFromLabel = value => `${value ?? ''}`
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+
+/**
+ * Resolve a concise resolution label from the selected profile or actual dimensions.
+ * @param {Object} options - Export dimensions and selected resolution profile.
+ * @returns {string} The selected profile label or actual pixel dimensions.
+ */
+const resolveVideoResolutionLabel = ({width, height, resolutionProfile}) => {
+    const profileLabel = VIDEO_RESOLUTION_PROFILE_LABELS[resolutionProfile]
+    if (profileLabel) {
+        return profileLabel
+    }
+
+    const standardResolution = STANDARD_VIDEO_RESOLUTION_LABELS[Math.min(width, height)]
+
+    return standardResolution ?? `${width}x${height}`
+}
+
 export const VideoDownloadAndShareDialog = () => {
     const [dialogOpen, setDialogOpen] = useState(false)
     const [closeConfirmationOpen, setCloseConfirmationOpen] = useState(false)
     const [filename, setFilename] = useState('')
     const [canDownloadAndShare, setCanDownloadAndShare] = useState(false)
+    const [isMediaOperationActive, setIsMediaOperationActive] = useState(false)
     const [isRecordingInfoOpen, setIsRecordingInfoOpen] = useState(false)
     const [mediaUrl, setMediaUrl] = useState(null)
     const [deferredMediaData, setDeferredMediaData] = useState(null)
@@ -102,8 +146,9 @@ export const VideoDownloadAndShareDialog = () => {
     const _recordingInfoButton = useRef(null)
     const _recordingInfoPopup = useRef(null)
     const _mediaBlob = useRef({blob: null, url: null, filename: ''})
+    const _filenameSuffix = useRef('')
     const _mediaDownloaded = useRef(false)
-    const _shareInFlight = useRef(false)
+    const _mediaActionInFlight = useRef(false)
     const _dialogCleanupDone = useRef(true)
     const _replayScenePreFocused = useRef(false)
     const _mediaRequestToken = useRef(0)
@@ -115,6 +160,13 @@ export const VideoDownloadAndShareDialog = () => {
             _mediaBlob.current.url = null
             URL.revokeObjectURL(url)
         }
+        const metadataUrl = _mediaBlob.current.metadataBlobUrl
+        if (metadataUrl) {
+            _mediaBlob.current.metadataBlobUrl = null
+            URL.revokeObjectURL(metadataUrl)
+        }
+        _mediaBlob.current.metadataBlob = null
+        _mediaBlob.current.metadataTagSignature = ''
     }, [])
     const getVideoExtension = useCallback(() => deferredMediaData?.extension
         || __.mediaCapture.mediaData?.extension
@@ -176,11 +228,16 @@ export const VideoDownloadAndShareDialog = () => {
             quality:    {name: 'Unknown'},
             ratio:      {label: 'Unknown'},
             metadata:   {},
+            filenameTagInfo: _mediaBlob.current.filenameTagInfo ?? null,
         }
 
         try {
             if (deferredMediaData) {
-                return {...fallback, ...deferredMediaData}
+                return {
+                    ...fallback,
+                    ...deferredMediaData,
+                    filenameTagInfo: _mediaBlob.current.filenameTagInfo ?? null,
+                }
             }
             const data = __.mediaCapture?.mediaData
             if (!data || typeof data !== 'object') {
@@ -199,6 +256,7 @@ export const VideoDownloadAndShareDialog = () => {
                     quality:    data.quality || {name: 'Unknown'},
                     ratio:      data.ratio || {label: 'Unknown'},
                     metadata:   data.metadata || {},
+                    filenameTagInfo: _mediaBlob.current.filenameTagInfo ?? null,
                 }
             }
             else {
@@ -210,6 +268,7 @@ export const VideoDownloadAndShareDialog = () => {
                         height: Number(data.dimensions?.height) || 0,
                     },
                     metadata:   data.metadata || {},
+                    filenameTagInfo: null,
                 }
             }
 
@@ -232,11 +291,16 @@ export const VideoDownloadAndShareDialog = () => {
                 releaseMediaUrl()
                 const imageUrl = URL.createObjectURL(imageBlob)
                 const safeFilename = sanitizeFilenameStem(getMediaFilenameStem(DEFAULT_IMAGE_FILENAME), DEFAULT_IMAGE_FILENAME)
+                _filenameSuffix.current = ''
                 _mediaBlob.current = {
                     blob:     imageBlob,
                     url:      imageUrl,
                     filename: safeFilename,
                     type:     ReplayMediaCapture.IMAGE,
+                    filenameTagInfo: null,
+                    metadataBlob: null,
+                    metadataBlobUrl: null,
+                    metadataTagSignature: '',
                 }
                 _dialogCleanupDone.current = false
                 setMediaUrl(imageUrl)
@@ -276,6 +340,7 @@ export const VideoDownloadAndShareDialog = () => {
                 releaseMediaUrl()
                 const url = URL.createObjectURL(blob)
                 const safeFilename = sanitizeFilenameStem(`${filename}`.replace(/\.[^.]+$/, ''), DEFAULT_VIDEO_FILENAME)
+                _filenameSuffix.current = ''
                 _mediaBlob.current = {
                     blob,
                     url,
@@ -283,6 +348,10 @@ export const VideoDownloadAndShareDialog = () => {
                     type: ReplayMediaCapture.VIDEO,
                     source: 'deferred-replay',
                     mediaData,
+                    filenameTagInfo: null,
+                    metadataBlob: null,
+                    metadataBlobUrl: null,
+                    metadataTagSignature: '',
                 }
                 __.mediaCapture.type = ReplayMediaCapture.VIDEO
                 setDeferredMediaData(mediaData)
@@ -443,6 +512,68 @@ export const VideoDownloadAndShareDialog = () => {
     }, [])
 
     /**
+     * Append the current export resolution and video format as filename tags.
+     * @returns {void}
+     */
+    const handleAddVideoTags = useCallback(() => {
+        if (!__.mediaCapture.isVideo()) {
+            return
+        }
+
+        const {dimensions = {}, ratio: mediaRatio = null} = getMediaData()
+        const width = Math.max(0, Math.round(Number(dimensions.width) || 0))
+        const height = Math.max(0, Math.round(Number(dimensions.height) || 0))
+        if (width <= 0 || height <= 0) {
+            return
+        }
+
+        const dimensionsTag = width > 0 && height > 0 ? `${width}x${height}` : ''
+        const videoState = lgs.stores?.ui?.video
+        const videoSettings = lgs.settings?.ui?.video
+        const currentRatio = videoState?.ratio ?? videoSettings?.ratio ?? mediaRatio
+        const selectedRatio = currentRatio?.value ?? currentRatio ?? mediaRatio?.value ?? mediaRatio
+        const ratioDefinition = lgs.configuration?.videoFormats?.find(format => format.value === selectedRatio)
+        const resolutionProfile = videoSettings?.resolutionProfile
+                                   ?? videoState?.resolutionProfile
+                                   ?? REPLAY_VIDEO_RESOLUTION_PROFILES.AUTOMATIC
+        const resolutionLabel = resolveVideoResolutionLabel({width, height, resolutionProfile})
+        const formatLabel = ratioDefinition?.label ?? currentRatio?.label ?? 'Custom'
+        const formatTag = ratioDefinition?.locked === true
+            ? filenameTagFromLabel(formatLabel)
+            : `custom-${dimensionsTag}`
+        const suffix = `${filenameTagFromLabel(resolutionLabel)}-${formatTag || `custom-${dimensionsTag}`}`
+        const filenameTagInfo = {
+            suffix,
+            resolutionLabel,
+            formatLabel,
+            aspectRatioLabel: formatLabel,
+            dimensions: {width, height},
+        }
+        const previousSuffixMarker = _filenameSuffix.current ? `-${_filenameSuffix.current}` : ''
+        const baseFilename = previousSuffixMarker && filename.endsWith(previousSuffixMarker)
+            ? filename.slice(0, -previousSuffixMarker.length)
+            : filename
+        const nextSuffixMarker = `-${suffix}`
+        const safeBaseFilename = sanitizeFilenameStem(baseFilename, DEFAULT_VIDEO_FILENAME)
+        const nextFilename = safeBaseFilename.endsWith(nextSuffixMarker)
+            ? safeBaseFilename
+            : `${safeBaseFilename}${nextSuffixMarker}`
+        const staleMetadataUrl = _mediaBlob.current.metadataBlobUrl
+        if (staleMetadataUrl) {
+            URL.revokeObjectURL(staleMetadataUrl)
+        }
+
+        _filenameSuffix.current = suffix
+        _mediaBlob.current.filenameTagInfo = filenameTagInfo
+        _mediaBlob.current.metadataBlob = null
+        _mediaBlob.current.metadataBlobUrl = null
+        _mediaBlob.current.metadataTagSignature = ''
+        _mediaBlob.current.filename = nextFilename
+        setCanDownloadAndShare(true)
+        setFilename(nextFilename)
+    }, [filename, getMediaData])
+
+    /**
      * Resolve the video or screenshot already present in the dialog.
      */
     const resolveSmartVideoBlob = useCallback(async () => {
@@ -452,14 +583,48 @@ export const VideoDownloadAndShareDialog = () => {
                 filename:   sanitizeFilenameStem(_mediaBlob.current.filename, DEFAULT_IMAGE_FILENAME),
                 extension:  getVideoExtension(),
                 mimeType:   getVideoMimeType(),
+                url:        _mediaBlob.current.url,
+            }
+        }
+
+        const sourceBlob = _mediaBlob.current.blob
+        const filenameTagInfo = _mediaBlob.current.filenameTagInfo
+        const requestToken = _mediaRequestToken.current
+        let blob = sourceBlob
+        let url = _mediaBlob.current.url
+
+        if (filenameTagInfo) {
+            const metadataTagSignature = JSON.stringify(filenameTagInfo)
+            if (_mediaBlob.current.metadataBlob
+                && _mediaBlob.current.metadataTagSignature === metadataTagSignature) {
+                blob = _mediaBlob.current.metadataBlob
+                url = _mediaBlob.current.metadataBlobUrl
+            }
+            else {
+                const metadataBlob = await rewriteReplayVideoMetadata({blob: sourceBlob, filenameTagInfo})
+                if (requestToken !== _mediaRequestToken.current || sourceBlob !== _mediaBlob.current.blob) {
+                    return {blob: null, filename: '', extension: getVideoExtension(), mimeType: getVideoMimeType(), url: null}
+                }
+
+                const metadataBlobUrl = URL.createObjectURL(metadataBlob)
+                const previousMetadataUrl = _mediaBlob.current.metadataBlobUrl
+                if (previousMetadataUrl) {
+                    URL.revokeObjectURL(previousMetadataUrl)
+                }
+                _mediaBlob.current.metadataBlob = metadataBlob
+                _mediaBlob.current.metadataBlobUrl = metadataBlobUrl
+                _mediaBlob.current.metadataTagSignature = metadataTagSignature
+                blob = metadataBlob
+                url = metadataBlobUrl
             }
         }
 
         return {
-            blob:      _mediaBlob.current.blob,
+            blob,
             filename:   getVideoFilenameStem(),
             extension:  getVideoExtension(),
             mimeType:   getVideoMimeType(),
+            url,
         }
     }, [getVideoFilenameStem, getVideoExtension, getVideoMimeType])
 
@@ -467,7 +632,7 @@ export const VideoDownloadAndShareDialog = () => {
      * Handle share action with Web Share API fallback.
      */
     const handleShare = useCallback(async () => {
-        if (_shareInFlight.current) {
+        if (_mediaActionInFlight.current) {
             return
         }
         const exportMedia = await resolveSmartVideoBlob()
@@ -480,7 +645,7 @@ export const VideoDownloadAndShareDialog = () => {
             return
         }
 
-        _shareInFlight.current = true
+        _mediaActionInFlight.current = true
         const isVideo = __.mediaCapture.isVideo()
         const extension = isVideo ? exportMedia.extension || getVideoExtension() : lgs.settings.ui.video.image
         const file = new File(
@@ -535,7 +700,7 @@ export const VideoDownloadAndShareDialog = () => {
                           })
         }
         finally {
-            _shareInFlight.current = false
+            _mediaActionInFlight.current = false
         }
     }, [getVideoExtension, getVideoMimeType, resolveSmartVideoBlob])
 
@@ -560,15 +725,10 @@ export const VideoDownloadAndShareDialog = () => {
                     return
                 }
                 const downloadFilename = buildMediaFilename(media.filename, media.extension || getVideoExtension(), DEFAULT_VIDEO_FILENAME)
-                if (_mediaBlob.current.source === 'deferred-replay') {
-                    const link = document.createElement('a')
-                    link.href = _mediaBlob.current.url
-                    link.download = downloadFilename
-                    link.click()
-                }
-                else {
-                    await __.mediaCapture.download({filename: downloadFilename})
-                }
+                const link = document.createElement('a')
+                link.href = media.url
+                link.download = downloadFilename
+                link.click()
             }
             else {
                 await __.mediaCapture.download({
@@ -617,6 +777,7 @@ export const VideoDownloadAndShareDialog = () => {
         })
         setCanDownloadAndShare(false)
         setFilename('')
+        _filenameSuffix.current = ''
         void __.mediaCapture?.releaseMedia?.()
         setDeferredMediaData(null)
     }, [prepareReplaySceneForDialog, releaseMediaUrl])
@@ -725,6 +886,21 @@ export const VideoDownloadAndShareDialog = () => {
                         .{isVideo ? getVideoExtension() : lgs.settings.ui.video.image}
                     </span>
                 </WaInput>
+                {isVideo && (
+                    <WaButton
+                        className="video-file-tag-button"
+                        appearance="outlined"
+                        size="s"
+                        variant="neutral"
+                        disabled={!canDownloadAndShare
+                            || mediaData.dimensions.width <= 0
+                            || mediaData.dimensions.height <= 0}
+                        onClick={handleAddVideoTags}
+                    >
+                        <WaIcon slot="start" {...UI_ACTIONS.addVideoTags.icon}/>
+                        {UI_ACTIONS.addVideoTags.label}
+                    </WaButton>
+                )}
                 <div className="video-file-info-action">
                     <WaTooltip for="video-recording-info-trigger" placement="top">
                         {'Recording information'}
