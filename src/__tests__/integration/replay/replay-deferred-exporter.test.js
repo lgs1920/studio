@@ -1761,9 +1761,22 @@ describe('ReplayDeferredExporter', () => {
             consoleTable.mockRestore()
         }
 
-        const phases = renderReplayExportFrame.mock.calls.slice(-result.plan.manifest.frameCount)
+        const tilePrewarmSampleCalls = renderReplayExportFrame.mock.calls.filter(([options]) => options.tilePrewarm === true)
+        const tilePrewarmRestoreCalls = renderReplayExportFrame.mock.calls.filter(([options]) => options.tilePrewarm === 'restore')
+        const tilePrewarmReadinessCalls = tileCoordinator.prepareForCapture.mock.calls
+            .filter(([options]) => options.maxMillis === 100)
+        const prewarmRenderMillis = (tilePrewarmSampleCalls.length + tilePrewarmRestoreCalls.length - 4) * 40
+        const prewarmReadinessMillis = (tilePrewarmReadinessCalls.length - 3) * 20
+        const expectedOtherMillis = 5220 + prewarmRenderMillis + prewarmReadinessMillis
+        const prewarmAllowancePerFrame = (prewarmRenderMillis + prewarmReadinessMillis)
+            / result.plan.manifest.frameCount
+        const phases = renderReplayExportFrame.mock.calls
+            .filter(([options]) => options.tilePrewarm === undefined)
+            .slice(-result.plan.manifest.frameCount)
             .map(([frame]) => frame.phase.kind)
-        const dryRunFrameCalls = renderReplayExportFrame.mock.calls.slice(-result.plan.manifest.frameCount)
+        const dryRunFrameCalls = renderReplayExportFrame.mock.calls
+            .filter(([options]) => options.tilePrewarm === undefined)
+            .slice(-result.plan.manifest.frameCount)
         const readinessFrameCalls = dryRunFrameCalls.filter(([options]) => options.frame.isFirst
             || options.frame.isLast
             || options.phase.isFinalSceneFrame
@@ -1789,14 +1802,19 @@ describe('ReplayDeferredExporter', () => {
             cameraTraceMillis: result.plan.manifest.frameCount * 40,
             widgetStateMillis: 0,
             tileReadinessMillis: readinessFrameCalls.length * 20,
-            otherMillis: 5220,
-            totalMillis: 5220 + result.plan.manifest.frameCount * 40 + readinessFrameCalls.length * 20,
+            otherMillis: expectedOtherMillis,
+            totalMillis: expectedOtherMillis + result.plan.manifest.frameCount * 40 + readinessFrameCalls.length * 20,
         })
         expect(phases).toContain('pre-replay')
         expect(phases).toContain('replay')
         expect(phases).toContain('post-replay')
-        expect(renderReplayExportFrame).toHaveBeenCalledTimes(result.plan.manifest.frameCount + 4)
-        expect(tileCoordinator.prepareForCapture.mock.calls.filter(([options]) => options.maxMillis === 100)).toHaveLength(3)
+        expect(tilePrewarmSampleCalls.length).toBeGreaterThan(3)
+        expect(tilePrewarmRestoreCalls.length).toBeGreaterThan(1)
+        expect(tilePrewarmSampleCalls.some(([options]) => options.frame.frameTimeMs > 1000)).toBe(true)
+        expect(renderReplayExportFrame).toHaveBeenCalledTimes(
+            result.plan.manifest.frameCount + tilePrewarmSampleCalls.length + tilePrewarmRestoreCalls.length,
+        )
+        expect(tilePrewarmReadinessCalls).toHaveLength(tilePrewarmSampleCalls.length)
         expect(tileCoordinator.prepareForCapture.mock.calls.filter(([options]) => options.maxMillis === 250))
             .toHaveLength(readinessFrameCalls.length)
         expect(frameTileWaitCount).toBe(readinessFrameCalls.length)
@@ -1808,10 +1826,12 @@ describe('ReplayDeferredExporter', () => {
         expect(buildCanvas).not.toHaveBeenCalled()
         expect(CanvasOverlayComposer).not.toHaveBeenCalled()
         expect(result.plan.runtime.exportElapsedMillis).toBe(
-            5220 + result.plan.manifest.frameCount * 40 + readinessFrameCalls.length * 20,
+            expectedOtherMillis + result.plan.manifest.frameCount * 40 + readinessFrameCalls.length * 20,
         )
-        expect(result.plan.runtime.exportAverageFrameMillis).toBeLessThan(60)
-        expect(result.plan.runtime.exportEstimatedTotalMillis).toBeLessThan(result.plan.manifest.frameCount * 60)
+        expect(result.plan.runtime.exportAverageFrameMillis).toBeLessThan(60 + prewarmAllowancePerFrame)
+        expect(result.plan.runtime.exportEstimatedTotalMillis).toBeLessThan(
+            result.plan.manifest.frameCount * (60 + prewarmAllowancePerFrame),
+        )
         expect(monitorSnapshots.find(snapshot => snapshot.mode === 'dry-run' && snapshot.processedFrames > 0)).toMatchObject({
             elapsedMillis: 5280,
             estimatedRemainingMillis: null,
