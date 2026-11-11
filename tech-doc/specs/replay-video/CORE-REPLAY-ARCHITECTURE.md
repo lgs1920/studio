@@ -2,7 +2,7 @@
 
 Status: current implementation inventory; see the implementation status for known gaps
 
-Date: 2026-11-06
+Date: 2026-11-10
 
 ## Purpose
 
@@ -464,7 +464,9 @@ retargets or clears the renderer used by the visible Studio viewer. The host
 uses the requested
 physical output dimensions as its drawing buffer, independent of the display
 resolution, and applies the same canonical Replay frame intents and crop
-frustum. It never changes the interactive camera. The exporter verifies the
+frustum. Pixel-sized Replay strokes, marker limits, and effects use the
+crop-to-output pixel scale so their proportions match the preview at the
+requested resolution. It never changes the interactive camera. The exporter verifies the
 Cesium drawing-buffer dimensions after resize and stops with an error if they do
 not match the requested output.
 
@@ -485,7 +487,10 @@ scene content. Required visible objects without a reconstruction strategy
 produce an explicit compatibility error. Provider references are reused;
 imagery layers, tilesets, cameras, data sources, and WebGL objects are not shared
 between contexts. Widget and overlay composition still uses the existing
-logical Replay time and frame composer. Native export preserves the prepared
+logical Replay time and frame composer. POI opening and closing remains driven
+by the canonical Replay sample. Native HQ waits for the corresponding React POI
+capture and applies it to the isolated billboard before that frame is rendered.
+Native export preserves the prepared
 camera's world-space pose when initializing its isolated camera, then applies
 each canonical Replay camera frame to that target.
 

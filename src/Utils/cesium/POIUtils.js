@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-03-01
- * Last modified: 2026-11-08
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -51,6 +51,45 @@ export const POI_PROFILER = 'profiler'
 const finiteNumber = value => {
     const number = Number(value)
     return Number.isFinite(number) ? number : null
+}
+
+/** Return the first positive finite dimension from one render target.
+ * @param {...*} values - Candidate viewport dimensions.
+ * @returns {number|null} First valid dimension.
+ */
+const firstPositiveDimension = (...values) => values
+    .map(finiteNumber)
+    .find(value => value !== null && value > 0) ?? null
+
+/** Resolve the native pixel scale for a POI drawn into a physical export viewport.
+ * @param {Object|null} renderTarget - Target geometry supplied by Native HQ.
+ * @returns {number} Physical pixels per target viewport pixel.
+ */
+const replayRenderTargetPixelScale = renderTarget => {
+    const configuredScale = finiteNumber(renderTarget?.poiPixelScale)
+    if (configuredScale !== null && configuredScale > 0) {
+        return configuredScale
+    }
+
+    const outputWidth = firstPositiveDimension(
+        renderTarget?.outputDimensions?.width,
+        renderTarget?.scene?.drawingBufferWidth,
+        renderTarget?.canvas?.width,
+    )
+    const outputHeight = firstPositiveDimension(
+        renderTarget?.outputDimensions?.height,
+        renderTarget?.scene?.drawingBufferHeight,
+        renderTarget?.canvas?.height,
+    )
+    const viewportWidth = firstPositiveDimension(renderTarget?.viewportDimensions?.width)
+    const viewportHeight = firstPositiveDimension(renderTarget?.viewportDimensions?.height)
+    if (!outputWidth || !outputHeight || !viewportWidth || !viewportHeight) {
+        return 1
+    }
+
+    const scaleX = outputWidth / viewportWidth
+    const scaleY = outputHeight / viewportHeight
+    return Math.min(scaleX, scaleY)
 }
 
 /** Escape color strings before embedding them in a fallback SVG attribute. */
@@ -450,6 +489,7 @@ export class POIUtils {
         billboardOverrides = null,
     } = {}) => {
         const hasImageUpdate = (poi.image !== undefined && poi.image !== null) || clearImage
+        const renderPixelScale = replayRenderTargetPixelScale(renderTarget)
         // Default dimensions if poi.image is undefined
         const width = clearImage ? 32 : poi.image?.width ?? 32
         const height = clearImage ? 32 : poi.image?.height ?? 32
@@ -491,6 +531,22 @@ export class POIUtils {
 
         if (billboard.pixelOffset && !(billboard.pixelOffset instanceof Cartesian2)) {
             billboard.pixelOffset = new Cartesian2(billboard.pixelOffset.x ?? 0, billboard.pixelOffset.y ?? 0)
+        }
+        if (renderPixelScale !== 1) {
+            const billboardWidth = finiteNumber(billboard.width)
+            const billboardHeight = finiteNumber(billboard.height)
+            if (billboardWidth !== null) {
+                billboard.width = billboardWidth * renderPixelScale
+            }
+            if (billboardHeight !== null) {
+                billboard.height = billboardHeight * renderPixelScale
+            }
+            if (billboard.pixelOffset) {
+                billboard.pixelOffset = new Cartesian2(
+                    billboard.pixelOffset.x * renderPixelScale,
+                    billboard.pixelOffset.y * renderPixelScale,
+                )
+            }
         }
 
         // Get entity container

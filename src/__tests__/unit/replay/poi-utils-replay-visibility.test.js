@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-12
- * Last modified: 2026-11-08
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,11 @@
 import { GLOBAL_PARENT } from '@Core/constants'
 import { POIUtils } from '@Utils/cesium/POIUtils'
 import {getOrCreateSceneRenderScheduler} from '@Utils/cesium/SceneRenderScheduler'
+import {setReplayRenderTarget, clearReplayRenderTarget} from '@Core/ui/replay/ReplayRenderTarget'
+import {
+    syncCapturedReplayPOIToTarget,
+    waitForReplayPOITargetCapture,
+} from '@Core/ui/replay/ReplayPOICaptureBridge'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
@@ -664,6 +669,41 @@ describe('POIUtils replay visibility', () => {
         expect(propertyValue(entity.billboard.pixelOffset)).toMatchObject({x: 6, y: -9})
         expect(targetScene.requestRender).toHaveBeenCalledOnce()
         expect(globalThis.lgs.viewer.scene.requestRender).not.toHaveBeenCalled()
+    })
+
+    it('waits for an expanded React capture and copies its bitmap to the Native HQ entity', async () => {
+        const {container: targetEntities} = createEntityContainer()
+        const targetScene = {requestRender: vi.fn()}
+        const target = {
+            viewer: {entities: targetEntities, dataSources: {length: 0}},
+            scene: targetScene,
+            canvas: {width: 1920, height: 1080},
+        }
+        const owner = {}
+        const poi = {
+            id: 'animated-native-hq-poi',
+            longitude: 2,
+            latitude: 48,
+            visible: true,
+            expanded: true,
+            image: {src: {bitmap: 'expanded-card'}, width: 180, height: 120},
+            pixelOffset: {x: 12, y: -18},
+        }
+        setReplayRenderTarget(owner, target)
+        const captureReady = waitForReplayPOITargetCapture({target, poiId: poi.id, expanded: true})
+
+        await syncCapturedReplayPOIToTarget({poi, expanded: true, effectiveVisibility: true})
+        await expect(captureReady).resolves.toBeUndefined()
+
+        const entity = targetEntities.getById(poi.id)
+        expect(entity).toBeDefined()
+        expect(propertyValue(entity.billboard.image)).toBe(poi.image.src)
+        expect(propertyValue(entity.billboard.width)).toBe(180)
+        expect(propertyValue(entity.billboard.height)).toBe(120)
+        expect(propertyValue(entity.billboard.pixelOffset)).toMatchObject({x: 12, y: -18})
+        expect(globalThis.lgs.viewer.entities.getById(poi.id)).toBeUndefined()
+        expect(targetScene.requestRender).toHaveBeenCalledOnce()
+        clearReplayRenderTarget(owner, target)
     })
 
     it('scales an anchored POI pixel offset with the billboard distance scale', async () => {

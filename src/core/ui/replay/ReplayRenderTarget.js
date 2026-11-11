@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-11-08
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,8 @@
 import {JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 
 const replayRenderTargets = new WeakMap()
+let activeReplayRenderTargetOwner = null
+let activeReplayRenderTarget = null
 
 /**
  * Install an explicit render target for one replay owner.
@@ -38,13 +40,23 @@ export const setReplayRenderTarget = (owner, target = null) => {
         return null
     }
     if (!target) {
+        const current = replayRenderTargets.get(owner)
         replayRenderTargets.delete(owner)
+        if (activeReplayRenderTargetOwner === owner && activeReplayRenderTarget === current) {
+            activeReplayRenderTargetOwner = null
+            activeReplayRenderTarget = null
+        }
         return null
     }
 
     replayRenderTargets.set(owner, target)
+    activeReplayRenderTargetOwner = owner
+    activeReplayRenderTarget = target
     return target
 }
+
+/** Return the isolated target currently receiving Replay POI captures. */
+export const activeReplayRenderTargetForPOICapture = () => activeReplayRenderTarget
 
 /**
  * Return the explicit target currently owned by a replay session.
@@ -53,6 +65,74 @@ export const setReplayRenderTarget = (owner, target = null) => {
  * @returns {Object|null} Active target.
  */
 export const replayRenderTargetFor = owner => replayRenderTargets.get(owner) ?? null
+
+/**
+ * Return the logical viewport for an isolated renderer whose frustum already
+ * applies the selected crop. Camera tracking must use the preview crop's CSS
+ * dimensions even when the isolated drawing buffer is much larger.
+ *
+ * @param {Object|null} target - Explicit Cesium render target.
+ * @returns {Object|null} Crop-local viewport in logical CSS pixels.
+ */
+export const replayRenderTargetCropViewport = target => {
+    if (!target?.cropProjection) {
+        return null
+    }
+
+    const width = Number(target.viewportDimensions?.width
+        ?? target.cropProjection?.crop?.width)
+    const height = Number(target.viewportDimensions?.height
+        ?? target.cropProjection?.crop?.height)
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        return null
+    }
+
+    return {
+        left: 0,
+        top: 0,
+        width,
+        height,
+        canvasWidth: width,
+        canvasHeight: height,
+        canvasLeft: 0,
+        canvasTop: 0,
+    }
+}
+
+/**
+ * Convert isolated-scene window coordinates into the preview crop's logical
+ * coordinate space. Cesium projects against canvas.clientWidth/clientHeight,
+ * which are the physical output size in the off-screen host.
+ *
+ * @param {Object|null} target - Explicit Cesium render target.
+ * @param {Object|null} position - Cesium window-coordinate position.
+ * @returns {Object|null} Position in logical crop CSS pixels.
+ */
+export const replayRenderTargetWindowPosition = (target, position) => {
+    const viewport = replayRenderTargetCropViewport(target)
+    const x = Number(position?.x)
+    const y = Number(position?.y)
+    if (!viewport || !Number.isFinite(x) || !Number.isFinite(y)) {
+        return position ?? null
+    }
+
+    const bounds = target.canvas?.getBoundingClientRect?.()
+    const canvasWidth = Number(target.canvas?.clientWidth)
+        || Number(bounds?.width)
+        || Number(target.canvas?.width)
+    const canvasHeight = Number(target.canvas?.clientHeight)
+        || Number(bounds?.height)
+        || Number(target.canvas?.height)
+    if (!Number.isFinite(canvasWidth) || !Number.isFinite(canvasHeight)
+        || canvasWidth <= 0 || canvasHeight <= 0) {
+        return position
+    }
+
+    return {
+        x: x * viewport.width / canvasWidth,
+        y: y * viewport.height / canvasHeight,
+    }
+}
 
 /** Resolve the renderer that owns geometry for the active replay target. */
 export const replayRendererFor = owner => {
@@ -76,6 +156,10 @@ export const clearReplayRenderTarget = (owner, expectedTarget = null) => {
     }
 
     replayRenderTargets.delete(owner)
+    if (activeReplayRenderTargetOwner === owner && activeReplayRenderTarget === current) {
+        activeReplayRenderTargetOwner = null
+        activeReplayRenderTarget = null
+    }
     return true
 }
 

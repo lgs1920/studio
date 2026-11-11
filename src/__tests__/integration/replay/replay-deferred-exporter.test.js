@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-11-08
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -839,6 +839,29 @@ describe('ReplayDeferredExporter', () => {
             recordingSync: true,
             visibleOverlayIds: ['compass-widget#1'],
         })
+
+        const previewCameraState = {
+            destination: {longitude: 3, latitude: 49, height: 700},
+            orientation: {heading: 0.4, pitch: -0.6, roll: 0},
+            altitude: 700,
+            pivot: {longitude: 3, latitude: 49, height: 250},
+            worldPose: {
+                position: {x: 4, y: 5, z: 6},
+                direction: {x: -1, y: 0, z: 0},
+                up: {x: 0, y: 0, z: 1},
+                transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+            },
+        }
+        const previewContext = captureReplayDeferredExportContext({
+            replay,
+            controller,
+            cameraState: previewCameraState,
+            dimensions: {width: 1280, height: 720},
+            captureMode: 'quality',
+            fps: 30,
+        })
+
+        expect(previewContext.context.cameraState).toMatchObject(previewCameraState)
 
         const freshPlan = prepareReplayDeferredExportPlan({
             replay,
@@ -2208,20 +2231,43 @@ describe('ReplayDeferredExporter', () => {
             }),
             positionCartographic: {longitude: 1, latitude: 0.5, height: 1000},
         }
-        const mainScene = {mode: 3, camera, globe: {}, fog: {}, render: vi.fn(), requestRender: vi.fn()}
+        const mainScene = {
+            mode: 3,
+            camera,
+            globe: {},
+            fog: {},
+            msaaSamples: 4,
+            render: vi.fn(),
+            requestRender: vi.fn(),
+        }
         const isolatedScene = {mode: 3, camera: {}, globe: {}, fog: {}, render: vi.fn(), requestRender: vi.fn()}
         const viewer = {
             scene: mainScene,
             camera,
+            resolutionScale: 2,
             terrainProvider: {id: 'terrain'},
             imageryLayers: {length: 0, get: vi.fn()},
             useDefaultRenderLoop: true,
+            resize: vi.fn(),
             render: vi.fn(),
         }
         const isolatedViewer = {scene: isolatedScene, canvas: isolatedCanvas, render: vi.fn()}
         const target = {viewer: isolatedViewer, scene: isolatedScene, canvas: isolatedCanvas}
         let activeScene = mainScene
+        const previewCameraState = {
+            destination: {longitude: 3, latitude: 49, height: 700},
+            orientation: {heading: 0.4, pitch: -0.6, roll: 0},
+            altitude: 700,
+            pivot: {longitude: 3, latitude: 49, height: 250},
+            worldPose: {
+                position: {x: 4, y: 5, z: 6},
+                direction: {x: -1, y: 0, z: 0},
+                up: {x: 0, y: 0, z: 1},
+                transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+            },
+        }
         const replayMode = {
+            captureCameraSnapshot: vi.fn(() => previewCameraState),
             restorePlaybackScene: vi.fn(async () => undefined),
             preparePlaybackSceneForExport: vi.fn(async () => true),
             renderReplayExportFrame: vi.fn(({phase}) => ({progress: phase.progress})),
@@ -2237,7 +2283,11 @@ describe('ReplayDeferredExporter', () => {
             prepareForCapture: vi.fn(async () => true),
             destroy: vi.fn(),
         }
-        const isolatedRenderHostFactory = vi.fn(() => isolatedRenderHost)
+        const isolatedRenderHostFactory = vi.fn(() => {
+            expect(viewer.resolutionScale).toBe(1)
+            expect(mainScene.msaaSamples).toBe(1)
+            return isolatedRenderHost
+        })
         const widgetId = 'custom-replay-widget'
         const widgetElement = document.createElement('div')
         widgetElement.dataset.videoOverlayVisible = 'true'
@@ -2330,6 +2380,10 @@ describe('ReplayDeferredExporter', () => {
 
             const composer = CanvasOverlayComposer.instances[0]
             expect(result.blob.size).toBeGreaterThan(0)
+            expect(replayMode.captureCameraSnapshot).toHaveBeenCalledWith({camera})
+            expect(replayMode.preparePlaybackSceneForExport).toHaveBeenCalledWith(expect.objectContaining({
+                cameraState: expect.objectContaining(previewCameraState),
+            }))
             expect(composer.sourceCanvas).toBe(isolatedCanvas)
             expect(composer.options.outputCanvas).toBe(buildCanvas.mock.results[0].value)
             expect(composer.canvas).toEqual({width: 320, height: 180})
@@ -2339,6 +2393,8 @@ describe('ReplayDeferredExporter', () => {
             expect(flushMirror).toHaveBeenCalledTimes(result.frameCount)
             expect(mirror.setFrameDriven).toHaveBeenLastCalledWith(false)
             expect(isolatedRenderHost.canvas).toHaveBeenCalledTimes(result.frameCount + 1)
+            expect(viewer.resolutionScale).toBe(2)
+            expect(mainScene.msaaSamples).toBe(4)
             expect(buildCanvas.mock.results[0].value.width).toBe(320)
             expect(buildCanvas.mock.results[0].value.height).toBe(180)
 

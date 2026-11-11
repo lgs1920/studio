@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-08
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@
  */
 
 import {acquireReplayCameraOwnership, releaseReplayCameraOwnership, replayOwnedCameraFor, replayReturnCameraStateFor} from './ReplayCameraOwnership'
-import {replayCameraFor, replayRendererFor} from './ReplayRenderTarget'
+import {replayCameraFor, replayRendererFor, replayRenderTargetFor} from './ReplayRenderTarget'
 import { REPLAY_DRAWER }                                                               from '@Core/constants'
 import {
     getJourneyReplayHideOtherJourneys,
@@ -533,6 +533,44 @@ export const captureCameraSnapshot = (mode, {camera = replayCameraFor(mode), sam
             ? {...globalThis.__?.ui?.cameraManager?.position}
             : null,
     }
+}
+
+/**
+ * Mirror the active isolated Replay camera into Studio's visible viewer.
+ *
+ * The export camera owns the frame's position and orientation. Keep the
+ * visible viewer's own frustum so its image scale remains tied to the visible
+ * viewport instead of the Native HQ output dimensions. The visible camera is
+ * restored to its pre-export snapshot by the exporter during cleanup.
+ *
+ * @param {object} mode - Replay session mode.
+ * @returns {boolean} Whether the visible camera was updated.
+ */
+export const syncVisibleCameraToRenderTarget = (mode) => {
+    const target = replayRenderTargetFor(mode)
+    const sourceCamera = target?.viewer?.camera ?? target?.camera ?? target?.scene?.camera
+    const visibleCamera = globalThis.lgs?.viewer?.camera ?? globalThis.lgs?.camera
+    if (!sourceCamera || !visibleCamera || sourceCamera === visibleCamera) {
+        return false
+    }
+
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    // Camera.changed is raised by Cesium on the next render. Keep the
+    // export-driven camera updates from being interpreted as manual UI edits.
+    state.suppressPlaybackCameraSync = true
+
+    visibleCamera.cancelFlight?.()
+    visibleCamera.lookAtTransform(Matrix4.clone(sourceCamera.transform))
+    visibleCamera.setView({
+        destination: Cartesian3.clone(sourceCamera.positionWC),
+        orientation: {
+            direction: Cartesian3.clone(sourceCamera.directionWC),
+            up: Cartesian3.clone(sourceCamera.upWC),
+        },
+    })
+    const visibleScene = globalThis.lgs?.viewer?.scene ?? globalThis.lgs?.scene
+    visibleScene?.requestRender?.()
+    return true
 }
 
 /** Save the current camera pose and acquire the camera lease for Replay. */

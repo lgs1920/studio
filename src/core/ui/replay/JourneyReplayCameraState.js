@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-17
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,7 +45,14 @@ import {
     getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, toGlobalReplayCameraSettings,
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
-import {replayCameraFor, replaySceneFor, replayViewerFor} from './ReplayRenderTarget'
+import {
+    replayCameraFor,
+    replayRenderTargetCropViewport,
+    replayRenderTargetFor,
+    replayRenderTargetWindowPosition,
+    replaySceneFor,
+    replayViewerFor,
+} from './ReplayRenderTarget'
 import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
 import {getBasicReplaySettings, writeBasicReplaySettings} from './ReplayModeSettings'
 import {syncJourneyExpertReplayCamera, syncJourneyBasicReplayCamera} from './ReplayUserModes'
@@ -431,10 +438,14 @@ export const windowPositionForSample =  (mode, sample) => {
                              ? scene.worldToWindowCoordinates(position)
                              : SceneTransforms.worldToWindowCoordinates(scene, position)
             if (windowPosition) {
-                return {
+                const position = {
                     x: windowPosition.x,
                     y: windowPosition.y,
                 }
+                return replayRenderTargetWindowPosition(
+                    replayRenderTargetFor(mode),
+                    position,
+                ) ?? position
             }
         }
         catch {
@@ -444,10 +455,14 @@ export const windowPositionForSample =  (mode, sample) => {
 
         const canvasPosition = scene.cartesianToCanvasCoordinates?.(position, new Cartesian2())
         if (canvasPosition) {
-            return {
+            const position = {
                 x: canvasPosition.x,
                 y: canvasPosition.y,
             }
+            return replayRenderTargetWindowPosition(
+                replayRenderTargetFor(mode),
+                position,
+            ) ?? position
         }
 
         return windowPosition ?? canvasPosition ?? null
@@ -467,6 +482,12 @@ export const trackingWindowPositionForSample =  (mode, sample) => {
         const windowPosition = call.windowPositionForSample(sample)
         if (!windowPosition) {
             return null
+        }
+
+        // Native HQ already applies the crop in its camera frustum, so Cesium's
+        // window coordinates are crop-local and must not be offset again.
+        if (replayRenderTargetCropViewport(replayRenderTargetFor(mode))) {
+            return windowPosition
         }
 
         const cropRect = call.videoCropRect()

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-08
- * Last modified: 2026-11-08
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -102,5 +102,52 @@ describe('isolated Replay render target ownership', () => {
 
         destroyed = true
         expect(() => dataSources.dataSourceRemoved.raiseEvent()).not.toThrow()
+    })
+
+    it('detaches POI collection listeners when Cesium emits removals during viewer destruction', () => {
+        const createEvent = () => {
+            const listeners = new Set()
+            return {
+                addEventListener(listener) {
+                    listeners.add(listener)
+                    return () => listeners.delete(listener)
+                },
+                raiseEvent: (...args) => [...listeners].forEach(listener => listener(...args)),
+                get listenerCount() {
+                    return listeners.size
+                },
+            }
+        }
+        const entityCollection = {collectionChanged: createEvent()}
+        const dataSources = {
+            length: 0,
+            dataSourceAdded: createEvent(),
+            dataSourceRemoved: createEvent(),
+            dataSourceMoved: createEvent(),
+        }
+        let destroyed = false
+        const viewer = {
+            scene: {},
+            dataSources,
+            get entities() {
+                if (destroyed) {
+                    throw new TypeError("Cannot read properties of undefined (reading 'defaultDataSource')")
+                }
+                return entityCollection
+            },
+        }
+        const lookup = createReplayPOIEntityLookup(viewer)
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+        destroyed = true
+
+        expect(() => dataSources.dataSourceRemoved.raiseEvent()).not.toThrow()
+        expect(dataSources.dataSourceRemoved.listenerCount).toBe(0)
+        expect(entityCollection.collectionChanged.listenerCount).toBe(0)
+        expect(warn).toHaveBeenCalledWith(
+            '[Replay] POI entity lookup detached during Cesium viewer teardown.',
+            expect.objectContaining({message: expect.stringContaining('defaultDataSource')}),
+        )
+        expect(lookup.get({id: 'poi-1'})).toEqual([])
     })
 })

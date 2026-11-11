@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -69,6 +69,11 @@ import {
 }                                                                                          from './JourneyReplayPOISettings'
 import {projectReplayPOIsOnSampler} from './JourneyReplayPOIProjection'
 import {isPOIAnchorOccludedByTerrain} from './ReplayPOITerrainVisibility'
+import {replayRenderTargetFor} from './ReplayRenderTarget'
+import {
+    cancelReplayPOITargetCaptureWait,
+    waitForReplayPOITargetCapture,
+} from './ReplayPOICaptureBridge'
 
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
@@ -361,24 +366,56 @@ export const syncRuntimeNearbyPOIs = (_mode, journey = currentReplayJourney()) =
     return nearbyPois
 }
 
+/** Synchronize a Replay POI expansion state with the Native HQ capture.
+ * @param {object} mode - Replay session mode.
+ * @param {string} poiId - POI identifier.
+ * @param {boolean} expanded - Requested card expansion state.
+ * @returns {Promise<object|null>} Updated POI or null when it is unavailable.
+ */
 export const updatePOIExpandedState = async (mode, poiId, expanded) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        if (!poiId) {
-            return null
-        }
-
-        const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
-        if (!poi || poi.expanded === expanded) {
-            return poi ?? null
-        }
-
-        return globalThis.__?.ui?.poiManager?.updatePOI?.(poiId, {expanded}, {
-            skipPersist:        true,
-            immediate:          true,
-            skipLocationUpdate: true,
-        }) ?? null
+    if (!poiId) {
+        return null
     }
+
+    const poi = globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
+    if (!poi) {
+        return null
+    }
+
+    const target = replayRenderTargetFor(mode)
+    const poiExpansionChanged = poi.expanded !== expanded
+    const poiVisualStateChanged = (poi.expanded === true) !== (expanded === true)
+    const shouldWaitForExportCapture = target && (
+        (poiVisualStateChanged && (expanded === true || POIUtils.isPOIVisibleOnMap(poi)))
+        || (expanded === true && state.replayPoiTriggered?.has(poiId))
+    )
+    const captureReady = shouldWaitForExportCapture
+        ? waitForReplayPOITargetCapture({target, poiId, expanded: expanded === true})
+        : null
+
+    try {
+        const updatedPOI = poiExpansionChanged
+            ? await globalThis.__?.ui?.poiManager?.updatePOI?.(poiId, {expanded}, {
+                skipPersist:        true,
+                immediate:          true,
+                skipLocationUpdate: true,
+            })
+            : poi
+        if (captureReady) {
+            await captureReady
+        }
+        return updatedPOI ?? globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId) ?? poi
+    }
+    catch (error) {
+        if (captureReady) {
+            cancelReplayPOITargetCaptureWait(target, poiId, error)
+            // Consume the waiter rejection when the state update failed first.
+            await captureReady.catch(() => {})
+        }
+        throw error
+    }
+}
 
 /** Restore the POI expansion and appearance state saved before Replay playback. */
 export const restoreNearbyPOIsAfterPlayback = async (mode, {restoreExpanded = true} = {}) => {

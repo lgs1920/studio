@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-11-08
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -84,9 +84,77 @@ describe('IsolatedReplayRenderHost', () => {
             destroy: vi.fn(),
             isDestroyed: vi.fn(() => false),
         }
+        const createWidget = vi.fn(() => widget)
         const host = new IsolatedReplayRenderHost({
             dimensions: {width: 2160, height: 3840},
             viewportDimensions: {width: 674.446, height: 1199.001},
+            descriptor: {sceneMode: 3, imageryLayers: [], environment: {}, compatibilityLimitations: []},
+            createWidget,
+            createReadinessCoordinator: vi.fn(() => ({})),
+        })
+
+        try {
+            await host.initialize()
+            expect(container.style).toMatchObject({width: '2160px', height: '3840px'})
+            expect(createWidget).toHaveBeenCalledWith(container, expect.objectContaining({
+                contextOptions: {webgl: {antialias: false}},
+                msaaSamples: 1,
+            }))
+            expect(widget.resolutionScale).toBe(1)
+            expect(host.renderTarget().viewportDimensions).toEqual({width: 674.446, height: 1199.001})
+        }
+        finally {
+            host.destroy()
+            vi.unstubAllGlobals()
+        }
+    })
+
+    it('releases the isolated WebGL context and DOM host when Cesium destruction throws', async () => {
+        const container = {
+            dataset: {},
+            style: {},
+            setAttribute: vi.fn(),
+            remove: vi.fn(),
+        }
+        const loseContext = vi.fn()
+        const context = {
+            MAX_RENDERBUFFER_SIZE: 1,
+            MAX_TEXTURE_SIZE: 2,
+            MAX_VIEWPORT_DIMS: 3,
+            getExtension: vi.fn(() => ({loseContext})),
+            getParameter: vi.fn(parameter => parameter === 3 ? [16384, 16384] : 16384),
+        }
+        const canvas = {
+            width: 1920,
+            height: 1080,
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+            getContext: vi.fn(() => context),
+        }
+        const widget = {
+            canvas,
+            scene: {
+                drawingBufferWidth: 1920,
+                drawingBufferHeight: 1080,
+                primitives: {add: vi.fn()},
+                screenSpaceCameraController: {},
+                globe: {},
+                fog: {},
+            },
+            imageryLayers: {add: vi.fn()},
+            resize: vi.fn(),
+            render: vi.fn(),
+            destroy: vi.fn(() => {
+                throw new Error('Cesium viewer teardown failed')
+            }),
+            isDestroyed: vi.fn(() => false),
+        }
+        vi.stubGlobal('document', {
+            createElement: vi.fn(() => container),
+            body: {append: vi.fn()},
+        })
+        const host = new IsolatedReplayRenderHost({
+            dimensions: {width: 1920, height: 1080},
             descriptor: {sceneMode: 3, imageryLayers: [], environment: {}, compatibilityLimitations: []},
             createWidget: vi.fn(() => widget),
             createReadinessCoordinator: vi.fn(() => ({})),
@@ -94,12 +162,11 @@ describe('IsolatedReplayRenderHost', () => {
 
         try {
             await host.initialize()
-            expect(container.style).toMatchObject({width: '2160px', height: '3840px'})
-            expect(widget.resolutionScale).toBe(1)
-            expect(host.renderTarget().viewportDimensions).toEqual({width: 674.446, height: 1199.001})
+            expect(() => host.destroy()).toThrow('Cesium viewer teardown failed')
+            expect(loseContext).toHaveBeenCalledOnce()
+            expect(container.remove).toHaveBeenCalledOnce()
         }
         finally {
-            host.destroy()
             vi.unstubAllGlobals()
         }
     })
@@ -627,8 +694,12 @@ describe('IsolatedReplayRenderHost', () => {
 
         await host.initialize()
         const pendingCapture = host.prepareForCapture()
-        canvas.dispatchEvent(new Event('webglcontextlost', {cancelable: true}))
-        await expect(pendingCapture).rejects.toThrow('WebGL context was lost during export')
+        canvas.dispatchEvent(Object.assign(new Event('webglcontextlost', {cancelable: true}), {
+            statusMessage: 'GPU context reset',
+        }))
+        await expect(pendingCapture).rejects.toThrow(
+            'The Native Replay WebGL context was lost while rendering 320 × 180 pixels. Browser status: GPU context reset.',
+        )
 
         host.destroy()
         expect(readiness.dispose).toHaveBeenCalledOnce()

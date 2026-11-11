@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -216,6 +216,12 @@ export class JourneyReplayCesiumRenderer {
     #viewer = () => this.#renderTarget?.viewer ?? globalThis.lgs?.viewer ?? null
 
     #scene = () => this.#renderTarget?.scene ?? globalThis.lgs?.scene ?? this.#viewer()?.scene ?? null
+
+    /** Resolve Native HQ output pixels per logical crop pixel for pixel-sized Replay graphics. */
+    #renderPixelScale = () => {
+        const configuredScale = finiteNumber(this.#renderTarget?.poiPixelScale)
+        return configuredScale !== null && configuredScale > 0 ? configuredScale : 1
+    }
 
     #requestRender = () => this.#scene()?.requestRender?.()
 
@@ -1066,6 +1072,7 @@ export class JourneyReplayCesiumRenderer {
         const hasVisibleBorder = border.width > 0 && border.opacity > 0
         const effectBorderBaseColor = hasVisibleBorder ? borderColor : fillColor
         const effect = progression.effect
+        const renderPixelScale = this.#renderPixelScale()
         const effectBorderOpacity = hasVisibleBorder ? border.opacity : fill.opacity
         const effectBorderColor = cssColor(effectBorderBaseColor, Color.fromCssColorString(DEFAULT_COLOR))
             .withAlpha(effectBorderOpacity)
@@ -1096,11 +1103,12 @@ export class JourneyReplayCesiumRenderer {
             maxRenderPoints: basicMode
                 ? normalizeReplaySampleCount(settings.sampleCount)
                 : MAX_RENDER_POINTS,
-            fillWidth: Math.max(REPLAY_MIN_TRACE_WIDTH, fill.width) * sizeScale,
-            borderWidth: Math.max(0, border.width) * sizeScale,
+            renderPixelScale,
+            fillWidth: Math.max(REPLAY_MIN_TRACE_WIDTH, fill.width) * sizeScale * renderPixelScale,
+            borderWidth: Math.max(0, border.width) * sizeScale * renderPixelScale,
             cursorDiameter: Math.max(CURSOR_MIN_RADIUS_METERS * 2, fill.width),
             cursorSizeScale: markerSizeScale,
-            cursorBorder: Math.max(0, border.width) * markerSizeScale,
+            cursorBorder: Math.max(0, border.width) * markerSizeScale * renderPixelScale,
         }
     }
 
@@ -1184,13 +1192,15 @@ export class JourneyReplayCesiumRenderer {
             const effectSpread = style.effectMode === REPLAY_EFFECT_NEON
                 ? REPLAY_EFFECT_NEON_FILL_SPREAD_METERS
                 : REPLAY_EFFECT_GLOW_FILL_SPREAD_METERS
-            return width + effectSpread
+            return width + effectSpread * style.renderPixelScale
         }
 
         const effectSpread = style.effectMode === REPLAY_EFFECT_NEON
             ? REPLAY_EFFECT_NEON_SPREAD_METERS
             : REPLAY_EFFECT_GLOW_SPREAD_METERS
-        return layer === 'border' ? Math.max(style.fillWidth, width) + effectSpread : width
+        return layer === 'border'
+            ? Math.max(style.fillWidth, width) + effectSpread * style.renderPixelScale
+            : width
     }
 
     #trackStyleForSegment = (segment) => {
@@ -1386,7 +1396,10 @@ export class JourneyReplayCesiumRenderer {
 
         const outerAlpha = style.effectMode === REPLAY_EFFECT_NEON ? 0.65 : 0.55
         this.#cursorEffectOuter.position = cursorPosition
-        this.#cursorEffectOuter.point.pixelSize = Math.max(pointSize * (style.effectMode === REPLAY_EFFECT_NEON ? 1.65 : 1.5), pointSize + 4)
+        this.#cursorEffectOuter.point.pixelSize = Math.max(
+            pointSize * (style.effectMode === REPLAY_EFFECT_NEON ? 1.65 : 1.5),
+            pointSize + 4 * style.renderPixelScale,
+        )
         this.#cursorEffectOuter.point.color = brightenEffectColor(
             style.effectBorderColor,
             style.effectMode,
@@ -1413,7 +1426,8 @@ export class JourneyReplayCesiumRenderer {
             ? REPLAY_EFFECT_NEON_FILL_ALPHA
             : REPLAY_EFFECT_GLOW_FILL_ALPHA
         this.#cursorEffectInner.position = cursorPosition
-        this.#cursorEffectInner.point.pixelSize = pointSize + (style.effectMode === REPLAY_EFFECT_NEON ? 3 : 2)
+        this.#cursorEffectInner.point.pixelSize = pointSize
+            + (style.effectMode === REPLAY_EFFECT_NEON ? 3 : 2) * style.renderPixelScale
         this.#cursorEffectInner.point.color = brightenEffectColor(
             style.effectFillEdgeColor,
             style.effectMode,
@@ -1444,7 +1458,7 @@ export class JourneyReplayCesiumRenderer {
         }
 
         this.#cursorEffectCore.position = cursorPosition
-        this.#cursorEffectCore.point.pixelSize = Math.max(pointSize * 1.12, pointSize + 1)
+        this.#cursorEffectCore.point.pixelSize = Math.max(pointSize * 1.12, pointSize + style.renderPixelScale)
         this.#cursorEffectCore.point.color = style.effectFillColor
         this.#cursorEffectCore.point.heightReference = HeightReference.CLAMP_TO_GROUND
         this.#cursorEffectCore.point.disableDepthTestDistance = 0
@@ -1467,6 +1481,9 @@ export class JourneyReplayCesiumRenderer {
             : boundingHeight > 0
                 ? boundingHeight
                 : drawingBufferHeight / (pixelRatio > 0 ? pixelRatio : 1)
+        const renderPixelScale = this.#renderPixelScale()
+        // Resolve the cursor's logical crop size before scaling it to the Native HQ drawing buffer.
+        const logicalCanvasHeight = cssCanvasHeight / renderPixelScale
         const cameraPosition = camera?.positionWC ?? camera?.position
         const hasPosition = isUsableCartesian3(position)
         const hasCameraPosition = isUsableCartesian3(cameraPosition)
@@ -1475,13 +1492,14 @@ export class JourneyReplayCesiumRenderer {
             : 1
         const fovy = finiteNumber(camera?.frustum?.fovy) ?? (Math.PI / 3)
         const tangent = Math.tan(fovy / 2)
-        const pixelsPerMeter = cssCanvasHeight > 0 && Number.isFinite(tangent) && tangent > 0
-            ? cssCanvasHeight / (2 * distance * tangent)
+        const pixelsPerMeter = logicalCanvasHeight > 0 && Number.isFinite(tangent) && tangent > 0
+            ? logicalCanvasHeight / (2 * distance * tangent)
             : 1
         const safePixelsPerMeter = Number.isFinite(pixelsPerMeter) && pixelsPerMeter > 0 ? pixelsPerMeter : 1
         const safeMeters = finiteNumber(meters) ?? 1
 
-        return Math.max(4, Math.min(maxPixels, Math.round(Math.max(1, safeMeters) * safePixelsPerMeter)))
+        const logicalPixelSize = Math.max(4, Math.min(maxPixels, Math.round(Math.max(1, safeMeters) * safePixelsPerMeter)))
+        return logicalPixelSize * renderPixelScale
     }
 
     #polylineGeometryKey = positions => {
@@ -1839,7 +1857,7 @@ export class JourneyReplayCesiumRenderer {
                 }
                 /** Resolve the current screen-space tangent direction for this cap. */
                 const rotationFromTrace = () => getPolylineEndCapRotation(
-                    lgs.viewer.scene,
+                    this.#scene(),
                     positionsFromTrace(),
                     record.end,
                 )

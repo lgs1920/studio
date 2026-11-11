@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-11-08
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -76,7 +76,7 @@ import {
     IsolatedReplayRenderHost,
 }                              from '@Core/ui/replay/IsolatedReplayRenderHost'
 import {
-    captureReplayCanvasCropProjection,
+    captureReplayCanvasCropProjection, replayCanvasCssViewportDimensions,
 }                              from '@Core/ui/replay/ReplayCropFrustum'
 import {
     captureReplaySceneDescriptor,
@@ -89,6 +89,7 @@ import {
 }                              from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import {createReplayRecordingPerformance} from '@Core/ui/replay/ReplayRecordingPerformance'
 import {acquireReplayExportRenderLoop} from '@Core/ui/replay/ReplayExportRenderLoop'
+import {acquireVisibleViewerExportGpuBudget} from '@Core/ui/replay/ReplayExportGpuBudget'
 import {
     REPLAY_VIDEO_FPS, resolveReplayVideoQualityLevel,
 }                              from '@Core/ui/replay/ReplayVideoSettings'
@@ -714,6 +715,9 @@ const normalizeReplayCameraStateSnapshot = cameraState => {
             roll:    roundFocusValue(cameraState?.orientation?.roll),
         },
         altitude: roundFocusValue(cameraState?.altitude),
+        ...(cameraState?.pivot && typeof cameraState.pivot === 'object'
+            ? {pivot: {...cameraState.pivot}}
+            : {}),
         ...(worldPose ? {worldPose} : {}),
     }
 }
@@ -2495,6 +2499,8 @@ export const resolveReplayDeferredExportPlan = ({
                                                     replay = defaultReplayStore(),
                                                     journey = defaultJourney(),
                                                     controller = defaultReplayController(),
+                                                    cameraState = null,
+                                                    renderHostMode = null,
                                                     fps = defaultReplayExportFps(),
                                                     label = null,
                                                     metadata = null,
@@ -2526,10 +2532,12 @@ export const resolveReplayDeferredExportPlan = ({
         dimensions: requestedDimensions,
         fps,
         captureMode: requestedCaptureMode,
+        renderHostMode,
     })
     const currentContext = captureReplayDeferredExportContext({
         replay,
         controller,
+        cameraState: currentRenderSpec?.renderHostMode === 'isolated' ? cameraState : null,
         dimensions: requestedDimensions,
         captureMode: requestedCaptureMode,
         fps,
@@ -2574,6 +2582,7 @@ export const resolveReplayDeferredExportPlan = ({
         metadata,
         mediaMetadata,
         dimensions: requestedDimensions,
+        renderSpec: currentRenderSpec,
         captureMode: requestedCaptureMode,
         sourceCanvas,
         context: currentContext,
@@ -2627,10 +2636,16 @@ export const runReplayDeferredMp4Export = async ({
     const existingPlan = replay?.deferredExportPlan ?? null
     const requestedDimensions = dimensions ?? existingPlan?.dimensions ?? null
     const requestedCaptureMode = captureMode ?? existingPlan?.captureMode ?? null
+    const previewCamera = globalThis.lgs?.viewer?.camera ?? globalThis.lgs?.camera ?? null
+    const previewCameraState = replayMode?.captureCameraSnapshot?.({
+        camera: previewCamera,
+    }) ?? null
     const basePlan = resolveReplayDeferredExportPlan({
         replay,
         journey,
         controller,
+        cameraState: previewCameraState,
+        renderHostMode,
         fps,
         label,
         metadata,
@@ -2735,6 +2750,7 @@ export const runReplayDeferredMp4Export = async ({
     let isolatedRenderTarget = null
     let isolatedViewportDimensions = null
     let isolatedCanvasDimensions = null
+    let restoreVisibleViewerExportGpuBudget = null
     let previousReplayExportFrame = null
     let previousReplayExportSample = null
     const exportStartedAt = runtimeNow()
@@ -2846,21 +2862,26 @@ export const runReplayDeferredMp4Export = async ({
             const cropRect = outputRenderSpec?.cropRect
                              ?? normalizeReplayVideoCropRect(plan.runtime?.context?.cropRect ?? replay?.videoCropRect ?? null)
             try {
-                const outputDpr = cropRect
-                    ? Math.max(1, Math.min(
-                        outputDimensions.width / Math.max(1, cropRect.width),
-                        outputDimensions.height / Math.max(1, cropRect.height),
-                    ))
-                    : 1
+                restoreVisibleViewerExportGpuBudget = acquireVisibleViewerExportGpuBudget(
+                    globalThis.lgs?.viewer ?? null,
+                )
+                const sourceViewport = replayCanvasCssViewportDimensions(sourceCanvas)
+                const poiReferenceWidth = cropRect?.width ?? sourceViewport?.width ?? outputDimensions.width
+                const poiReferenceHeight = cropRect?.height ?? sourceViewport?.height ?? outputDimensions.height
+                const poiPixelScale = Math.min(
+                    outputDimensions.width / Math.max(1, poiReferenceWidth),
+                    outputDimensions.height / Math.max(1, poiReferenceHeight),
+                )
                 isolatedViewportDimensions = {
-                    width: outputDimensions.width / outputDpr,
-                    height: outputDimensions.height / outputDpr,
+                    width: cropRect?.width ?? sourceViewport?.width ?? outputDimensions.width,
+                    height: cropRect?.height ?? sourceViewport?.height ?? outputDimensions.height,
                 }
                 isolatedRenderHost = isolatedRenderHostFactory({
                     dimensions: outputDimensions,
                     viewportDimensions: isolatedViewportDimensions,
                     descriptor,
                     cropProjection,
+                    poiPixelScale,
                     maximumScreenSpaceError: outputRenderSpec?.maximumScreenSpaceError ?? 16,
                     readiness: {
                         ...normalizeJourneyReplayReadiness(
@@ -3139,6 +3160,9 @@ export const runReplayDeferredMp4Export = async ({
                 finally {
                     recordingPerformance?.record('replayFrameUpdate', frameUpdateStartedAt)
                 }
+                if (selectedRenderHostMode === 'isolated') {
+                    replayMode?.syncVisibleCameraToRenderTarget?.()
+                }
                 const widgetStateStartedAt = recordingPerformance?.now() ?? (isDryRun ? runtimeNow() : 0)
                 if (isDryRun) {
                     dryRunTimings.cameraTraceMillis += widgetStateStartedAt - frameUpdateStartedAt
@@ -3293,13 +3317,12 @@ export const runReplayDeferredMp4Export = async ({
                 {
                     const cropRect = outputRenderSpec?.cropRect
                                      ?? normalizeReplayVideoCropRect(plan.runtime?.context?.cropRect ?? replay?.videoCropRect ?? null)
-                    const composerClip = isolatedRenderHost && isolatedViewportDimensions
-                        ? {
-                            x: 0,
-                            y: 0,
-                            width: isolatedViewportDimensions.width,
-                            height: isolatedViewportDimensions.height,
-                        }
+                    // Native HQ has already applied the crop in its camera frustum
+                    // and rendered that crop across the full physical output canvas.
+                    // Clipping it again in preview-space dimensions zooms progressively
+                    // further into the frame as output resolution increases.
+                    const composerClip = isolatedRenderHost
+                        ? null
                         : outputRenderSpec?.composerClip
                           ?? replayVideoComposerClipFromCropRect(cropRect)
                     const composerOutputDpr = outputRenderSpec?.outputDpr
@@ -3618,6 +3641,8 @@ export const runReplayDeferredMp4Export = async ({
         }
         await cleanup('isolated-render-host', () => isolatedRenderHost?.destroy?.())
         isolatedRenderHost = null
+        await cleanup('visible-viewer-gpu-budget', () => restoreVisibleViewerExportGpuBudget?.())
+        restoreVisibleViewerExportGpuBudget = null
         await cleanup('playback-scene', () => replayMode?.restorePlaybackScene?.({force: true}))
         if (selectedRenderHostMode === 'isolated') {
             await cleanup('replay-preview', () => replayMode?.refresh?.({camera: false, forceGeometry: true}))
@@ -3628,6 +3653,18 @@ export const runReplayDeferredMp4Export = async ({
             }
         })
         await cleanup('preparation-refresh', () => globalThis.__?.ui?.replay?.refresh?.({camera: true, suppressMoveEvents: true}))
+        if (selectedRenderHostMode === 'isolated') {
+            await cleanup('visible-camera', () => {
+                const camera = globalThis.lgs?.viewer?.camera ?? globalThis.lgs?.camera ?? null
+                replayMode?.restoreCameraState?.({
+                    clear: false,
+                    cameraState: previewCameraState,
+                    targetCamera: camera,
+                })
+                const visibleScene = globalThis.lgs?.viewer?.scene ?? globalThis.lgs?.scene
+                visibleScene?.requestRender?.()
+            })
+        }
         await cleanup('tile-cache', () => restoreReplaySceneTileCache?.())
         restoreReplaySceneTileCache = null
         await cleanup('frame-composer', () => replayComposer?.dispose?.())

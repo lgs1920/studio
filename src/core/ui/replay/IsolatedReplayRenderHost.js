@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-11-08
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -231,6 +231,7 @@ export class IsolatedReplayRenderHost {
     #maximumScreenSpaceError
     #createReadinessCoordinator
     #cropProjection
+    #poiPixelScale
     #canvasDimensions = null
     #destroyed = false
     #contextLostError = null
@@ -250,6 +251,7 @@ export class IsolatedReplayRenderHost {
         container = null,
         readiness = {},
         maximumScreenSpaceError = 16,
+        poiPixelScale = null,
         createWidget = (element, options) => new Viewer(element, {
             ...options,
             animation: false,
@@ -291,6 +293,9 @@ export class IsolatedReplayRenderHost {
         this.#drawPOI = drawPOI
         this.#createReadinessCoordinator = createReadinessCoordinator
         this.#cropProjection = cropProjection
+        this.#poiPixelScale = Number.isFinite(Number(poiPixelScale)) && Number(poiPixelScale) > 0
+            ? Number(poiPixelScale)
+            : null
     }
 
     /**
@@ -314,10 +319,12 @@ export class IsolatedReplayRenderHost {
      *
      * @returns {Error} Context-loss failure.
      */
-    #recordContextLoss = () => {
+    #recordContextLoss = statusMessage => {
         if (!this.#contextLostError) {
             this.#contextLostError = new Error(
-                'The Native Replay WebGL context was lost during export. Retry or use Standard export.',
+                `The Native Replay WebGL context was lost while rendering ${this.#dimensions.width} × ${this.#dimensions.height} pixels.`
+                + (statusMessage ? ` Browser status: ${statusMessage}.` : '')
+                + ' The export stopped at the requested resolution. Close other GPU-heavy browser tabs or choose a lower output resolution, then retry.',
             )
             this.#resolveContextLoss?.(this.#contextLostError)
         }
@@ -346,10 +353,10 @@ export class IsolatedReplayRenderHost {
     /** Rebuild captured Studio POIs and visible background tracks in the owned viewer. */
     #createReplaySceneContent = async () => {
         const viewer = this.#widget
-        const renderTarget = {viewer, scene: viewer?.scene, canvas: viewer?.canvas}
         if (!viewer) {
             return
         }
+        const renderTarget = this.renderTarget()
 
         const poiDescriptors = this.#descriptor.poiDescriptors ?? []
         const trackDescriptors = this.#descriptor.trackDescriptors ?? []
@@ -477,6 +484,8 @@ export class IsolatedReplayRenderHost {
             terrainProvider: this.#descriptor.terrainProvider ?? undefined,
             sceneMode: this.#descriptor.sceneMode,
             mapProjection: this.#descriptor.mapProjection ?? undefined,
+            contextOptions: {webgl: {antialias: false}},
+            msaaSamples: 1,
             useDefaultRenderLoop: false,
             useBrowserRecommendedResolution: true,
             requestRenderMode: true,
@@ -488,7 +497,7 @@ export class IsolatedReplayRenderHost {
             this.#contextLossPromise = new Promise(resolve => {
                 this.#resolveContextLoss = resolve
             })
-            this.#contextLossListener = () => this.#recordContextLoss()
+            this.#contextLossListener = event => this.#recordContextLoss(event?.statusMessage)
             this.#widget.canvas.addEventListener('webglcontextlost', this.#contextLossListener)
         }
         // Keep CSS layout integral and map one CSS pixel to one requested output pixel.
@@ -592,6 +601,11 @@ export class IsolatedReplayRenderHost {
             viewer: this.#widget,
             scene:  this.#widget.scene,
             canvas: this.#widget.canvas,
+            outputDimensions: {
+                width: this.#dimensions.width,
+                height: this.#dimensions.height,
+            },
+            poiPixelScale: this.#poiPixelScale,
             viewportDimensions: {
                 width: this.#viewportDimensions.width,
                 height: this.#viewportDimensions.height,
@@ -691,13 +705,33 @@ export class IsolatedReplayRenderHost {
         this.#resolveContextLoss = null
         this.#readinessCoordinator?.dispose?.()
         this.#readinessCoordinator = null
-        if (this.#widget && this.#widget.isDestroyed?.() !== true) {
-            this.#widget.destroy?.()
+        let destroyError = null
+        const widget = this.#widget
+        try {
+            if (widget && widget.isDestroyed?.() !== true) {
+                widget.destroy?.()
+            }
         }
-        this.#widget = null
-        if (this.#ownsContainer) {
-            this.#container?.remove?.()
+        catch (error) {
+            destroyError = error
+            try {
+                const context = widget?.canvas?.getContext?.('webgl2')
+                    ?? widget?.canvas?.getContext?.('webgl')
+                context?.getExtension?.('WEBGL_lose_context')?.loseContext?.()
+            }
+            catch {
+                // DOM removal still releases the isolated canvas when WebGL teardown has failed.
+            }
         }
-        this.#container = null
+        finally {
+            this.#widget = null
+            if (this.#ownsContainer) {
+                this.#container?.remove?.()
+            }
+            this.#container = null
+        }
+        if (destroyError) {
+            throw destroyError
+        }
     }
 }

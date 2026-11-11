@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-10-12
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,6 +34,7 @@ import {
     JOURNEY_REPLAY_INTERNAL_CALL,
     JOURNEY_REPLAY_INTERNAL_STATE,
 } from './JourneyReplayInternal'
+import {replayRenderTargetCropViewport, replayRenderTargetFor} from './ReplayRenderTarget'
 import {
     buildConstrainedReplayCameraPath,
     offsetConstrainedReplayFrame,
@@ -162,6 +163,10 @@ export const constrainedReplayTerrainRedirectWeight = ({
  */
 export const constrainedReplayProjectionViewport = mode => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const croppedTargetViewport = replayRenderTargetCropViewport(replayRenderTargetFor(mode))
+    if (croppedTargetViewport) {
+        return croppedTargetViewport
+    }
     const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
     const scene = call.cesiumScene?.() ?? globalThis.lgs?.scene ?? globalThis.lgs?.viewer?.scene
     const canvas = viewer?.canvas ?? scene?.canvas ?? globalThis.lgs?.canvas

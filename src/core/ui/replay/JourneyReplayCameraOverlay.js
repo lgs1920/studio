@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-15
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,7 +37,7 @@ import {
     getJourneyReplaySettings, normalizeJourneyReplayMarker,
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
-import {replayRenderTargetFor} from './ReplayRenderTarget'
+import {replayRenderTargetCropViewport, replayRenderTargetFor} from './ReplayRenderTarget'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
@@ -511,6 +511,10 @@ export const viewportRectForCesiumSurface = (mode) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const target = replayRenderTargetFor(mode)
+        const croppedTargetViewport = replayRenderTargetCropViewport(target)
+        if (croppedTargetViewport) {
+            return croppedTargetViewport
+        }
         const targetCanvas = target?.canvas ?? target?.scene?.canvas ?? target?.viewer?.canvas ?? null
         if (targetCanvas) {
             const targetRect = targetCanvas.getBoundingClientRect?.()

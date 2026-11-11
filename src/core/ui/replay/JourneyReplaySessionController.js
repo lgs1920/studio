@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-08
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -71,6 +71,7 @@ import {replayOwnedCameraFor} from './ReplayCameraOwnership'
 import {
     clearReplayRenderTarget, replayCameraFor, replayRenderTargetFor, setReplayRenderTarget,
 }                                                                                          from './ReplayRenderTarget'
+import {cancelReplayPOITargetCaptures} from './ReplayPOICaptureBridge'
 
 const DEFAULT_DURATION = 60
 const PROFILE_HOVER_RENDER_INTERVAL = 120
@@ -1303,9 +1304,13 @@ export class JourneyReplaySessionController {
         JourneyReplayVisibilityController.disposeReplayPOIEntityLookup(this)
         this[JOURNEY_REPLAY_INTERNAL_STATE].exportRenderer?.clear?.()
         this[JOURNEY_REPLAY_INTERNAL_STATE].exportRenderer = null
+        cancelReplayPOITargetCaptures(activeTarget)
         const cleared = clearReplayRenderTarget(this, expectedTarget)
         return cleared
     }
+
+    /** Mirror the active isolated Replay camera to the visible Studio viewer. */
+    syncVisibleCameraToRenderTarget = () => JourneyReplaySessionSceneController.syncVisibleCameraToRenderTarget(this)
 
     #samplerConfigurationKey = ({
                                     journey = null,

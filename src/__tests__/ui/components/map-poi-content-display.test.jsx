@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-24
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -58,6 +58,8 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
 import { MapPOIContent } from '@Components/MainUI/MapPOI/MapPOIContent'
 import {poiCanvasImageCache} from '@Components/MainUI/MapPOI/poiCanvasImageCache'
 import {poiCaptureSurfaceStore} from '@Components/MainUI/MapPOI/poiCaptureSurfaceStore'
+import {setReplayRenderTarget, clearReplayRenderTarget} from '@Core/ui/replay/ReplayRenderTarget'
+import {waitForReplayPOITargetCapture} from '@Core/ui/replay/ReplayPOICaptureBridge'
 import {POIUtils} from '@Utils/cesium/POIUtils'
 import {snapdom} from '@zumer/snapdom'
 
@@ -562,6 +564,43 @@ describe('MapPOIContent display settings', () => {
         await waitFor(() => expect(drawPOI).toHaveBeenCalledWith(expect.objectContaining({
             id: 'poi-1', image: {src: canvas, width: 100, height: 40},
         })))
+    })
+
+    it('synchronizes an animated POI capture to the isolated Replay target before export continues', async () => {
+        const replay = globalThis.lgs.stores.replay
+        replay.clipSequenceActive = true
+        replay.animatedPOIIds = ['poi-1']
+        replay.nearbyPois = [{poi: poiList.get('poi-1')}]
+        const targetEntities = new Map()
+        const target = {
+            viewer: {
+                entities: {
+                    getById: id => targetEntities.get(id),
+                    add: entity => {targetEntities.set(entity.id, entity); return entity},
+                },
+                dataSources: {length: 0},
+            },
+            scene: {requestRender: vi.fn()},
+            canvas: {width: 1920, height: 1080},
+        }
+        const owner = {}
+        setReplayRenderTarget(owner, target)
+        globalThis.__.ui.sceneManager = {noRelief: () => true}
+        const captureReady = waitForReplayPOITargetCapture({target, poiId: 'poi-1', expanded: true})
+
+        try {
+            renderWithCaptureBounds(<MapPOIContent poi="poi-1"/>)
+            await act(async () => captureReady)
+
+            const isolatedPOI = targetEntities.get('poi-1')
+            expect(isolatedPOI).toBeDefined()
+            expect(isolatedPOI.billboard.image.getValue()).toBe(captureCanvas)
+            expect(isolatedPOI.billboard.width.getValue()).toBe(100)
+            expect(target.scene.requestRender).toHaveBeenCalledOnce()
+        }
+        finally {
+            clearReplayRenderTarget(owner, target)
+        }
     })
 
     it.each(['global-mask', 'animation-end', 'stop'])('rejects a pending canvas when presentation changes: %s', async transition => {
