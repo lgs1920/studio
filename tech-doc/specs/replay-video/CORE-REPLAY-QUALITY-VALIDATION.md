@@ -154,6 +154,9 @@ narrow crop, and at least one high-resolution output profile.
 - Native HQ creates one isolated renderer per export session and reuses it for
   every frame. Verify its camera, canvas and Replay trace all resolve to the
   isolated target while the interactive camera remains byte-for-byte unchanged.
+- After preparing the isolated camera, Native HQ issues an explicit render before
+  widget preparation and the first output frame. Verify this order so initial
+  tile requests start early; readiness still gates frame submission.
 - A 4K UHD export on a Full HD display must report and render a 3840 × 2160
   Cesium drawing buffer for a 16:9 crop. Verify portrait and custom crops retain
   their aspect ratio and that an unsupported drawing-buffer size fails before

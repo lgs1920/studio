@@ -35,12 +35,12 @@ const createReplayTilePrewarmAbortError = () => {
  * window restores its anchor frame before returning so the caller can render/capture it.
  *
  * @param {object} options - Timeline, render callbacks, and scheduling bounds.
- * @param {object|null} options.timeline - Replay frame timeline.
- * @param {number} options.lookaheadMs - Maximum future timeline span to warm.
+ * @param {object|null} [options.timeline=null] - Replay frame timeline.
+ * @param {number} [options.lookaheadMs=0] - Maximum future timeline span to warm.
  * @param {number} [options.stepMs=333] - Target time between warmed views.
  * @param {number} [options.maxSamples=3] - Maximum views warmed per window.
- * @param {Function} options.prewarmFrame - Render and qualify one future frame.
- * @param {Function} options.restoreFrame - Restore the current frame after a window.
+ * @param {Function|null} [options.prewarmFrame=null] - Render and qualify one future frame.
+ * @param {Function|null} [options.restoreFrame=null] - Restore the current frame after a window.
  * @param {AbortSignal|null} [options.signal=null] - Optional export cancellation signal.
  * @param {Function|null} [options.onError=null] - Report non-cancellation warmup errors.
  * @returns {object|null} Prewarm lifecycle methods, or null when disabled or incomplete.

@@ -494,6 +494,15 @@ Native export preserves the prepared
 camera's world-space pose when initializing its isolated camera, then applies
 each canonical Replay camera frame to that target.
 
+Before Replay widget preparation begins, the exporter issues an explicit render
+flush on the isolated Viewer using the prepared camera. This starts Cesium's
+initial terrain, imagery, and 3D Tiles requests before the first export frame.
+The flush only starts tile selection and requests; the active readiness policy
+still decides when each frame can be submitted. The isolated Viewer remains
+under explicit export control and does not start a competing default render
+loop. This startup flush is independent of the configured camera look-ahead;
+that setting controls optional warming of future camera samples.
+
 Camera, trace, clip, visibility, prewarming, readiness, and capture operations
 must resolve the active session render target. They must not access the global
 viewer directly when a target-aware call is available.

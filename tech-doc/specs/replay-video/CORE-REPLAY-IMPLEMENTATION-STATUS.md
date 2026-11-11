@@ -183,7 +183,10 @@ Basic/Expert support is present but incomplete:
 - Native HQ defaults to strict readiness: visible tile resources and a completed
   Cesium `postRender` boundary are required before a frame is submitted. Strict
   timeout, failure, and cancellation outcomes are separate and retry counts are
-  bounded. The existing adaptive Standard behavior remains available.
+  bounded. The prepared isolated camera is explicitly rendered before widget
+  preparation so its initial tile requests begin before the first export frame,
+  independently of the optional future-camera look-ahead; readiness still gates
+  frame submission. The existing adaptive Standard behavior remains available.
 - The existing performance report now identifies export mode, requested and
   actual render/composition resolution, codec, FPS, LOD, readiness outcomes,
   tile events, stage percentiles, total export wall time, and sampled heap use

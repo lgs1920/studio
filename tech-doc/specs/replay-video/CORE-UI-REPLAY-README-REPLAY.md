@@ -556,8 +556,16 @@ readiness**:
 - **Readiness policy** selects `adaptive`, `strict`, `custom`, or `off`;
 - custom readiness exposes separate maximum waits while the camera is moving
   and after it settles; and
-- **Camera tile preloading** selects a bounded initial look-ahead of `off`,
-  `500 ms`, `1 s`, `2 s`, or `3 s` before export starts.
+- **Camera tile preloading** selects a bounded look-ahead of `off`, `500 ms`,
+  `1 s`, `2 s`, or `3 s` for warming upcoming camera views before the first
+  output frame and as the export advances.
+
+Native HQ also renders its prepared camera during scene preparation, before
+widget preparation and the first output frame. This starts the first tile
+requests independently of the configured look-ahead. Turning look-ahead off
+disables warming future camera views, but not this initial render. Starting
+requests does not mean the tiles are ready; the selected readiness policy still
+controls whether a frame waits or continues with the available scene content.
 
 The normalized defaults keep readiness enabled with the `adaptive` policy, a
 1-second moving wait, a 5-second settled wait, and a 1-second camera preload

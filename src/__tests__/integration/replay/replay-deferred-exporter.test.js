@@ -1761,22 +1761,25 @@ describe('ReplayDeferredExporter', () => {
             consoleTable.mockRestore()
         }
 
-        const tilePrewarmSampleCalls = renderReplayExportFrame.mock.calls.filter(([options]) => options.tilePrewarm === true)
-        const tilePrewarmRestoreCalls = renderReplayExportFrame.mock.calls.filter(([options]) => options.tilePrewarm === 'restore')
+        const allReplayFrameCalls = renderReplayExportFrame.mock.calls
+        const prewarmRenderCount = allReplayFrameCalls.length - result.plan.manifest.frameCount
         const tilePrewarmReadinessCalls = tileCoordinator.prepareForCapture.mock.calls
             .filter(([options]) => options.maxMillis === 100)
-        const prewarmRenderMillis = (tilePrewarmSampleCalls.length + tilePrewarmRestoreCalls.length - 4) * 40
+        const prewarmRenderMillis = (prewarmRenderCount - 4) * 40
         const prewarmReadinessMillis = (tilePrewarmReadinessCalls.length - 3) * 20
         const expectedOtherMillis = 5220 + prewarmRenderMillis + prewarmReadinessMillis
         const prewarmAllowancePerFrame = (prewarmRenderMillis + prewarmReadinessMillis)
             / result.plan.manifest.frameCount
-        const phases = renderReplayExportFrame.mock.calls
-            .filter(([options]) => options.tilePrewarm === undefined)
-            .slice(-result.plan.manifest.frameCount)
-            .map(([frame]) => frame.phase.kind)
-        const dryRunFrameCalls = renderReplayExportFrame.mock.calls
-            .filter(([options]) => options.tilePrewarm === undefined)
-            .slice(-result.plan.manifest.frameCount)
+        let expectedFrameIndex = 0
+        const dryRunFrameCalls = allReplayFrameCalls.slice(4).filter(([options]) => {
+            if (options.frame?.index !== expectedFrameIndex) {
+                return false
+            }
+
+            expectedFrameIndex += 1
+            return true
+        })
+        const phases = dryRunFrameCalls.map(([frame]) => frame.phase.kind)
         const readinessFrameCalls = dryRunFrameCalls.filter(([options]) => options.frame.isFirst
             || options.frame.isLast
             || options.phase.isFinalSceneFrame
@@ -1808,13 +1811,9 @@ describe('ReplayDeferredExporter', () => {
         expect(phases).toContain('pre-replay')
         expect(phases).toContain('replay')
         expect(phases).toContain('post-replay')
-        expect(tilePrewarmSampleCalls.length).toBeGreaterThan(3)
-        expect(tilePrewarmRestoreCalls.length).toBeGreaterThan(1)
-        expect(tilePrewarmSampleCalls.some(([options]) => options.frame.frameTimeMs > 1000)).toBe(true)
-        expect(renderReplayExportFrame).toHaveBeenCalledTimes(
-            result.plan.manifest.frameCount + tilePrewarmSampleCalls.length + tilePrewarmRestoreCalls.length,
-        )
-        expect(tilePrewarmReadinessCalls).toHaveLength(tilePrewarmSampleCalls.length)
+        expect(prewarmRenderCount).toBeGreaterThan(4)
+        expect(tilePrewarmReadinessCalls.length).toBeGreaterThan(3)
+        expect(dryRunFrameCalls).toHaveLength(result.plan.manifest.frameCount)
         expect(tileCoordinator.prepareForCapture.mock.calls.filter(([options]) => options.maxMillis === 250))
             .toHaveLength(readinessFrameCalls.length)
         expect(frameTileWaitCount).toBe(readinessFrameCalls.length)
@@ -2404,6 +2403,12 @@ describe('ReplayDeferredExporter', () => {
             expect(replayMode.preparePlaybackSceneForExport).toHaveBeenCalledWith(expect.objectContaining({
                 cameraState: expect.objectContaining(previewCameraState),
             }))
+            const preparedSceneOrder = replayMode.preparePlaybackSceneForExport.mock.invocationCallOrder[0]
+            const initialIsolatedRenderOrder = isolatedViewer.render.mock.invocationCallOrder[0]
+            const firstReplayFrameOrder = replayMode.renderReplayExportFrame.mock.invocationCallOrder[0]
+            expect(initialIsolatedRenderOrder).toBeDefined()
+            expect(preparedSceneOrder).toBeLessThan(initialIsolatedRenderOrder)
+            expect(initialIsolatedRenderOrder).toBeLessThan(firstReplayFrameOrder)
             expect(composer.sourceCanvas).toBe(isolatedCanvas)
             expect(composer.options.outputCanvas).toBe(buildCanvas.mock.results[0].value)
             expect(composer.canvas).toEqual({width: 320, height: 180})

@@ -372,14 +372,14 @@ const defaultIsolatedReplayRenderHostFactory = options => new IsolatedReplayRend
  * window restores its current timeline frame before export rendering continues.
  *
  * @param {object} options - Pre-warm options.
- * @param {object|null} options.plan - Deferred export plan.
- * @param {object|null} options.replay - Replay store.
- * @param {object|null} options.controller - Replay controller.
- * @param {object|null} options.replayMode - Replay mode facade.
- * @param {object|null} options.coordinator - Tile readiness coordinator.
- * @param {number} options.lookaheadMs - Camera tile preloading horizon.
- * @param {boolean} options.dryRun - Whether to use the lighter dry-run trace cadence.
- * @param {AbortSignal|null} options.signal - Optional cancellation signal.
+ * @param {object|null} [options.plan=null] - Deferred export plan.
+ * @param {object|null} [options.replay=null] - Replay store.
+ * @param {object|null} [options.controller=null] - Replay controller.
+ * @param {object|null} [options.replayMode=null] - Replay mode facade.
+ * @param {object|null} [options.coordinator=null] - Tile readiness coordinator.
+ * @param {number} [options.lookaheadMs=1000] - Camera tile preloading horizon.
+ * @param {boolean} [options.dryRun=false] - Whether to use the lighter dry-run trace cadence.
+ * @param {AbortSignal|null} [options.signal=null] - Optional cancellation signal.
  * @returns {Promise<object|null>} Rolling prewarmer, or null when unavailable.
  */
 const createReplaySceneTilePrewarmer = async ({
@@ -427,7 +427,6 @@ const createReplaySceneTilePrewarmer = async ({
             replay,
             controller,
             dryRun,
-            tilePrewarm: true,
         })
         await coordinator.prepareForCapture({
             maxMillis: 100,
@@ -446,7 +445,6 @@ const createReplaySceneTilePrewarmer = async ({
             replay,
             controller,
             dryRun,
-            tilePrewarm: 'restore',
         })
     }
 
@@ -3033,6 +3031,10 @@ export const runReplayDeferredMp4Export = async ({
             replaySceneTileReadinessOptions = {
                 readiness: replayReadiness,
                 camera:    replayCamera,
+            }
+            if (isolatedRenderHost) {
+                // Start the prepared camera's tile requests before export widgets finish preparing.
+                flushReplayRenderTarget()
             }
             await delay(0)
             scenePrepared = true
