@@ -5082,3 +5082,79 @@
 ## 2026-11-10 — [`Merge branch 'feature/nominatim-to-photon' into 1.0.0`](https://github.com/lgs1920/studio/commit/ad5c9dc3c3fef738830fba9c5ca955f585055752)
 
 - Recorded automatically from Git history.
+
+## 2026-11-08 — [`fix(replay): isolate Native HQ scene reconstruction`](https://github.com/lgs1920/studio/commit/6d944ab3808d48e30ef9a9a3bb9f552cfa369d58)
+
+- Recorded automatically from Git history.
+
+## 2026-11-08 — [`fix(replay): allow exports with failed imagery tiles`](https://github.com/lgs1920/studio/commit/6cc311799151dfd2f32fe1ac7c9fe05a9f25961e)
+
+- Recorded automatically from Git history.
+
+## 2026-11-08 — [`fix(replay): preserve Native HQ output profiles`](https://github.com/lgs1920/studio/commit/64b1e50f3b798e30f6223428759212145820f85f)
+
+- Recorded automatically from Git history.
+
+## 2026-11-08 — [`feat(ui): add copy action to error toasts`](https://github.com/lgs1920/studio/commit/68292fc5c9c8c4e8304f3442d610d3254b835251)
+
+- Recorded automatically from Git history.
+
+## 2026-11-08 — [`docs(replay): document Native HQ scene reconstruction`](https://github.com/lgs1920/studio/commit/34129caa206d0761d728739a03694ec47f2129e6)
+
+- Recorded automatically from Git history.
+
+## 2026-11-08 — [`fix(replay): handle pending WMTS imagery in Strict readiness`](https://github.com/lgs1920/studio/commit/ec0325193b46c7f3adcd715eff5e275b12ca0544)
+
+- Recorded automatically from Git history.
+
+## 2026-11-09 — [`feat(poi): add POI categories and icons`](https://github.com/lgs1920/studio/commit/f435dce927d718035814188e816ff2db7948778b)
+
+- Recorded automatically from Git history.
+
+## 2026-11-10 — [`fix(cache): skip invalid cartographic entries`](https://github.com/lgs1920/studio/commit/a361cfb80bffcf8a002d5f9a2b461426c33b50d5)
+
+- Recorded automatically from Git history.
+
+## 2026-11-11 — [`Chore: update dependencies`](https://github.com/lgs1920/studio/commit/a05ec34df77c00e9b439d18d7ef7953ba4023c97)
+
+- Recorded automatically from Git history.
+
+## 2026-11-11 — [`fix(replay): preserve Native HQ frame composition`](https://github.com/lgs1920/studio/commit/28ea8f1d0e4b96f651676fed66912cad4b3eaa84)
+
+- Recorded automatically from Git history.
+
+## 2026-11-11 — [`fix(app): keep startup errors visible`](https://github.com/lgs1920/studio/commit/8d413fc69219ba16aa70403c5862377a58c7ef3c)
+
+- Recorded automatically from Git history.
+
+## 2026-11-11 — [`feat(video): tag exports with resolution metadata`](https://github.com/lgs1920/studio/commit/c11a80d6d6ed3f8e6bf35c461a7c4498607f2bcd)
+
+- Recorded automatically from Git history.
+
+## 2026-11-11 — [`fix(replay): prewarm tiles along export timeline`](https://github.com/lgs1920/studio/commit/c8efa04184adda27453f348e7b0022631c6a6bbb)
+
+- Recorded automatically from Git history.
+
+## 2026-11-11 — [`test(data): cover POI clipboard proxy contract`](https://github.com/lgs1920/studio/commit/20e69927b84b61ec99900a3cc25ff8185c465264)
+
+- Recorded automatically from Git history.
+
+## 2026-11-11 — [`test(replay): cover rolling tile prewarming`](https://github.com/lgs1920/studio/commit/6bb90307d4fc561aaef9b47f3ac6da9413280313)
+
+- Recorded automatically from Git history.
+
+## 2026-11-11 — [`docs(replay): track Native HQ POI validation`](https://github.com/lgs1920/studio/commit/f9d54387441d5963a26d98fef515d3a4677306ff)
+
+- Recorded automatically from Git history.
+
+## 2026-11-11 — [`fix(replay): start Native HQ tile loading before first frame`](https://github.com/lgs1920/studio/commit/351027f6a5cc59bb7cacfe6915d21add356477d7)
+
+- Recorded automatically from Git history.
+
+## 2026-11-11 — [`Merge branch 'fix/native-hq-studio-scene' into 1.0.0`](https://github.com/lgs1920/studio/commit/41c0c1a6e62bf08ffb2b66b3154bce00d761c227)
+
+- Recorded automatically from Git history.
+
+## 2026-11-11 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/92dbce8e580cb8da6a43ecd5d92cafc37a7d4990)
+
+- Recorded automatically from Git history.
