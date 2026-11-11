@@ -45,6 +45,11 @@ const HOP_BY_HOP_HEADERS = [
 
 const EXTERNAL_PROXY_TARGETS = [
     [
+        'host' => 'photon.komoot.io',
+        'scheme' => 'https',
+        'port' => 443,
+    ],
+    [
         'host' => 'wms.pcn.minambiente.it',
         'scheme' => 'https',
         'port' => 443,

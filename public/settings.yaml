@@ -485,9 +485,10 @@ ui:
   ## Geocoder
   geocoder:
     url: https://photon.komoot.io
+    proxy: /proxy.php?csurl=
     search: api/
     reverse: reverse
-    limit: 7 # results per query
+    limit: 7 # results per page
     minQuery: 3 # characters
 
   ## Toolbars

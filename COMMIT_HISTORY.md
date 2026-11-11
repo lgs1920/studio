@@ -5158,3 +5158,23 @@
 ## 2026-11-11 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/92dbce8e580cb8da6a43ecd5d92cafc37a7d4990)
 
 - Recorded automatically from Git history.
+
+## 2026-11-11 — [`Replace Nominatim settings with Photon`](https://github.com/lgs1920/studio/commit/e58f977ca0f02288d8865b1b22bb0ad721dbe7fb)
+
+- Recorded automatically from Git history.
+
+## 2026-11-11 — [`Credit Photon and OpenStreetMap for geocoding`](https://github.com/lgs1920/studio/commit/34d31da73026ff34d86350d40662aa804ef7f7ca)
+
+- Recorded automatically from Git history.
+
+## 2026-11-11 — [`Allow Photon through the production proxy`](https://github.com/lgs1920/studio/commit/adb488cc3a5cd33e615bd3a9dd16a5364c20473e)
+
+- Recorded automatically from Git history.
+
+## 2026-11-11 — [`Allow Photon through the development proxy`](https://github.com/lgs1920/studio/commit/f28fde691cd1411e1bb74af56dd3ef57215b606f)
+
+- Recorded automatically from Git history.
+
+## 2026-11-11 — [`fix: route Photon requests through the configured proxy`](https://github.com/lgs1920/studio/commit/781893770333f22a8005d03a06b0acaa7699747c)
+
+- Recorded automatically from Git history.
