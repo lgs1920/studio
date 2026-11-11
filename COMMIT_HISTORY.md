@@ -5178,3 +5178,7 @@
 ## 2026-11-11 — [`fix: route Photon requests through the configured proxy`](https://github.com/lgs1920/studio/commit/781893770333f22a8005d03a06b0acaa7699747c)
 
 - Recorded automatically from Git history.
+
+## 2026-11-11 — [`Merge pull request #566 from lgs1920/feat/photon-geocoder`](https://github.com/lgs1920/studio/commit/8a615149aa66988d9553bd448b46d1b8ba46cfff)
+
+- Route Photon geocoding through proxies on 1.0.0
