@@ -5070,3 +5070,15 @@
 ## 2026-11-07 — [`Merge pull request #565 from lgs1920/feature/cesium-native-hq-video-capture`](https://github.com/lgs1920/studio/commit/3136dd0bb37b745268c1a2b3a205cd5c78c14ace)
 
 - feat(replay): deliver Native HQ video export for Basic Replay
+
+## 2026-11-08 — [`Chore: update dependencies`](https://github.com/lgs1920/studio/commit/5326c598e87de65fb88c4dda1be9e5debb211fa3)
+
+- Recorded automatically from Git history.
+
+## 2026-11-10 — [`feat(geocoding): use Photon for search and reverse geocoding`](https://github.com/lgs1920/studio/commit/733c25b18e6f8abdb8b8702b1e226e9478b9f65f)
+
+- Recorded automatically from Git history.
+
+## 2026-11-10 — [`Merge branch 'feature/nominatim-to-photon' into 1.0.0`](https://github.com/lgs1920/studio/commit/ad5c9dc3c3fef738830fba9c5ca955f585055752)
+
+- Recorded automatically from Git history.
