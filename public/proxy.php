@@ -650,6 +650,10 @@ function is_allowed_origin(string $origin, array $config): bool
         origin_from_config($config['site'] ?? []),
     ];
 
+    if (($config['platform'] ?? '') === 'production') {
+        $allowed[] = 'https://wizzlie.lgs1920.fr';
+    }
+
     if (($config['platform'] ?? '') === 'development') {
         $allowed[] = 'http://localhost:5173';
         $allowed[] = 'http://dev.lgs1920.fr:5173';
