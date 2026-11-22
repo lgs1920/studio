@@ -2385,3 +2385,7 @@
 ## 2026-10-23 — [`Merge pull request #551 from lgs1920/codex/revert-388-main`](https://github.com/lgs1920/studio/commit/282ee2a65edd89d32bcbdaaf6725bb6715ec8504)
 
 - revert: remove FIT and TCX import from main
+
+## 2026-11-22 — [`fix(proxy): allow the Wizzlie production origin`](https://github.com/lgs1920/studio/commit/2e4b548b4fcd70697e2d48fc4c1c6b6e58608280)
+
+- Recorded automatically from Git history.
