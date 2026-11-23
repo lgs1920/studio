@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-19
- * Last modified: 2026-11-10
+ * Last modified: 2026-11-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -264,6 +264,7 @@ export class Geocoder {
     results = new Map()
     limit = 0
     url
+    proxy
     hasMoreResults = false
     #search
     #reverse
@@ -288,6 +289,7 @@ export class Geocoder {
         }
 
         this.url = lgs.settings.ui.geocoder.url
+        this.proxy = lgs.servers?.studio?.proxy || lgs.settings.ui.geocoder.proxy || ''
         this.limit = lgs.settings.ui.geocoder.limit
         this.#search = lgs.settings.ui.geocoder.search
         this.#reverse = lgs.settings.ui.geocoder.reverse
@@ -545,8 +547,20 @@ export class Geocoder {
      * @returns {Promise<Object>} The API response data.
      */
     fetch = async (url) => {
-        const response = await lgs.axios.get(url.toString())
+        const response = await lgs.axios.get(this.#getFetchUrl(url))
         return response.data
+    }
+
+    /**
+     * Builds the configured proxy URL for a geocoding request.
+     * @param {URL} url - The target geocoding URL.
+     * @returns {string} The proxy URL or the target URL when no proxy is configured.
+     */
+    #getFetchUrl = url => {
+        const targetUrl = url instanceof URL ? url.toString() : String(url)
+        const proxyUrl = normalizePlaceName(this.proxy)
+
+        return proxyUrl ? `${proxyUrl}${encodeURIComponent(targetUrl)}` : targetUrl
     }
 
     #isReverseLocationUnavailable = () => Date.now() < this.#reverseLocationUnavailableUntil
