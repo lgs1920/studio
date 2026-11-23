@@ -15,9 +15,11 @@
  ******************************************************************************/
 
 import {describe, expect, it, vi} from 'vitest'
-import {Mesh, MeshBasicMaterial, Raycaster, Vector3} from 'three'
+import {Color, Mesh, MeshBasicMaterial, Raycaster, Vector3} from 'three'
 import {
     createDomeSeamGeometry, createJoystickContactRingGeometry, createJoystickCrownGeometry, createJoystickDomeGeometry,
+    createGripMarks, createJoystickCrownEdgeShadeGeometry, createJoystickCrownSeparationBaseMaterial,
+    createJoystickCrownMaterial, createJoystickCrownSeparationGeometry, createJoystickDomeMaterial,
     createJoystickGripRingGeometry, setJoystickDomeTilt,
     setJoystickMapReflectionTransform,
 } from '@Components/JourneyReplay/ReplayCameraJoystickScene'
@@ -99,12 +101,97 @@ describe('Replay camera joystick surface', () => {
             grip.computeBoundingBox()
             crown.computeBoundingBox()
             expect(grip.boundingBox.min.z).toBeLessThan(crown.boundingBox.min.z)
-            expect(grip.boundingBox.max.z).toBeCloseTo(crown.boundingBox.max.z, 7)
+            expect(grip.boundingBox.max.z).toBeCloseTo(0, 7)
+            expect(crown.boundingBox.max.z).toBeCloseTo(0.0025, 6)
             expect(grip.boundingBox.max.x).toBeCloseTo(0.788, 5)
         }
         finally {
             grip.dispose()
             crown.dispose()
+            material.dispose()
+        }
+    })
+
+    it('sets the 32 inner grip grooves to the eight compass tick directions', () => {
+        const marks = createGripMarks()
+        expect(marks).toHaveLength(32)
+        for (let index = 0; index < 32; index += 4) {
+            const points = marks[index].getPoints().slice(0, -1)
+            const centerX = points.reduce((sum, point) => sum + point.x, 0) / points.length
+            const centerY = points.reduce((sum, point) => sum + point.y, 0) / points.length
+            const expectedAngle = index * Math.PI / 16
+            expect(centerX / Math.hypot(centerX, centerY)).toBeCloseTo(Math.cos(expectedAngle), 6)
+            expect(centerY / Math.hypot(centerX, centerY)).toBeCloseTo(Math.sin(expectedAngle), 6)
+        }
+    })
+
+    it('creates a two-pixel shaded channel between the grip and compass crowns', () => {
+        const grip = createJoystickGripRingGeometry()
+        const crown = createJoystickCrownGeometry()
+        const separation = createJoystickCrownSeparationGeometry()
+        try {
+            const radialExtent = (geometry, maximum) => {
+                const positions = geometry.getAttribute('position')
+                let radius = maximum ? 0 : Infinity
+                for (let index = 0; index < positions.count; index++) {
+                    const candidate = Math.hypot(positions.getX(index), positions.getY(index))
+                    radius = maximum ? Math.max(radius, candidate) : Math.min(radius, candidate)
+                }
+                return radius
+            }
+            const pixelScale = 144 / (2 * 0.99)
+            const gapPixels = (radialExtent(crown, false) - radialExtent(grip, true)) * pixelScale
+            expect(gapPixels).toBeCloseTo(2, 1)
+
+            const colors = separation.getAttribute('color')
+            let darkestChannelAlpha = 0
+            let brightestChannel = 0
+            for (let index = 0; index < colors.count; index++) {
+                darkestChannelAlpha = Math.max(darkestChannelAlpha, colors.getW(index))
+                brightestChannel = Math.max(brightestChannel, colors.getX(index))
+            }
+            expect(darkestChannelAlpha).toBeGreaterThan(0.45)
+            expect(brightestChannel).toBeGreaterThan(0.2)
+        }
+        finally {
+            grip.dispose()
+            crown.dispose()
+            separation.dispose()
+        }
+    })
+
+    it('uses an opaque theme-colored backing under the crown channel', () => {
+        const material = createJoystickCrownSeparationBaseMaterial(new Color(0.4, 0.6, 0.8))
+        try {
+            expect(material.transparent).toBe(false)
+            expect(material.color.r).toBeCloseTo(0.192)
+            expect(material.color.g).toBeCloseTo(0.288)
+            expect(material.color.b).toBeCloseTo(0.384)
+        }
+        finally {
+            material.dispose()
+        }
+    })
+
+    it('keeps both decorative crowns mostly opaque', () => {
+        const material = createJoystickCrownMaterial(new Color(0.4, 0.6, 0.8), new Color(1, 1, 1))
+        try {
+            expect(material.transparent).toBe(true)
+            expect(material.opacity).toBe(0.9)
+        }
+        finally {
+            material.dispose()
+        }
+    })
+
+    it('uses a more matte finish on the ball while retaining a soft reflection', () => {
+        const material = createJoystickDomeMaterial(new Color(0.4, 0.6, 0.8), null)
+        try {
+            expect(material.roughness).toBe(0.66)
+            expect(material.clearcoat).toBe(0.1)
+            expect(material.clearcoatRoughness).toBe(0.58)
+        }
+        finally {
             material.dispose()
         }
     })
@@ -158,6 +245,20 @@ describe('Replay camera joystick surface', () => {
         }
     })
 
+    it('places the crown-edge shade over only the lower-right outer arc', () => {
+        const shade = createJoystickCrownEdgeShadeGeometry()
+        try {
+            shade.computeBoundingBox()
+            expect(shade.boundingBox.min.x).toBeCloseTo(0)
+            expect(shade.boundingBox.max.x).toBeCloseTo(0.99)
+            expect(shade.boundingBox.min.y).toBeCloseTo(-0.99)
+            expect(shade.boundingBox.max.y).toBeCloseTo(0)
+        }
+        finally {
+            shade.dispose()
+        }
+    })
+
     it('keeps a faint floor shadow on the lower-right side', () => {
         const seam = createDomeSeamGeometry()
         try {
@@ -200,8 +301,8 @@ describe('Replay camera joystick surface', () => {
             dome.computeBoundingBox()
             expect(crown.boundingBox.max.x).toBeCloseTo(0.99)
             expect(crown.boundingBox.min.x).toBeCloseTo(-0.99)
-            expect(crown.boundingBox.min.z).toBeCloseTo(-0.042, 5)
-            expect(crown.boundingBox.max.z).toBeCloseTo(0, 5)
+            expect(crown.boundingBox.min.z).toBeCloseTo(-0.0445, 5)
+            expect(crown.boundingBox.max.z).toBeCloseTo(0.0025, 5)
             expect(dome.boundingBox.max.x).toBeCloseTo(0.70, 5)
             expect(dome.boundingBox.max.z).toBeCloseTo(0.19)
             const vertices = crown.getAttribute('position')
@@ -212,7 +313,7 @@ describe('Replay camera joystick surface', () => {
                 innerRadius = Math.min(innerRadius, Math.hypot(vertices.getX(index), vertices.getY(index)))
                 maxU = Math.max(maxU, uv.getX(index))
             }
-            expect(innerRadius).toBeCloseTo(0.797, 5)
+            expect(innerRadius).toBeCloseTo(0.8155, 5)
             expect(maxU).toBeCloseTo(0.85)
         }
         finally {

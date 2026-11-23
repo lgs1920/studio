@@ -24,12 +24,14 @@ import {
 const DISH_RADIUS = 0.70
 const GRIP_RING_INNER_RADIUS = DISH_RADIUS - 0.036
 const GRIP_RING_OUTER_RADIUS = 0.788
-const CROWN_INNER_RADIUS = 0.797
+const CROWN_INNER_RADIUS = 0.818
 const CROWN_OUTER_RADIUS = 0.99
 const CROWN_RADIUS = (CROWN_INNER_RADIUS + CROWN_OUTER_RADIUS) / 2
 const CROWN_RECESS = 0.041
 const ENGRAVING_DEPTH = 0.042
 const GRIP_ENGRAVING_DEPTH = 0.052
+const CROWN_EDGE_BEVEL_SIZE = 0.0025
+const CROWN_EDGE_BEVEL_THICKNESS = 0.0025
 const DOME_RECESS = CROWN_RECESS + 0.06
 const DOME_HEIGHT = 0.19
 const DOME_SPHERE_RADIUS = (DISH_RADIUS ** 2 + DOME_HEIGHT ** 2) / (2 * DOME_HEIGHT)
@@ -170,19 +172,23 @@ const createCompassMarks = () => {
 }
 
 /** Give the grip repeated engravings with the same finish as the compass marks. */
-const createGripMarks = () => {
+export const createGripMarks = () => {
     const radius = (GRIP_RING_INNER_RADIUS + GRIP_RING_OUTER_RADIUS) / 2
-    return Array.from({length: 28}, (_, index) => createRadialMark(index * Math.PI / 14, radius, 0.043, 0.012))
+    return Array.from({length: 32}, (_, index) => createRadialMark(index * Math.PI / 16, radius, 0.043, 0.012))
 }
 
 /** Cut recessed markings into a flat ring and use the same reflection coordinates on both crowns. */
-const createEngravedRingGeometry = (innerRadius, outerRadius, marks, depth) => {
+const createEngravedRingGeometry = (innerRadius, outerRadius, marks, depth, bevel = null) => {
     const outline = new Shape()
     outline.absarc(0, 0, outerRadius, 0, Math.PI * 2, false)
     const center = new Path()
     center.absarc(0, 0, innerRadius, 0, Math.PI * 2, true)
     outline.holes.push(center, ...marks)
-    const geometry = new ExtrudeGeometry(outline, {depth, bevelEnabled: false, curveSegments: 96})
+    const geometry = new ExtrudeGeometry(outline, {
+        depth, bevelEnabled: Boolean(bevel), bevelSegments: 2,
+        bevelSize: bevel?.size ?? 0, bevelThickness: bevel?.thickness ?? 0,
+        curveSegments: 96,
+    })
     geometry.translate(0, 0, -depth)
     const positions = geometry.getAttribute('position')
     const uv = geometry.getAttribute('uv')
@@ -199,7 +205,50 @@ export const createJoystickGripRingGeometry = (marks = createGripMarks()) =>
 
 /** Build the outer compass. */
 export const createJoystickCrownGeometry = (marks = createCompassMarks()) =>
-    createEngravedRingGeometry(CROWN_INNER_RADIUS, CROWN_OUTER_RADIUS, marks, ENGRAVING_DEPTH)
+    createEngravedRingGeometry(CROWN_INNER_RADIUS, CROWN_OUTER_RADIUS, marks, ENGRAVING_DEPTH, {
+        size: CROWN_EDGE_BEVEL_SIZE, thickness: CROWN_EDGE_BEVEL_THICKNESS,
+    })
+
+/** Add a recessed, shaded channel between the grip ring and the outer compass. */
+export const createJoystickCrownSeparationGeometry = () => {
+    const geometry = new RingGeometry(GRIP_RING_OUTER_RADIUS, CROWN_INNER_RADIUS, 192, 4)
+    const positions = geometry.getAttribute('position')
+    const colors = new Float32Array(positions.count * 4)
+    for (let index = 0; index < positions.count; index++) {
+        const radius = Math.hypot(positions.getX(index), positions.getY(index))
+        const progress = Math.min(1, Math.max(0,
+            (radius - GRIP_RING_OUTER_RADIUS) / (CROWN_INNER_RADIUS - GRIP_RING_OUTER_RADIUS)))
+        const shadow = 0.48 * Math.sin(Math.PI * progress) ** 1.5
+        const highlight = 0.16 * Math.max(0, 1 - Math.abs(progress - 0.78) / 0.12)
+        const alpha = Math.max(shadow, highlight)
+        const brightness = alpha > 0 ? 0.52 * highlight / alpha : 0
+        colors.set([brightness, brightness, brightness, alpha], index * 4)
+    }
+    geometry.setAttribute('color', new BufferAttribute(colors, 4))
+    return geometry
+}
+
+/** Create the opaque backing that prevents the map from showing through the crown channel. */
+export const createJoystickCrownSeparationBaseMaterial = surfaceColor =>
+    new MeshBasicMaterial({color: surfaceColor.clone().multiplyScalar(0.48)})
+
+/** Create the shared, mostly opaque finish for the outer crown and inner grip ring. */
+export const createJoystickCrownMaterial = (surfaceColor, highlightColor) =>
+    new MeshStandardMaterial({
+        color: surfaceColor.clone().lerp(highlightColor, 0.12),
+        roughness: 0.76, metalness: 0.08, transparent: true, opacity: 0.9,
+    })
+
+/** Create the lightly matte, reflective finish for the joystick ball. */
+export const createJoystickDomeMaterial = (color, reflectionTexture) =>
+    new MeshPhysicalMaterial({
+        color, roughness: 0.66, metalness: 0.12, vertexColors: true,
+        envMap: reflectionTexture, envMapIntensity: 0.28, clearcoat: 0.1, clearcoatRoughness: 0.58,
+    })
+
+/** Add a subtle shadow directly over the bright lower-right edge of the outer crown. */
+export const createJoystickCrownEdgeShadeGeometry = () =>
+    new RingGeometry(CROWN_OUTER_RADIUS - 0.022, CROWN_OUTER_RADIUS, 48, 1, Math.PI * 1.5, Math.PI * 0.5)
 
 /** Add a soft seam shadow with a lighter floor under the lower-right reflection. */
 export const createDomeSeamGeometry = () => {
@@ -450,20 +499,16 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, o
     const domeGeometry = createJoystickDomeGeometry()
     const compassMarks = createCompassMarks()
     const crownGeometry = createJoystickCrownGeometry(compassMarks)
+    const crownEdgeShadeGeometry = createJoystickCrownEdgeShadeGeometry()
+    const crownSeparationGeometry = createJoystickCrownSeparationGeometry()
     const gripMarks = createGripMarks()
     const gripRingGeometry = createJoystickGripRingGeometry(gripMarks)
     const engravingFloorGeometry = new ShapeGeometry(compassMarks)
     const gripFloorGeometry = new ShapeGeometry(gripMarks)
     const contactRingGeometry = createJoystickContactRingGeometry()
     const domeSeamGeometry = createDomeSeamGeometry()
-    const domeMaterial = new MeshPhysicalMaterial({
-        color: domeColor, roughness: 0.53, metalness: 0.12, vertexColors: true,
-        envMap: reflection.texture, envMapIntensity: 0.32, clearcoat: 0.16, clearcoatRoughness: 0.48,
-    })
-    const crownMaterial = new MeshStandardMaterial({
-        color: surfaceColor.clone().lerp(highlightColor, 0.12),
-        roughness: 0.76, metalness: 0.08, transparent: true, opacity: 0.70,
-    })
+    const domeMaterial = createJoystickDomeMaterial(domeColor, reflection.texture)
+    const crownMaterial = createJoystickCrownMaterial(surfaceColor, highlightColor)
     const engravingWallMaterial = new MeshStandardMaterial({color: surfaceColor.clone().multiplyScalar(0.47), roughness: 0.85})
     const engravingFloorMaterial = new MeshStandardMaterial({color: getCompassMarkColor(padElement, surfaceColor), roughness: 0.9})
     const contactRingMaterial = new MeshBasicMaterial({vertexColors: true, transparent: true, depthWrite: false})
@@ -481,6 +526,20 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, o
     crownReflection.visible = false
     crownReflection.renderOrder = 1
     const crown = new Mesh(crownGeometry, [crownMaterial, engravingWallMaterial])
+    const crownSeparationBaseMaterial = createJoystickCrownSeparationBaseMaterial(surfaceColor)
+    const crownSeparationBase = new Mesh(crownSeparationGeometry, crownSeparationBaseMaterial)
+    crownSeparationBase.position.z = -CROWN_RECESS - 0.0035
+    crownSeparationBase.renderOrder = 1
+    const crownSeparation = new Mesh(crownSeparationGeometry, new MeshBasicMaterial({
+        vertexColors: true, transparent: true, depthWrite: false,
+    }))
+    crownSeparation.position.z = -CROWN_RECESS - 0.003
+    crownSeparation.renderOrder = 2
+    const crownEdgeShade = new Mesh(crownEdgeShadeGeometry, new MeshBasicMaterial({
+        color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false,
+    }))
+    crownEdgeShade.position.z = -CROWN_RECESS + 0.0005
+    crownEdgeShade.renderOrder = 3
     const gripRing = new Mesh(gripRingGeometry, [crownMaterial, engravingWallMaterial])
     const gripReflection = new Mesh(gripRingGeometry, crownReflectionMaterial)
     gripRing.position.z = -CROWN_RECESS
@@ -490,8 +549,8 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, o
     gripReflection.renderOrder = 1
     const engravingFloor = new Mesh(engravingFloorGeometry, engravingFloorMaterial)
     const gripFloor = new Mesh(gripFloorGeometry, engravingFloorMaterial)
-    crown.position.z = -CROWN_RECESS
-    crownReflection.position.z = -CROWN_RECESS
+    crown.position.z = -CROWN_RECESS - CROWN_EDGE_BEVEL_THICKNESS
+    crownReflection.position.z = -CROWN_RECESS - CROWN_EDGE_BEVEL_THICKNESS
     engravingFloor.position.z = -CROWN_RECESS - ENGRAVING_DEPTH
     engravingFloor.receiveShadow = true
     gripFloor.position.z = -CROWN_RECESS - GRIP_ENGRAVING_DEPTH
@@ -506,7 +565,8 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, o
     dome.castShadow = true
     dome.receiveShadow = true
     contactRing.renderOrder = 2
-    scene.add(dome, mapReflection, gripRing, gripReflection, crown, crownReflection, engravingFloor, gripFloor, domeSeam, contactRing)
+    scene.add(dome, mapReflection, gripRing, gripReflection, crown, crownReflection,
+        crownSeparationBase, crownSeparation, crownEdgeShade, engravingFloor, gripFloor, domeSeam, contactRing)
 
     let disposed = false
     let contextLost = false
@@ -611,6 +671,8 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, o
         canvas.removeEventListener('webglcontextrestored', restoreContext)
         domeGeometry.dispose()
         crownGeometry.dispose()
+        crownEdgeShadeGeometry.dispose()
+        crownSeparationGeometry.dispose()
         gripRingGeometry.dispose()
         engravingFloorGeometry.dispose()
         gripFloorGeometry.dispose()
@@ -619,6 +681,9 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, o
         domeMaterial.dispose()
         mapMaterial.dispose()
         crownMaterial.dispose()
+        crownEdgeShade.material.dispose()
+        crownSeparationBaseMaterial.dispose()
+        crownSeparation.material.dispose()
         crownReflectionMaterial.dispose()
         engravingWallMaterial.dispose()
         engravingFloorMaterial.dispose()
