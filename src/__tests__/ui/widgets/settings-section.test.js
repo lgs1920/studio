@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-11-08
+ * Last modified: 2026-11-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,9 @@
 import { SETTINGS_STORE }                                  from '@Core/constants'
 import { SettingsSection }                                 from '@Core/settings/SettingsSection'
 import { Track }                                           from '@Core/Track'
+import {readFileSync}                                      from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {parse}                                             from 'yaml'
 
 /**
  * Let the Valtio subscription queue flush without waiting on wall-clock time.
@@ -235,6 +237,28 @@ describe('SettingsSection', () => {
         const migrated = section.update(storedJourney, lgs.configuration.journey)
 
         expect(migrated).not.toHaveProperty('fixPathMaxSegmentMeters')
+    })
+
+    it('adds joystick defaults for existing profiles and keeps both user choices after reload', async () => {
+        const {joystick} = parse(readFileSync('public/settings.yaml', 'utf8')).ui
+        expect(joystick).toEqual({visible: true, followPitch: false})
+        let saved = {profile: {liveData: false}}
+        lgs.configuration.ui.joystick = {...joystick}
+        lgs.db.settings.get.mockImplementation(async () => saved)
+        lgs.db.settings.put.mockImplementation(async (_, value) => { saved = value })
+
+        const section = new SettingsSection('ui')
+        await section.init()
+        expect(section.content.joystick).toEqual(joystick)
+        section.content.joystick.visible = false
+        section.content.joystick.followPitch = true
+        await waitForSubscription()
+        expect(saved.joystick).toEqual({visible: false, followPitch: true})
+
+        lgs.configuration.ui.joystick = {...joystick}
+        const reopened = new SettingsSection('ui')
+        await reopened.init()
+        expect(reopened.content.joystick).toEqual({visible: false, followPitch: true})
     })
 
     it('keeps user replay settings while adding new default keys', () => {

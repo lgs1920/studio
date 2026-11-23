@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-18
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { CompassSettings } from '@Components/Settings/application/style/CompassSettings'
 import { EditorSettings } from '@Components/Settings/application/style/EditorSettings'
+import { JoystickSettings } from '@Components/Settings/application/style/JoystickSettings'
 import { MenuSettings }      from '@Components/Settings/application/style/MenuSettings'
 import { PWASettings } from '@Components/Settings/application/style/PWASettings'
 import { SETTINGS_EDITOR_DRAWER }  from '@Core/constants'
@@ -78,6 +79,14 @@ export const Style = memo(() => {
                        name="style-settings"
             >
                 <EditorSettings/>
+            </WaDetails>
+
+            <WaDetails id="ui-joystick-settings"
+                       small
+                       className="lgs-theme lgs--details-hoverable"
+                       name="style-settings"
+            >
+                <JoystickSettings/>
             </WaDetails>
 
             <WaDetails id="ui-pwa-settings"

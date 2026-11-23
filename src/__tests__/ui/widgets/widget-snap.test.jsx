@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-10-29
+ * Last modified: 2026-11-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -723,6 +723,32 @@ describe('Widget snap behavior', () => {
         expect(container.querySelector('.lgs-widget')?.classList.contains('crop-pass-through')).toBe(true)
         expect(latestMoveableProps().style).toEqual({opacity: 1, pointerEvents: 'auto'})
         expect(latestMoveableProps().useResizeObserver).toBe(true)
+    })
+
+    it('keeps a selected frameless widget draggable without exposing its control box', () => {
+        installGlobals()
+        const id = 'main-camera-joystick-widget'
+        lgs.stores.ui.widget.current = {id, rotate: 0}
+
+        renderWidget({id, draggable: true, showControlBox: false})
+
+        expect(latestMoveableProps().draggable).toBe(true)
+        expect(latestMoveableProps().edgeDraggable).toBe(false)
+        expect(latestMoveableProps().style).toEqual({opacity: 0, pointerEvents: 'none'})
+    })
+
+    it('leaves Shift drags over joystick controls to the map instead of dragging the widget', () => {
+        installGlobals()
+        renderWidget({id: 'main-camera-joystick-widget', draggable: true, shiftDragEnabled: false})
+        const control = document.createElement('span')
+        control.className = 'lgs-widget-no-drag'
+        const stopDrag = vi.fn()
+        latestMoveableProps().onDragStart({
+            inputEvent: {shiftKey: true, target: control, composedPath: () => [control]},
+            stopDrag,
+        })
+        expect(stopDrag).toHaveBeenCalledOnce()
+        expect(latestMoveableProps().draggable).toBe(true)
     })
 
     it('recognizes the cropper base identifier while its runtime identifier is being resolved', () => {

@@ -401,19 +401,42 @@
   keys:
     - Left drag
   scope: Replay camera setup
-- action: Adjust replay zoom and pitch with the joystick
-  description: During Basic or Expert video preparation, drag the recessed thumb upward to zoom in, downward to zoom out, and horizontally to change pitch. Drag the hemisphere outside the thumb to move the widget. Diagonal input combines both camera axes. Holding a displaced thumb continues adjustment at a rate set by its distance from center. Returning to center stops adjustment. Release retains the camera pose and centers the thumb. When the joystick has keyboard focus, Up zooms in, Down zooms out, Left and Right adjust pitch, and Escape centers it. Local joystick keys do not rotate Replay azimuth.
+- action: Adjust zoom and pitch with the camera joystick
+  description: On the main map or in idle Replay preparation, drag outward from the center of the dome. Movement within 45 degrees of a horizontal direction zooms. Movement closer to vertical adjusts pitch. Holding a deflection continues adjustment until the pointer returns to its starting point or is released. With the dome focused, Up and Down adjust pitch, Left zooms out, Right zooms in, and Escape stops the gesture.
   id: replay-camera-joystick
   keys:
     - Left drag
     - ArrowUp | ArrowDown | ArrowLeft | ArrowRight | Escape
-  scope: Replay camera setup
-- action: Constrain the camera joystick to one axis
-  description: Hold Ctrl while dragging the joystick thumb to lock its movement to the initial dominant horizontal or vertical axis. Keep Ctrl pressed to retain that axis. Release Ctrl to resume free movement without a camera jump.
+  scope: Map and Replay camera setup
+- action: Rotate the camera with the joystick grip ring
+  description: Drag the ridged inner ring around the dome to rotate. With the grip ring focused, Left and Right rotate in 5-degree steps.
+  id: camera-joystick-crown
+  keys:
+    - Left drag
+    - ArrowLeft | ArrowRight
+  scope: Map and Replay camera setup
+- action: Pan the map with the camera joystick
+  description: On the main map, hold Shift as you start dragging the dome or grip ring. The gesture moves the map along its initial dominant axis. To move the widget itself, drag the area outside the grip ring.
+  id: camera-joystick-pan
+  keys:
+    - Shift+Left drag
+  scope: Main map
+- action: Reset camera joystick orientation
+  description: Double-click or double-tap the dome or grip ring to face geographic north on the 3D map or during Replay preparation.
+  id: camera-joystick-reset-orientation
+  keys:
+    - Double click | Double tap
+  scope: Map and Replay camera setup
+- action: Adjust the camera joystick precisely
+  description: Hold Ctrl to slow pitch and zoom. During a dome drag, Ctrl also locks input to the initial dominant axis. With the dome focused, hold Ctrl while using the arrow keys for finer steps.
   id: replay-camera-joystick-axis-lock
   keys:
     - Ctrl+Left drag
-  scope: Replay camera setup
+    - Ctrl+ArrowUp
+    - Ctrl+ArrowDown
+    - Ctrl+ArrowLeft
+    - Ctrl+ArrowRight
+  scope: Map and Replay camera setup
 - action: Snap replay camera angle while dragging
   description: Hold Shift while dragging the camera icon to rotate replay azimuth in 5-degree steps.
   id: replay-camera-angle-snap-shift-drag
@@ -560,7 +583,7 @@
   reference: true
   scope: Widget interaction
 - action: Move widget
-  description: Drags a movable on-map widget. Hold Shift to drag it from anywhere on the widget, including interactive controls.
+  description: Drags a movable on-map widget. On widgets that reserve Shift for dragging, it also lets you grab the widget over interactive controls.
   id: widget-move-pointer
   keys:
     - Left drag

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -335,7 +335,7 @@ export const MainUI = memo(() => {
                 </>
             )}
             {video.editing && !videoCaptureActive && <CameraAdjustmentOverlay/>}
-            <ReplayCameraJoystick/>
+            <ReplayCameraJoystick key={video.editing ? 'replay' : 'main'} mainScene={!video.editing}/>
             <ContextMenuRenderer/>
             <MapPOIMoveOverlay/>
             <GeocodingPOIAddOverlay/>

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -632,7 +632,8 @@ const WidgetHost = ({
     const canScale = canInteract && !effectiveCollapsed && (config?.scalable ?? false)
     const canRotate = canInteract && !effectiveCollapsed && (config?.rotatable ?? false)
     const forceControlBox = config?.forceControlBox === true && !effectiveLocked
-    const showMoveableControls = (isSelected || forceControlBox) && (!config.isCropper || canResize)
+    const showMoveableControls = config.showControlBox !== false
+        && (isSelected || forceControlBox) && (!config.isCropper || canResize)
     const availableResizeDirections = config.isCropper && showMoveableControls
         ? CROP_RESIZE_DIRECTIONS
         : controlBox.renderDirections
@@ -2104,7 +2105,7 @@ const WidgetHost = ({
                 target={_widget}
                 dragTarget={config.handle ? resolveDragTarget : _widget}
                 draggable={canDrag}
-                edgeDraggable={true}
+                edgeDraggable={config.showControlBox !== false}
                 edge={resizeDirections ?? ['w', 'e', 's', 'n']}
                 onDrag={handleDrag}
                 onDragStart={handleDragStart}

@@ -522,6 +522,11 @@ ui:
   compass:
     mode: 1                # 0: none, 1: full, 2: light, 3: modern, 4: flat
 
+  ## Joystick
+  joystick:
+    visible: true
+    followPitch: false
+
   ## Video
   video:
     format: mp4        # for Video

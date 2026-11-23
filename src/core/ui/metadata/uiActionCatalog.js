@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-03
- * Last modified: 2026-11-11
+ * Last modified: 2026-11-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -152,6 +152,14 @@ export const UI_ACTIONS = Object.freeze({
         label: 'Show Compass',
         icon: UI_ICONS.compass,
     },
+    showJoystick: {
+        label: 'Show joystick',
+        icon: UI_ICONS.show,
+    },
+    joystickFollowPitch: {
+        label: 'Follow camera pitch',
+        icon: UI_ICONS.orbit,
+    },
     showProfileWidget: {
         label: 'Show Profile',
         icon: UI_ICONS.elevationProfile,
@@ -243,6 +251,10 @@ export const UI_ACTIONS = Object.freeze({
     redo: {
         label: 'Redo',
         icon: {name: 'arrow-rotate-right', variant: 'regular'},
+    },
+    joystickGripRing: {
+        label: 'Rotate camera with the grip ring',
+        icon: UI_ICONS.orbit,
     },
     clearCartographicCache: {
         label: 'Clear cartographic cache',
