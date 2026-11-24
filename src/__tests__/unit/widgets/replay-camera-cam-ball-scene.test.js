@@ -2,48 +2,49 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: replay-camera-joystick-scene.test.js
+ * File: replay-camera-cam-ball-scene.test.js
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-10-29
- * Last modified: 2026-11-23
+ * Created on: 2026-11-24
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {describe, expect, it, vi} from 'vitest'
-import {Color, Mesh, MeshBasicMaterial, Raycaster, Vector3} from 'three'
+import {Color, Mesh, MeshBasicMaterial, MeshStandardMaterial, Raycaster, Vector3} from 'three'
 import {
-    createDomeSeamGeometry, createJoystickContactRingGeometry, createJoystickCrownGeometry, createJoystickDomeGeometry,
-    createGripMarks, createJoystickCrownEdgeShadeGeometry, createJoystickCrownSeparationBaseMaterial,
-    createJoystickCrownMaterial, createJoystickCrownSeparationGeometry, createJoystickDomeMaterial,
-    createJoystickGripRingGeometry, setJoystickDomeTilt,
-    setJoystickMapReflectionTransform,
-} from '@Components/JourneyReplay/ReplayCameraJoystickScene'
+    createDomeSeamGeometry, createCamBallContactRingGeometry, createCamBallCrownGeometry, createCamBallDomeGeometry,
+    createGripMarks, createCamBallCrownEdgeShadeGeometry, createCamBallCrownSeparationBaseMaterial,
+    createCamBallCrownMaterial, createCamBallCrownSeparationGeometry, createCamBallDomeMaterial,
+    createCamBallNorthIndicatorMaterial,
+    createCamBallGripRingGeometry, setCamBallDomeTilt,
+    setCamBallMapReflectionTransform,
+} from '@Components/JourneyReplay/ReplayCameraCamBallScene'
 
-describe('Replay camera joystick surface', () => {
+describe('Replay camera CamBall surface', () => {
     it('flips sampled map imagery horizontally and vertically for the convex reflection', () => {
         const context = {setTransform: vi.fn()}
-        setJoystickMapReflectionTransform(context, 256)
+        setCamBallMapReflectionTransform(context, 256)
         expect(context.setTransform).toHaveBeenCalledWith(-1, 0, 0, -1, 256, 256)
     })
 
     it('keeps the dome smooth while its finish rolls with the drag', () => {
-        const dome = createJoystickDomeGeometry()
+        const dome = createCamBallDomeGeometry()
         try {
             const positions = dome.getAttribute('position')
             const reflection = dome.getAttribute('uv')
             expect(positions.getZ(0)).toBeCloseTo(0.19)
             expect(positions.getZ(1)).toBeLessThan(positions.getZ(0))
             const originalPositions = positions.array.slice()
-            setJoystickDomeTilt(dome, 0.35, 0)
+            setCamBallDomeTilt(dome, 0.35, 0)
             expect(positions.array).toEqual(originalPositions)
             expect(reflection.getX(0)).toBeLessThan(0.5)
             expect(reflection.getY(0)).toBeCloseTo(0.5)
-            setJoystickDomeTilt(dome, 0, 0)
+            setCamBallDomeTilt(dome, 0, 0)
             expect(reflection.getX(0)).toBe(0.5)
         }
         finally {
@@ -52,14 +53,14 @@ describe('Replay camera joystick surface', () => {
     })
 
     it('adds light at the dark edge when the dome is fully deflected', () => {
-        const dome = createJoystickDomeGeometry()
+        const dome = createCamBallDomeGeometry()
         try {
             const colors = dome.getAttribute('color')
             const edge = colors.count - 128
             const idleShade = colors.getX(edge)
-            setJoystickDomeTilt(dome, 0.40, 0)
+            setCamBallDomeTilt(dome, 0.40, 0)
             expect(colors.getX(edge)).toBeGreaterThan(idleShade)
-            setJoystickDomeTilt(dome, 0, 0)
+            setCamBallDomeTilt(dome, 0, 0)
             expect(colors.getX(edge)).toBe(idleShade)
         }
         finally {
@@ -68,7 +69,7 @@ describe('Replay camera joystick surface', () => {
     })
 
     it('cuts the north tip and tick marks into the crown instead of raising them', () => {
-        const crown = createJoystickCrownGeometry()
+        const crown = createCamBallCrownGeometry()
         const material = new MeshBasicMaterial()
         const mesh = new Mesh(crown, material)
         const raycaster = new Raycaster(new Vector3(), new Vector3(0, 0, -1))
@@ -88,8 +89,8 @@ describe('Replay camera joystick surface', () => {
     })
 
     it('gives the grip deeper grooves while keeping its surface flush with the compass', () => {
-        const grip = createJoystickGripRingGeometry()
-        const crown = createJoystickCrownGeometry()
+        const grip = createCamBallGripRingGeometry()
+        const crown = createCamBallCrownGeometry()
         const material = new MeshBasicMaterial()
         const mesh = new Mesh(grip, material)
         const raycaster = new Raycaster(new Vector3(), new Vector3(0, 0, -1))
@@ -126,9 +127,9 @@ describe('Replay camera joystick surface', () => {
     })
 
     it('creates a two-pixel shaded channel between the grip and compass crowns', () => {
-        const grip = createJoystickGripRingGeometry()
-        const crown = createJoystickCrownGeometry()
-        const separation = createJoystickCrownSeparationGeometry()
+        const grip = createCamBallGripRingGeometry()
+        const crown = createCamBallCrownGeometry()
+        const separation = createCamBallCrownSeparationGeometry()
         try {
             const radialExtent = (geometry, maximum) => {
                 const positions = geometry.getAttribute('position')
@@ -161,7 +162,7 @@ describe('Replay camera joystick surface', () => {
     })
 
     it('uses an opaque theme-colored backing under the crown channel', () => {
-        const material = createJoystickCrownSeparationBaseMaterial(new Color(0.4, 0.6, 0.8))
+        const material = createCamBallCrownSeparationBaseMaterial(new Color(0.4, 0.6, 0.8))
         try {
             expect(material.transparent).toBe(false)
             expect(material.color.r).toBeCloseTo(0.192)
@@ -174,10 +175,27 @@ describe('Replay camera joystick surface', () => {
     })
 
     it('keeps both decorative crowns mostly opaque', () => {
-        const material = createJoystickCrownMaterial(new Color(0.4, 0.6, 0.8), new Color(1, 1, 1))
+        const material = createCamBallCrownMaterial(new Color(0.4, 0.6, 0.8), new Color(1, 1, 1))
         try {
             expect(material.transparent).toBe(true)
-            expect(material.opacity).toBe(0.9)
+            expect(material.opacity).toBe(0.96)
+            expect(material.roughness).toBe(0.9)
+        }
+        finally {
+            material.dispose()
+        }
+    })
+
+    it('keeps the north indicator warning-colored with dimensional lighting', () => {
+        const material = createCamBallNorthIndicatorMaterial(new Color(1, 0.5, 0))
+        try {
+            expect(material).toBeInstanceOf(MeshStandardMaterial)
+            expect(material.color.r).toBe(1)
+            expect(material.color.g).toBe(0.5)
+            expect(material.color.b).toBe(0)
+            expect(material.roughness).toBe(0.68)
+            expect(material.metalness).toBe(0.04)
+            expect(material.toneMapped).toBe(false)
         }
         finally {
             material.dispose()
@@ -185,7 +203,7 @@ describe('Replay camera joystick surface', () => {
     })
 
     it('uses a more matte finish on the ball while retaining a soft reflection', () => {
-        const material = createJoystickDomeMaterial(new Color(0.4, 0.6, 0.8), null)
+        const material = createCamBallDomeMaterial(new Color(0.4, 0.6, 0.8), null)
         try {
             expect(material.roughness).toBe(0.66)
             expect(material.clearcoat).toBe(0.1)
@@ -197,7 +215,7 @@ describe('Replay camera joystick surface', () => {
     })
 
     it('lights the upper-left map edge and the opposite side inside the recess', () => {
-        const shadow = createJoystickContactRingGeometry()
+        const shadow = createCamBallContactRingGeometry()
         try {
             const positions = shadow.getAttribute('position')
             const colors = shadow.getAttribute('color')
@@ -246,7 +264,7 @@ describe('Replay camera joystick surface', () => {
     })
 
     it('places the crown-edge shade over only the lower-right outer arc', () => {
-        const shade = createJoystickCrownEdgeShadeGeometry()
+        const shade = createCamBallCrownEdgeShadeGeometry()
         try {
             shade.computeBoundingBox()
             expect(shade.boundingBox.min.x).toBeCloseTo(0)
@@ -274,7 +292,7 @@ describe('Replay camera joystick surface', () => {
     })
 
     it('centers the map reflection and curves its sampling toward the dome edge', () => {
-        const dome = createJoystickDomeGeometry()
+        const dome = createCamBallDomeGeometry()
         try {
             const positions = dome.getAttribute('position')
             const coordinates = dome.getAttribute('uv')
@@ -293,8 +311,8 @@ describe('Replay camera joystick surface', () => {
     })
 
     it('keeps the outer diameter while reserving a gap between the dome and compass', () => {
-        const crown = createJoystickCrownGeometry()
-        const dome = createJoystickDomeGeometry()
+        const crown = createCamBallCrownGeometry()
+        const dome = createCamBallDomeGeometry()
 
         try {
             crown.computeBoundingBox()

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-11-11
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -1299,7 +1299,7 @@ const refreshPreparationCamera = (mode, sample, options = {}) => {
  * @param {Object} mode - Replay session.
  * @param {Object} updates - Prepared camera settings to merge.
  * @param {Object} [options] - Preparation camera framing options.
- * @param {boolean} [options.preserveCameraRange=false] - Keep joystick pitch changes from changing zoom.
+ * @param {boolean} [options.preserveCameraRange=false] - Keep CamBall pitch changes from changing zoom.
  * @returns {Object|null} Saved pose, or null outside idle video preparation.
  */
 export const updatePreparationCamera = (mode, updates, {preserveCameraRange = false} = {}) => {
@@ -1353,7 +1353,7 @@ export const updatePreparationCamera = (mode, updates, {preserveCameraRange = fa
     call.cancelPreparationCameraGesture?.()
     const camera = call.persistCameraSettings?.(cameraUpdates)
     if (camera) {
-        refreshCamera(mode, {preparation: true, suppressMoveEvents: true, source: 'preparation-joystick'})
+        refreshCamera(mode, {preparation: true, suppressMoveEvents: true, source: 'preparation-cam-ball'})
     }
     return camera ?? null
 }

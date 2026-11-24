@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -48,7 +48,7 @@ vi.mock('@Components/MainUI/MapPOI/MapPOIMonitor', () => ({
 }))
 vi.mock('@Components/MainUI/MapPOI/MapPOIMoveOverlay', () => ({MapPOIMoveOverlay: () => null}))
 vi.mock('@Components/JourneyReplay/JourneyReplayCameraAngleGuide', () => ({JourneyReplayCameraAngleGuide: () => null}))
-vi.mock('@Components/JourneyReplay/ReplayCameraJoystick', () => ({ReplayCameraJoystick: () => null}))
+vi.mock('@Components/JourneyReplay/ReplayCameraCamBall', () => ({ReplayCameraCamBall: () => null}))
 vi.mock('@Components/MainUI/PanoramaWidget', () => ({
     PanoramaWidget: () => <div data-testid="panorama-widget"/>,
 }))

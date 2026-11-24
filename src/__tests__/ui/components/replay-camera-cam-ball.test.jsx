@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: replay-camera-joystick.test.jsx
+ * File: replay-camera-cam-ball.test.jsx
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-10-29
- * Last modified: 2026-11-23
+ * Created on: 2026-11-24
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,8 +18,9 @@ import {act, cleanup, fireEvent, render} from '@testing-library/react'
 import {Camera, Cartesian2, Cartesian3, Ellipsoid, GeographicProjection, HeadingPitchRange, Matrix4, SceneMode, SceneTransforms} from 'cesium'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
-import {ReplayCameraJoystick} from '@Components/JourneyReplay/ReplayCameraJoystick'
-import {JoystickSettings} from '@Components/Settings/application/style/JoystickSettings'
+import {ReplayCameraCamBall} from '@Components/JourneyReplay/ReplayCameraCamBall'
+import {CamBallSettings} from '@Components/Settings/application/style/CamBallSettings'
+import {getMainSceneCameraPivot, setMainSceneCameraPivot} from '@Core/ui/MainSceneCameraPivot'
 
 vi.mock('@Components/MainUI/widgets/Widget', () => ({
     Widget: ({children, containerClassName, config}) => (
@@ -68,35 +69,36 @@ const pointer = (target, type, x, y, pointerId = 1, ctrlKey = false, pointerType
         shiftKey: {value: shiftKey},
         button: {value: 0}, clientX: {value: x}, clientY: {value: y}, pointerId: {value: pointerId}, ctrlKey: {value: ctrlKey},
     })
-    const grip = type === 'pointerdown' ? target.querySelector('.replay-camera-joystick-dome-hit') : null
+    const grip = type === 'pointerdown' ? target.querySelector('.replay-camera-cam-ball-dome-hit') : null
     fireEvent(grip ?? target, event)
 }
 
 afterEach(() => {
     cleanup()
+    document.querySelectorAll('.replay-pivot-test-canvas-parent').forEach(element => element.remove())
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
 })
 
-describe('Replay camera joystick', () => {
-    it('shows the joystick by default and applies both UI preferences immediately', async () => {
+describe('Replay camera CamBall', () => {
+    it('shows CamBall by default and applies both UI preferences immediately', async () => {
         const {video} = install()
         video.editing = false
         lgs.camera = {pitch: -Math.PI / 4}
-        const view = render(<><JoystickSettings/><ReplayCameraJoystick mainScene/></>)
+        const view = render(<><CamBallSettings/><ReplayCameraCamBall mainScene/></>)
         /** Read the current visual angle on the widget surface. */
-        const tilt = () => view.container.querySelector('.replay-camera-joystick')
-            ?.style.getPropertyValue('--lgs-joystick-view-tilt')
-        const show = view.getByRole('checkbox', {name: 'Show joystick'})
+        const tilt = () => view.container.querySelector('.replay-camera-cam-ball')
+            ?.style.getPropertyValue('--lgs-cam-ball-view-tilt')
+        const show = view.getByRole('checkbox', {name: 'Show CamBall'})
         const follow = view.getByRole('checkbox', {name: 'Follow camera pitch'})
         expect(show.checked).toBe(true)
         expect(follow.checked).toBe(false)
         expect(tilt()).toBe('0.00deg')
         await act(async () => fireEvent.click(follow))
-        expect(lgs.settings.ui.joystick).toEqual({visible: true, followPitch: true})
+        expect(lgs.settings.ui.camBall).toEqual({visible: true, followPitch: true})
         expect(tilt()).toBe('30.00deg')
         await act(async () => fireEvent.click(show))
-        expect(lgs.settings.ui.joystick.visible).toBe(false)
+        expect(lgs.settings.ui.camBall.visible).toBe(false)
         expect(tilt()).toBeUndefined()
         await act(async () => fireEvent.click(show))
         expect(tilt()).toBe('30.00deg')
@@ -107,45 +109,45 @@ describe('Replay camera joystick', () => {
     it.each([false, true])('uses the map tool layer below overlays in both contexts (mainScene %s)', mainScene => {
         const {video} = install()
         video.editing = !mainScene
-        const view = render(<ReplayCameraJoystick mainScene={mainScene}/>)
-        const layer = view.container.querySelector('.replay-camera-joystick-layer')
+        const view = render(<ReplayCameraCamBall mainScene={mainScene}/>)
+        const layer = view.container.querySelector('.replay-camera-cam-ball-layer')
         expect(layer?.style.zIndex).toBe('var(--lgs-tools-ui-zindex)')
     })
 
     it('tilts the whole widget with the live pitch and limits the visual angle at both ends', () => {
         const {video} = install()
-        lgs.settings.ui.joystick = {followPitch: true}
+        lgs.settings.ui.camBall = {followPitch: true}
         video.editing = false
         const addEventListener = vi.fn()
         lgs.camera = {pitch: -Math.PI / 2}
         lgs.scene = {postRender: {addEventListener}}
-        const view = render(<ReplayCameraJoystick mainScene/>)
-        const surface = view.container.querySelector('.replay-camera-joystick')
+        const view = render(<ReplayCameraCamBall mainScene/>)
+        const surface = view.container.querySelector('.replay-camera-cam-ball')
         const refresh = addEventListener.mock.calls[0][0]
         const grip = view.getByRole('group', {name: 'Rotate camera with the grip ring'})
         const flatGrip = grip.getAttribute('d')
-        expect(surface.style.getPropertyValue('--lgs-joystick-view-tilt')).toBe('0.00deg')
-        expect(surface.style.getPropertyValue('--lgs-joystick-view-perspective')).toBe('560px')
+        expect(surface.style.getPropertyValue('--lgs-cam-ball-view-tilt')).toBe('0.00deg')
+        expect(surface.style.getPropertyValue('--lgs-cam-ball-view-perspective')).toBe('560px')
         lgs.camera.pitch = -Math.PI / 4
         refresh()
-        expect(surface.style.getPropertyValue('--lgs-joystick-view-tilt')).toBe('30.00deg')
+        expect(surface.style.getPropertyValue('--lgs-cam-ball-view-tilt')).toBe('30.00deg')
         lgs.camera.pitch = 0.2
         refresh()
-        expect(surface.style.getPropertyValue('--lgs-joystick-view-tilt')).toBe('60.00deg')
-        expect(surface.style.getPropertyValue('--lgs-joystick-view-perspective')).toBe('240px')
+        expect(surface.style.getPropertyValue('--lgs-cam-ball-view-tilt')).toBe('60.00deg')
+        expect(surface.style.getPropertyValue('--lgs-cam-ball-view-perspective')).toBe('240px')
         expect(grip.getAttribute('d')).not.toBe(flatGrip)
-        expect(grip.closest('.replay-camera-joystick-visual')).toBeNull()
+        expect(grip.closest('.replay-camera-cam-ball-visual')).toBeNull()
         lgs.camera.pitch = -2
         refresh()
-        expect(surface.style.getPropertyValue('--lgs-joystick-view-tilt')).toBe('0.00deg')
+        expect(surface.style.getPropertyValue('--lgs-cam-ball-view-tilt')).toBe('0.00deg')
         expect(grip.getAttribute('d')).toBe(flatGrip)
     })
 
     it('measures a grip turn in the dial plane when the widget is tilted in perspective', () => {
         const {replay} = install()
-        lgs.settings.ui.joystick = {followPitch: true}
+        lgs.settings.ui.camBall = {followPitch: true}
         lgs.camera = {pitch: -Math.PI / 12}
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const grip = view.getByRole('group', {name: 'Rotate camera with the grip ring'})
         const pad = view.getByRole('group', {name: /adjust pitch/})
         pad.getBoundingClientRect = () => ({left: 20, top: 30, width: 144, height: 144})
@@ -179,23 +181,28 @@ describe('Replay camera joystick', () => {
         camera.lookAt(pivot, new HeadingPitchRange(0.7, -0.8, 17000))
         lgs.scene = scene
         lgs.camera = camera
-        const view = render(<ReplayCameraJoystick mainScene/>)
+        const view = render(<ReplayCameraCamBall mainScene/>)
         const pad = view.getByRole('group', {name: /adjust pitch/})
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
         const normal = scene.ellipsoid.geodeticSurfaceNormal(pivot)
-
         pointer(pad, 'pointerdown', 50, 50)
         pointer(pad, 'pointermove', 50, 80)
         for (let step = 0; step < 46; step++) await frame(step * 100)
-        expect(Cartesian3.dot(camera.directionWC, normal)).toBeCloseTo(-1, 9)
+        const cameraUp = scene.ellipsoid.geodeticSurfaceNormal(camera.positionWC, new Cartesian3())
+        expect(Cartesian3.dot(camera.directionWC, normal)).toBeCloseTo(-Math.cos(Math.PI / 180), 5)
+        expect(Cartesian3.dot(camera.directionWC, cameraUp)).toBeLessThan(0)
         pointer(pad, 'pointermove', 50, 20)
         for (let step = 46; step < 100; step++) await frame(step * 100)
-        expect(Cartesian3.dot(camera.directionWC, normal)).toBeCloseTo(0, 9)
+        scene.ellipsoid.geodeticSurfaceNormal(camera.positionWC, cameraUp)
+        expect(Cartesian3.dot(camera.directionWC, cameraUp)).toBeLessThanOrEqual(-Math.sin(Math.PI / 180) + 1e-8)
         expect(Cartesian3.distance(camera.positionWC, pivot)).toBeCloseTo(17000, 5)
     })
 
-    it.each(['horizontal', 'vertical'])('uses Shift to pan on the initial %s axis without zooming or tilting', async axis => {
-        const {frame, video} = install()
+    it.each([
+        {modifier: 'Shift', ctrlKey: false, shiftKey: true},
+        {modifier: 'Ctrl', ctrlKey: true, shiftKey: false},
+    ])('ignores $modifier drags on the CamBall face', ({ctrlKey, shiftKey}) => {
+        const {video} = install()
         video.editing = false
         const moveRight = vi.fn()
         const moveUp = vi.fn()
@@ -206,31 +213,22 @@ describe('Replay camera joystick', () => {
             screenSpaceCameraController: {enableInputs: true, enableTranslate: true, enableZoom: true, enableTilt: true},
             requestRender: vi.fn(),
         }
-        const view = render(<ReplayCameraJoystick mainScene/>)
+        const view = render(<ReplayCameraCamBall mainScene/>)
         const pad = view.getByRole('group', {name: /adjust pitch/})
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
-        const horizontal = axis === 'horizontal'
-        const pan = horizontal ? moveRight : moveUp
-        const crossAxis = horizontal ? moveUp : moveRight
-        pointer(pad, 'pointerdown', 50, 50, 1, false, 'mouse', true)
-        pointer(pad, 'pointermove', horizontal ? 63 : 52, horizontal ? 52 : 63, 1, false, 'mouse', true)
-        await frame(40)
-        pointer(pad, 'pointermove', horizontal ? 62 : 95, horizontal ? 95 : 62, 1, false, 'mouse', true)
-        await frame(80)
-        expect(pan).toHaveBeenCalledTimes(2)
-        expect(crossAxis).not.toHaveBeenCalled()
+        pointer(pad, 'pointerdown', 50, 50, 1, ctrlKey, 'mouse', shiftKey)
+        pointer(pad, 'pointermove', 75, 70, 1, ctrlKey, 'mouse', shiftKey)
+        pointer(pad, 'pointerup', 75, 70, 1, ctrlKey, 'mouse', shiftKey)
+        expect(moveRight).not.toHaveBeenCalled()
+        expect(moveUp).not.toHaveBeenCalled()
         expect(zoomIn).not.toHaveBeenCalled()
-        expect(Math.sign(pan.mock.calls[0][0])).toBe(horizontal ? -1 : 1)
-        pointer(pad, 'pointerup', 62, 62)
-        await frame(120)
-        expect(pan).toHaveBeenCalledTimes(2)
     })
 
     it('uses a circular drag from the grip ring to rotate without changing pitch or altitude', () => {
         const {updatePreparationCamera} = install()
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByRole('group', {name: /adjust pitch/})
-        const rim = pad.querySelector('.replay-camera-joystick-grip-hit')
+        const rim = pad.querySelector('.replay-camera-cam-ball-grip-hit')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
         pointer(rim, 'pointerdown', 76, 54, 1, false, 'touch')
         pointer(rim, 'pointermove', 50, 79, 1, false, 'touch')
@@ -241,8 +239,8 @@ describe('Replay camera joystick', () => {
 
     it('leaves the outer crown display-only when clicked or dragged', () => {
         const {frames, updatePreparationCamera} = install()
-        const view = render(<ReplayCameraJoystick/>)
-        const crown = view.container.querySelector('.replay-camera-joystick-crown-band')
+        const view = render(<ReplayCameraCamBall/>)
+        const crown = view.container.querySelector('.replay-camera-cam-ball-crown-band')
         pointer(crown, 'pointerdown', 84, 54)
         pointer(crown, 'pointermove', 50, 86)
         pointer(crown, 'pointerup', 50, 86)
@@ -283,7 +281,7 @@ describe('Replay camera joystick', () => {
         }
         lgs.scene = scene
         lgs.camera = camera
-        const view = render(<ReplayCameraJoystick mainScene/>)
+        const view = render(<ReplayCameraCamBall mainScene/>)
         const rim = view.getByRole('group', {name: 'Rotate camera with the grip ring'})
         const pad = view.getByRole('group', {name: /adjust pitch/})
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
@@ -319,7 +317,7 @@ describe('Replay camera joystick', () => {
         pointer(rim, 'pointerup', 24, 54)
         expect(scene.requestRender).toHaveBeenCalledTimes(2)
         if (gesture === 'double click') {
-            fireEvent.doubleClick(pad.querySelector('.replay-camera-joystick-dome-hit'))
+            fireEvent.doubleClick(pad.querySelector('.replay-camera-cam-ball-dome-hit'))
         }
         else {
             for (const id of [2, 3]) {
@@ -340,9 +338,9 @@ describe('Replay camera joystick', () => {
     it('restores geographic north while keeping Replay pitch and altitude on double click or double tap', () => {
         const {replay, updatePreparationCamera} = install()
         lgs.camera = {heading: Math.PI}
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByRole('group', {name: /adjust pitch/})
-        const dome = pad.querySelector('.replay-camera-joystick-dome-hit')
+        const dome = pad.querySelector('.replay-camera-cam-ball-dome-hit')
         fireEvent.doubleClick(dome)
         expect(replay.camera).toEqual({altitude: 1200, pitch: -40, cameraAngle: -115})
 
@@ -361,7 +359,7 @@ describe('Replay camera joystick', () => {
 
     it('clears keyboard focus when the user grabs the dome without blocking the drag', async () => {
         const {frame, updatePreparationCamera} = install()
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByRole('group', {name: /adjust pitch/})
         pad.getBoundingClientRect = () => ({width: 100, height: 100})
         pad.focus()
@@ -376,9 +374,9 @@ describe('Replay camera joystick', () => {
     it('rotates from the grip ring across the angle seam and stops on release', () => {
         const {replay, frames, updatePreparationCamera} = install()
         replay.camera.cameraAngle = -179
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const rim = view.getByRole('group', {name: 'Rotate camera with the grip ring'})
-        const pad = rim.closest('.replay-camera-joystick-pad')
+        const pad = rim.closest('.replay-camera-cam-ball-pad')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
         const marks = pad.querySelector('svg path')
 
@@ -404,12 +402,15 @@ describe('Replay camera joystick', () => {
         const addEventListener = vi.fn(() => remove)
         lgs.camera = {heading: Math.PI / 2}
         lgs.scene = {postRender: {addEventListener}}
-        const view = render(<ReplayCameraJoystick mainScene/>)
+        const view = render(<ReplayCameraCamBall mainScene/>)
         const marks = view.container.querySelector('svg path')
+        const north = view.container.querySelector('.replay-camera-cam-ball-north-mark')
         expect(marks.getAttribute('transform')).toBe('rotate(-90)')
+        expect(north.getAttribute('transform')).toBe('rotate(-90)')
         lgs.camera.heading = 3 * Math.PI / 2
         addEventListener.mock.calls[0][0]()
         expect(marks.getAttribute('transform')).toBe('rotate(90)')
+        expect(north.getAttribute('transform')).toBe('rotate(90)')
         view.unmount()
         expect(remove).toHaveBeenCalledOnce()
     })
@@ -433,9 +434,9 @@ describe('Replay camera joystick', () => {
             screenSpaceCameraController: {enableInputs: true, enableRotate: true},
             requestRender: vi.fn(),
         }
-        const view = render(<ReplayCameraJoystick mainScene/>)
+        const view = render(<ReplayCameraCamBall mainScene/>)
         const rim = view.getByRole('group', {name: 'Rotate camera with the grip ring'})
-        rim.closest('.replay-camera-joystick-pad').getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
+        rim.closest('.replay-camera-cam-ball-pad').getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
         pointer(rim, 'pointerdown', 76, 54)
         pointer(rim, 'pointermove', 50, 79)
         expect(lgs.camera.positionWC.y).toBeCloseTo(100)
@@ -447,6 +448,60 @@ describe('Replay camera joystick', () => {
         Cartesian3.normalize(towardPivot, towardPivot)
         expect(Cartesian3.dot(towardPivot, lgs.camera.directionWC)).toBeCloseTo(1)
         expect(updatePreparationCamera).not.toHaveBeenCalled()
+    })
+
+    it('uses the map-selected pivot for CamBall pitch without owning the map reticle', async () => {
+        const {frame, video} = install()
+        video.editing = false
+        const canvas = document.createElement('canvas')
+        Object.defineProperties(canvas, {
+            clientWidth: {value: 800},
+            clientHeight: {value: 600},
+        })
+        const canvasParent = document.createElement('div')
+        canvasParent.className = 'replay-pivot-test-canvas-parent'
+        Object.defineProperties(canvasParent, {
+            clientWidth: {value: 800},
+            clientHeight: {value: 600},
+        })
+        canvasParent.append(canvas)
+        document.body.append(canvasParent)
+        canvasParent.getBoundingClientRect = () => ({left: 20, top: 30, right: 420, bottom: 330, width: 400, height: 300})
+        canvas.getBoundingClientRect = () => ({left: 20, top: 30, right: 420, bottom: 330, width: 400, height: 300})
+        const initialPivot = Cartesian3.fromDegrees(7.25, 46.7)
+        const scene = {
+            mode: SceneMode.SCENE3D, frameState: {mode: SceneMode.SCENE3D},
+            canvas, drawingBufferWidth: 800, drawingBufferHeight: 600,
+            mapProjection: new GeographicProjection(), ellipsoid: Ellipsoid.WGS84,
+            screenSpaceCameraController: {enableInputs: true, enableRotate: true, enableTilt: true},
+            pickPositionSupported: true, requestRender: vi.fn(),
+        }
+        const camera = new Camera(scene)
+        scene.camera = camera
+        camera.update(SceneMode.SCENE3D)
+        camera.lookAt(initialPivot, new HeadingPitchRange(0.7, -0.8, 17000))
+        camera.lookAtTransform(Matrix4.IDENTITY)
+        scene.pickPosition = vi.fn(position => camera.pickEllipsoid(position, Ellipsoid.WGS84))
+        scene.postRender = {addEventListener: vi.fn(() => vi.fn())}
+        const selectedPivot = Cartesian3.fromDegrees(7.3, 46.75, 500)
+        setMainSceneCameraPivot(scene, camera, selectedPivot)
+        lgs.scene = scene
+        lgs.camera = camera
+        const view = render(<ReplayCameraCamBall mainScene/>)
+        const pad = view.getByRole('group', {name: /adjust pitch/})
+        pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
+        expect(getMainSceneCameraPivot(scene, camera)).toEqual(selectedPivot)
+        const selectedRange = Cartesian3.distance(camera.positionWC, selectedPivot)
+        const initialRange = Cartesian3.distance(camera.positionWC, initialPivot)
+        pointer(pad, 'pointerdown', 50, 50)
+        pointer(pad, 'pointermove', 50, 30)
+        await frame(40)
+        expect(Cartesian3.distance(camera.positionWC, selectedPivot)).toBeCloseTo(selectedRange, 5)
+        expect(Cartesian3.distance(camera.positionWC, initialPivot)).not.toBeCloseTo(initialRange, 2)
+        pointer(pad, 'pointerup', 50, 30)
+
+        view.unmount()
+        canvasParent.remove()
     })
 
     it('controls the main scene without a journey and relinquishes input during Replay preparation', async () => {
@@ -462,7 +517,7 @@ describe('Replay camera joystick', () => {
             },
             requestRender: vi.fn(),
         }
-        const view = render(<ReplayCameraJoystick mainScene/>)
+        const view = render(<ReplayCameraCamBall mainScene/>)
         const pad = view.getByRole('group', {name: /adjust pitch/})
         fireEvent.keyDown(pad, {key: 'ArrowRight'})
         expect(lgs.camera.zoomIn.mock.calls[0][0]).toBeGreaterThan(0)
@@ -488,7 +543,7 @@ describe('Replay camera joystick', () => {
             },
             requestRender: vi.fn(),
         }
-        const view = render(<ReplayCameraJoystick mainScene/>)
+        const view = render(<ReplayCameraCamBall mainScene/>)
         const pad = view.getByRole('group', {name: /adjust pitch/})
         pad.getBoundingClientRect = () => ({width: 100, height: 100})
 
@@ -505,16 +560,16 @@ describe('Replay camera joystick', () => {
 
     it('leaves the area outside the dome and crown available for widget dragging', () => {
         const {frames, updatePreparationCamera} = install()
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
-        const sphere = view.container.querySelector('.replay-camera-joystick')
+        const sphere = view.container.querySelector('.replay-camera-cam-ball')
         const hostDrag = vi.fn()
         sphere.addEventListener('pointerdown', hostDrag)
         try {
             fireEvent(pad, new Event('pointerdown', {bubbles: true, cancelable: true}))
             expect(hostDrag).toHaveBeenCalledOnce()
             expect(pad.closest('.lgs-widget-no-drag')).toBeNull()
-            expect(pad.querySelector('.replay-camera-joystick-dome-hit').classList.contains('lgs-widget-no-drag')).toBe(true)
+            expect(pad.querySelector('.replay-camera-cam-ball-dome-hit').classList.contains('lgs-widget-no-drag')).toBe(true)
             expect(frames.size).toBe(0)
             expect(updatePreparationCamera).not.toHaveBeenCalled()
         }
@@ -523,7 +578,7 @@ describe('Replay camera joystick', () => {
 
     it.each(['horizontal', 'vertical'])('locks Ctrl dragging to its initial %s axis and unlocks without a jump', async axis => {
         const {frame, replay} = install()
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
         pointer(pad, 'pointerdown', 50, 50, 1, true)
@@ -553,7 +608,7 @@ describe('Replay camera joystick', () => {
 
     it('keeps the dome where it was rolled after release and uses that position for the next drag', async () => {
         const {frame, replay} = install()
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
         expect(view.container.querySelector('[data-icon]')).toBeNull()
@@ -579,7 +634,7 @@ describe('Replay camera joystick', () => {
 
     it('switches from a retained full zoom deflection to pitch when the next drag moves vertically', async () => {
         const {frame, replay} = install()
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
 
@@ -601,7 +656,7 @@ describe('Replay camera joystick', () => {
 
     it('switches from zoom to pitch at 45 degrees, consumes pointer input, and stops on release', async () => {
         const {frame, frames, replay, updatePreparationCamera} = install()
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 116, height: 116})
         const bubbled = vi.fn()
@@ -645,7 +700,7 @@ describe('Replay camera joystick', () => {
         {dx: -15, dy: -16, zoom: 0, tilt: 1},
     ])('applies only the dominant axis for movement ($dx, $dy)', ({dx, dy, zoom, tilt}) => {
         const {replay} = install()
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByRole('group', {name: /adjust pitch/})
         pad.getBoundingClientRect = () => ({width: 100, height: 100})
         pointer(pad, 'pointerdown', 50, 50)
@@ -657,7 +712,7 @@ describe('Replay camera joystick', () => {
 
     it('stops a held adjustment when the pointer returns to its starting point', async () => {
         const {frames, frame, replay} = install()
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
         pointer(pad, 'pointerdown', 50, 50)
@@ -676,7 +731,7 @@ describe('Replay camera joystick', () => {
         const poses = []
         for (const fps of [30, 60]) {
             const {frame, replay} = install()
-            const view = render(<ReplayCameraJoystick/>)
+            const view = render(<ReplayCameraCamBall/>)
             const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
             pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
             pointer(pad, 'pointerdown', 50, 50)
@@ -694,7 +749,7 @@ describe('Replay camera joystick', () => {
 
     it('offers focus-scoped keyboard axes with bounded values and no visible buttons or text', async () => {
         const {replay} = install()
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         expect(view.container.textContent).toBe('')
         expect(view.container.querySelector('button, wa-button, small, strong')).toBeNull()
@@ -723,7 +778,7 @@ describe('Replay camera joystick', () => {
         {key: 'ArrowUp', x: 50, y: 30, field: 'pitch'},
     ])('uses finer Ctrl adjustments for $field with pointer and keyboard', async ({key, x, y, field}) => {
         const {frame, replay} = install()
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByRole('group', {name: /adjust pitch/})
         pad.getBoundingClientRect = () => ({width: 100, height: 100})
         /** Compare zoom in log space because zoom is distance-relative. */
@@ -754,7 +809,7 @@ describe('Replay camera joystick', () => {
 
     it('flushes a short drag on release without leaving a queued camera update', async () => {
         const {frames, frame, replay, updatePreparationCamera} = install()
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
         pointer(pad, 'pointerdown', 50, 50)
@@ -771,7 +826,7 @@ describe('Replay camera joystick', () => {
 
     it.each(['preRecording', 'exporting', 'snapshot', 'finalizing'])('hides and cancels queued input when %s starts', async field => {
         const {video, frames, frame, updatePreparationCamera} = install()
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 116, height: 116})
         pointer(pad, 'pointerdown', 85, 30)
@@ -785,7 +840,7 @@ describe('Replay camera joystick', () => {
 
     it('stops on pointer cancellation, blur, journey replacement, and unmount', async () => {
         const {frames, main} = install()
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
         pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 116, height: 116})
         pointer(pad, 'pointerdown', 85, 30)
@@ -806,9 +861,9 @@ describe('Replay camera joystick', () => {
         expect(frames.size).toBe(0)
     })
 
-    it.each(['active', 'playing', 'paused', 'clipSequenceActive'])('blocks joystick input during Replay %s', async field => {
+    it.each(['active', 'playing', 'paused', 'clipSequenceActive'])('blocks CamBall input during Replay %s', async field => {
         const {replay, frames, updatePreparationCamera} = install()
-        const view = render(<ReplayCameraJoystick/>)
+        const view = render(<ReplayCameraCamBall/>)
         await act(async () => { replay[field] = true })
         expect(view.queryByLabelText('Drag up or down to adjust pitch, and left or right to zoom')).toBeNull()
         expect(frames.size).toBe(0)

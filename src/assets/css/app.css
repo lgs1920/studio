@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -355,10 +355,45 @@ body.lgs-app-booting #cesium-viewer {
     justify-content: center;
     transition: all 0.5s ease;
     filter: drop-shadow(0 0 5px black);
+    pointer-events: none;
+    user-select: none;
+
+    &.is-pivot-dragging { transition: none; }
+
+    &::before,
+    &::after {
+        position: absolute;
+        inset: 24%;
+        border: 2px solid currentColor;
+        border-radius: 50%;
+        box-shadow: 0 0 7px 2px color-mix(in srgb, currentColor 62%, transparent),
+            inset 0 0 4px color-mix(in srgb, currentColor 48%, transparent);
+        content: '';
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    &::after {
+        inset: 14%;
+        border-width: 1.5px;
+    }
+
+    &.is-pivot-grabbed::before { animation: camera-pivot-pulse 1100ms ease-out both; }
+    &.is-pivot-grabbed::after { animation: camera-pivot-pulse 1100ms 180ms ease-out both; }
 }
 
 #camera-target[show="true"] {
     display: flex !important;
+}
+
+@keyframes camera-pivot-pulse {
+    from { opacity: 0.9; filter: blur(0); transform: scale(0.38); }
+    to { opacity: 0; filter: blur(2px); transform: scale(2.35); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #camera-target.is-pivot-grabbed::before,
+    #camera-target.is-pivot-grabbed::after { animation: none; }
 }
 
 /** Drawers **/

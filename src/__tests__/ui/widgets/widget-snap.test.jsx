@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-11-23
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -737,9 +737,12 @@ describe('Widget snap behavior', () => {
         expect(latestMoveableProps().style).toEqual({opacity: 0, pointerEvents: 'none'})
     })
 
-    it('leaves Shift drags over joystick controls to the map instead of dragging the widget', () => {
+    it('keeps Shift drags over camBall controls for the pivot instead of moving the widget', () => {
         installGlobals()
-        renderWidget({id: 'main-camera-joystick-widget', draggable: true, shiftDragEnabled: false})
+        const {container} = renderWidget({id: 'main-camera-joystick-widget', draggable: true, shiftDragEnabled: false})
+        const widget = container.querySelector('.lgs-widget')
+        fireEvent.mouseEnter(widget, {shiftKey: true})
+        expect(container.querySelector('.lgs-widget-shift-drag-overlay')).toBeNull()
         const control = document.createElement('span')
         control.className = 'lgs-widget-no-drag'
         const stopDrag = vi.fn()
@@ -749,6 +752,13 @@ describe('Widget snap behavior', () => {
         })
         expect(stopDrag).toHaveBeenCalledOnce()
         expect(latestMoveableProps().draggable).toBe(true)
+    })
+
+    it('keeps the Shift drag overlay enabled for widgets by default', () => {
+        installGlobals()
+        const {container} = renderWidget({id: 'snap-widget', draggable: true})
+        fireEvent.mouseEnter(container.querySelector('.lgs-widget'), {shiftKey: true})
+        expect(container.querySelector('.lgs-widget-shift-drag-overlay')).not.toBeNull()
     })
 
     it('recognizes the cropper base identifier while its runtime identifier is being resolved', () => {

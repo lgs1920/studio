@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-10
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -118,7 +118,7 @@ afterEach(() => {
 })
 
 describe('Replay with the real Cesium camera', () => {
-    it.each(['basic', 'expert'])('applies joystick height and pitch during %s preparation and restores the original view', async userMode => {
+    it.each(['basic', 'expert'])('applies CamBall height and pitch during %s preparation and restores the original view', async userMode => {
         const {camera, mode, journey} = installScene({userMode, cameraAngle: 65})
         const normal = readPose(camera)
         try {

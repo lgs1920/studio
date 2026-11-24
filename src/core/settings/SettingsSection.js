@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-25
- * Last modified: 2026-10-17
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -103,17 +103,24 @@ export class SettingsSection {
             }
         }
         else {
+            const camBallMigrated = this.key === 'ui' && Object.prototype.hasOwnProperty.call(data, 'joystick')
+            const migratedSettings = camBallMigrated
+                ? {...data, camBall: data.camBall ?? data.joystick}
+                : data
+            if (camBallMigrated) {
+                delete migratedSettings.joystick
+            }
             const replayMigration = this.key === 'ui' && data?.replay
                 ? migrateLegacyBasicReplaySettings(data.replay)
                 : {settings: data?.replay, migrated: false}
             const origin = replayMigration.migrated
-                ? {...data, replay: replayMigration.settings}
-                : data
+                ? {...migratedSettings, replay: replayMigration.settings}
+                : migratedSettings
             const updated = this.update(origin, configFromJSON)
             this.#content = proxy(updated instanceof Object ? updated : {__value: updated})
             lgs.configuration[this.key] = JSON.parse(JSON.stringify(updated))
 
-            if (this.hasChanged() || replayMigration.migrated) {
+            if (this.hasChanged() || replayMigration.migrated || camBallMigrated) {
                 await this.save()
             }
             this.subscribeToChange()

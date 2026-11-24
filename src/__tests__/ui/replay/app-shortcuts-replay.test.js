@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-10-29
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -321,16 +321,16 @@ describe('app replay shortcuts', () => {
             preparation: true,
         }))
         expect(globalThis.lgs.stores.replay.cameraUpdateSource).toBe('keyboard')
-        const joystick = document.createElement('div')
-        joystick.className = 'replay-camera-joystick-pad'
-        document.body.append(joystick)
+        const camBall = document.createElement('div')
+        camBall.className = 'replay-camera-cam-ball-pad'
+        document.body.append(camBall)
         const localInput = vi.fn()
-        joystick.addEventListener('keydown', localInput)
-        joystick.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, cancelable: true, key: 'ArrowRight'}))
+        camBall.addEventListener('keydown', localInput)
+        camBall.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, cancelable: true, key: 'ArrowRight'}))
         expect(localInput).toHaveBeenCalledOnce()
         expect(globalThis.lgs.theJourney.replay.expert.camera.cameraAngle).toBe(26)
         expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenCalledTimes(4)
-        joystick.remove()
+        camBall.remove()
         removers.forEach(remove => remove?.())
         canvas.remove()
     })

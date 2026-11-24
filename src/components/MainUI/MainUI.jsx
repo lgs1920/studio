@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-11-23
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { Compass }          from '@Components/MainUI/compass/Compass'
 import { CameraAdjustmentOverlay } from '@Components/MainUI/CameraAdjustmentOverlay'
 import { JourneyReplayCameraAngleGuide } from '@Components/JourneyReplay/JourneyReplayCameraAngleGuide'
-import { ReplayCameraJoystick } from '@Components/JourneyReplay/ReplayCameraJoystick'
+import { ReplayCameraCamBall } from '@Components/JourneyReplay/ReplayCameraCamBall'
 import { FullScreenButton } from '@Components/FullScreenButton/FullScreenButton'
 import { ContextMenuRenderer } from '@Components/MainUI/context-menu/ContextMenuRenderer'
 import { MapPointContextMenuTrigger } from '@Components/MainUI/context-menu/MapPointContextMenuTrigger'
@@ -335,7 +335,7 @@ export const MainUI = memo(() => {
                 </>
             )}
             {video.editing && !videoCaptureActive && <CameraAdjustmentOverlay/>}
-            <ReplayCameraJoystick key={video.editing ? 'replay' : 'main'} mainScene={!video.editing}/>
+            <ReplayCameraCamBall key={video.editing ? 'replay' : 'main'} mainScene={!video.editing}/>
             <ContextMenuRenderer/>
             <MapPOIMoveOverlay/>
             <GeocodingPOIAddOverlay/>

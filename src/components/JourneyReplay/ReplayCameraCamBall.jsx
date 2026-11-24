@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: ReplayCameraJoystick.jsx
+ * File: ReplayCameraCamBall.jsx
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-10-29
- * Last modified: 2026-11-23
+ * Created on: 2026-11-24
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,14 +17,17 @@
 import {Widget} from '@Components/MainUI/widgets/Widget'
 import {LGS_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD} from '@Core/constants'
 import {UI_ACTIONS} from '@Core/ui/metadata/uiActionCatalog'
+import {getMainSceneCameraPivot} from '@Core/ui/MainSceneCameraPivot'
 import {normalizeJourneyReplayCamera} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {currentJourneyReplayCameraSettings, isJourneyReplayCameraActive} from '@Core/ui/replay/JourneyReplayRuntime'
 import {isCameraOwnedByReplay} from '@Core/ui/replay/ReplayCameraOwnership'
 import {useOptionalSnapshot, useProxyValue} from '@Utils/ValtioUtils'
 import {WaIcon} from '@awesome.me/webawesome/dist/react'
-import {Cartesian2, Cartesian3, Math as CesiumMath, Matrix3, Matrix4, Quaternion, Ray, SceneMode} from 'cesium'
+import {
+    Cartesian2, Cartesian3, Math as CesiumMath, Matrix3, Matrix4, Quaternion, Ray, SceneMode, SceneTransforms,
+} from 'cesium'
 import {useCallback, useEffect, useRef, useState} from 'react'
-import './replayCameraJoystick.css'
+import './replayCameraCamBall.css'
 
 const CONFIG = {
     id: 'replay-camera-joystick-widget',
@@ -36,6 +39,7 @@ const CONFIG = {
     attachTo: 'right',
     margin: 24,
     draggable: true,
+    shiftDragEnabled: false,
     canReduce: false,
     canLock: false,
     contextMenu: {canRemove: false},
@@ -51,27 +55,28 @@ const CONFIG = {
 
 const MAIN_SCENE_CONFIG = {...CONFIG, id: 'main-camera-joystick-widget'}
 
-/** Scale pointer-held joystick input into a gentler Replay camera adjustment rate. */
-const JOYSTICK_POINTER_SENSITIVITY = 0.7
-const JOYSTICK_CAMERA_SPEED = 1.4
-const JOYSTICK_PRECISION_FACTOR = 0.35
+/** Scale pointer-held CamBall gestures into a gentler Replay camera adjustment rate. */
+const CAM_BALL_POINTER_SENSITIVITY = 0.7
+const CAM_BALL_CAMERA_SPEED = 1.4
+const CAM_BALL_PRECISION_FACTOR = 0.35
 
 /** Limit full-deflection pitch adjustment to 22.5 degrees per second. */
-const JOYSTICK_PITCH_DEGREES_PER_SECOND = 22.5
-const JOYSTICK_MAX_VISUAL_TILT_DEGREES = 60
-const JOYSTICK_FLAT_PERSPECTIVE = 560
-const JOYSTICK_TILTED_PERSPECTIVE = 240
-const JOYSTICK_LAYOUT_SIZE = 144
+const CAM_BALL_PITCH_DEGREES_PER_SECOND = 22.5
+const CAM_BALL_HORIZON_MARGIN = CesiumMath.toRadians(1)
+const CAM_BALL_MAX_VISUAL_TILT_DEGREES = 60
+const CAM_BALL_FLAT_PERSPECTIVE = 560
+const CAM_BALL_TILTED_PERSPECTIVE = 240
+const CAM_BALL_LAYOUT_SIZE = 144
 
 /** Match crown displacement to the visible map rotation in radians. */
 const CROWN_SENSITIVITY = 1
 const DOUBLE_TAP_INTERVAL = 320
 const TAP_TRAVEL_LIMIT = 8
-const JOYSTICK_ROTATION_SURFACE = '.replay-camera-joystick-grip-hit'
-const JOYSTICK_CAMERA_SURFACE = `.replay-camera-joystick-dome-hit, ${JOYSTICK_ROTATION_SURFACE}`
+const CAM_BALL_ROTATION_SURFACE = '.replay-camera-cam-ball-grip-hit'
+const CAM_BALL_CAMERA_SURFACE = `.replay-camera-cam-ball-dome-hit, ${CAM_BALL_ROTATION_SURFACE}`
 
 /** Use a faster normal rate and a finer rate while Ctrl is held. */
-const cameraAdjustmentSpeed = precision => JOYSTICK_CAMERA_SPEED * (precision ? JOYSTICK_PRECISION_FACTOR : 1)
+const cameraAdjustmentSpeed = precision => CAM_BALL_CAMERA_SPEED * (precision ? CAM_BALL_PRECISION_FACTOR : 1)
 
 /** Check the live preparation state before every camera write, including queued input frames. */
 const canAdjustCamera = () => {
@@ -97,7 +102,7 @@ const mainCameraContext = ({allowOrbit = false} = {}) => {
     return {scene, camera, controller}
 }
 
-/** Hand normal camera control back to the user when a joystick gesture starts. */
+/** Hand normal camera control back to the user when a CamBall gesture starts. */
 const beginMainCameraInput = () => {
     if (!mainCameraContext({allowOrbit: true})) return false
     if (globalThis.lgs.stores.ui.mainUI?.rotate?.running) {
@@ -115,8 +120,10 @@ const adjustMainCamera = (x, y, scale, gesture) => {
     const {scene, camera, controller} = context
     let changed = false
     if (y && scene.mode === SceneMode.SCENE3D && controller.enableTilt) {
-        const orbit = gesture ? (gesture.mainOrbit ??= resolveMainCameraOrbit(context)) : resolveMainCameraOrbit(context)
-        changed = orbit?.tilt(-y * CesiumMath.toRadians(JOYSTICK_PITCH_DEGREES_PER_SECOND) * scale, context) ?? false
+        const orbit = gesture
+            ? (gesture.mainOrbit ??= resolveMainCameraOrbit(context))
+            : resolveMainCameraOrbit(context)
+        changed = orbit?.tilt(-y * CesiumMath.toRadians(CAM_BALL_PITCH_DEGREES_PER_SECOND) * scale, context) ?? false
     }
     if (x && controller.enableZoom) {
         const position = camera.positionCartographic
@@ -137,19 +144,28 @@ const adjustMainCamera = (x, y, scale, gesture) => {
 }
 
 /** Resolve a geographic pivot once, using the same screen point throughout the gesture. */
+const resolveMainCameraPivot = (scene, camera, screenPosition) => {
+    const ray = camera.getPickRay(screenPosition)
+    const ellipsoid = scene.globe?.ellipsoid ?? scene.ellipsoid
+    const picked = (scene.pickPositionSupported ? scene.pickPosition(screenPosition) : undefined)
+        ?? (ray ? scene.globe?.pick(ray, scene) : undefined)
+        ?? camera.pickEllipsoid(screenPosition, ellipsoid)
+    if (!picked || !ellipsoid) return null
+    const distance = ray && Cartesian3.dot(
+        Cartesian3.subtract(picked, ray.origin, new Cartesian3()),
+        ray.direction,
+    )
+    return ray && distance > 0 ? Ray.getPoint(ray, distance) : picked
+}
+
+/** Resolve the selected geographic pivot or the current viewport center. */
 const resolveMainCameraOrbit = (context = mainCameraContext()) => {
     if (!context || context.scene.mode !== SceneMode.SCENE3D) return null
     const {scene, camera} = context
     const center = new Cartesian2(scene.canvas.clientWidth / 2, scene.canvas.clientHeight / 2)
-    const ray = camera.getPickRay(center)
     const ellipsoid = scene.globe?.ellipsoid ?? scene.ellipsoid
-    const picked = (scene.pickPositionSupported ? scene.pickPosition(center) : undefined)
-        ?? (ray ? scene.globe?.pick(ray, scene) : undefined)
-        ?? camera.pickEllipsoid(center, ellipsoid)
-    if (!picked || !ellipsoid) return null
-    // Depth picking may sample a neighboring pixel. Keep the orbit on the exact center ray.
-    const distance = ray && Cartesian3.dot(Cartesian3.subtract(picked, ray.origin, new Cartesian3()), ray.direction)
-    const pivot = ray && distance > 0 ? Ray.getPoint(ray, distance) : picked
+    const pivot = getMainSceneCameraPivot(scene, camera) ?? resolveMainCameraPivot(scene, camera, center)
+    if (!pivot || !ellipsoid) return null
     const axis = ellipsoid.geodeticSurfaceNormal(pivot)
     const rotation = new Matrix3()
     const quaternion = new Quaternion()
@@ -157,6 +173,13 @@ const resolveMainCameraOrbit = (context = mainCameraContext()) => {
     const destination = new Cartesian3()
     const direction = new Cartesian3()
     const up = new Cartesian3()
+    const minimumPitch = -CesiumMath.PI_OVER_TWO + CesiumMath.toRadians(1)
+    const maximumPitch = -CesiumMath.toRadians(1)
+    let pitch = CesiumMath.clamp(
+        CesiumMath.asinClamped(Cartesian3.dot(camera.directionWC, axis)),
+        minimumPitch,
+        maximumPitch,
+    )
 
     /** Rotate the world pose around the pivot without changing the camera reference frame. */
     const rotatePose = (rotationAxis, delta, current, checkTerrain = false) => {
@@ -193,9 +216,44 @@ const resolveMainCameraOrbit = (context = mainCameraContext()) => {
 
     /** Tilt around the camera's right axis through the pivot instead of looking up in place. */
     const tilt = (delta, current) => {
-        const pitch = CesiumMath.asinClamped(Cartesian3.dot(camera.directionWC, axis))
-        const next = CesiumMath.clamp(pitch + delta, -CesiumMath.PI_OVER_TWO, 0)
-        return Math.abs(next - pitch) > 1e-6 && rotatePose(camera.rightWC, next - pitch, current, true)
+        if (current?.camera !== camera || current.scene !== scene || scene.mode !== SceneMode.SCENE3D) return false
+        const right = camera.rightWC
+        const nextPitch = CesiumMath.clamp(pitch + delta, minimumPitch, maximumPitch)
+        let appliedDelta = nextPitch - pitch
+        if (Math.abs(appliedDelta) <= 1e-8) return false
+        const currentUp = ellipsoid.geodeticSurfaceNormal(camera.positionWC, new Cartesian3())
+        const currentHorizonDot = Cartesian3.dot(camera.directionWC, currentUp)
+        const maximumHorizonDot = -Math.sin(CAM_BALL_HORIZON_MARGIN)
+        const candidateHorizonDot = angle => {
+            Matrix3.fromQuaternion(Quaternion.fromAxisAngle(right, angle, quaternion), rotation)
+            Cartesian3.subtract(camera.positionWC, pivot, offset)
+            Matrix3.multiplyByVector(rotation, offset, destination)
+            Cartesian3.add(pivot, destination, destination)
+            Matrix3.multiplyByVector(rotation, camera.directionWC, direction)
+            const candidateUp = ellipsoid.geodeticSurfaceNormal(destination, new Cartesian3())
+            return Cartesian3.dot(direction, candidateUp)
+        }
+        let nextHorizonDot = candidateHorizonDot(appliedDelta)
+        if (nextHorizonDot > maximumHorizonDot) {
+            if (currentHorizonDot > maximumHorizonDot) {
+                if (nextHorizonDot >= currentHorizonDot) return false
+            }
+            else {
+                let allowedFraction = 0
+                let blockedFraction = 1
+                for (let index = 0; index < 24; index++) {
+                    const fraction = (allowedFraction + blockedFraction) / 2
+                    const candidateDot = candidateHorizonDot(appliedDelta * fraction)
+                    if (candidateDot <= maximumHorizonDot) allowedFraction = fraction
+                    else blockedFraction = fraction
+                }
+                appliedDelta *= allowedFraction
+                if (Math.abs(appliedDelta) <= 1e-8) return false
+            }
+        }
+        if (!rotatePose(right, appliedDelta, current, true)) return false
+        pitch += appliedDelta
+        return true
     }
 
     /** Resolve north in the pivot's tangent plane so the center ray stays fixed during reset. */
@@ -249,7 +307,7 @@ const crownPointerAngle = (event, rect, projection) => {
 }
 
 /** Project the visible hit areas into an ordinary two-dimensional SVG. */
-const projectJoystickHits = ({tiltRadians, perspective}, layoutHeight) => {
+const projectCamBallHits = ({tiltRadians, perspective}, layoutHeight) => {
     const sine = Math.sin(tiltRadians)
     const cosine = Math.cos(tiltRadians)
     const depthSlope = sine * layoutHeight / (100 * perspective)
@@ -267,33 +325,34 @@ const projectJoystickHits = ({tiltRadians, perspective}, layoutHeight) => {
     return {dome: ellipse(53, 25, 23.5), grip: ellipse(54, 32, 30) + ellipse(54, 25, 23)}
 }
 
-const FLAT_JOYSTICK_PROJECTION = {tiltRadians: 0, perspective: JOYSTICK_FLAT_PERSPECTIVE}
-const FLAT_JOYSTICK_HITS = projectJoystickHits(FLAT_JOYSTICK_PROJECTION, JOYSTICK_LAYOUT_SIZE)
+const FLAT_CAM_BALL_PROJECTION = {tiltRadians: 0, perspective: CAM_BALL_FLAT_PERSPECTIVE}
+const FLAT_CAM_BALL_HITS = projectCamBallHits(FLAT_CAM_BALL_PROJECTION, CAM_BALL_LAYOUT_SIZE)
 
-/** Consume joystick input before the widget host or map handles it. */
+/** Consume CamBall input before the widget host or map handles it. */
 const consumeInput = event => {
     event.preventDefault()
     event.stopPropagation()
 }
 
 /** Render the shared rolling-ball zoom and pitch control on the map or during Replay preparation. */
-export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
+export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
     const video = useOptionalSnapshot(lgs.stores.ui.video)
     const replay = useOptionalSnapshot(lgs.stores.replay)
     const journeySlug = useProxyValue(lgs.stores.main, main => main.theJourney?.slug ?? null, null)
     const uiSettings = useOptionalSnapshot(lgs.settings?.ui)
-    const joystick = uiSettings.joystick
-    const followPitch = joystick?.followPitch === true
+    const camBall = uiSettings.camBall
+    const followPitch = camBall?.followPitch === true
     const _gesture = useRef(null)
     const _frame = useRef(null)
     const _surface = useRef(null)
-    const _projection = useRef(FLAT_JOYSTICK_PROJECTION)
+    const _projection = useRef(FLAT_CAM_BALL_PROJECTION)
     const _pad = useRef(null)
     const _domeHit = useRef(null)
     const _gripHit = useRef(null)
     const _canvas = useRef(null)
     const _scene = useRef(null)
     const _crownMarks = useRef(null)
+    const _northMark = useRef(null)
     const _gripMarks = useRef(null)
     const _crownAngle = useRef(0)
     const _lastTap = useRef(null)
@@ -302,7 +361,7 @@ export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
     const [stick, setStick] = useState({x: 0, y: 0})
     const [action, setAction] = useState({x: 0, y: 0})
     const [sceneReady, setSceneReady] = useState(false)
-    const available = joystick?.visible !== false
+    const available = camBall?.visible !== false
         && (mainScene ? !video.editing : video.editing === true && Boolean(journeySlug))
         && !video.preRecording && !video.exporting
         && !video.snapshot && !video.finalizing && !isJourneyReplayCameraActive(replay)
@@ -317,6 +376,7 @@ export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
     const stop = useCallback(() => {
         const gesture = _gesture.current
         _gesture.current = null
+        gesture?.cleanup?.()
         if (_frame.current !== null) cancelAnimationFrame(_frame.current)
         _frame.current = null
         if (gesture?.target.hasPointerCapture?.(gesture.pointerId)) {
@@ -331,6 +391,7 @@ export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
         if (Math.abs(angle - _crownAngle.current) < 1e-6) return
         _crownAngle.current = angle
         _crownMarks.current?.setAttribute('transform', `rotate(${CesiumMath.toDegrees(angle)})`)
+        _northMark.current?.setAttribute('transform', `rotate(${CesiumMath.toDegrees(angle)})`)
         _gripMarks.current?.setAttribute('transform', `rotate(${CesiumMath.toDegrees(angle)})`)
         _scene.current?.setCrownAngle(angle)
     }, [])
@@ -342,19 +403,19 @@ export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
     }, [placeCrown])
 
     /** Tilt the entire dial with the camera while keeping a usable hit surface at the horizon. */
-    const syncJoystickView = useCallback(() => {
+    const syncCamBallView = useCallback(() => {
         syncCrownNorth()
         const livePitch = followPitch ? globalThis.lgs?.camera?.pitch : undefined
         const pitch = Number.isFinite(livePitch) ? livePitch : -CesiumMath.PI_OVER_TWO
         const progress = CesiumMath.clamp(1 + pitch / CesiumMath.PI_OVER_TWO, 0, 1)
-        const tilt = Number((progress * JOYSTICK_MAX_VISUAL_TILT_DEGREES).toFixed(2))
-        const perspective = Math.round(CesiumMath.lerp(JOYSTICK_FLAT_PERSPECTIVE, JOYSTICK_TILTED_PERSPECTIVE, progress))
+        const tilt = Number((progress * CAM_BALL_MAX_VISUAL_TILT_DEGREES).toFixed(2))
+        const perspective = Math.round(CesiumMath.lerp(CAM_BALL_FLAT_PERSPECTIVE, CAM_BALL_TILTED_PERSPECTIVE, progress))
         const style = _surface.current?.style
-        if (style?.getPropertyValue('--lgs-joystick-view-tilt') !== tilt.toFixed(2) + 'deg') {
-            style?.setProperty('--lgs-joystick-view-tilt', tilt.toFixed(2) + 'deg')
-            style?.setProperty('--lgs-joystick-view-perspective', `${perspective}px`)
+        if (style?.getPropertyValue('--lgs-cam-ball-view-tilt') !== tilt.toFixed(2) + 'deg') {
+            style?.setProperty('--lgs-cam-ball-view-tilt', tilt.toFixed(2) + 'deg')
+            style?.setProperty('--lgs-cam-ball-view-perspective', `${perspective}px`)
             _projection.current = {tiltRadians: CesiumMath.toRadians(tilt), perspective}
-            const hits = projectJoystickHits(_projection.current, _pad.current?.clientHeight || JOYSTICK_LAYOUT_SIZE)
+            const hits = projectCamBallHits(_projection.current, _pad.current?.clientHeight || CAM_BALL_LAYOUT_SIZE)
             _domeHit.current?.setAttribute('d', hits.dome)
             _gripHit.current?.setAttribute('d', hits.grip)
         }
@@ -380,24 +441,9 @@ export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
         }
     }, [beginInteraction, mainScene, syncCrownNorth, turnCrown])
 
-    /** Capture a Shift-drag for map panning without changing the retained ball deflection. */
-    const startPan = useCallback((event, target = event.currentTarget) => {
-        const context = mainScene ? mainCameraContext() : null
-        if (!context?.controller.enableTranslate || !beginInteraction()) return false
-        consumeInput(event)
-        const rect = _pad.current.getBoundingClientRect()
-        _gesture.current = {
-            target, pointerId: event.pointerId, rect, pan: true, panAxis: null,
-            pressX: event.clientX, pressY: event.clientY,
-            lastClientX: event.clientX, lastClientY: event.clientY,
-        }
-        target.setPointerCapture?.(event.pointerId)
-        return true
-    }, [beginInteraction, mainScene])
-
     /** Handle mouse double clicks on either camera control. */
     const doubleClick = useCallback(event => {
-        if (event.shiftKey || !event.target.closest?.(JOYSTICK_CAMERA_SURFACE)) return
+        if (event.shiftKey || !event.target.closest?.(CAM_BALL_CAMERA_SURFACE)) return
         consumeInput(event)
         if (event.timeStamp - _touchResetTime.current > DOUBLE_TAP_INTERVAL) resetNorth()
     }, [resetNorth])
@@ -405,19 +451,18 @@ export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
     /** Capture the grip ring and keep its angle as the gesture origin. */
     const startGrip = useCallback(event => {
         if (event.button !== 0 || _gesture.current) return
-        if (event.shiftKey) {
-            if (mainScene) startPan(event, event.currentTarget)
+        if (event.shiftKey || (mainScene && event.ctrlKey)) {
             return
         }
         consumeInput(event)
         const rect = _pad.current.getBoundingClientRect()
         const projection = {
             ..._projection.current,
-            perspective: _projection.current.perspective * rect.height / (_pad.current.clientHeight || rect.height || JOYSTICK_LAYOUT_SIZE),
+            perspective: _projection.current.perspective * rect.height / (_pad.current.clientHeight || rect.height || CAM_BALL_LAYOUT_SIZE),
         }
         const angle = crownPointerAngle(event, rect, projection)
         if (angle === null || !beginInteraction()) return
-        const rotate = mainScene ? resolveMainCameraOrbit()?.rotate : rotateReplayCamera
+            const rotate = mainScene ? resolveMainCameraOrbit()?.rotate : rotateReplayCamera
         if (!rotate) return
         const target = event.currentTarget
         _gesture.current = {
@@ -425,7 +470,7 @@ export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
             pressX: event.clientX, pressY: event.clientY, pressTime: event.timeStamp,
         }
         target.setPointerCapture?.(event.pointerId)
-    }, [beginInteraction, mainScene, startPan])
+    }, [beginInteraction, mainScene])
 
     /** Let focused keyboard users rotate the map in five degree steps. */
     const gripKeyDown = useCallback(event => {
@@ -450,7 +495,7 @@ export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
         if (!canAdjustCamera()) return
         const current = currentJourneyReplayCameraSettings()
         const altitude = Math.max(10, Math.min(100000, current.altitude * Math.exp(-x * scale)))
-        const pitch = Math.max(-89, Math.min(-5, current.pitch - y * JOYSTICK_PITCH_DEGREES_PER_SECOND * scale))
+        const pitch = Math.max(-89, Math.min(-5, current.pitch - y * CAM_BALL_PITCH_DEGREES_PER_SECOND * scale))
         if (altitude !== current.altitude || pitch !== current.pitch) {
             globalThis.__?.ui?.replay?.updatePreparationCamera?.(
                 {altitude, pitch},
@@ -482,7 +527,7 @@ export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
             : Math.max(0, Math.min(0.1, (currentTime - gesture.lastFrameTime) / 1000))
         gesture.lastFrameTime = currentTime
         const speed = cameraAdjustmentSpeed(gesture.precision)
-        adjust(x, y, elapsedSeconds * JOYSTICK_POINTER_SENSITIVITY * speed, gesture)
+        adjust(x, y, elapsedSeconds * CAM_BALL_POINTER_SENSITIVITY * speed, gesture)
         if (_gesture.current === gesture) _frame.current = requestAnimationFrame(gesture.applyHeld)
     }, [adjust, canInteract, stop])
 
@@ -492,36 +537,6 @@ export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
         if (!gesture || gesture.pointerId !== event.pointerId) return
         consumeInput(event)
         if (Math.hypot(event.clientX - gesture.pressX, event.clientY - gesture.pressY) > TAP_TRAVEL_LIMIT) gesture.dragged = true
-        if (gesture.pan) {
-            const context = mainCameraContext()
-            if (!context?.controller.enableTranslate) {
-                stop()
-                return
-            }
-            if (!gesture.panAxis) {
-                const totalX = event.clientX - gesture.pressX
-                const totalY = event.clientY - gesture.pressY
-                if (Math.max(Math.abs(totalX), Math.abs(totalY)) >= 3) {
-                    gesture.panAxis = Math.abs(totalX) >= Math.abs(totalY) ? 'horizontal' : 'vertical'
-                }
-            }
-            const deltaX = event.clientX - gesture.lastClientX
-            const deltaY = event.clientY - gesture.lastClientY
-            gesture.lastClientX = event.clientX
-            gesture.lastClientY = event.clientY
-            const height = context.camera.positionCartographic?.height
-            const viewportWidth = context.scene.canvas?.clientWidth || gesture.rect.width
-            const viewportHeight = context.scene.canvas?.clientHeight || gesture.rect.height
-            if (Number.isFinite(height) && height > 0 && gesture.panAxis === 'horizontal' && deltaX) {
-                context.camera.moveRight(-deltaX * height / viewportWidth)
-                context.scene.requestRender()
-            }
-            else if (Number.isFinite(height) && height > 0 && gesture.panAxis === 'vertical' && deltaY) {
-                context.camera.moveUp(deltaY * height / viewportHeight)
-                context.scene.requestRender()
-            }
-            return
-        }
         if (gesture.rotate) {
             if (!canInteract()) {
                 stop()
@@ -616,12 +631,9 @@ export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
 
     /** Capture input on the full dome surface. */
     const start = useCallback(event => {
-        const target = event.target.closest?.('.replay-camera-joystick-dome-hit')
+        const target = event.target.closest?.('.replay-camera-cam-ball-dome-hit')
         if (event.button !== 0 || _gesture.current || !target) return
-        if (event.shiftKey) {
-            startPan(event, target)
-            return
-        }
+        if (event.shiftKey || (mainScene && event.ctrlKey)) return
         if (!beginInteraction()) return
         consumeInput(event)
         _gesture.current = {
@@ -636,9 +648,9 @@ export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
             originStickX: stick.x, originStickY: stick.y, axis: null,
         }
         target.setPointerCapture?.(event.pointerId)
-    }, [applyHeld, beginInteraction, startPan, stick.x, stick.y])
+    }, [applyHeld, beginInteraction, stick.x, stick.y])
 
-    /** End only the pointer gesture owned by this joystick. */
+    /** End only the pointer gesture owned by this CamBall. */
     const end = useCallback(event => {
         const gesture = _gesture.current
         if (gesture?.pointerId !== event.pointerId) return
@@ -716,9 +728,9 @@ export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
 
     useEffect(() => {
         if (!available) return
-        syncJoystickView()
-        return globalThis.lgs?.scene?.postRender?.addEventListener(syncJoystickView)
-    }, [available, syncJoystickView])
+        syncCamBallView()
+        return globalThis.lgs?.scene?.postRender?.addEventListener(syncCamBallView)
+    }, [available, syncCamBallView])
 
     useEffect(() => {
         const canvasElement = _canvas.current
@@ -726,32 +738,32 @@ export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
         if (!available || !canvasElement || !padElement) return
         setSceneReady(false)
         let cancelled = false
-        let joystickScene
-        import('./ReplayCameraJoystickScene').then(({createReplayCameraJoystickScene}) => {
+        let camBallScene
+        import('./ReplayCameraCamBallScene').then(({createReplayCameraCamBallScene}) => {
             if (cancelled) return
             try {
-                joystickScene = createReplayCameraJoystickScene({
+                camBallScene = createReplayCameraCamBallScene({
                     canvas: canvasElement,
                     padElement,
                     mapScene: globalThis.lgs?.scene,
                     onContextLost: handleSceneContextLost,
                     onContextRestored: handleSceneContextRestored,
                 })
-                _scene.current = joystickScene
-                joystickScene.setPosition(_visualPosition.current)
-                joystickScene.setCrownAngle(_crownAngle.current)
+                _scene.current = camBallScene
+                camBallScene.setPosition(_visualPosition.current)
+                camBallScene.setCrownAngle(_crownAngle.current)
                 setSceneReady(true)
             }
             catch (error) {
-                console.warn('Replay camera joystick could not initialize its Three.js surface', error)
+                console.warn('Replay CamBall could not initialize its Three.js surface', error)
             }
         }).catch(error => {
-            if (!cancelled) console.warn('Replay camera joystick could not load its Three.js surface', error)
+            if (!cancelled) console.warn('Replay CamBall could not load its Three.js surface', error)
         })
         return () => {
             cancelled = true
-            joystickScene?.dispose()
-            if (_scene.current === joystickScene) _scene.current = null
+            camBallScene?.dispose()
+            if (_scene.current === camBallScene) _scene.current = null
             setSceneReady(false)
         }
     }, [available, handleSceneContextLost, handleSceneContextRestored])
@@ -765,46 +777,48 @@ export const ReplayCameraJoystick = ({mainScene = false} = {}) => {
 
     return (
         <Widget key={mainScene ? MAIN_SCENE_CONFIG.id : CONFIG.id} isVisible
-                config={mainScene ? MAIN_SCENE_CONFIG : CONFIG} className="replay-camera-joystick-shell"
-                containerClassName="replay-camera-joystick-layer">
-            <div ref={_surface} className="replay-camera-joystick">
-                <div ref={_pad} className={`replay-camera-joystick-pad lgs-card wa-theme-lgs1920-on-map${sceneReady ? ' is-threejs-ready' : ''}`}
+                config={mainScene ? MAIN_SCENE_CONFIG : CONFIG} className="replay-camera-cam-ball-shell"
+                containerClassName="replay-camera-cam-ball-layer">
+            <div ref={_surface} className="replay-camera-cam-ball">
+                <div ref={_pad} className={`replay-camera-cam-ball-pad lgs-card wa-theme-lgs1920-on-map${sceneReady ? ' is-threejs-ready' : ''}`}
                      role="group" tabIndex={0}
-                     aria-label="Drag up or down to adjust pitch, and left or right to zoom" aria-roledescription="joystick"
+                     aria-label="Drag up or down to adjust pitch, and left or right to zoom" aria-roledescription="camera control"
                      onKeyDown={keyDown} onKeyUp={keyUp} onBlur={stop}
                      onPointerDownCapture={clearPointerFocus} onPointerDown={start} onPointerMove={move} onPointerUp={end}
                      onPointerCancel={end} onLostPointerCapture={stop} onContextMenu={consumeInput}
                      onDoubleClick={doubleClick} onWheel={consumeInput}>
-                    <div className="replay-camera-joystick-visual" aria-hidden="true">
-                        <canvas ref={_canvas} className="replay-camera-joystick-canvas"/>
-                        <svg className="replay-camera-joystick-crown" viewBox="0 0 100 100">
-                            <ellipse className="replay-camera-joystick-crown-fallback replay-camera-joystick-crown-band"
+                    <div className="replay-camera-cam-ball-visual" aria-hidden="true">
+                        <canvas ref={_canvas} className="replay-camera-cam-ball-canvas"/>
+                        <svg className="replay-camera-cam-ball-crown" viewBox="0 0 100 100">
+                            <ellipse className="replay-camera-cam-ball-crown-fallback replay-camera-cam-ball-crown-band"
                                      cx="50" cy="54" rx="34" ry="32" aria-hidden="true"/>
-                            <ellipse className="replay-camera-joystick-crown-fallback replay-camera-joystick-crown-band replay-camera-joystick-grip-band"
+                            <ellipse className="replay-camera-cam-ball-crown-fallback replay-camera-cam-ball-crown-band replay-camera-cam-ball-grip-band"
                                      cx="50" cy="54" rx="28.5" ry="26.5" aria-hidden="true"/>
-                            <g className="replay-camera-joystick-crown-fallback replay-camera-joystick-compass-marks"
+                            <g className="replay-camera-cam-ball-crown-fallback replay-camera-cam-ball-compass-marks"
                                transform="translate(50 54) scale(0.83 0.78)" aria-hidden="true">
                                 <path ref={_crownMarks}
-                                      d="M-3 -39 0 -44 3 -39 Z M27.8 -27.8 30.2 -30.2 M38 0 44 0 M27.8 27.8 30.2 30.2 M0 38 0 44 M-27.8 27.8 -30.2 30.2 M-38 0 -44 0 M-27.8 -27.8 -30.2 -30.2"/>
+                                      d="M27.8 -27.8 30.2 -30.2 M38 0 44 0 M27.8 27.8 30.2 30.2 M0 38 0 44 M-27.8 27.8 -30.2 30.2 M-38 0 -44 0 M-27.8 -27.8 -30.2 -30.2"/>
+                                <path ref={_northMark} className="replay-camera-cam-ball-north-mark"
+                                      d="M-3 -39 0 -44 3 -39 Z"/>
                             </g>
-                            <g className="replay-camera-joystick-crown-fallback replay-camera-joystick-grip-marks"
+                            <g className="replay-camera-cam-ball-crown-fallback replay-camera-cam-ball-grip-marks"
                                transform="translate(50 54) scale(1 0.93)" aria-hidden="true">
                                 <circle ref={_gripMarks} r="28.5"/>
                             </g>
                         </svg>
-                        <span className="replay-camera-joystick-dome-fallback"/>
+                        <span className="replay-camera-cam-ball-dome-fallback"/>
                     </div>
-                    <svg className="replay-camera-joystick-touch-surface" viewBox="0 0 100 100">
-                        <path ref={_gripHit} className="replay-camera-joystick-grip-hit lgs-widget-no-drag"
-                              d={FLAT_JOYSTICK_HITS.grip} fillRule="evenodd" role="group" tabIndex={0}
-                              aria-label={UI_ACTIONS.joystickGripRing.label}
+                    <svg className="replay-camera-cam-ball-touch-surface" viewBox="0 0 100 100">
+                        <path ref={_gripHit} className="replay-camera-cam-ball-grip-hit lgs-widget-no-drag"
+                              d={FLAT_CAM_BALL_HITS.grip} fillRule="evenodd" role="group" tabIndex={0}
+                              aria-label={UI_ACTIONS.camBallGripRing.label}
                               onPointerDown={startGrip} onKeyDown={gripKeyDown}/>
-                        <path ref={_domeHit} className="replay-camera-joystick-dome-hit lgs-widget-no-drag"
-                              d={FLAT_JOYSTICK_HITS.dome} aria-hidden="true"/>
+                        <path ref={_domeHit} className="replay-camera-cam-ball-dome-hit lgs-widget-no-drag"
+                              d={FLAT_CAM_BALL_HITS.dome} aria-hidden="true"/>
                     </svg>
-                    {action.y !== 0 && <WaIcon className={`replay-camera-joystick-action ${action.y < 0 ? 'action-top' : 'action-bottom'}`}
+                    {action.y !== 0 && <WaIcon className={`replay-camera-cam-ball-action ${action.y < 0 ? 'action-top' : 'action-bottom'}`}
                         name={action.y < 0 ? 'arrow-up' : 'arrow-down'} aria-hidden="true"/>}
-                    {action.x !== 0 && <WaIcon className={`replay-camera-joystick-action ${action.x < 0 ? 'action-left' : 'action-right'}`}
+                    {action.x !== 0 && <WaIcon className={`replay-camera-cam-ball-action ${action.x < 0 ? 'action-left' : 'action-right'}`}
                         name={action.x < 0 ? 'magnifying-glass-minus' : 'magnifying-glass-plus'} aria-hidden="true"/>}
                 </div>
             </div>

@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: ReplayCameraJoystickScene.js
+ * File: ReplayCameraCamBallScene.js
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-10-29
- * Last modified: 2026-11-23
+ * Created on: 2026-11-24
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -48,7 +48,7 @@ const REFLECTION_FRAME_INTERVAL_MS = 100
 const ON_MAP_FALLBACK = 'var(--lgs-on-map-dark-color, var(--lgs-dark-color, var(--wa-color-brand, #273d35)))'
 
 /** Flip sampled map imagery on both axes to match a convex mirrored surface. */
-export const setJoystickMapReflectionTransform = (context, size) => context.setTransform(-1, 0, 0, -1, size, size)
+export const setCamBallMapReflectionTransform = (context, size) => context.setTransform(-1, 0, 0, -1, size, size)
 
 /** Return how directly the edge faces the key light in the dial plane. */
 const keyLightAlignment = (x, y, radius) => (x * KEY_LIGHT_X + y * KEY_LIGHT_Y)
@@ -61,7 +61,7 @@ const getDomeShade = (x, y) => 1.14 - 0.28 * Math.hypot(x, y) / DISH_RADIUS
 const getDomeHeight = (x, y) => Math.sqrt(DOME_SPHERE_RADIUS ** 2 - x ** 2 - y ** 2) - DOME_EDGE_HEIGHT
 
 /** Build the large rounded on-map ball with a spherical cap profile. */
-export const createJoystickDomeGeometry = () => {
+export const createCamBallDomeGeometry = () => {
     const radialSteps = 36
     const radialSegments = 128
     const positions = [0, 0, DOME_HEIGHT]
@@ -101,12 +101,12 @@ export const createJoystickDomeGeometry = () => {
     geometry.setIndex(indices)
     geometry.computeBoundingSphere()
     geometry.computeVertexNormals()
-    setJoystickDomeTilt(geometry, 0, 0)
+    setCamBallDomeTilt(geometry, 0, 0)
     return geometry
 }
 
 /** Preserve the contact shadow and catch light where the map starts to slope into the recess. */
-export const createJoystickContactRingGeometry = () => {
+export const createCamBallContactRingGeometry = () => {
     const geometry = new RingGeometry(CROWN_OUTER_RADIUS - CONTACT_SHADOW_INSET,
         CROWN_OUTER_RADIUS + CONTACT_SHADOW_OUTSET, 256, 24)
     const positions = geometry.getAttribute('position')
@@ -200,17 +200,17 @@ const createEngravedRingGeometry = (innerRadius, outerRadius, marks, depth, beve
 }
 
 /** Build the inner rotating grip. */
-export const createJoystickGripRingGeometry = (marks = createGripMarks()) =>
+export const createCamBallGripRingGeometry = (marks = createGripMarks()) =>
     createEngravedRingGeometry(GRIP_RING_INNER_RADIUS, GRIP_RING_OUTER_RADIUS, marks, GRIP_ENGRAVING_DEPTH)
 
 /** Build the outer compass. */
-export const createJoystickCrownGeometry = (marks = createCompassMarks()) =>
+export const createCamBallCrownGeometry = (marks = createCompassMarks()) =>
     createEngravedRingGeometry(CROWN_INNER_RADIUS, CROWN_OUTER_RADIUS, marks, ENGRAVING_DEPTH, {
         size: CROWN_EDGE_BEVEL_SIZE, thickness: CROWN_EDGE_BEVEL_THICKNESS,
     })
 
 /** Add a recessed, shaded channel between the grip ring and the outer compass. */
-export const createJoystickCrownSeparationGeometry = () => {
+export const createCamBallCrownSeparationGeometry = () => {
     const geometry = new RingGeometry(GRIP_RING_OUTER_RADIUS, CROWN_INNER_RADIUS, 192, 4)
     const positions = geometry.getAttribute('position')
     const colors = new Float32Array(positions.count * 4)
@@ -229,25 +229,29 @@ export const createJoystickCrownSeparationGeometry = () => {
 }
 
 /** Create the opaque backing that prevents the map from showing through the crown channel. */
-export const createJoystickCrownSeparationBaseMaterial = surfaceColor =>
+export const createCamBallCrownSeparationBaseMaterial = surfaceColor =>
     new MeshBasicMaterial({color: surfaceColor.clone().multiplyScalar(0.48)})
 
-/** Create the shared, mostly opaque finish for the outer crown and inner grip ring. */
-export const createJoystickCrownMaterial = (surfaceColor, highlightColor) =>
+/** Create the shared opaque, matte finish for the outer crown and inner grip ring. */
+export const createCamBallCrownMaterial = (surfaceColor, highlightColor) =>
     new MeshStandardMaterial({
         color: surfaceColor.clone().lerp(highlightColor, 0.12),
-        roughness: 0.76, metalness: 0.08, transparent: true, opacity: 0.9,
+        roughness: 0.9, metalness: 0.04, transparent: true, opacity: 0.96,
     })
 
-/** Create the lightly matte, reflective finish for the joystick ball. */
-export const createJoystickDomeMaterial = (color, reflectionTexture) =>
+/** Create a softly beveled warning-colored north indicator that keeps its dimensional lighting. */
+export const createCamBallNorthIndicatorMaterial = color =>
+    new MeshStandardMaterial({color, roughness: 0.68, metalness: 0.04, toneMapped: false})
+
+/** Create the lightly matte, reflective finish for the CamBall body. */
+export const createCamBallDomeMaterial = (color, reflectionTexture) =>
     new MeshPhysicalMaterial({
         color, roughness: 0.66, metalness: 0.12, vertexColors: true,
         envMap: reflectionTexture, envMapIntensity: 0.28, clearcoat: 0.1, clearcoatRoughness: 0.58,
     })
 
 /** Add a subtle shadow directly over the bright lower-right edge of the outer crown. */
-export const createJoystickCrownEdgeShadeGeometry = () =>
+export const createCamBallCrownEdgeShadeGeometry = () =>
     new RingGeometry(CROWN_OUTER_RADIUS - 0.022, CROWN_OUTER_RADIUS, 48, 1, Math.PI * 1.5, Math.PI * 0.5)
 
 /** Add a soft seam shadow with a lighter floor under the lower-right reflection. */
@@ -299,7 +303,7 @@ const readCssColor = (element, expression) => {
 const getOnMapColor = (element, token, fallback) => readCssColor(element, `var(${token}, ${fallback})`)
 
 /** Reduce chroma without changing the color's relative luminance. */
-const muteJoystickColor = (color, amount) => {
+const muteCamBallColor = (color, amount) => {
     const luminance = 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b
     return color.setRGB(
         color.r + (luminance - color.r) * amount,
@@ -309,7 +313,7 @@ const muteJoystickColor = (color, amount) => {
 }
 
 /** Read a muted version of the themed on-map surface. */
-const getOnMapSurfaceColor = element => muteJoystickColor(
+const getOnMapSurfaceColor = element => muteCamBallColor(
     getOnMapColor(element, '--lgs-card-on-map-bg-color', ON_MAP_FALLBACK), 0.42,
 )
 
@@ -323,11 +327,11 @@ const getOnMapDomeColor = element => {
     const surfaceColor = getOnMapSurfaceColor(element)
     const brandColor = getOnMapColor(element, '--wa-color-brand', ON_MAP_FALLBACK)
     const seasonColor = getOnMapColor(element, '--lgs-season-accent-color', 'var(--wa-color-green-60, #67a50d)')
-    return muteJoystickColor(surfaceColor.lerp(brandColor, 0.28).lerp(seasonColor, 0.22), 0.53).multiplyScalar(0.9)
+    return muteCamBallColor(surfaceColor.lerp(brandColor, 0.28).lerp(seasonColor, 0.22), 0.53).multiplyScalar(0.9)
 }
 
 /** Roll the surface finish around the smooth dome. */
-export const setJoystickDomeTilt = (geometry, x, y) => {
+export const setCamBallDomeTilt = (geometry, x, y) => {
     const positions = geometry.getAttribute('position')
     const colors = geometry.getAttribute('color')
     const uv = geometry.getAttribute('uv')
@@ -368,13 +372,13 @@ const getOnMapHighlightColor = element => {
     return color.multiplyScalar(1 / Math.max(color.r, color.g, color.b, 0.001))
 }
 
-/** Create a small theme-derived reflection map for the joystick's polished surfaces. */
+/** Create a small theme-derived reflection map for the CamBall's polished surfaces. */
 const createOnMapReflectionTexture = element => {
     const canvas = element.ownerDocument.createElement('canvas')
     canvas.width = 256
     canvas.height = 128
     const context = canvas.getContext('2d')
-    if (!context) throw new Error('The joystick reflection canvas is unavailable')
+    if (!context) throw new Error('The CamBall reflection canvas is unavailable')
 
     const texture = new CanvasTexture(canvas)
     texture.mapping = EquirectangularReflectionMapping
@@ -419,7 +423,7 @@ const createOnMapReflectionTexture = element => {
             const size = mapSample.width
             const crop = Math.min(source.width, source.height) * 0.86
             sampleContext.clearRect(0, 0, size, size)
-            setJoystickMapReflectionTransform(sampleContext, size)
+            setCamBallMapReflectionTransform(sampleContext, size)
             sampleContext.filter = 'saturate(0.34) contrast(1.12)'
             sampleContext.drawImage(source, (source.width - crop) / 2, (source.height - crop) / 2,
                 crop, crop, 0, 0, size, size)
@@ -456,7 +460,7 @@ const createOnMapReflectionTexture = element => {
 }
 
 /** Render the large domed surface and its compass crown. */
-export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, onContextLost, onContextRestored}) => {
+export const createReplayCameraCamBallScene = ({canvas, padElement, mapScene, onContextLost, onContextRestored}) => {
     const renderer = new WebGLRenderer({canvas, alpha: true, antialias: true, powerPreference: 'low-power'})
     renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2))
     renderer.setClearColor(0, 0)
@@ -496,19 +500,25 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, o
     const fillLight = new DirectionalLight(shadowColor, 0.25)
     fillLight.position.set(2, -1.5, 2.5)
     scene.add(fillLight)
-    const domeGeometry = createJoystickDomeGeometry()
+    const domeGeometry = createCamBallDomeGeometry()
     const compassMarks = createCompassMarks()
-    const crownGeometry = createJoystickCrownGeometry(compassMarks)
-    const crownEdgeShadeGeometry = createJoystickCrownEdgeShadeGeometry()
-    const crownSeparationGeometry = createJoystickCrownSeparationGeometry()
+    const crownGeometry = createCamBallCrownGeometry(compassMarks)
+    const northIndicatorGeometry = new ExtrudeGeometry(compassMarks[0], {
+        depth: 0.002, bevelEnabled: true, bevelSegments: 2, bevelSize: 0.002, bevelThickness: 0.0015,
+    })
+    const crownEdgeShadeGeometry = createCamBallCrownEdgeShadeGeometry()
+    const crownSeparationGeometry = createCamBallCrownSeparationGeometry()
     const gripMarks = createGripMarks()
-    const gripRingGeometry = createJoystickGripRingGeometry(gripMarks)
+    const gripRingGeometry = createCamBallGripRingGeometry(gripMarks)
     const engravingFloorGeometry = new ShapeGeometry(compassMarks)
     const gripFloorGeometry = new ShapeGeometry(gripMarks)
-    const contactRingGeometry = createJoystickContactRingGeometry()
+    const contactRingGeometry = createCamBallContactRingGeometry()
     const domeSeamGeometry = createDomeSeamGeometry()
-    const domeMaterial = createJoystickDomeMaterial(domeColor, reflection.texture)
-    const crownMaterial = createJoystickCrownMaterial(surfaceColor, highlightColor)
+    const domeMaterial = createCamBallDomeMaterial(domeColor, reflection.texture)
+    const crownMaterial = createCamBallCrownMaterial(surfaceColor, highlightColor)
+    const northIndicatorMaterial = createCamBallNorthIndicatorMaterial(getOnMapColor(
+        padElement, '--wa-color-warning', 'var(--wa-color-brand, #273d35)',
+    ))
     const engravingWallMaterial = new MeshStandardMaterial({color: surfaceColor.clone().multiplyScalar(0.47), roughness: 0.85})
     const engravingFloorMaterial = new MeshStandardMaterial({color: getCompassMarkColor(padElement, surfaceColor), roughness: 0.9})
     const contactRingMaterial = new MeshBasicMaterial({vertexColors: true, transparent: true, depthWrite: false})
@@ -520,13 +530,13 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, o
     mapReflection.visible = false
     mapReflection.renderOrder = 1
     const crownReflectionMaterial = new MeshBasicMaterial({
-        map: reflection.mapTexture, blending: AdditiveBlending, transparent: true, opacity: 0.13, depthWrite: false,
+        map: reflection.mapTexture, blending: AdditiveBlending, transparent: true, opacity: 0.07, depthWrite: false,
     })
     const crownReflection = new Mesh(crownGeometry, crownReflectionMaterial)
     crownReflection.visible = false
     crownReflection.renderOrder = 1
     const crown = new Mesh(crownGeometry, [crownMaterial, engravingWallMaterial])
-    const crownSeparationBaseMaterial = createJoystickCrownSeparationBaseMaterial(surfaceColor)
+    const crownSeparationBaseMaterial = createCamBallCrownSeparationBaseMaterial(surfaceColor)
     const crownSeparationBase = new Mesh(crownSeparationGeometry, crownSeparationBaseMaterial)
     crownSeparationBase.position.z = -CROWN_RECESS - 0.0035
     crownSeparationBase.renderOrder = 1
@@ -548,10 +558,14 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, o
     gripReflection.visible = false
     gripReflection.renderOrder = 1
     const engravingFloor = new Mesh(engravingFloorGeometry, engravingFloorMaterial)
+    const northIndicator = new Mesh(northIndicatorGeometry, northIndicatorMaterial)
     const gripFloor = new Mesh(gripFloorGeometry, engravingFloorMaterial)
     crown.position.z = -CROWN_RECESS - CROWN_EDGE_BEVEL_THICKNESS
     crownReflection.position.z = -CROWN_RECESS - CROWN_EDGE_BEVEL_THICKNESS
     engravingFloor.position.z = -CROWN_RECESS - ENGRAVING_DEPTH
+    northIndicator.position.z = engravingFloor.position.z + 0.0005
+    northIndicator.renderOrder = 1
+    northIndicator.castShadow = true
     engravingFloor.receiveShadow = true
     gripFloor.position.z = -CROWN_RECESS - GRIP_ENGRAVING_DEPTH
     gripFloor.receiveShadow = true
@@ -566,7 +580,7 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, o
     dome.receiveShadow = true
     contactRing.renderOrder = 2
     scene.add(dome, mapReflection, gripRing, gripReflection, crown, crownReflection,
-        crownSeparationBase, crownSeparation, crownEdgeShade, engravingFloor, gripFloor, domeSeam, contactRing)
+        crownSeparationBase, crownSeparation, crownEdgeShade, engravingFloor, northIndicator, gripFloor, domeSeam, contactRing)
 
     let disposed = false
     let contextLost = false
@@ -586,6 +600,9 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, o
         const shadowColor = surfaceColor.clone().multiplyScalar(0.65)
         domeMaterial.color.copy(domeColor)
         crownMaterial.color.copy(surfaceColor).lerp(highlightColor, 0.12)
+        northIndicatorMaterial.color.copy(getOnMapColor(
+            padElement, '--wa-color-warning', 'var(--wa-color-brand, #273d35)',
+        ))
         engravingWallMaterial.color.copy(surfaceColor).multiplyScalar(0.47)
         engravingFloorMaterial.color.copy(getCompassMarkColor(padElement, surfaceColor))
         reflection.update(surfaceColor, highlightColor)
@@ -671,6 +688,7 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, o
         canvas.removeEventListener('webglcontextrestored', restoreContext)
         domeGeometry.dispose()
         crownGeometry.dispose()
+        northIndicatorGeometry.dispose()
         crownEdgeShadeGeometry.dispose()
         crownSeparationGeometry.dispose()
         gripRingGeometry.dispose()
@@ -681,6 +699,7 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, o
         domeMaterial.dispose()
         mapMaterial.dispose()
         crownMaterial.dispose()
+        northIndicatorMaterial.dispose()
         crownEdgeShade.material.dispose()
         crownSeparationBaseMaterial.dispose()
         crownSeparation.material.dispose()
@@ -712,6 +731,7 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, o
             gripReflection.rotation.z = -angle
             crownReflection.rotation.z = -angle
             engravingFloor.rotation.z = -angle
+            northIndicator.rotation.z = -angle
             gripFloor.rotation.z = -angle
             render()
         },
@@ -720,7 +740,7 @@ export const createReplayCameraJoystickScene = ({canvas, padElement, mapScene, o
             if (disposed) return
             const x = next.x * DOME_TRAVEL
             const y = -next.y * DOME_TRAVEL
-            setJoystickDomeTilt(domeGeometry, x, y)
+            setCamBallDomeTilt(domeGeometry, x, y)
             render()
         },
         dispose,

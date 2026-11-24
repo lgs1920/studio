@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-11-23
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -239,26 +239,44 @@ describe('SettingsSection', () => {
         expect(migrated).not.toHaveProperty('fixPathMaxSegmentMeters')
     })
 
-    it('adds joystick defaults for existing profiles and keeps both user choices after reload', async () => {
-        const {joystick} = parse(readFileSync('public/settings.yaml', 'utf8')).ui
-        expect(joystick).toEqual({visible: true, followPitch: false})
+    it('adds CamBall defaults for existing profiles and keeps both user choices after reload', async () => {
+        const {camBall} = parse(readFileSync('public/settings.yaml', 'utf8')).ui
+        expect(camBall).toEqual({visible: true, followPitch: false})
         let saved = {profile: {liveData: false}}
-        lgs.configuration.ui.joystick = {...joystick}
+        lgs.configuration.ui.camBall = {...camBall}
         lgs.db.settings.get.mockImplementation(async () => saved)
         lgs.db.settings.put.mockImplementation(async (_, value) => { saved = value })
 
         const section = new SettingsSection('ui')
         await section.init()
-        expect(section.content.joystick).toEqual(joystick)
-        section.content.joystick.visible = false
-        section.content.joystick.followPitch = true
+        expect(section.content.camBall).toEqual(camBall)
+        section.content.camBall.visible = false
+        section.content.camBall.followPitch = true
         await waitForSubscription()
-        expect(saved.joystick).toEqual({visible: false, followPitch: true})
+        expect(saved.camBall).toEqual({visible: false, followPitch: true})
 
-        lgs.configuration.ui.joystick = {...joystick}
+        lgs.configuration.ui.camBall = {...camBall}
         const reopened = new SettingsSection('ui')
         await reopened.init()
-        expect(reopened.content.joystick).toEqual({visible: false, followPitch: true})
+        expect(reopened.content.camBall).toEqual({visible: false, followPitch: true})
+    })
+
+    it('migrates persisted joystick preferences to CamBall settings', async () => {
+        lgs.configuration.ui.camBall = {visible: true, followPitch: false}
+        let saved = {
+            profile: {liveData: false},
+            joystick: {visible: false, followPitch: true},
+        }
+        lgs.db.settings.get.mockImplementation(async () => saved)
+        lgs.db.settings.put.mockImplementation(async (_, value) => { saved = value })
+
+        const section = new SettingsSection('ui')
+        await section.init()
+
+        expect(section.content.camBall).toEqual({visible: false, followPitch: true})
+        expect(section.content).not.toHaveProperty('joystick')
+        expect(saved.camBall).toEqual({visible: false, followPitch: true})
+        expect(saved).not.toHaveProperty('joystick')
     })
 
     it('keeps user replay settings while adding new default keys', () => {

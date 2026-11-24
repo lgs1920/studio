@@ -2,24 +2,24 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: replayCameraJoystick.css
+ * File: replayCameraCamBall.css
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-10-29
- * Last modified: 2026-11-23
+ * Created on: 2026-11-24
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-.lgs-widget-container.replay-camera-joystick-layer {
+.lgs-widget-container.replay-camera-cam-ball-layer {
     /* Keep this map control under drawers and dialogs when the widget manager changes its order. */
     z-index: var(--lgs-tools-ui-zindex) !important;
 }
 
-.replay-camera-joystick-shell {
+.replay-camera-cam-ball-shell {
     width: auto !important;
     height: auto !important;
     padding: 0 !important;
@@ -30,16 +30,16 @@
     overflow: visible !important;
 }
 
-.replay-camera-joystick {
+.replay-camera-cam-ball {
     /* Tilt of the widget face driven by the live Cesium camera pitch. */
-    --lgs-joystick-view-tilt: 0deg;
+    --lgs-cam-ball-view-tilt: 0deg;
     /* Distance to the dial face, shortened as the camera approaches the horizon. */
-    --lgs-joystick-view-perspective: 560px;
+    --lgs-cam-ball-view-perspective: 560px;
     position: relative;
     border-radius: 50%;
     cursor: grab;
 
-    & .replay-camera-joystick-pad.lgs-card.wa-theme-lgs1920-on-map {
+    & .replay-camera-cam-ball-pad.lgs-card.wa-theme-lgs1920-on-map {
         position: relative;
         display: block;
         box-sizing: border-box;
@@ -62,14 +62,14 @@
         &:focus-visible { outline: 2px solid var(--wa-color-focus); outline-offset: 3px; }
     }
 
-    & .replay-camera-joystick-visual {
+    & .replay-camera-cam-ball-visual {
         position: absolute;
         inset: 0;
         pointer-events: none;
-        transform: perspective(var(--lgs-joystick-view-perspective)) rotateX(var(--lgs-joystick-view-tilt));
+        transform: perspective(var(--lgs-cam-ball-view-perspective)) rotateX(var(--lgs-cam-ball-view-tilt));
     }
 
-    & .replay-camera-joystick-canvas {
+    & .replay-camera-cam-ball-canvas {
         position: absolute;
         inset: 0;
         display: block;
@@ -80,7 +80,7 @@
         pointer-events: none;
     }
 
-    & .replay-camera-joystick-crown {
+    & .replay-camera-cam-ball-crown {
         position: absolute;
         inset: 0;
         width: 100%;
@@ -90,20 +90,20 @@
         pointer-events: none;
     }
 
-    & .replay-camera-joystick-crown-fallback {
+    & .replay-camera-cam-ball-crown-fallback {
         fill: none;
         stroke: var(--lgs-card-on-map-bg-color);
         stroke-width: 5;
     }
 
-    & .replay-camera-joystick-crown-band {
+    & .replay-camera-cam-ball-crown-band {
         stroke: color-mix(in srgb, var(--lgs-card-on-map-bg-color) 88%, var(--lgs-on-map-text-color, var(--lgs-text-on-color)));
         stroke-width: 8;
-        stroke-opacity: 0.72;
+        stroke-opacity: 0.84;
         filter: saturate(0.62) drop-shadow(0 -1px 1px var(--lgs-on-map-dark-color, var(--lgs-dark-color)));
     }
 
-    & .replay-camera-joystick-compass-marks {
+    & .replay-camera-cam-ball-compass-marks {
         fill: color-mix(in srgb, var(--lgs-card-on-map-bg-color) 74%, var(--lgs-on-map-text-color, var(--lgs-text-on-color)));
         stroke: color-mix(in srgb, var(--lgs-card-on-map-bg-color) 74%, var(--lgs-on-map-text-color, var(--lgs-text-on-color)));
         stroke-width: 1.4;
@@ -112,21 +112,27 @@
         filter: drop-shadow(0 0.7px 0 color-mix(in srgb, var(--lgs-on-map-text-color, var(--lgs-text-on-color)) 24%, transparent));
     }
 
-    & .is-threejs-ready .replay-camera-joystick-crown-fallback {
+    & .replay-camera-cam-ball-north-mark {
+        fill: var(--wa-color-warning);
+        stroke: var(--wa-color-warning);
+        filter: drop-shadow(0 0.7px 0 var(--wa-color-shadow));
+    }
+
+    & .is-threejs-ready .replay-camera-cam-ball-crown-fallback {
         display: none;
     }
 
-    & .replay-camera-joystick-grip-marks {
+    & .replay-camera-cam-ball-grip-marks {
         stroke: color-mix(in srgb, var(--lgs-card-on-map-bg-color) 74%, var(--lgs-on-map-text-color, var(--lgs-text-on-color)));
         stroke-dasharray: 1.5 4.9;
         stroke-width: 3.5;
     }
 
-    & .replay-camera-joystick-grip-band {
+    & .replay-camera-cam-ball-grip-band {
         stroke-width: 4.7;
     }
 
-    & .replay-camera-joystick-touch-surface {
+    & .replay-camera-cam-ball-touch-surface {
         position: absolute;
         inset: 0;
         width: 100%;
@@ -136,7 +142,7 @@
         pointer-events: none;
     }
 
-    & :is(.replay-camera-joystick-grip-hit, .replay-camera-joystick-dome-hit) {
+    & :is(.replay-camera-cam-ball-grip-hit, .replay-camera-cam-ball-dome-hit) {
         fill: transparent;
         pointer-events: fill;
         cursor: grab;
@@ -151,7 +157,7 @@
         }
     }
 
-    & .replay-camera-joystick-dome-fallback {
+    & .replay-camera-cam-ball-dome-fallback {
         position: absolute;
         top: 53%;
         left: 50%;
@@ -167,11 +173,11 @@
         filter: saturate(0.52);
     }
 
-    & .is-threejs-ready .replay-camera-joystick-dome-fallback {
+    & .is-threejs-ready .replay-camera-cam-ball-dome-fallback {
         display: none;
     }
 
-    & .replay-camera-joystick-action {
+    & .replay-camera-cam-ball-action {
         position: absolute;
         z-index: 5;
         width: 16px;

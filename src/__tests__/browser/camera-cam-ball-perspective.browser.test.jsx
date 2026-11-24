@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: camera-joystick-perspective.browser.test.jsx
+ * File: camera-cam-ball-perspective.browser.test.jsx
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-11-23
- * Last modified: 2026-11-23
+ * Created on: 2026-11-24
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import {afterEach, expect, it, vi} from 'vitest'
 import {userEvent} from 'vitest/browser'
 import {render} from 'vitest-browser-react'
 import {proxy} from 'valtio'
-import {ReplayCameraJoystick} from '@Components/JourneyReplay/ReplayCameraJoystick'
+import {ReplayCameraCamBall} from '@Components/JourneyReplay/ReplayCameraCamBall'
 
 vi.mock('@Components/MainUI/widgets/Widget', () => ({Widget: ({children}) => <div>{children}</div>}))
 vi.mock('@Core/ui/replay/JourneyReplayRuntime', () => ({
@@ -35,7 +35,7 @@ it('drags the dome and grip using real browser hit testing at a steep tilt', asy
     const updatePreparationCamera = vi.fn(updates => Object.assign(replay.camera, updates))
     vi.stubGlobal('lgs', {
         camera: {pitch: -0.15},
-        settings: {ui: proxy({joystick: {followPitch: true}})},
+        settings: {ui: proxy({camBall: {followPitch: true}})},
         stores: {
             replay,
             main: proxy({theJourney: {slug: 'prepared'}}),
@@ -44,16 +44,16 @@ it('drags the dome and grip using real browser hit testing at a steep tilt', asy
     })
     vi.stubGlobal('__', {ui: {replay: {updatePreparationCamera}}})
 
-    const view = await render(<ReplayCameraJoystick/>)
+    const view = await render(<ReplayCameraCamBall/>)
     try {
         const pad = view.getByRole('group', {name: /adjust pitch/})
         const element = pad.element()
         await expect.element(pad).toHaveClass('is-threejs-ready')
         const {left, top, width, height} = element.getBoundingClientRect()
-        const visual = element.querySelector('.replay-camera-joystick-visual')
+        const visual = element.querySelector('.replay-camera-cam-ball-visual')
         const matrix = new DOMMatrix(getComputedStyle(visual).transform)
-        const dome = element.querySelector('.replay-camera-joystick-dome-hit')
-        const grip = element.querySelector('.replay-camera-joystick-grip-hit')
+        const dome = element.querySelector('.replay-camera-cam-ball-dome-hit')
+        const grip = element.querySelector('.replay-camera-cam-ball-grip-hit')
 
         /** Convert a point on the dial face using Chromium's computed transform. */
         const project = (x, y) => {
