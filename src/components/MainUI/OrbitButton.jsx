@@ -8,16 +8,19 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-29
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CURRENT_POI }                             from '@Core/constants'
+import { CURRENT_MAP_POINT, CURRENT_POI }           from '@Core/constants'
+import { MapTarget }                               from '@Core/MapTarget'
 import { getOrbitSettings, setOrbitStoreSettings } from '@Core/OrbitSettings'
+import { getMainSceneCameraPivot }                  from '@Core/ui/MainSceneCameraPivot'
 import { UI_ACTIONS }                              from '@Core/ui/metadata/uiActionCatalog'
 import { WaButton, WaIcon, WaTooltip } from '@awesome.me/webawesome/dist/react'
+import { Cartographic, Math as CesiumMath } from 'cesium'
 import { memo, useCallback }                       from 'react'
 import { useSnapshot } from 'valtio'
 
@@ -60,6 +63,25 @@ const normalizedFocusPoint = point => {
     return normalizedPoint
 }
 
+const selectedPivotTarget = () => {
+    const scene = lgs.scene ?? lgs.viewer?.scene
+    const camera = lgs.camera ?? lgs.viewer?.camera
+    const pivot = getMainSceneCameraPivot(scene, camera)
+    const cartographic = pivot ? Cartographic.fromCartesian(pivot) : null
+    if (!cartographic) return null
+
+    const longitude = CesiumMath.toDegrees(cartographic.longitude)
+    const latitude = CesiumMath.toDegrees(cartographic.latitude)
+    if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return null
+
+    const height = __.ui.sceneManager?.noRelief?.() ? 0 : cartographic.height
+    const id = `${CURRENT_MAP_POINT}:${longitude.toFixed(6)}:${latitude.toFixed(6)}`
+    const point = new MapTarget(CURRENT_MAP_POINT, {height, id, latitude, longitude})
+    point.simulatedHeight = height
+    point.title = 'Map pivot'
+    return point
+}
+
 /**
  * A memoized React component for toggling map orbit around a target.
  * @param {Object} props - Component props
@@ -85,8 +107,11 @@ export const OrbitButton = memo(({tooltip = 'top'}) => {
      */
     const handleOrbit = useCallback(async () => {
         const focusTarget = sceneTarget?.element ? sceneTarget : null
-        const poi = focusTarget?.element === CURRENT_POI
-                    ? lgs.stores.main.components.pois.list.get(focusTarget.slug ?? focusTarget.id)
+        const poiFocusTarget = focusTarget?.element === CURRENT_POI
+            ? focusTarget
+            : target?.element === CURRENT_POI ? target : null
+        const poi = poiFocusTarget
+                    ? lgs.stores.main.components.pois.list.get(poiFocusTarget.slug ?? poiFocusTarget.id)
                     : null
 
         try {
@@ -107,7 +132,11 @@ export const OrbitButton = memo(({tooltip = 'top'}) => {
                 return
             }
 
-            const focusPoint = normalizedFocusPoint(target)
+            const pivotTarget = poiFocusTarget ? null : selectedPivotTarget()
+            const orbitFocusTarget = poiFocusTarget ?? pivotTarget ?? focusTarget
+            const focusPoint = normalizedFocusPoint(poiFocusTarget)
+                ?? normalizedFocusPoint(pivotTarget)
+                ?? normalizedFocusPoint(target)
                 ?? normalizedFocusPoint(focusTarget)
                 ?? normalizedFocusPoint(orbitTarget)
             if (!focusPoint) {
@@ -115,7 +144,7 @@ export const OrbitButton = memo(({tooltip = 'top'}) => {
                 return
             }
 
-            const orbitSettings = getOrbitSettings(focusTarget ?? focusPoint, 'rotation', lgs.stores.ui.mainUI.rotate)
+            const orbitSettings = getOrbitSettings(orbitFocusTarget ?? focusPoint, 'rotation', lgs.stores.ui.mainUI.rotate)
             setOrbitStoreSettings(lgs.stores.ui.mainUI.rotate, orbitSettings)
             await __.ui.sceneManager.focus(focusPoint, {
                 direction: orbitSettings.direction,
@@ -125,7 +154,7 @@ export const OrbitButton = memo(({tooltip = 'top'}) => {
                 rotate:     true,
                 flyingTime: 0,
                 rpm:       orbitSettings.rpm,
-                target:    focusTarget ?? FOCUS_TARGET,
+                target:    orbitFocusTarget ?? FOCUS_TARGET,
             })
             if (poi && !poi.animated) {
                 poi.animated = true

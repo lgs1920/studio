@@ -21,6 +21,7 @@ import { hasActiveAppShortcutBlocker }                  from '@Core/events/short
 import { MapTarget }                                    from '@Core/MapTarget'
 import { getOrbitSettings, setOrbitStoreSettings }      from '@Core/OrbitSettings'
 import { getGlobalHideOtherJourneys, setGlobalHideOtherJourneys } from '@Core/ui/JourneyVisibility'
+import {getMainSceneCameraPivot}                         from '@Core/ui/MainSceneCameraPivot'
 import {
     REPLAY_MARKER_MODE_TRACE,
     REPLAY_CAMERA_KEYBOARD_ROTATION_STEP_DEGREES,
@@ -187,7 +188,31 @@ const buildMapPointId = ({longitude, latitude}) => {
     return `${CURRENT_MAP_POINT}:${longitude.toFixed(MAP_POINT_PRECISION)}:${latitude.toFixed(MAP_POINT_PRECISION)}`
 }
 
+/** Convert the explicitly selected camera pivot into a map target. */
+const resolveSelectedPivotTarget = () => {
+    const scene = lgs.scene ?? lgs.viewer?.scene
+    const camera = lgs.camera ?? lgs.viewer?.camera
+    const pivot = getMainSceneCameraPivot(scene, camera)
+    const cartographic = pivot ? Cartographic.fromCartesian(pivot) : null
+    if (!cartographic) return null
+    const longitude = CesiumMath.toDegrees(cartographic.longitude)
+    const latitude = CesiumMath.toDegrees(cartographic.latitude)
+    if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return null
+    const height = __.ui.sceneManager?.noRelief?.() ? 0 : (mapTargetHeight(cartographic.height) ?? 0)
+    const target = new MapTarget(CURRENT_MAP_POINT, {
+        height,
+        id: buildMapPointId({longitude, latitude}),
+        latitude,
+        longitude,
+    })
+    target.simulatedHeight = height
+    target.title = 'Map pivot'
+    return target
+}
+
 const resolveMapCenterTarget = () => {
+    const selectedPivot = resolveSelectedPivotTarget()
+    if (selectedPivot) return selectedPivot
     const canvas = lgs.canvas ?? lgs.viewer?.canvas
     const scene = lgs.scene ?? lgs.viewer?.scene
     const camera = lgs.camera ?? lgs.viewer?.camera
@@ -235,6 +260,7 @@ const resolveMapCenterTarget = () => {
 }
 
 const resolvePanoramaFocus = () => {
+    const selectedPivotTarget = resolveSelectedPivotTarget()
     const sceneTarget = __.ui.sceneManager?.target
     const cameraTarget = lgs.stores.main.components.camera.target
     const explicitTarget = explicitTargetOf(sceneTarget)
@@ -248,6 +274,11 @@ const resolvePanoramaFocus = () => {
             slug:    explicitTarget.slug ?? explicitTarget.id,
         }
         : null
+    const explicitPoiTarget = explicitSceneTarget?.element === CURRENT_POI ? explicitSceneTarget : null
+    const cameraPoiTarget = cameraTarget?.element === CURRENT_POI
+        ? normalizedFocusPoint(cameraTarget)
+        : null
+    const otherSceneTarget = explicitPoiTarget ? null : explicitSceneTarget
     const currentPoiTarget = normalizedFocusPoint(resolveCurrentPoiTarget())
     const centerTarget = resolveMapCenterTarget()
     const rotateTarget = lgs.stores.ui.mainUI.rotate.target
@@ -255,7 +286,10 @@ const resolvePanoramaFocus = () => {
 
     return [
         currentPoiTarget,
-        explicitSceneTarget,
+        explicitPoiTarget,
+        cameraPoiTarget,
+        selectedPivotTarget,
+        otherSceneTarget,
         centerTarget,
         panoramaTarget,
         rotateTarget,
@@ -397,7 +431,9 @@ const toggleRotation = () => {
 
         await __.ui.cameraManager.updatePositionInformation?.()
         const sceneTarget = explicitTargetOf(__.ui.sceneManager?.target)
-        const centerTarget = normalizedFocusPoint(resolveMapCenterTarget())
+        const explicitPoiTarget = sceneTarget?.element === CURRENT_POI ? sceneTarget : null
+        const selectedPivotTarget = explicitPoiTarget ? null : resolveSelectedPivotTarget()
+        const centerTarget = normalizedFocusPoint(explicitPoiTarget ?? selectedPivotTarget ?? resolveMapCenterTarget())
         const target = centerTarget
             ?? normalizedFocusPoint(sceneTarget)
             ?? normalizedFocusPoint(lgs.stores.ui.mainUI.rotate.target)
@@ -408,7 +444,7 @@ const toggleRotation = () => {
             return false
         }
 
-        const focusTarget = sceneTarget ?? target
+        const focusTarget = explicitPoiTarget ?? selectedPivotTarget ?? sceneTarget ?? target
         const rotationSettings = getOrbitSettings(focusTarget, 'rotation', rotate)
         setOrbitStoreSettings(rotate, rotationSettings)
         await __.ui.sceneManager.focus(target, {

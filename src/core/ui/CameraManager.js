@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-08
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import {
   CURRENT_CAMERA,
+  CURRENT_POI,
   CURRENT_STORE,
   FOCUS_STARTER,
   JOURNEYS_STORE,
@@ -30,7 +31,8 @@ import {
 import { CameraUtils } from "@Utils/cesium/CameraUtils.js";
 import { getSceneRenderScheduler, requestSceneRender } from "@Utils/cesium/SceneRenderScheduler";
 import { UIToast } from "@Utils/UIToast";
-import { Cartesian3, HeadingPitchRange, Matrix4 } from "cesium";
+import {getMainSceneCameraPivot} from "@Core/ui/MainSceneCameraPivot"
+import { Cartesian3, Cartographic, HeadingPitchRange, Math as CesiumMath, Matrix4 } from "cesium"
 import { snapshot } from "valtio";
 import { deepClone } from "valtio/utils";
 import { Journey } from "../Journey";
@@ -532,10 +534,24 @@ export class CameraManager {
     if (point === null) {
       //take current settings from proxy
       const settings = snapshot(this.store);
-      point = {
-        ...settings.target,
-        camera: settings.position,
-      };
+      const scene = lgs.scene ?? lgs.viewer?.scene
+      const camera = lgs.camera ?? lgs.viewer?.camera
+      const pivot = getMainSceneCameraPivot(scene, camera)
+      const cartographic = pivot && settings.target?.element !== CURRENT_POI
+        ? Cartographic.fromCartesian(pivot)
+        : null
+      point = cartographic
+        ? {
+            longitude: CesiumMath.toDegrees(cartographic.longitude),
+            latitude: CesiumMath.toDegrees(cartographic.latitude),
+            height: cartographic.height,
+            simulatedHeight: cartographic.height,
+            camera: settings.position,
+          }
+        : {
+            ...settings.target,
+            camera: settings.position,
+          }
     }
 
     const preserveView = options?.preserveView === true;

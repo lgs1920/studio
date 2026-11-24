@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-11-24
+ * Created on: 2026-10-29
  * Last modified: 2026-11-24
  *
  *
@@ -636,10 +636,13 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
         if (event.shiftKey || (mainScene && event.ctrlKey)) return
         if (!beginInteraction()) return
         consumeInput(event)
+        // Capture the selected map pivot before any held camera frame can run.
+        const mainOrbit = mainScene ? resolveMainCameraOrbit() : null
         _gesture.current = {
             target, precision: event.ctrlKey, pointerId: event.pointerId, rect: event.currentTarget.getBoundingClientRect(),
             pressX: event.clientX, pressY: event.clientY, pressTime: event.timeStamp,
             x: stick.x, y: stick.y, lastFrameTime: null, applyHeld,
+            mainOrbit,
             lastClientX: event.clientX, lastClientY: event.clientY,
             activeAxis: stick.x !== 0 || stick.y !== 0
                 ? Math.abs(stick.x) >= Math.abs(stick.y) ? 'horizontal' : 'vertical'
@@ -648,7 +651,7 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
             originStickX: stick.x, originStickY: stick.y, axis: null,
         }
         target.setPointerCapture?.(event.pointerId)
-    }, [applyHeld, beginInteraction, stick.x, stick.y])
+    }, [applyHeld, beginInteraction, mainScene, stick.x, stick.y])
 
     /** End only the pointer gesture owned by this CamBall. */
     const end = useCallback(event => {

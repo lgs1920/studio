@@ -416,10 +416,17 @@
     - ArrowLeft | ArrowRight
   scope: Map and Replay camera setup
 - action: Move the camera CamBall rotation center
-  description: On the main map, hold Shift and drag the small pivot marker, shown at the map center by default, to choose the point the camera rotates around. Ctrl-drag on the map remains a Cesium gesture.
+  description: On the main map, hold Shift and drag the small pivot marker, shown at the map center by default, to choose the point map-wide rotation, focus, and panorama use when there is no explicit POI target. Ctrl-drag on the map remains a Cesium gesture.
   id: camera-joystick-pivot
   keys:
     - Shift+Left drag
+  scope: Main map
+- action: Center the selected map pivot
+  description: On the main map, Shift-double-click the pivot marker or double-tap it on a touch screen. Moves the map so the selected coordinates sit under the viewport center while keeping the camera orientation and distance.
+  id: camera-pivot-center
+  keys:
+    - Shift+Double click
+    - Double tap
   scope: Main map
 - action: Reset camera CamBall orientation
   description: Double-click or double-tap the dome or grip ring to face geographic north on the 3D map or during Replay preparation.

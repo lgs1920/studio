@@ -358,7 +358,11 @@ body.lgs-app-booting #cesium-viewer {
     pointer-events: none;
     user-select: none;
 
-    &.is-pivot-dragging { transition: none; }
+    &.is-pivot-dragging {
+        transition: none;
+        color: var(--wa-color-brand) !important;
+        filter: drop-shadow(0 0 7px var(--wa-color-brand));
+    }
 
     &::before,
     &::after {
@@ -378,8 +382,21 @@ body.lgs-app-booting #cesium-viewer {
         border-width: 1.5px;
     }
 
-    &.is-pivot-grabbed::before { animation: camera-pivot-pulse 1100ms ease-out both; }
-    &.is-pivot-grabbed::after { animation: camera-pivot-pulse 1100ms 180ms ease-out both; }
+    &.is-pivot-grabbed::before {
+        animation: camera-pivot-pulse 1100ms ease-out infinite;
+    }
+
+    &.is-pivot-grabbed::after {
+        animation: camera-pivot-pulse 1100ms 180ms ease-out infinite;
+    }
+
+    &.is-pivot-release-pulse::before {
+        animation: camera-pivot-pulse 1100ms ease-out both;
+    }
+
+    &.is-pivot-release-pulse::after {
+        animation: camera-pivot-pulse 1100ms 180ms ease-out both;
+    }
 }
 
 #camera-target[show="true"] {
@@ -393,7 +410,9 @@ body.lgs-app-booting #cesium-viewer {
 
 @media (prefers-reduced-motion: reduce) {
     #camera-target.is-pivot-grabbed::before,
-    #camera-target.is-pivot-grabbed::after { animation: none; }
+    #camera-target.is-pivot-grabbed::after,
+    #camera-target.is-pivot-release-pulse::before,
+    #camera-target.is-pivot-release-pulse::after { animation: none; }
 }
 
 /** Drawers **/

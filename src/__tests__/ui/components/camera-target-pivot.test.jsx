@@ -114,7 +114,7 @@ describe('Cesium camera pivot marker', () => {
         canvas.addEventListener('pointerdown', mapPointerDown)
         pointer(canvas, 'pointerdown', 530, 350, {pointerId: 7, shiftKey: true})
         expect(marker.classList.contains('is-pivot-grabbed')).toBe(true)
-        expect(marker.classList.contains('is-pivot-dragging')).toBe(true)
+        expect(marker.classList.contains('is-pivot-dragging')).toBe(false)
         expect(mapPointerDown).not.toHaveBeenCalled()
 
         pointer(canvas, 'pointermove', 560, 380, {pointerId: 7, shiftKey: true})
