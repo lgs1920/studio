@@ -162,6 +162,7 @@ const resolveMainCameraPivot = (scene, camera, screenPosition) => {
 const resolveMainCameraOrbit = (context = mainCameraContext()) => {
     if (!context || context.scene.mode !== SceneMode.SCENE3D) return null
     const {scene, camera} = context
+    if (!scene.canvas) return null
     const center = new Cartesian2(scene.canvas.clientWidth / 2, scene.canvas.clientHeight / 2)
     const ellipsoid = scene.globe?.ellipsoid ?? scene.ellipsoid
     const pivot = getMainSceneCameraPivot(scene, camera) ?? resolveMainCameraPivot(scene, camera, center)
@@ -304,6 +305,16 @@ const crownPointerAngle = (event, rect, projection) => {
     const x = localX / rect.width
     const y = (localY / rect.height - 0.04) * (41 / 39)
     return Number.isFinite(x + y) && Math.hypot(x, y) > 0.1 ? Math.atan2(y, x) : null
+}
+
+/** Return whether a captured pointer is still inside the circular CamBall surface. */
+const isPointerInsideCamBall = (event, rect) => {
+    if (!rect || !(rect.width > 0) || !(rect.height > 0)
+        || !Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) return true
+    const centerX = (Number.isFinite(rect.left) ? rect.left : 0) + rect.width / 2
+    const centerY = (Number.isFinite(rect.top) ? rect.top : 0) + rect.height / 2
+    const radius = Math.min(rect.width, rect.height) / 2
+    return Math.hypot(event.clientX - centerX, event.clientY - centerY) <= radius
 }
 
 /** Project the visible hit areas into an ordinary two-dimensional SVG. */
@@ -536,6 +547,10 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
         const gesture = _gesture.current
         if (!gesture || gesture.pointerId !== event.pointerId) return
         consumeInput(event)
+        if (!isPointerInsideCamBall(event, gesture.rect)) {
+            stop()
+            return
+        }
         if (Math.hypot(event.clientX - gesture.pressX, event.clientY - gesture.pressY) > TAP_TRAVEL_LIMIT) gesture.dragged = true
         if (gesture.rotate) {
             if (!canInteract()) {
@@ -659,6 +674,12 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
         if (gesture?.pointerId !== event.pointerId) return
         consumeInput(event)
         const released = event.type === 'pointerup'
+        const insideCamBall = isPointerInsideCamBall(event, gesture.rect)
+        if (!insideCamBall) {
+            stop()
+            if (event.pointerType === 'touch') _lastTap.current = null
+            return
+        }
         if (released && gesture.moved && gesture.lastFrameTime === null) applyHeld()
         stop()
         if (event.pointerType !== 'touch') return

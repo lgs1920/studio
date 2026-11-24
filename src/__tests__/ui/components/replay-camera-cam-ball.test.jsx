@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-11-24
+ * Created on: 2026-10-29
  * Last modified: 2026-11-24
  *
  *
@@ -593,15 +593,15 @@ describe('Replay camera CamBall', () => {
             expect(replay.camera.pitch).toBeLessThan(-40)
             expect(replay.camera.altitude).toBe(1200)
         }
-        pointer(pad, 'pointermove', 130, 130, 1, true)
+        pointer(pad, 'pointermove', horizontal ? 80 : 53, horizontal ? 53 : 80, 1, true)
         await frame(80)
         const crossAxisIcon = horizontal ? '.action-top, .action-bottom' : '.action-left, .action-right'
         expect(pad.querySelector(crossAxisIcon)).toBeNull()
         expect(horizontal ? replay.camera.pitch : replay.camera.altitude).toBe(horizontal ? -40 : 1200)
         const pose = {...replay.camera}
-        pointer(pad, 'pointermove', 130, 130, 1, false)
+        pointer(pad, 'pointermove', horizontal ? 80 : 53, horizontal ? 53 : 80, 1, false)
         expect(replay.camera).toEqual(pose)
-        pointer(pad, 'pointermove', horizontal ? 130 : 100, horizontal ? 100 : 130, 1, false)
+        pointer(pad, 'pointermove', 80, 80, 1, false)
         await frame(160)
         expect(horizontal ? replay.camera.pitch : replay.camera.altitude).not.toBe(horizontal ? pose.pitch : pose.altitude)
     })
@@ -725,6 +725,26 @@ describe('Replay camera CamBall', () => {
         await frame(80)
         expect(replay.camera).toEqual(centeredPose)
         expect(view.container.querySelector('[data-icon]')).toBeNull()
+    })
+
+    it('stops a drag when the pointer leaves the circular CamBall surface', async () => {
+        const {frames, frame, replay} = install()
+        const view = render(<ReplayCameraCamBall/>)
+        const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
+        pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
+
+        pointer(pad, 'pointerdown', 50, 50)
+        pointer(pad, 'pointermove', 70, 50)
+        await frame(0)
+        const poseBeforeExit = {...replay.camera}
+        expect(frames.size).toBe(1)
+
+        // The point remains inside the square bounds but is outside the ball's circle.
+        pointer(pad, 'pointermove', 90, 90)
+        expect(frames.size).toBe(0)
+        await frame(40)
+        expect(replay.camera).toEqual(poseBeforeExit)
+        pointer(pad, 'pointerup', 90, 90)
     })
 
     it('keeps the held adjustment rate independent of animation frame frequency', async () => {
