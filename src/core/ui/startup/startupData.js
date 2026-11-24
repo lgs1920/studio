@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -97,6 +97,93 @@ const geometrySegments = content => {
     return []
 }
 
+const journeySummaryProperties = [
+    'activity', 'activitySettings', 'camera', 'cameraOrigin', 'country', 'countryCode', 'countries', 'countryCodes',
+    'description', 'fixPathCorrectionData', 'fixPathEnabled', 'hasElevation', 'hasTime', 'location', 'panorama',
+    'POIsVisible', 'replay', 'renderSmoothing', 'rotation', 'slug', 'title', 'type', 'visible',
+]
+
+const trackSummaryProperties = [
+    'activity', 'activitySettings', 'color', 'description', 'hasAltitude', 'hasTime', 'id', 'name', 'parent',
+    'renderSmoothing', 'renderStyle', 'segments', 'slug', 'thickness', 'title', 'visible',
+]
+
+const pickProperties = (value, properties) => properties.reduce((result, property) => {
+    if (value?.[property] !== undefined) {
+        result[property] = value[property]
+    }
+    return result
+}, {})
+
+const visitCoordinates = (coordinates, visitor) => {
+    if (!Array.isArray(coordinates) || coordinates.length === 0) {
+        return
+    }
+
+    const longitude = Number(coordinates[0])
+    const latitude = Number(coordinates[1])
+    if (coordinates.length >= 2
+        && Number.isFinite(longitude)
+        && Number.isFinite(latitude)
+        && !Array.isArray(coordinates[0])) {
+        visitor(longitude, latitude)
+        return
+    }
+
+    coordinates.forEach(item => visitCoordinates(item, visitor))
+}
+
+const journeySpatialSummary = journey => {
+    let count = 0
+    let longitudeSum = 0
+    let latitudeSum = 0
+    let west = Number.POSITIVE_INFINITY
+    let south = Number.POSITIVE_INFINITY
+    let east = Number.NEGATIVE_INFINITY
+    let north = Number.NEGATIVE_INFINITY
+
+    trackEntries(journey).forEach(([, track]) => {
+        const geometry = track?.content?.geometry
+        if (!geometry) {
+            return
+        }
+
+        visitCoordinates(geometry.coordinates, (longitude, latitude) => {
+            count++
+            longitudeSum += longitude
+            latitudeSum += latitude
+            west = Math.min(west, longitude)
+            south = Math.min(south, latitude)
+            east = Math.max(east, longitude)
+            north = Math.max(north, latitude)
+        })
+    })
+
+    if (count === 0) {
+        return null
+    }
+
+    return {
+        bounds:   [west, south, east, north],
+        centroid: {
+            latitude:  latitudeSum / count,
+            longitude: longitudeSum / count,
+        },
+    }
+}
+
+const createJourneySummary = journey => {
+    const data = pickProperties(journey, journeySummaryProperties)
+    const tracks = trackEntries(journey).map(([key, value]) => {
+        const summary = pickProperties(value, trackSummaryProperties)
+        summary.color ??= summary.renderStyle?.color
+        summary.thickness ??= summary.renderStyle?.farPixelWidth
+        return {key, value: summary}
+    })
+    data.tracks = [...tracks, {__type: 'Map'}]
+    return data
+}
+
 export const streamStartupObject = async (value, emit, options = {}) => {
     const batchSize = options.batchSize ?? JOURNEY_BATCH_SIZE
     const items = Array.isArray(value) ? value : [value]
@@ -131,7 +218,12 @@ export const streamStartupJourney = async (value, emit, options = {}) => {
     const tracks = {...journey, tracks: undefined}
     delete tracks.tracks
 
-    await emit({type: 'journey', data: tracks})
+    await emit({
+        data:      tracks,
+        spatial:   journeySpatialSummary(journey),
+        trackKeys: entries.map(([key]) => key),
+        type:      'journey',
+    })
     for (let index = 0; index < entries.length; index++) {
         const [key, rawTrack] = entries[index]
         const track = decodeStartupJourney(rawTrack)
@@ -153,6 +245,33 @@ export const streamStartupJourney = async (value, emit, options = {}) => {
                                 })
     }
     await emit({type: 'journey-end'})
+}
+
+/**
+ * Stream metadata needed to render the journey catalog without transferring route geometry.
+ * @param {AsyncIterable<Array<Object>>} values - Journey records read from IndexedDB.
+ * @param {Function} emit - Packet emitter.
+ * @returns {Promise<void>} Resolves after all summaries have been emitted.
+ */
+export const streamStartupJourneyCatalog = async (values, emit) => {
+    for await (const valueBatch of values) {
+        for (const value of valueBatch ?? []) {
+            if (!value) {
+                continue
+            }
+
+            const journey = decodeStartupJourney(value)
+            if (!journey?.slug) {
+                continue
+            }
+
+            await emit({
+                data:    createJourneySummary(journey),
+                spatial: journeySpatialSummary(journey),
+                type:    'journey-summary',
+            })
+        }
+    }
 }
 
 /**

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-06
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -859,11 +859,14 @@ export class SceneUtils {
 
     static getJourneyCentroid = async (journey, source = null, {useStoredHeight = true} = {}) => {
         const focusSource = source ?? SceneUtils.getJourneyFeatureSource(journey)
-        if (!focusSource) {
+        const storedSpatialCenter = journey?.startupSpatial?.centroid
+        if (!focusSource && !storedSpatialCenter) {
             return null
         }
 
-        const [longitude, latitude] = centroid(focusSource).geometry.coordinates
+        const [longitude, latitude] = storedSpatialCenter
+                                         ? [storedSpatialCenter.longitude, storedSpatialCenter.latitude]
+                                         : centroid(focusSource).geometry.coordinates
         const storedHeight = useStoredHeight
                              ? mapTargetHeight(journey?.camera?.target?.height)
                                ?? mapTargetHeight(journey?.cameraOrigin?.target?.height)
@@ -909,6 +912,8 @@ export class SceneUtils {
         }
 
         const focusTrackOnly = track !== null
+        const startupSpatial = options.startupSpatial
+            ?? (journey?.tracksLoaded === false ? journey.startupSpatial : null)
 
         // If track not provided, we'll get the first one of the journey
         if (track === null) {
@@ -922,12 +927,14 @@ export class SceneUtils {
             journey = lgs.journeys.get(track.parent)
         }
 
-        if (!track?.content) {
+        if (!track?.content && !startupSpatial?.centroid) {
             return
         }
 
-        const focusSource = focusTrackOnly ? track.content : (SceneUtils.getJourneyFeatureSource(journey) ?? track.content)
-        const theBbox = SceneUtils.extendBbox(bbox(focusSource), 2)
+        const focusSource = focusTrackOnly ? track.content : (SceneUtils.getJourneyFeatureSource(journey) ?? track?.content)
+        const theBbox = startupSpatial?.bounds
+            ? SceneUtils.extendBbox(startupSpatial.bounds, 2)
+            : SceneUtils.extendBbox(bbox(focusSource), 2)
         const focusId = focusTrackOnly ? track.slug : (journey?.slug ?? track.slug)
 
         let point
@@ -946,7 +953,7 @@ export class SceneUtils {
 
         if (!point) {
             // Centroid
-            const center = await SceneUtils.getJourneyCentroid(journey, focusSource, {
+            const center = await SceneUtils.getJourneyCentroid(journey, startupSpatial ? null : focusSource, {
                 useStoredHeight: options.resetCamera !== true,
             })
             if (!center) {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-10-17
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -217,24 +217,19 @@ describe('JourneyToolbar orbit toggle', () => {
         expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-disabled')).toBe('true')
     })
 
-    it('keeps loaded journeys selectable while other journeys are still loading', async () => {
+    it('keeps catalog journeys selectable while their geometry is still loading', async () => {
         lgs.stores.main.components.journeyEditor.list.splice(0, 1, 'journey-a', 'journey-b', 'journey-c')
         lgs.getJourneyBySlug.mockImplementation(slug => ['journey-a', 'journey-b', 'journey-c'].includes(slug) ? {slug} : undefined)
-        globalThis.lgs.stores.main.journeysReady = false
         const {container} = render(<JourneyToolbar/>)
 
-        expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-disabled')).toBe('true')
-        expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-available')).toBe('journey-a')
-
-        lgs.stores.main.loadedJourneySlugs.push('journey-b')
-        await waitFor(() => expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-disabled')).toBe('false'))
         expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-disabled')).toBe('false')
-        expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-available')).toBe('journey-a,journey-b')
+        expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-available')).toBe('journey-a,journey-b,journey-c')
 
         fireEvent.click(container.querySelector('[data-testid="select-loaded-journey"]'))
         await waitFor(() => expect(Utils.updateJourneyEditor).toHaveBeenCalledWith('journey-b', {}))
 
         fireEvent.click(container.querySelector('[data-testid="select-unloaded-journey"]'))
-        expect(Utils.updateJourneyEditor).toHaveBeenCalledTimes(1)
+        await waitFor(() => expect(Utils.updateJourneyEditor).toHaveBeenCalledWith('journey-c', {}))
+        expect(Utils.updateJourneyEditor).toHaveBeenCalledTimes(2)
     })
 })

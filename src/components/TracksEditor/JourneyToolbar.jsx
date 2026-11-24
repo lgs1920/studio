@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-29
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,17 +57,9 @@ export const JourneyToolbar = (props) => {
     const journeyLoaderStore = lgs.stores.ui.mainUI.journeyLoader
     const $editorStore = lgs.theJourneyEditorProxy
     const journeyVisible = useProxyValue($editorStore, editor => Boolean(editor?.journey) && editor.journey.visible !== false, false)
-    const loadedJourneySlugsVersion = useProxyValue(
-        lgs.stores.main,
-        main => Array.isArray(main.loadedJourneySlugs) ? main.loadedJourneySlugs.join('\u0000') : null,
-        null,
-    )
-    const loadedJourneySlugs = loadedJourneySlugsVersion === null
-        ? null
-        : new Set(loadedJourneySlugsVersion ? loadedJourneySlugsVersion.split('\u0000') : [])
     const selectableJourneys = journeyEditor.list
         .map(slug => lgs.getJourneyBySlug?.(slug))
-        .filter(journey => journey && (!loadedJourneySlugs || loadedJourneySlugs.has(journey.slug)))
+        .filter(Boolean)
     const selectableJourneySlugs = new Set(selectableJourneys.map(journey => journey.slug))
     const journeySelectionDisabled = selectableJourneySlugs.size < 2
 

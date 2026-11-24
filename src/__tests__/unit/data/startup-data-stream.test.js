@@ -8,13 +8,15 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {streamStartupJourney, streamStartupPOIs} from '@Core/ui/startup/startupData'
+import {
+    streamStartupJourney, streamStartupJourneyCatalog, streamStartupPOIs,
+} from '@Core/ui/startup/startupData'
 import {describe, expect, it, vi} from 'vitest'
 
 const line = coordinates => ({
@@ -47,6 +49,57 @@ describe('startup data streaming', () => {
         expect(packets.filter(packet => packet.type === 'track').map(packet => packet.key))
             .toEqual(['track-b', 'track-a'])
         expect(trackEnds).toEqual(['track-b', 'track-a'])
+        expect(packets[0]).toMatchObject({
+            spatial:   {bounds: [1, 1, 4, 4], centroid: {latitude: 2.5, longitude: 2.5}},
+            trackKeys: ['track-b', 'track-a'],
+        })
+    })
+
+    it('streams a catalog summary without transferring track geometry or metrics', async () => {
+        const packets = []
+
+        await streamStartupJourneyCatalog([
+            [{
+                activity: 'cycling',
+                metrics:  {global: {distance: 100}, points: [[1, 1]]},
+                slug:     'journey-a',
+                title:    'Journey A',
+                tracks:   [
+                    {__type: 'Map'},
+                    {
+                        key:   'track-a',
+                        value: {
+                            color:   '#fff',
+                            content: line([[1, 1], [2, 2]]),
+                            metrics: {points: [[1, 1]]},
+                            renderStyle: {color: '#fff'},
+                            slug:    'track-a',
+                            title:   'Track A',
+                        },
+                    },
+                ],
+            }],
+        ], async packet => packets.push(packet))
+
+        expect(packets).toHaveLength(1)
+        expect(packets[0].data).toMatchObject({
+            activity: 'cycling',
+            slug:     'journey-a',
+            title:    'Journey A',
+        })
+        expect(packets[0].data.metrics).toBeUndefined()
+        expect(packets[0].data.tracks).toContainEqual({
+            key:   'track-a',
+            value: {
+                color:       '#fff',
+                renderStyle: {color: '#fff'},
+                slug:        'track-a',
+                title:       'Track A',
+            },
+        })
+        expect(packets[0].data.tracks[0].value.content).toBeUndefined()
+        expect(packets[0].data.tracks[0].value.metrics).toBeUndefined()
+        expect(packets[0].spatial).toEqual({bounds: [1, 1, 2, 2], centroid: {latitude: 1.5, longitude: 1.5}})
     })
 
     it('keeps feature metadata and non-line geometry in the worker contract', async () => {

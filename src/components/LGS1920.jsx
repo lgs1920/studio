@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-11-11
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,7 +46,7 @@ import {
     getStartupOrbitSettings,
 }                       from '@Core/ui/cameraStartup'
 import {
-    DEFERRED_JOURNEY_DATA_TOAST_ID, runDeferredJourneyDataLoad,
+    runDeferredJourneyDataLoad,
 } from '@Core/ui/deferredJourneyData'
 import { StartupDataLoader } from '@Core/ui/startup/StartupDataLoader'
 import {markStartup, measureStartup} from '@Core/ui/startup/startupTelemetry'
@@ -54,7 +54,7 @@ import {
     TerrainUtils,
 }                       from '@Utils/cesium/TerrainUtils'
 import {
-    LGS_ERROR_TOAST, UIToast,
+    UIToast,
 }                       from '@Utils/UIToast'
 import {
     useCallback, useEffect, useRef, useState,
@@ -173,6 +173,7 @@ export const LGS1920 = () => {
             })
 
         startupDataLoader.current = new StartupDataLoader(lgs.db.lgs1920.dbName)
+        lgs.startupDataLoader = startupDataLoader.current
         markStartup('current-journey-init-start')
         const currentJourney = await startupDataLoader.current.loadCurrentJourney()
         if (!startupDataLoader.current.currentPOIsReady) {
@@ -194,6 +195,8 @@ export const LGS1920 = () => {
             throw new Error('The current journey did not reach the ready state')
         }
 
+        await startupDataLoader.current.loadJourneyCatalog()
+        await __.ui.journeyGroupManager.initialize()
         setCurrentJourneyReady(true)
     }
 
@@ -415,7 +418,12 @@ export const LGS1920 = () => {
         void initialize()
     }, [initializeApp, initializeStartupPOIs, setupStarterPOI])
 
-    useEffect(() => () => startupDataLoader.current?.dispose(), [])
+    useEffect(() => () => {
+        startupDataLoader.current?.dispose()
+        if (globalThis.lgs?.startupDataLoader === startupDataLoader.current) {
+            globalThis.lgs.startupDataLoader = null
+        }
+    }, [])
 
     useEffect(() => {
         if (appReady) {
@@ -431,11 +439,7 @@ export const LGS1920 = () => {
         deferredJourneyDataStarted.current = true
         void initializeDeferredJourneyData().catch(error => {
             console.error('[LGS1920] Deferred journey loading failed:', error)
-            UIToast.update(
-                DEFERRED_JOURNEY_DATA_TOAST_ID,
-                {caption: 'Journey loading failed!', text: error.message},
-                LGS_ERROR_TOAST,
-            )
+            UIToast.error({caption: 'Journey loading failed!', text: error.message})
         })
     }, [appReady, initializeDeferredJourneyData])
 

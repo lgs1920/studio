@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-20
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -293,7 +293,7 @@ export const JourneySelector = memo(({
 
     /** Render the track previews and activity icon associated with one journey. */
     const renderJourneyIcons = useCallback((journey = currentJourney, showActivityTooltip = true) => {
-        const tracks = Array.from(journey.tracks.values())
+        const tracks = Array.from(journey?.tracks?.values?.() ?? [])
         if (tracks.length === 1) {
             return (
                 <span className="lgs--journey-icons-in-settings">

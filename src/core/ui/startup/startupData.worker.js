@@ -8,18 +8,22 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {openDB} from 'idb'
-import {decodeStartupJourney, streamStartupJourney, streamStartupPOIs} from './startupData.js'
+import {
+    decodeStartupJourney, streamStartupJourney, streamStartupJourneyCatalog, streamStartupPOIs,
+} from './startupData.js'
 
 let nextPacketId = 0
 const acknowledgements = new Map()
 const cancelledRequests = new Set()
+const isExpired = value => Boolean(value?.expiresAt && value.expiresAt <= Date.now())
+    || Boolean(value?._exp_ && value._exp_ <= Date.now())
 
 const acknowledge = id => {
     const acknowledgement = acknowledgements.get(id)
@@ -80,7 +84,7 @@ const openReader = async name => {
         close: () => db.close(),
         get: async (store, key) => {
             const value = await db.get(store, key)
-            if (!value || (value.expiresAt && value.expiresAt <= Date.now())) {
+            if (!value || isExpired(value)) {
                 return null
             }
             return value.data ?? value
@@ -88,7 +92,13 @@ const openReader = async name => {
         keys: store => db.getAllKeys(store),
         scan: async function* (store, keys, batchSize = 128) {
             for (let index = 0; index < keys.length; index += batchSize) {
-                yield Promise.all(keys.slice(index, index + batchSize).map(key => db.get(store, key)))
+                yield Promise.all(keys.slice(index, index + batchSize).map(async key => {
+                    const value = await db.get(store, key)
+                    if (!value || isExpired(value)) {
+                        return null
+                    }
+                    return value.data ?? value
+                }))
             }
         },
     }
@@ -118,13 +128,14 @@ self.onmessage = async event => {
         if (requestType === 'journey') {
             const value = await reader.get('journeys', message.key)
             if (value) {
-                let primaryReady = false
-                const emitPrimaryPOIs = async journey => {
-                    if (!message.primary || primaryReady) {
+                let journeyPOIsReady = false
+                const shouldLoadJourneyPOIs = message.primary || message.loadPOIs
+                const emitJourneyPOIs = async journey => {
+                    if (!shouldLoadJourneyPOIs || journeyPOIsReady) {
                         return
                     }
 
-                    primaryReady = true
+                    journeyPOIsReady = true
                     const keys = await reader.keys('pois')
                     const trackKeys = [...(journey?.tracks instanceof Map
                                            ? journey.tracks.keys()
@@ -143,12 +154,14 @@ self.onmessage = async event => {
                         onBatch:      async () => {
                             if (firstBatch) {
                                 firstBatch = false
-                                await emitForRequest({type: 'primary-ready'})
+                                if (message.primary) {
+                                    await emitForRequest({type: 'primary-ready'})
+                                }
                             }
                         },
                         onComplete:   async () => {
-                            if (firstBatch) {
-                            await emitForRequest({type: 'primary-ready'})
+                            if (firstBatch && message.primary) {
+                                await emitForRequest({type: 'primary-ready'})
                             }
                         },
                         parents,
@@ -156,18 +169,18 @@ self.onmessage = async event => {
                     })
                 }
 
-                const decoded = message.primary ? decodeStartupJourney(value) : null
+                const decoded = (message.primary || message.loadPOIs) ? decodeStartupJourney(value) : null
                 await streamStartupJourney(value, emitForRequest, {
                     ...message,
                     onTrackEnd: async ({firstTrack}) => {
                         if (firstTrack) {
-                            await emitPrimaryPOIs(decoded)
+                            await emitJourneyPOIs(decoded)
                         }
                     },
                     preferredTrackKey: message.currentTrackKey,
                 })
-                if (message.primary && !primaryReady) {
-                    await emitPrimaryPOIs(decoded)
+                if (shouldLoadJourneyPOIs && !journeyPOIsReady) {
+                    await emitJourneyPOIs(decoded)
                 }
             }
             else if (message.primary) {
@@ -176,6 +189,14 @@ self.onmessage = async event => {
         }
         else if (requestType === 'journey-keys') {
             await emitForRequest({type: 'journey-keys', keys: await reader.keys('journeys')})
+        }
+        else if (requestType === 'journey-catalog') {
+            const keys = await reader.keys('journeys')
+            await streamStartupJourneyCatalog((async function* () {
+                for await (const batch of reader.scan('journeys', keys)) {
+                    yield batch
+                }
+            })(), emitForRequest)
         }
         else if (requestType === 'pois') {
             const keys = await reader.keys('pois')

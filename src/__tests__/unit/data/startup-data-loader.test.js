@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-10-26
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -43,14 +43,20 @@ vi.mock('cesium', async importOriginal => {
 
 vi.mock('@Core/Journey', () => ({
     Journey: {
-        deserialize: ({object}) => ({
-            ...object,
-            addToEditor:     vi.fn(),
-            globalSettings:  vi.fn(),
-            tracks:          new Map(),
-            updateVisibility: vi.fn(),
-            visible:         true,
-        }),
+        deserialize: ({object}) => {
+            const tracks = new Map((object?.tracks ?? [])
+                .filter(item => item && Object.prototype.hasOwnProperty.call(item, 'key'))
+                .map(item => [item.key, item.value]))
+            return {
+                ...object,
+                addToEditor:      vi.fn(),
+                globalSettings:   vi.fn(),
+                tracks,
+                updateVisibility: vi.fn(),
+                visible:          true,
+            }
+        },
+        readFromDB: vi.fn(),
     },
 }))
 
@@ -253,19 +259,10 @@ describe('startup data loader', () => {
         }
     })
 
-    it('renders secondary tracks even when hide other journeys keeps them hidden', async () => {
-        const sources = new Map()
+    it('loads a secondary journey catalog without rendering secondary tracks', async () => {
         const database = 'studio-db'
         const previousLgs = globalThis.lgs
         const previousNamespace = globalThis.__
-        const previousScheduler = globalThis.scheduler
-        let resolveDraw
-        const drawCompleted = new Promise(resolve => {
-            resolveDraw = resolve
-        })
-        const postTask = vi.fn(async callback => callback())
-
-        mocks.draw.mockImplementationOnce(() => resolveDraw())
 
         globalThis.lgs = {
             journeys:             new Map(),
@@ -275,32 +272,20 @@ describe('startup data loader', () => {
             settings:              {journey: {hideOtherJourneys: true}},
             stores:               {main: {journeysReady: false, readyForTheShow: false}},
             theJourney:           {slug: 'current-journey'},
-            viewer:               {
-                dataSources: {
-                    add:      async source => sources.set(source.name, source),
-                    getByName: name => [sources.get(name)].filter(Boolean),
-                },
-            },
+            viewer:               {dataSources: {add: vi.fn(), getByName: vi.fn(() => [])}},
         }
         globalThis.__ = {ui: {poiManager: {list: new Map()}}}
-        vi.stubGlobal('requestIdleCallback', callback => {
-            callback()
-            return 1
-        })
-        globalThis.scheduler = {postTask, yield: async () => {}}
 
         const client = {
-            request: vi.fn(async (request, consume) => {
-                if (request.type === 'journey-keys') {
-                    await consume({keys: ['journey-a'], type: 'journey-keys'})
-                    return true
-                }
-
-                await consume({data: {slug: 'journey-a'}, type: 'journey'})
-                await consume({data: {geometryType: 'LineString', slug: 'track-a', title: 'Track A'}, key: 'track-a', type: 'track'})
-                await consume({geometry: {coordinates: [[1, 1], [2, 2]], type: 'LineString'}, type: 'geometry'})
-                await consume({key: 'track-a', type: 'track-end'})
-                await consume({type: 'journey-end'})
+            request: vi.fn(async (_request, consume) => {
+                await consume({
+                    data: {
+                        slug:   'journey-a',
+                        title:  'Journey A',
+                        tracks: [{key: 'track-a', value: {slug: 'track-a', title: 'Track A'}}, {__type: 'Map'}],
+                    },
+                    type: 'journey-summary',
+                })
                 return true
             }),
         }
@@ -310,40 +295,20 @@ describe('startup data loader', () => {
 
             await expect(loader.loadRemainingJourneys()).resolves.toHaveLength(1)
             expect(globalThis.lgs.stores.main.journeysReady).toBe(true)
-            expect(globalThis.lgs.markJourneyLoaded).toHaveBeenCalledWith('journey-a')
-            await drawCompleted
-            expect(mocks.draw).toHaveBeenCalledOnce()
-            expect(mocks.draw).toHaveBeenCalledWith(expect.objectContaining({slug: 'track-a'}), {
-                action:       3,
-                forcedToHide: true,
-                renderMode:   'primitive',
+            expect(globalThis.lgs.markJourneyLoaded).not.toHaveBeenCalled()
+            expect(mocks.draw).not.toHaveBeenCalled()
+            expect(globalThis.lgs.journeys.get('journey-a')).toMatchObject({
+                isStartupSummary: true,
+                tracksLoaded:      false,
             })
-            expect(globalThis.lgs.journeys.get('journey-a').updateVisibility).toHaveBeenCalledWith(true)
-            expect(mocks.updateTrackVisibility).toHaveBeenCalledWith(
-                globalThis.lgs.journeys.get('journey-a'),
-                globalThis.lgs.journeys.get('journey-a').tracks.get('track-a'),
-                false,
-            )
-            expect(mocks.updatePOIsVisibility).toHaveBeenCalledWith(
-                globalThis.lgs.journeys.get('journey-a'),
-                false,
-            )
-            expect(postTask).toHaveBeenCalledWith(expect.any(Function), {priority: 'background'})
         }
         finally {
             globalThis.lgs = previousLgs
             globalThis.__ = previousNamespace
-            globalThis.scheduler = previousScheduler
-            vi.unstubAllGlobals()
-            mocks.draw.mockReset()
-            mocks.setProfileVisibility.mockReset()
-            mocks.updateTrackVisibility.mockReset()
-            mocks.updatePOIsVisibility.mockReset()
         }
     })
 
-    it('reuses one worker for the secondary journey queue', async () => {
-        const sources = new Map()
+    it('reuses one worker for the journey catalog', async () => {
         const workers = []
         const previousLgs = globalThis.lgs
         const previousNamespace = globalThis.__
@@ -368,27 +333,10 @@ describe('startup data loader', () => {
                     return
                 }
 
-                if (message.requestType === 'journey-keys') {
+                if (message.requestType === 'journey-catalog') {
                     this.pendingPackets = [
-                        {keys: ['journey-a', 'journey-b'], type: 'journey-keys'},
-                        {result: true, type: 'done'},
-                    ]
-                }
-                else {
-                    this.pendingPackets = [
-                        {data: {slug: message.key, tracks: [{__type: 'Map'}]}, type: 'journey'},
-                        {
-                            data: {
-                                geometryType: 'LineString',
-                                key:          `${message.key}-track`,
-                                slug:         `${message.key}-track`,
-                                title:        `${message.key} track`,
-                            },
-                            key:  `${message.key}-track`,
-                            type: 'track',
-                        },
-                        {coordinates: [[1, 1], [2, 2]], type: 'geometry'},
-                        {key: `${message.key}-track`, type: 'track-end'},
+                        {data: {slug: 'journey-a', tracks: [{__type: 'Map'}]}, type: 'journey-summary'},
+                        {data: {slug: 'journey-b', tracks: [{__type: 'Map'}]}, type: 'journey-summary'},
                         {result: true, type: 'done'},
                     ]
                 }
@@ -414,12 +362,7 @@ describe('startup data loader', () => {
             saveJourneyInContext: journey => globalThis.lgs.journeys.set(journey.slug, journey),
             scene:                {requestRender: vi.fn()},
             stores:               {main: {journeysReady: false, readyForTheShow: false}},
-            viewer:               {
-                dataSources: {
-                    add:      async source => sources.set(source.name, source),
-                    getByName: name => [sources.get(name)].filter(Boolean),
-                },
-            },
+            viewer:               {dataSources: {add: vi.fn(), getByName: vi.fn(() => [])}},
         }
         globalThis.__ = {ui: {poiManager: {list: new Map()}}}
         vi.stubGlobal('Worker', WorkerStub)
@@ -435,9 +378,10 @@ describe('startup data loader', () => {
             await expect(loader.loadRemainingJourneys()).resolves.toHaveLength(2)
             expect(workers).toHaveLength(1)
             expect(globalThis.lgs.stores.main.journeysReady).toBe(true)
-            expect(globalThis.lgs.markJourneyLoaded).toHaveBeenCalledWith('journey-a')
-            expect(globalThis.lgs.markJourneyLoaded).toHaveBeenCalledWith('journey-b')
-            await vi.waitFor(() => expect(mocks.draw).toHaveBeenCalledTimes(2))
+            expect(globalThis.lgs.markJourneyLoaded).not.toHaveBeenCalled()
+            expect(mocks.draw).not.toHaveBeenCalled()
+            expect(globalThis.lgs.journeys.has('journey-a')).toBe(true)
+            expect(globalThis.lgs.journeys.has('journey-b')).toBe(true)
         }
         finally {
             globalThis.lgs = previousLgs
@@ -446,6 +390,89 @@ describe('startup data loader', () => {
             vi.unstubAllGlobals()
             mocks.draw.mockReset()
             mocks.setProfileVisibility.mockReset()
+        }
+    })
+
+    it('loads a selected journey and its POIs progressively through the worker', async () => {
+        const sources = new Map()
+        const previousLgs = globalThis.lgs
+        const previousNamespace = globalThis.__
+        const previousScheduler = globalThis.scheduler
+        const onSpatialReady = vi.fn()
+        const onFirstTrackReady = vi.fn()
+
+        globalThis.lgs = {
+            journeys:             new Map(),
+            markJourneyLoaded:    vi.fn(),
+            saveJourneyInContext: journey => globalThis.lgs.journeys.set(journey.slug, journey),
+            scene:                {requestRender: vi.fn()},
+            settings:             {journey: {hideOtherJourneys: false}},
+            stores:               {main: {readyForTheShow: false}},
+            theJourney:           {slug: 'current-journey'},
+            viewer:               {
+                dataSources: {
+                    add:       async source => sources.set(source.name, source),
+                    getByName: name => [sources.get(name)].filter(Boolean),
+                },
+            },
+        }
+        const list = new Map()
+        globalThis.__ = {ui: {poiManager: {list, addToJourneyIndex: vi.fn()}}}
+        vi.stubGlobal('requestIdleCallback', callback => {
+            callback()
+            return 1
+        })
+        globalThis.scheduler = {yield: async () => {}}
+        mocks.draw.mockResolvedValue(undefined)
+
+        const client = {
+            request: vi.fn(async (_request, consume) => {
+                await consume({
+                    data:      {slug: 'journey-b', title: 'Journey B'},
+                    spatial:   {bounds: [1, 1, 2, 2], centroid: {latitude: 1.5, longitude: 1.5}},
+                    trackKeys: ['track-b'],
+                    type:      'journey',
+                })
+                await consume({
+                    data: {geometryType: 'LineString', slug: 'track-b', title: 'Track B'},
+                    key:  'track-b',
+                    type: 'track',
+                })
+                await consume({geometry: {coordinates: [[1, 1], [2, 2]], type: 'LineString'}, type: 'geometry'})
+                await consume({key: 'track-b', type: 'track-end'})
+                await consume({items: [{id: 'poi-b', parent: 'journey-b'}], type: 'pois'})
+                await consume({type: 'journey-end'})
+                return true
+            }),
+        }
+
+        try {
+            const loader = new StartupDataLoader('studio-db', client)
+            const firstLoad = loader.ensureJourneyLoaded('journey-b', {onFirstTrackReady, onSpatialReady})
+            const secondLoad = loader.ensureJourneyLoaded('journey-b')
+            const journey = await firstLoad
+            await secondLoad
+
+            expect(client.request).toHaveBeenCalledOnce()
+            expect(client.request.mock.calls[0][0]).toMatchObject({loadPOIs: true, type: 'journey'})
+            expect(onSpatialReady).toHaveBeenCalledWith(journey, expect.objectContaining({
+                centroid: {latitude: 1.5, longitude: 1.5},
+            }))
+            expect(onFirstTrackReady).toHaveBeenCalledWith(journey, expect.objectContaining({slug: 'track-b'}))
+            expect(list.has('poi-b')).toBe(true)
+            expect(mocks.draw).toHaveBeenCalledWith(
+                expect.objectContaining({slug: 'track-b'}),
+                expect.objectContaining({renderMode: 'primitive'}),
+            )
+            expect(journey.tracksLoaded).toBe(true)
+            expect(globalThis.lgs.markJourneyLoaded).toHaveBeenCalledWith('journey-b')
+        }
+        finally {
+            globalThis.lgs = previousLgs
+            globalThis.__ = previousNamespace
+            globalThis.scheduler = previousScheduler
+            vi.unstubAllGlobals()
+            mocks.draw.mockReset()
         }
     })
 })

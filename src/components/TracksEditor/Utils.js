@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-24
- * Last modified: 2026-09-20
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ import { Journey }    from '@Core/Journey'
 import { Track }      from '@Core/Track'
 import { getGlobalHideOtherJourneys, refreshJourneyVisibility } from '@Core/ui/JourneyVisibility'
 import { TrackUtils } from '@Utils/cesium/TrackUtils'
+import { UIToast } from '@Utils/UIToast'
 
 export class Utils {
 
@@ -68,7 +69,70 @@ export class Utils {
         // live camera updates keep reusing the previous journey anchor as a forced focus point.
         await __.ui.poiManager.stopRotationAndSync()
         lgs.stores.ui.mainUI.rotate.target = null
-        editorStore.journey = lgs.getJourneyBySlug(journeySlug)
+        let journey = lgs.getJourneyBySlug(journeySlug)
+        let earlyFocusStarted = false
+        const startupLoader = lgs.startupDataLoader
+        const focusLoadedJourney = loadedJourney => {
+            if (earlyFocusStarted || !shouldFocus || loadedJourney?.visible === false || typeof loadedJourney?.focus !== 'function') {
+                return
+            }
+
+            earlyFocusStarted = true
+            void Promise.resolve(loadedJourney.focus({
+                action,
+                resetCamera:    true,
+                rotate:         false,
+                startupSpatial: loadedJourney.startupSpatial,
+            })).catch(error => {
+                console.warn('[JourneyEditor] Early journey focus failed:', error)
+            })
+        }
+        if (!journey || journey.tracksLoaded === false) {
+            if (typeof startupLoader?.ensureJourneyLoaded !== 'function') {
+                UIToast.warning({
+                    caption: 'Journey is not available',
+                    text:    `The journey ${journeySlug} could not be loaded.`,
+                })
+                return
+            }
+
+            UIToast.warning({
+                caption: 'Journey loading',
+                text:    `${journey.title ?? journeySlug} is loading in the background.`,
+            })
+            try {
+                journey = await startupLoader.ensureJourneyLoaded(journeySlug, {
+                    onFirstTrackReady: focusLoadedJourney,
+                    onSpatialReady:     focusLoadedJourney,
+                })
+            }
+            catch (error) {
+                UIToast.error({
+                    caption: 'Journey loading failed',
+                    text:    error?.message ?? `The journey ${journeySlug} could not be loaded.`,
+                })
+                return
+            }
+        }
+
+        if (!journey) {
+            UIToast.warning({
+                caption: 'Journey is not available',
+                text:    `The journey ${journeySlug} could not be found.`,
+            })
+            return
+        }
+
+        const firstTrack = Array.from(journey.tracks?.values?.() ?? [])[0]
+        if (!firstTrack) {
+            UIToast.warning({
+                caption: 'Journey has no tracks',
+                text:    `${journey.title ?? journeySlug} cannot be selected yet.`,
+            })
+            return
+        }
+
+        editorStore.journey = journey
 
         lgs.saveJourneyInContext(editorStore.journey)
         editorStore.journey.addToContext()
@@ -76,7 +140,7 @@ export class Utils {
         // Force Tab to Data
 
         // Force Track and POI in editor
-        editorStore.track = Array.from(editorStore.journey.tracks.values())[0]
+        editorStore.track = firstTrack
         editorStore.track.addToContext()
         editorStore.track.addToEditor()
 
@@ -106,7 +170,7 @@ export class Utils {
 
         // Save information
         await TrackUtils.saveCurrentJourneyToDB(lgs.theJourney)
-        if (editorStore.journey.visible && shouldFocus) {
+        if (editorStore.journey.visible && shouldFocus && !earlyFocusStarted) {
             lgs.theJourney.focus({action, rotate, resetCamera: true})
         }
         if (getGlobalHideOtherJourneys()) {

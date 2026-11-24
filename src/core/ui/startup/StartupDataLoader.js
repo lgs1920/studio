@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import {CustomDataSource, GeoJsonDataSource} from 'cesium'
 import {
-    CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, DRAWING_FROM_DB, GLOBAL_PARENT, POI_STARTER_TYPE,
+    CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, DRAWING_FROM_DB, GLOBAL_PARENT, NO_FOCUS, POI_STARTER_TYPE,
 } from '@Core/constants'
 import {Journey} from '@Core/Journey'
 import {MapPOI} from '@Core/MapPOI'
@@ -61,6 +61,30 @@ const trackContent = (track, geometry) => {
     }
 }
 
+const setStartupJourneyMetadata = (journey, {spatial = null, trackKeys = [], summary = false} = {}) => {
+    Object.defineProperties(journey, {
+        isStartupSummary: {
+            configurable: true,
+            enumerable:   false,
+            value:        summary,
+            writable:     true,
+        },
+        startupSpatial: {
+            configurable: true,
+            enumerable:   false,
+            value:        spatial,
+            writable:     true,
+        },
+        startupTrackKeys: {
+            configurable: true,
+            enumerable:   false,
+            value:        trackKeys,
+            writable:     true,
+        },
+    })
+    return journey
+}
+
 const yieldSecondaryJourneyRender = () => {
     if (typeof globalThis.scheduler?.postTask === 'function') {
         return globalThis.scheduler.postTask(() => {}, {priority: 'background'})
@@ -76,13 +100,16 @@ const yieldSecondaryJourneyRender = () => {
 const hasPendingUserInput = () => globalThis.navigator?.scheduling?.isInputPending?.({includeContinuous: true}) === true
 
 /**
- * Hydrate the primary journey first, then reuse one worker for the remaining
- * journey queue while acknowledged packets keep main-thread work bounded.
+ * Hydrate the primary journey first, then keep a lightweight catalog for the
+ * remaining journeys while acknowledged worker packets bound main-thread work.
  */
 export class StartupDataLoader {
     #client
     #database
     #loadedJourneySlugs = new Set()
+    #journeyLoadPromises = new Map()
+    #journeyLoadQueue = Promise.resolve()
+    #journeyCatalogPromise = null
     #activeJourneyCompletion = Promise.resolve()
     #deferredTrackQueue = []
     #deferredTrackDrainPromise = null
@@ -130,6 +157,8 @@ export class StartupDataLoader {
         return this.#currentPOIsReady
     }
 
+    isJourneyLoaded = slug => this.#loadedJourneySlugs.has(slug)
+
     #waitForActiveJourney = async () => {
         await this.#activeJourneyCompletion
     }
@@ -141,7 +170,7 @@ export class StartupDataLoader {
      * @returns {Promise<void>} Resolves after each record has been installed.
      */
     #installPOIs = async items => {
-        for (const data of items ?? []) {
+        for (const [index, data] of (items ?? []).entries()) {
             if (!data?.id || __.ui.poiManager.list.has(data.id)) {
                 continue
             }
@@ -149,6 +178,9 @@ export class StartupDataLoader {
             const poi = new MapPOI(data)
             __.ui.poiManager.list.set(poi.id, poi)
             __.ui.poiManager.addToJourneyIndex(poi.id, poi)
+            if ((index + 1) % 8 === 0) {
+                await yieldStartupTask()
+            }
         }
         lgs.scene?.requestRender?.()
     }
@@ -201,13 +233,36 @@ export class StartupDataLoader {
         return this.#deferredTrackDrainPromise
     }
 
-    loadJourney = async (key, {current = false, currentTrackKey = null} = {}) => {
+    loadJourney = async (key, {
+        current = false,
+        currentTrackKey = null,
+        focusOnReady = false,
+        loadPOIs = false,
+        onFirstTrackReady = null,
+        onSpatialReady = null,
+    } = {}) => {
         if (!key || this.#loadedJourneySlugs.has(key)) {
             return lgs.getJourneyBySlug?.(key) ?? null
         }
 
         if (!this.#client) {
-            return current ? TrackUtils.readCurrentFromDB({alreadyDrawn: false}) : null
+            if (current) {
+                return TrackUtils.readCurrentFromDB({alreadyDrawn: false})
+            }
+
+            const journey = await Journey.readFromDB(key)
+            if (!journey) {
+                return null
+            }
+
+            journey.cameraOrigin = journey.camera
+            lgs.saveJourneyInContext(journey, {loaded: false})
+            await journey.prepareDrawing()
+            await journey.draw({action: DRAWING_FROM_DB, mode: NO_FOCUS})
+            journey.tracksLoaded = true
+            this.#loadedJourneySlugs.add(journey.slug)
+            lgs.markJourneyLoaded?.(journey.slug)
+            return journey
         }
 
         let journey = null
@@ -245,14 +300,14 @@ export class StartupDataLoader {
                 await lgs.viewer.dataSources.add(new GeoJsonDataSource(track.slug))
             }
 
-            const isPrimaryTrack = current && !firstTrackReady
+            const isPrimaryTrack = (current || focusOnReady) && !firstTrackReady
             if (current && (isPrimaryTrack || `${track.slug}` === `${currentTrackKey}`)) {
                 lgs.theTrack = track
                 lgs.theTrack.addToEditor()
                 TrackUtils.setProfileVisibility(journey)
             }
 
-            if (current && isPrimaryTrack) {
+            if (isPrimaryTrack) {
                 await TrackUtils.draw(track, {
                     action:       DRAWING_FROM_DB,
                     forcedToHide: journey.visible === false,
@@ -266,12 +321,19 @@ export class StartupDataLoader {
 
             if (isPrimaryTrack) {
                 firstTrackReady = true
-                lgs.stores.main.readyForTheShow = true
-                markStartup('current-track-drawn', {
-                    journey: journey.slug,
-                    track:   track.slug,
-                })
-                measureStartup('current-track', 'current-journey-init-start', 'current-track-drawn')
+                if (current) {
+                    lgs.stores.main.readyForTheShow = true
+                    markStartup('current-track-drawn', {
+                        journey: journey.slug,
+                        track:   track.slug,
+                    })
+                    measureStartup('current-track', 'current-journey-init-start', 'current-track-drawn')
+                }
+                if (onFirstTrackReady) {
+                    void Promise.resolve(onFirstTrackReady(journey, track)).catch(error => {
+                        console.warn('[StartupDataLoader] Early journey focus failed:', error)
+                    })
+                }
             }
         }
 
@@ -283,6 +345,7 @@ export class StartupDataLoader {
             excluded:    [...(__.ui.poiManager.list?.keys?.() ?? [])],
             globalParent: GLOBAL_PARENT,
             includeStarter: false,
+            loadPOIs,
             primary:     current,
             starterType: POI_STARTER_TYPE,
             type:        'journey',
@@ -290,8 +353,18 @@ export class StartupDataLoader {
             if (packet.type === 'journey') {
                 journey = Journey.deserialize({object: {...packet.data, tracks: [{__type: 'Map'}]}, reset: true})
                 journey.cameraOrigin = journey.camera
+                setStartupJourneyMetadata(journey, {
+                    spatial:   packet.spatial ?? null,
+                    trackKeys: packet.trackKeys ?? [],
+                })
+                journey.tracksLoaded = false
                 journey.globalSettings()
                 lgs.saveJourneyInContext(journey, {loaded: false})
+                if (onSpatialReady && packet.spatial) {
+                    void Promise.resolve(onSpatialReady(journey, packet.spatial)).catch(error => {
+                        console.warn('[StartupDataLoader] Early journey spatial focus failed:', error)
+                    })
+                }
                 await prepareCurrentJourney()
                 await ensureJourneyDataSource()
                 return
@@ -349,13 +422,16 @@ export class StartupDataLoader {
                 measureStartup('current-primary', 'current-journey-init-start', 'current-primary-ready')
                 firstTrackResolve(journey)
             }
-        }).finally(() => {
         })
 
         if (current) {
             this.#activeJourneyCompletion = completion
         }
-        void completion.catch(error => {
+        void completion.then(() => {
+            if (journey) {
+                journey.tracksLoaded = true
+            }
+        }).catch(error => {
             if (current) {
                 firstTrackReject(error)
             }
@@ -403,11 +479,115 @@ export class StartupDataLoader {
                 }
             })
         }
+        if (!current) {
+            journey.tracksLoaded = true
+        }
         this.#loadedJourneySlugs.add(journey.slug)
         lgs.markJourneyLoaded?.(journey.slug)
         await yieldStartupTask()
         return journey
     }
+
+    ensureJourneyLoaded = async (key, options = {}) => {
+        if (!key || this.#loadedJourneySlugs.has(key)) {
+            return lgs.getJourneyBySlug?.(key) ?? null
+        }
+
+        const pending = this.#journeyLoadPromises.get(key)
+        if (pending) {
+            return pending
+        }
+
+        const promise = this.#journeyLoadQueue.then(async () => {
+            if (this.#loadedJourneySlugs.has(key)) {
+                return lgs.getJourneyBySlug?.(key) ?? null
+            }
+
+            try {
+                const journey = await this.loadJourney(key, {
+                    ...options,
+                    focusOnReady: true,
+                    loadPOIs:     true,
+                })
+                if (!this.#client && journey) {
+                    await this.loadPOIs({currentOnly: true, includeStarter: false, journey})
+                }
+                return journey
+            }
+            catch (error) {
+                if (this.#client) {
+                    throw error
+                }
+
+                const journey = await this.loadJourney(key, options)
+                if (journey) {
+                    await this.loadPOIs({currentOnly: true, includeStarter: false, journey})
+                }
+                return journey
+            }
+        }).finally(() => {
+            if (this.#journeyLoadPromises.get(key) === promise) {
+                this.#journeyLoadPromises.delete(key)
+            }
+        })
+        this.#journeyLoadPromises.set(key, promise)
+        this.#journeyLoadQueue = promise.catch(() => {})
+        return promise
+    }
+
+    #readJourneyCatalog = async () => {
+        lgs.stores.main.journeysReady = false
+        try {
+            await this.#waitForActiveJourney()
+            if (!this.#client) {
+                const journeys = await TrackUtils.readRemainingFromDB()
+                lgs.stores.main.journeysReady = true
+                return journeys
+            }
+
+            const journeys = []
+            await this.#requestFromWorker({
+                database: this.#database,
+                type:     'journey-catalog',
+            }, async packet => {
+                if (packet.type !== 'journey-summary' || !packet.data?.slug) {
+                    return
+                }
+
+                const existing = lgs.getJourneyBySlug?.(packet.data.slug)
+                if (existing && (this.#loadedJourneySlugs.has(packet.data.slug) || existing.tracksLoaded === true)) {
+                    journeys.push(existing)
+                    return
+                }
+                if (existing?.isStartupSummary === true) {
+                    journeys.push(existing)
+                    return
+                }
+
+                const journey = Journey.deserialize({object: packet.data, reset: true})
+                setStartupJourneyMetadata(journey, {spatial: packet.spatial ?? null, summary: true})
+                journey.tracksLoaded = false
+                lgs.saveJourneyInContext(journey, {loaded: false})
+                journeys.push(journey)
+            })
+
+            lgs.stores.main.journeysReady = true
+            return journeys
+        }
+        catch (error) {
+            console.warn('[StartupDataLoader] Journey catalog worker load failed, using the legacy loader:', error)
+            const journeys = await TrackUtils.readRemainingFromDB()
+            lgs.stores.main.journeysReady = true
+            return journeys
+        }
+    }
+
+    loadJourneyCatalog = () => {
+        this.#journeyCatalogPromise ??= this.#readJourneyCatalog()
+        return this.#journeyCatalogPromise
+    }
+
+    loadRemainingJourneys = async () => this.loadJourneyCatalog()
 
     loadCurrentJourney = async () => {
         const key = await lgs.db.lgs1920.get(CURRENT_JOURNEY, CURRENT_STORE)
@@ -430,50 +610,6 @@ export class StartupDataLoader {
             this.#currentPOIsReady = false
             console.warn('[StartupDataLoader] Current journey worker load failed, using the legacy loader:', error)
             return TrackUtils.readCurrentFromDB()
-        }
-    }
-
-    loadRemainingJourneys = async () => {
-        lgs.stores.main.journeysReady = false
-        try {
-            await this.#waitForActiveJourney()
-            if (!this.#client) {
-                const journeys = await TrackUtils.readRemainingFromDB()
-                lgs.stores.main.journeysReady = true
-                return journeys
-            }
-            let keys = []
-            await this.#requestFromWorker({
-                database:    this.#database,
-                type:        'journey-keys',
-            }, async packet => {
-                if (packet.type !== 'journey-keys') {
-                    return
-                }
-                keys = packet.keys ?? []
-            })
-            const pendingKeys = keys.filter(key => !this.#loadedJourneySlugs.has(key) && !lgs.journeys.has(key))
-            const journeys = []
-            for (const key of pendingKeys) {
-                await yieldStartupIdleTask()
-                const journey = await this.loadJourney(key)
-                await this.#drainDeferredTracks().catch(error => {
-                    console.warn('[StartupDataLoader] Deferred journey render failed:', error)
-                })
-                await yieldStartupTask()
-                if (journey) {
-                    journeys.push(journey)
-                }
-            }
-
-            lgs.stores.main.journeysReady = true
-            return journeys
-        }
-        catch (error) {
-            console.warn('[StartupDataLoader] Remaining journey worker load failed, using the legacy loader:', error)
-            const journeys = await TrackUtils.readRemainingFromDB()
-            lgs.stores.main.journeysReady = true
-            return journeys
         }
     }
 

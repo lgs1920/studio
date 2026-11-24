@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-24
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,10 +42,6 @@ const dependencies = ({journeys = []} = {}) => ({
         ensureAllPOILocations: vi.fn(async () => undefined),
     },
     precacheAssets:      vi.fn(async () => undefined),
-    uiToast:             {
-        loading: vi.fn(() => 'startup-toast'),
-        update: vi.fn(),
-    },
 })
 
 const waitForBackgroundStartupTask = () => new Promise(resolve => {
@@ -87,7 +83,7 @@ describe('deferred journey data loading', () => {
         resolvePrecache()
     })
 
-    it('keeps a persistent loading toast until the journey and POI data are ready', async () => {
+    it('does not show a deferred loading toast while the journey and POI data settle', async () => {
         const deps = dependencies({journeys: [{slug: 'journey-a'}]})
         let resolvePOICaptures
         const poiCapturesReady = new Promise(resolve => {
@@ -98,22 +94,11 @@ describe('deferred journey data loading', () => {
         const loading = runDeferredJourneyDataLoad({...deps, waitForPOICaptures})
         await vi.waitFor(() => expect(waitForPOICaptures).toHaveBeenCalledOnce())
 
-        expect(deps.uiToast.loading).toHaveBeenCalledWith(
-            {caption: 'Your world is still unfolding...'},
-            'deferred-journeys-and-pois',
-        )
-        expect(deps.uiToast.update).not.toHaveBeenCalled()
         resolvePOICaptures()
         await loading
-
-        expect(deps.uiToast.update).toHaveBeenCalledWith(
-            'startup-toast',
-            {caption: 'Journeys and POIs are ready ...'},
-            'success',
-        )
     })
 
-    it('pauses the current Journey orbit while the remaining Journeys load, then resumes it in place', async () => {
+    it('does not pause the current Journey orbit while the worker catalog loads', async () => {
         const previousLgs = globalThis.lgs
         const previousNamespace = globalThis.__
         const events = []
@@ -156,21 +141,16 @@ describe('deferred journey data loading', () => {
             const loading = runDeferredJourneyDataLoad(deps)
             await vi.waitFor(() => expect(deps.startupLoader.loadRemainingJourneys).toHaveBeenCalledOnce())
 
-            expect(cameraManager.stopRotate).toHaveBeenCalledOnce()
-            expect(rotate.running).toBe(false)
+            expect(cameraManager.stopRotate).not.toHaveBeenCalled()
+            expect(rotate.running).toBe(true)
             expect(cameraManager.rotateAround).not.toHaveBeenCalled()
-            expect(events.map(([event]) => event)).toEqual(['stop', 'load'])
+            expect(events.map(([event]) => event)).toEqual(['load'])
 
             resolveJourneys([{slug: 'journey-secondary'}])
             await loading
 
-            expect(cameraManager.rotateAround).toHaveBeenCalledWith(null, {
-                direction: -1,
-                infinite: true,
-                preserveView: true,
-                rpm: 0.75,
-            })
-            expect(events.map(([event]) => event)).toEqual(['stop', 'load', 'resume'])
+            expect(cameraManager.rotateAround).not.toHaveBeenCalled()
+            expect(events.map(([event]) => event)).toEqual(['load'])
             expect(rotate.running).toBe(true)
         }
         finally {
@@ -220,11 +200,6 @@ describe('deferred journey data loading', () => {
 
         await runDeferredJourneyDataLoad(deps)
 
-        expect(deps.uiToast.update).toHaveBeenCalledWith(
-            'startup-toast',
-            {caption: 'Journeys and POIs are ready ...'},
-            'success',
-        )
     })
 
     it('propagates loading errors without running follow-up refreshes', async () => {
@@ -238,6 +213,5 @@ describe('deferred journey data loading', () => {
         expect(deps.poiManager.rebuildJourneyIndex).not.toHaveBeenCalled()
         expect(deps.poiManager.ensureAllPOILocations).not.toHaveBeenCalled()
         expect(deps.precacheAssets).not.toHaveBeenCalled()
-        expect(deps.uiToast.update).not.toHaveBeenCalled()
     })
 })

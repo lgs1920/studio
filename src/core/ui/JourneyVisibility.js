@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-30
- * Last modified: 2026-10-15
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -134,7 +134,7 @@ const runJourneyVisibilityRefresh = async ({
 
     for (let index = 0; index < journeys.length; index++) {
         const journey = journeys[index]
-        if (!journey || typeof journey.draw !== 'function') {
+        if (!journey || journey.tracksLoaded === false || typeof journey.draw !== 'function') {
             continue
         }
 
