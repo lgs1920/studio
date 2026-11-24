@@ -16,6 +16,7 @@
 
 import {
   CURRENT_CAMERA,
+  CURRENT_MAP_POINT,
   CURRENT_POI,
   CURRENT_STORE,
   FOCUS_STARTER,
@@ -24,6 +25,7 @@ import {
   MINUTE,
 } from "@Core/constants";
 
+import { MapTarget } from "@Core/MapTarget";
 import {
   normalizeOrbitDirection,
   normalizeOrbitRPM,
@@ -111,6 +113,7 @@ export class CameraManager {
     continuousReleases: [],
   };
   #panoramicCancel = null;
+  activeOrbitRetarget = null;
 
   constructor(settings) {
     // Singleton
@@ -173,6 +176,33 @@ export class CameraManager {
     const pixels = this.proxy.getTargetPositionInPixels(this.target);
     this.target.x = pixels?.x;
     this.target.y = pixels?.y;
+  };
+
+  /** Retarget a running map-wide orbit when the user selects a new camera pivot. */
+  retargetActiveRotationToMapPivot = position => {
+    const camera = lgs.camera ?? lgs.viewer?.camera;
+    const rotate = lgs.stores?.ui?.mainUI?.rotate;
+    if (!position || !camera || !rotate || !this.activeOrbitRetarget || !this.isRotating()
+      || rotate.target?.element === CURRENT_POI || isCameraOwnedByReplay(camera)) {
+      return false;
+    }
+
+    const cartographic = Cartographic.fromCartesian(position);
+    if (!cartographic) return false;
+    const longitude = CesiumMath.toDegrees(cartographic.longitude);
+    const latitude = CesiumMath.toDegrees(cartographic.latitude);
+    if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return false;
+
+    const height = __.ui.sceneManager?.noRelief?.() ? 0 : cartographic.height;
+    const target = new MapTarget(CURRENT_MAP_POINT, {
+      height,
+      id: `${CURRENT_MAP_POINT}:${longitude.toFixed(6)}:${latitude.toFixed(6)}`,
+      latitude,
+      longitude,
+    });
+    target.simulatedHeight = height;
+    target.title = "Map pivot";
+    return this.activeOrbitRetarget(target);
   };
 
   /**
@@ -525,6 +555,7 @@ export class CameraManager {
   rotateAround = async (point = null, options) => {
     // Let's stop any rotation
     await this.stopRotate();
+    this.activeOrbitRetarget = null;
 
     // And any related event
     this.stopWatching();
@@ -610,7 +641,8 @@ export class CameraManager {
     const baseOrbitCameraHeight = Number(
       lgs.camera?.positionCartographic?.height
     );
-    const baseOrbitTargetHeight = Number(point.simulatedHeight ?? point.height);
+    let baseOrbitTargetHeight = Number(point.simulatedHeight ?? point.height);
+    const orbitCamera = lgs.camera ?? lgs.viewer?.camera;
     const orbitHeightWorldPosition = new Cartesian3();
     const orbitHeightLocalOffset = new Cartesian3();
     let appliedOrbitHeightOffset = 0;
@@ -675,6 +707,21 @@ export class CameraManager {
         lgs.camera.lookAtTransform(lgs.camera.transform, orbitHeightLocalOffset);
       }
       appliedOrbitHeightOffset = heightOffset;
+      return true;
+    };
+
+    this.activeOrbitRetarget = target => {
+      const activeCamera = lgs.camera ?? lgs.viewer?.camera;
+      const nextTargetHeight = Number(target.simulatedHeight ?? target.height);
+      if (activeCamera !== orbitCamera || !this.isRotating() || !Number.isFinite(nextTargetHeight)) {
+        return false;
+      }
+
+      this.proxy.setOrbitTransform(activeCamera, target);
+      baseOrbitTargetHeight = nextTargetHeight;
+      $rotate.target = target;
+      this.syncPositionInformation({skipTargetPick: true, target});
+      requestSceneRender(lgs.scene);
       return true;
     };
 
@@ -762,6 +809,7 @@ export class CameraManager {
    * @return {Promise<void>}
    */
   stopRotate = async () => {
+    this.activeOrbitRetarget = null;
     if (this.isRotating()) {
       const target = lgs.stores.ui.mainUI.rotate.target;
       __.cancelAnimationFrame(this.move.animation);

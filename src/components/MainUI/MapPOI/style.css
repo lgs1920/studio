@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -1853,6 +1853,75 @@
     z-index: 1000001;
     overflow: hidden;
     pointer-events: none;
+
+    & .poi-move-marker-pulse,
+    & .poi-move-release-pulse {
+        color: var(--lgs-poi-color, var(--wa-color-brand));
+        pointer-events: none;
+        z-index: 2;
+    }
+
+    & .poi-move-marker-pulse {
+        position: absolute;
+        inset: 0;
+    }
+
+    & .poi-move-release-pulse {
+        position: absolute;
+        width: calc(0.8 * var(--poi-reduce-dimension));
+        height: calc(0.8 * var(--poi-reduce-dimension));
+        transform: translate(-50%, -50%);
+    }
+
+    & .poi-move-marker-pulse::before,
+    & .poi-move-marker-pulse::after,
+    & .poi-move-release-pulse::before,
+    & .poi-move-release-pulse::after {
+        position: absolute;
+        inset: 24%;
+        border: 2px solid currentColor;
+        border-radius: 50%;
+        box-shadow: 0 0 7px 2px color-mix(in srgb, currentColor 62%, transparent),
+            inset 0 0 4px color-mix(in srgb, currentColor 48%, transparent);
+        content: '';
+        opacity: 0;
+    }
+
+    & .poi-move-marker-pulse::after,
+    & .poi-move-release-pulse::after {
+        inset: 14%;
+        border-width: 1.5px;
+    }
+
+    & .poi-move-marker-pulse.is-poi-move-grabbed::before {
+        animation: camera-pivot-pulse 1100ms ease-out infinite;
+    }
+
+    & .poi-move-marker-pulse.is-poi-move-grabbed::after {
+        animation: camera-pivot-pulse 1100ms 180ms ease-out infinite;
+    }
+
+    & .poi-move-marker-pulse.is-poi-move-dragging {
+        color: var(--wa-color-brand);
+        filter: drop-shadow(0 0 7px var(--wa-color-brand));
+    }
+
+    & .poi-move-release-pulse::before {
+        animation: camera-pivot-pulse 1100ms ease-out both;
+    }
+
+    & .poi-move-release-pulse::after {
+        animation: camera-pivot-pulse 1100ms 180ms ease-out both;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        & .poi-move-marker-pulse.is-poi-move-grabbed::before,
+        & .poi-move-marker-pulse.is-poi-move-grabbed::after,
+        & .poi-move-release-pulse::before,
+        & .poi-move-release-pulse::after {
+            animation: none;
+        }
+    }
 
     & wa-button.poi-move-marker {
         /* Keep the drag target centered on the map anchor while cloned contents define its visible bounds. */

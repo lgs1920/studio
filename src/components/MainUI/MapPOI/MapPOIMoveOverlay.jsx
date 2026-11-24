@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-26
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-24
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,6 +39,7 @@ import { useSnapshot } from 'valtio'
 import './style.css'
 
 const MOVE_OVERLAY_GAP = 8
+const MOVE_RELEASE_PULSE_DURATION = 1400
 const DEFAULT_MARKER_GEOMETRY = {
     anchorOffset: {x: 0, y: 0},
     markerBounds: {left: -19, top: -19, right: 19, bottom: 19},
@@ -145,6 +146,7 @@ export const MapPOIMoveOverlay = () => {
     const $pois = lgs.stores.main.components.pois
     const poiListSnapshot = useSnapshot($pois.list)
     const poi = session?.poiId ? poiListSnapshot.get(session.poiId) ?? {} : {}
+    const poiColor = poi.borderColor ?? poi.color ?? lgs.colors.poiDefault
     const coordinateSettings = useSnapshot(lgs.settings.coordinateSystem)
     const unitSettings = useSnapshot(lgs.settings.unitSystem)
     const _marker = useRef(null)
@@ -159,9 +161,12 @@ export const MapPOIMoveOverlay = () => {
     const [candidate, setCandidate] = useState(null)
     const [overlayPoint, setOverlayPoint] = useState(null)
     const [dragging, setDragging] = useState(false)
+    const [moveAnimation, setMoveAnimation] = useState('idle')
+    const [releasePulse, setReleasePulse] = useState(null)
     const [markerGeometry, setMarkerGeometry] = useState(DEFAULT_MARKER_GEOMETRY)
     const [viewportRevision, setViewportRevision] = useState(0)
     const [captureSourceRevision, setCaptureSourceRevision] = useState(0)
+    const _releasePulseTimer = useRef(null)
 
     const viewer = lgs.viewer
 
@@ -195,6 +200,26 @@ export const MapPOIMoveOverlay = () => {
     const _viewport = useRef(viewport)
     const hasAnchor = Boolean(anchor)
 
+    /** Clear any finished POI move pulse when another interaction begins. */
+    const clearReleasePulse = useCallback(() => {
+        window.clearTimeout(_releasePulseTimer.current)
+        _releasePulseTimer.current = null
+        setReleasePulse(null)
+    }, [])
+
+    /** Show the same paired ring pulse used by the camera pivot at the committed POI anchor. */
+    const showReleasePulse = useCallback(point => {
+        if (!point) return
+        window.clearTimeout(_releasePulseTimer.current)
+        setReleasePulse(point)
+        _releasePulseTimer.current = window.setTimeout(() => {
+            _releasePulseTimer.current = null
+            setReleasePulse(null)
+        }, MOVE_RELEASE_PULSE_DURATION)
+    }, [])
+
+    useEffect(() => () => window.clearTimeout(_releasePulseTimer.current), [])
+
     useLayoutEffect(() => {
         _viewport.current = viewport
     }, [viewport])
@@ -221,6 +246,7 @@ export const MapPOIMoveOverlay = () => {
         const drag = _drag.current
         _drag.current = null
         setDragging(false)
+        setMoveAnimation('idle')
         if (drag?.captureElement?.hasPointerCapture?.(drag.pointerId)) {
             drag.captureElement.releasePointerCapture(drag.pointerId)
         }
@@ -229,8 +255,9 @@ export const MapPOIMoveOverlay = () => {
     /** Cancel the move without changing any POI data. */
     const cancelMove = useCallback(() => {
         clearDrag()
+        clearReleasePulse()
         $poiMove.session = null
-    }, [clearDrag])
+    }, [clearDrag, clearReleasePulse])
 
     /** Convert a container-relative world projection into map-viewport pixels. */
     const toViewportPoint = useCallback(point => {
@@ -267,6 +294,7 @@ export const MapPOIMoveOverlay = () => {
         if (!activeViewport) {
             return null
         }
+        drag.lastAnchor = nextAnchor
         const clientX = containerRect.left + (activeViewport?.left ?? 0) + nextAnchor.x
         const clientY = containerRect.top + (activeViewport?.top ?? 0) + nextAnchor.y
         const terrain = pickTerrainLocation(viewer, clientX, clientY)
@@ -454,13 +482,18 @@ export const MapPOIMoveOverlay = () => {
             pointerId: event.pointerId,
             offsetX: 0,
             offsetY: 0,
+            startX: event.clientX,
+            startY: event.clientY,
+            moved: false,
             captureElement: event.currentTarget,
         }
         _drag.current = drag
         setDragging(true)
+        setMoveAnimation('grabbed')
+        clearReleasePulse()
         updateFromPointer(event, drag)
         event.currentTarget.setPointerCapture?.(event.pointerId)
-    }, [anchor, cancelMove, container, updateFromPointer])
+    }, [anchor, cancelMove, clearReleasePulse, container, updateFromPointer])
 
     /** Track the pointer while the marker owns the pointer capture. */
     const handlePointerMove = useCallback(event => {
@@ -482,6 +515,7 @@ export const MapPOIMoveOverlay = () => {
         }
         if (drag.moved === false && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 3) {
             drag.moved = true
+            setMoveAnimation('dragging')
         }
         if (drag.moved !== false) {
             updateFromPointer(event, drag)
@@ -502,16 +536,27 @@ export const MapPOIMoveOverlay = () => {
         }
         event.preventDefault()
         event.stopPropagation()
-        const moved = drag.moved !== false
-            || Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 3
-        if (!moved) {
+        const pointerDistance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY)
+        if (drag.moved === false && pointerDistance > 3) {
+            drag.moved = true
+            setMoveAnimation('dragging')
+        }
+        if (drag.moved !== true) {
             cancelMove()
             return
         }
         const location = updateFromPointer(event, drag)
+        const releasePoint = drag.lastAnchor
+            ? {
+                x: drag.lastAnchor.x - markerGeometry.anchorOffset.x,
+                y: drag.lastAnchor.y - markerGeometry.anchorOffset.y,
+                color: poiColor,
+            }
+            : null
         clearDrag()
+        showReleasePulse(releasePoint)
         void commitMove(location)
-    }, [cancelMove, clearDrag, commitMove, updateFromPointer])
+    }, [cancelMove, clearDrag, commitMove, markerGeometry.anchorOffset, poiColor, showReleasePulse, updateFromPointer])
 
     /** Cancel a drag when the browser interrupts pointer capture. */
     const handlePointerCancel = useCallback(event => {
@@ -575,6 +620,8 @@ export const MapPOIMoveOverlay = () => {
                 captureElement: canvas,
             }
             setDragging(true)
+            setMoveAnimation('grabbed')
+            clearReleasePulse()
             event.preventDefault()
             event.stopImmediatePropagation()
             _suppressClick.current = true
@@ -620,7 +667,7 @@ export const MapPOIMoveOverlay = () => {
                 _pointerHandlers.current.cancelMove()
             }
         }
-    }, [canvas, $pois, viewer])
+    }, [canvas, $pois, clearReleasePulse, viewer])
 
     useLayoutEffect(() => {
         if (!session?.poiId) {
@@ -823,7 +870,29 @@ export const MapPOIMoveOverlay = () => {
     }, [anchor, candidate, markerGeometry.markerBounds, viewport, viewportBounds, unitSettings.current, coordinateSettings.current])
 
     if (!session || !poi.id || poi.type === POI_TMP_TYPE || !container || !viewport) {
-        return null
+        if (!releasePulse || !container || !viewport) return null
+        return createPortal(
+            <div
+                className="poi-move-overlay-root"
+                style={{
+                    left: `${viewport.left}px`,
+                    top: `${viewport.top}px`,
+                    width: `${viewport.width}px`,
+                    height: `${viewport.height}px`,
+                }}
+            >
+                <div
+                    className="poi-move-release-pulse"
+                    style={{
+                        left: `${releasePulse.x}px`,
+                        top: `${releasePulse.y}px`,
+                        '--lgs-poi-color': releasePulse.color ?? lgs.colors.poiDefault,
+                    }}
+                    aria-hidden="true"
+                />
+            </div>,
+            container,
+        )
     }
 
     const coordinateSystem = coordinateSettings.current
@@ -867,7 +936,25 @@ export const MapPOIMoveOverlay = () => {
                     onLostPointerCapture={handlePointerCancel}
                 >
                     <div className="poi-move-marker-content" ref={_markerContent}/>
+                    <span
+                        className={`poi-move-marker-pulse ${moveAnimation === 'grabbed'
+                            ? 'is-poi-move-grabbed'
+                            : moveAnimation === 'dragging' ? 'is-poi-move-dragging' : ''}`}
+                        style={{color: poiColor}}
+                        aria-hidden="true"
+                    />
                 </WaButton>
+            )}
+            {releasePulse && (
+                <div
+                    className="poi-move-release-pulse"
+                    style={{
+                        left: `${releasePulse.x}px`,
+                        top: `${releasePulse.y}px`,
+                        '--lgs-poi-color': releasePulse.color ?? lgs.colors.poiDefault,
+                    }}
+                    aria-hidden="true"
+                />
             )}
             {candidate && anchor && (
                 <MapOverlaySurface

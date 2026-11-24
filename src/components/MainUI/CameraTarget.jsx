@@ -322,7 +322,9 @@ export const CameraTarget = () => {
                 const position = screenPosition
                     ? pickMainSceneWorldPosition(currentDrag.scene, currentDrag.camera, screenPosition)
                     : null
-                if (position) setMainSceneCameraPivot(currentDrag.scene, currentDrag.camera, position)
+                if (position && setMainSceneCameraPivot(currentDrag.scene, currentDrag.camera, position)) {
+                    __.ui.cameraManager?.retargetActiveRotationToMapPivot?.(position)
+                }
             }
             const released = event.type === 'pointerup' && currentDrag.active
             clearGesture(currentDrag, {releasePointerCapture: false})
