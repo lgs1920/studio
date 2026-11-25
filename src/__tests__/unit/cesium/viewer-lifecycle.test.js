@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-11-11
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,7 +36,7 @@ const {FakeViewer, fakeCanvasEventManager} = vi.hoisted(() => {
         static constructionAttempts = 0
         static constructionError = null
 
-        constructor(container) {
+        constructor(container, options) {
             FakeViewer.constructionAttempts += 1
             if (FakeViewer.constructionError) {
                 throw FakeViewer.constructionError
@@ -65,7 +65,7 @@ const {FakeViewer, fakeCanvasEventManager} = vi.hoisted(() => {
                 renderError:                 createEvent(),
                 screenSpaceCameraController: {},
                 requestRender:               vi.fn(),
-                requestRenderMode:           true,
+                requestRenderMode:           options.requestRenderMode,
             }
             this.screenSpaceEventHandler = {removeInputAction: vi.fn()}
             this.forceResize = vi.fn()
@@ -119,7 +119,7 @@ vi.mock('@Utils/cesium/SceneUtils', () => ({
     },
 }))
 
-import {ensureViewer, ensureViewerBase, ensureViewerBaseWithRetry} from '@Components/cesium/Viewer'
+import {ensureViewer, ensureViewerBase, ensureViewerBaseWithRetry, restoreVisibleViewerResolution} from '@Components/cesium/Viewer'
 import {getSceneRenderScheduler, requestSceneRender} from '@Utils/cesium/SceneRenderScheduler'
 
 const createContext = () => {
@@ -204,6 +204,22 @@ describe('Cesium viewer lifecycle', () => {
         expect(viewer).toBe(globalThis.lgs.viewer)
         expect(viewer.forceResize).toHaveBeenCalledOnce()
         expect(viewer.scene.requestRender).toHaveBeenCalledOnce()
+    })
+
+    it('keeps a stable resolution from viewer startup through map reveal', async () => {
+        const viewer = await ensureViewerBaseWithRetry()
+
+        expect(viewer.scene.requestRenderMode).toBe(true)
+        expect(viewer.resolutionScale).toBe(2)
+        expect(ensureViewer()).toBe(viewer)
+        expect(viewer.resolutionScale).toBe(2)
+        viewer.scene.requestRender.mockClear()
+
+        restoreVisibleViewerResolution(viewer)
+        restoreVisibleViewerResolution(viewer)
+
+        expect(viewer.resolutionScale).toBe(2)
+        expect(viewer.scene.requestRender).not.toHaveBeenCalled()
     })
 
     it('retries a temporarily missing container', async () => {
