@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-05-09
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -147,8 +147,11 @@ const ReplayPOIContentList = ({poiList}) => {
     ))
 }
 
-/** Monitor POI interaction, capture lifecycle, and the map POI collection. */
-export const MapPOIMonitor = () => {
+/** Monitor POIs and keep their map imagery hidden until Cesium loads the initial map view.
+ * @param {{initialMapTilesReady?: boolean}} props - Initial map readiness state.
+ * @returns {JSX.Element} Map POI overlays and interaction monitor.
+ */
+export const MapPOIMonitor = ({initialMapTilesReady = true} = {}) => {
     const $pois = lgs.stores.main.components.pois
     const replay = useSnapshot(lgs.stores.replay)
     const replayPresentationActive = isReplayPOIPresentationActive(replay)
@@ -156,6 +159,11 @@ export const MapPOIMonitor = () => {
 
     /** Queue one rich capture with a camera-aware score evaluated at promotion time. */
     const requestPOICapture = useCallback((poiId, {priority = false} = {}) => {
+        if (!initialMapTilesReady) {
+            poiCaptureSurfaceStore.cancel(poiId)
+            return
+        }
+
         if (isReplayPOIPresentationActive(lgs.stores.replay)) {
             poiCaptureSurfaceStore.cancel(poiId)
             return
@@ -180,7 +188,7 @@ export const MapPOIMonitor = () => {
             isEligible: () => !isReplayPOIPresentationActive(lgs.stores.replay)
                 && POIUtils.isPOIVisibleOnMap($pois.list.get(poiId)),
         })
-    }, [$pois])
+    }, [$pois, initialMapTilesReady])
 
     /** Read and select one current POI from the canonical store. */
     const getPOI = useCallback(poiId => {
@@ -598,14 +606,18 @@ export const MapPOIMonitor = () => {
 
     return (
         <>
-            <div id="map-poi-list">
-                {replayPresentationActive
-                    ? <ReplayPOIContentList poiList={$pois.list}/>
-                    : activeCapturePOIs.map(poiId => (
-                        <MapPOIContent key={poiId} poi={poiId} managedCaptureSurface/>
-                    ))}
-            </div>
-            <MapPOICluster/>
+            {initialMapTilesReady && (
+                <>
+                    <div id="map-poi-list">
+                        {replayPresentationActive
+                            ? <ReplayPOIContentList poiList={$pois.list}/>
+                            : activeCapturePOIs.map(poiId => (
+                                <MapPOIContent key={poiId} poi={poiId} managedCaptureSurface/>
+                            ))}
+                    </div>
+                    <MapPOICluster/>
+                </>
+            )}
         </>
     )
 }

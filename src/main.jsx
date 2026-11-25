@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-11-11
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -114,23 +114,50 @@ const bootstrap = async () => {
     markStartup('startup-media-ready')
 
     if (hasVideo && splashElement && splashVideo) {
-        const revealVideo = () => {
-            let playPromise
-            try {
-                playPromise = splashVideo.play()
-            }
-            catch {
+        let splashVideoPlaybackRequested = false
+        let splashVideoFrameRequested = false
+
+        /** Reveal the splash video after the browser presents its first playback frame. */
+        const revealVideoOnFirstFrame = () => {
+            if (splashVideoFrameRequested) {
                 return
             }
-            if (playPromise?.then) {
-                void playPromise.then(() => {
+
+            splashVideoFrameRequested = true
+            if (typeof splashVideo.requestVideoFrameCallback === 'function') {
+                splashVideo.requestVideoFrameCallback(() => {
                     splashElement.classList.add('lgs-boot-splash-video-ready')
-                }).catch(() => {
                 })
                 return
             }
 
             splashElement.classList.add('lgs-boot-splash-video-ready')
+        }
+
+        /** Start muted splash playback once the browser has enough video data. */
+        const revealVideo = () => {
+            if (splashVideoPlaybackRequested) {
+                return
+            }
+
+            splashVideoPlaybackRequested = true
+
+            let playPromise
+            try {
+                playPromise = splashVideo.play()
+            }
+            catch {
+                splashVideoPlaybackRequested = false
+                return
+            }
+            if (playPromise?.then) {
+                void playPromise.then(revealVideoOnFirstFrame).catch(() => {
+                    splashVideoPlaybackRequested = false
+                })
+                return
+            }
+
+            revealVideoOnFirstFrame()
         }
 
         const rotateSplashVideo = () => {
@@ -179,6 +206,7 @@ const bootstrap = async () => {
         import('@Components/cesium/Viewer'),
         import('@Components/StartupErrorBoundary'),
     ])
+    markStartup('application-modules-ready')
 
     AppUtils.setTheme(localStorage.getItem('theme') || 'system')
 

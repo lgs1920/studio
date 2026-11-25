@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-11-24
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,8 +21,9 @@ import { AppUpdate }    from '@Components/AppUpdate'
  * Renders the map, UI components, and PWA installation button
  * @returns {JSX.Element} The LGS1920 component
  */
-import {AppSurface} from '@Components/AppSurface'
-import {ensureViewer} from '@Components/cesium/Viewer'
+import {AppMapLayers, AppSurface} from '@Components/AppSurface'
+import {watchInitialMapTiles} from '@Core/ui/startup/initialMapTiles'
+import {ensureViewer, restoreVisibleViewerResolution} from '@Components/cesium/Viewer'
 import {
     InitErrorMessage,
 }                       from '@Components/InitErrorMessage'
@@ -72,6 +73,10 @@ export const LGS1920 = () => {
     const [initialFocusReady, setInitialFocusReady] = useState(false)
     const [currentJourneyReady, setCurrentJourneyReady] = useState(false)
     const [appSurfaceReady, setAppSurfaceReady] = useState(false)
+    const [mapLayersMounted, setMapLayersMounted] = useState(false)
+    const [initialTilesReady, setInitialTilesReady] = useState(false)
+    const [initialMapAvailable, setInitialMapAvailable] = useState(false)
+    const startupOrbit = useRef(null)
     const deferredJourneyDataStarted = useRef(false)
     const startupDataLoader = useRef(null)
     const appUpdateStore = globalThis.__?.updater?.store
@@ -81,12 +86,14 @@ export const LGS1920 = () => {
         && initialFocusReady
         && currentJourneyReady
         && appSurfaceReady
+        && initialMapAvailable
         && !appUpdate.isAutomaticUpdateInProgress
 
     const revealApp = useCallback(() => {
         markStartup('app-revealed')
         document.body.classList.remove('lgs-app-booting')
         document.body.classList.add('lgs-app-visible')
+        globalThis.lgs?.scene?.requestRender()
         setAppVisible(true)
     }, [])
 
@@ -195,8 +202,6 @@ export const LGS1920 = () => {
             throw new Error('The current journey did not reach the ready state')
         }
 
-        await startupDataLoader.current.loadJourneyCatalog()
-        await __.ui.journeyGroupManager.initialize()
         setCurrentJourneyReady(true)
     }
 
@@ -275,12 +280,21 @@ export const LGS1920 = () => {
     const setCameraFocus = (lgs, starter, focusTarget, cameraStore) => {
         let focusReady = false
         let focusReadyTimeout = null
-        const markInitialFocusReady = point => {
+        /** Mark startup focus ready and activate safe normal camera persistence. */
+        const markInitialFocusReady = (point, source = 'focus-complete') => {
+            console.log('[LGS1920][StartupTrace][Camera] Initial focus reached', {
+                actualHeight:              lgs.viewer?.camera?.positionCartographic?.height ?? null,
+                restoreCameraPosition:     cameraStore?.restoreCameraPosition === true,
+                requestedHeight:           cameraStore?.position?.height ?? null,
+                source,
+            })
             if (focusReady) {
                 return
             }
 
             focusReady = true
+            restoreVisibleViewerResolution(lgs.viewer)
+            setMapLayersMounted(true)
             if (focusReadyTimeout !== null) {
                 window.clearTimeout(focusReadyTimeout)
                 focusReadyTimeout = null
@@ -292,6 +306,7 @@ export const LGS1920 = () => {
                 },
             })
             window.dispatchEvent(initEvent)
+            __.ui.cameraManager?.enableMapDragging?.()
             setInitialFocusReady(true)
             markStartup('camera-focus-ready')
         }
@@ -306,21 +321,29 @@ export const LGS1920 = () => {
                                                                persistedStarter,
                                                                starter,
                                                            })
+        const rotate = lgs.settings.ui.camera.start.rotate.app
         const focusOptions = buildStartupCameraFocusOptions({
                                                                 cameraStore,
                                                                 focusTarget: startupFocusTarget,
                                                                 noRelief: __.ui.sceneManager.noRelief(),
-                                                                rotate:   lgs.settings.ui.camera.start.rotate.app,
             rpm:      startupOrbitSettings.rpm,
-            callback: markInitialFocusReady,
+            callback: point => {
+                if (rotate) {
+                    startupOrbit.current = () => __.ui.cameraManager.rotateAround(point, {
+                        ...startupOrbitSettings,
+                        preserveView: true,
+                    })
+                }
+                markInitialFocusReady(point, 'focus-complete')
+            },
         })
         markStartup('camera-focus-start')
         __.ui.sceneManager.focus(cameraStore.target, focusOptions)
         focusReadyTimeout = window.setTimeout(
-            () => markInitialFocusReady(cameraStore.target),
+            () => markInitialFocusReady(cameraStore.target, 'focus-timeout'),
             INITIAL_FOCUS_READY_TIMEOUT,
         )
-        starter.animated = focusTarget === starter && lgs.settings.ui.camera.start.rotate.app
+        starter.animated = focusTarget === starter && rotate
     }
 
     useEffect(() => {
@@ -380,6 +403,13 @@ export const LGS1920 = () => {
                                                                                     sceneManager:   __.ui.sceneManager,
                                                                                     cameraSettings: lgs.settings.camera,
                                                                                 })
+                console.log('[LGS1920][StartupTrace][Camera] Startup camera resolved', {
+                    focusMode:               lgs.settings.ui.camera.start.app,
+                    restoreCameraPosition:   cameraStore?.restoreCameraPosition === true,
+                    requestedHeight:         cameraStore?.position?.height ?? null,
+                    range:                   cameraStore?.position?.range ?? null,
+                    targetHeight:            cameraStore?.target?.height ?? null,
+                })
 
                 // Set camera focus
                 await initializeStartupPOIs({focusTarget, cameraStore, starter})
@@ -426,6 +456,43 @@ export const LGS1920 = () => {
     }, [])
 
     useEffect(() => {
+        if (!initialFocusReady || !appSurfaceReady || initStatus !== true) {
+            return
+        }
+
+        markStartup('initial-tiles-wait-start')
+        return watchInitialMapTiles(lgs, status => {
+            if (status === 'fallback') {
+                markStartup('initial-tiles-fallback-ready')
+                setInitialMapAvailable(true)
+            }
+            else if (status === 'ready') {
+                markStartup('initial-tiles-wait-end')
+                measureStartup('initial-tiles-wait', 'initial-tiles-wait-start', 'initial-tiles-wait-end')
+                if (document.body.classList.contains('lgs-app-visible')) {
+                    startupOrbit.current = null
+                }
+                setInitialMapAvailable(true)
+                setInitialTilesReady(true)
+            }
+            else {
+                markStartup('initial-tiles-wait-timeout')
+            }
+        })
+    }, [appSurfaceReady, initialFocusReady, initStatus])
+
+    useEffect(() => {
+        if (!appVisible || !initialTilesReady || !startupOrbit.current) {
+            return
+        }
+        const startOrbit = startupOrbit.current
+        startupOrbit.current = null
+        if (!__.ui.cameraManager.isFlying() && !__.ui.cameraManager.isRotating() && !lgs.stores.replay.active) {
+            void startOrbit().catch(error => console.warn('[LGS1920] Startup orbit could not start:', error))
+        }
+    }, [appVisible, initialTilesReady])
+
+    useEffect(() => {
         if (appReady) {
             markStartup('enter-available')
         }
@@ -449,7 +516,14 @@ export const LGS1920 = () => {
 
             <AppUpdate updateDialogEnabled={appVisible}/>
 
-            {initStatus === true && <AppSurface onReady={markAppSurfaceReady} onError={handleAppSurfaceError}/>}
+            {mapLayersMounted && !initError && <AppMapLayers/>}
+            {initStatus === true && (
+                <AppSurface
+                    initialMapTilesReady={initialMapAvailable}
+                    onReady={markAppSurfaceReady}
+                    onError={handleAppSurfaceError}
+                />
+            )}
 
             {!initError && !appVisible && (
                 <>
@@ -460,7 +534,7 @@ export const LGS1920 = () => {
                         initializationStep={initializationStep}
                         updateInProgress={appUpdate.isAutomaticUpdateInProgress}
                         onEnter={revealApp}
-                        showMedia={false}
+                        showMedia={appReady}
                     />
                 </>
             )}

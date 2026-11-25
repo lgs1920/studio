@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-01
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,7 +36,7 @@ import {clearPOIHoverTitlePreview, getPOIHoverTitle} from '@Components/MainUI/Ma
 /** Install the map event adapter and one visible POI. */
 const setupMonitor = (pois = [
     {id: 'poi-1', title: 'River stop', visible: true, expanded: true, replay: {visible: true}},
-]) => {
+], {initialMapTilesReady = true} = {}) => {
     const poi = pois[0]
     const listeners = []
     const record = name => vi.fn((callback, options) => listeners.push({name, callback, options}))
@@ -84,7 +84,7 @@ const setupMonitor = (pois = [
         },
     }
 
-    const rendered = render(<MapPOIMonitor/>)
+    const rendered = render(<MapPOIMonitor initialMapTilesReady={initialMapTilesReady}/>)
     return {canvas, canvasEvents, listeners, poi, rendered, updatePOI}
 }
 
@@ -169,6 +169,24 @@ describe('Map POI interaction monitor', () => {
 
         expect(screen.getAllByTestId('poi-capture-surface')).toHaveLength(1)
         expect(screen.getByTestId('poi-capture-surface').dataset.poi).toBe('poi-1')
+    })
+
+    it('keeps POI captures hidden until the initial map tiles have loaded', async () => {
+        const {rendered} = setupMonitor([
+            {id: 'poi-waiting-for-map', title: 'Map first', visible: true, expanded: true, replay: {visible: true}},
+        ], {initialMapTilesReady: false})
+
+        await act(async () => {
+            await Promise.resolve()
+        })
+        expect(screen.queryByTestId('poi-capture-surface')).toBeNull()
+
+        await act(async () => {
+            rendered.rerender(<MapPOIMonitor initialMapTilesReady/>)
+            await Promise.resolve()
+        })
+
+        expect(screen.getByTestId('poi-capture-surface').dataset.poi).toBe('poi-waiting-for-map')
     })
 
     it('waits to mount a rich capture surface until a hidden POI becomes visible', async () => {

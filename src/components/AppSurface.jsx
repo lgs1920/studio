@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-09-30
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,9 +25,20 @@ import {SelectionIndicator} from '@Components/MainUI/SelectionIndicator'
 import {ToolsUI} from '@Components/MainUI/ToolsUI'
 import {Toast} from '@Components/Toast'
 import {BASE_ENTITY, OVERLAY_ENTITY} from '@Core/constants'
+import {markStartup} from '@Core/ui/startup/startupTelemetry'
 import {useEffect} from 'react'
 
 const APP_SURFACE_READY_TIMEOUT = 1500
+
+/** Keep the selected map layers mounted throughout startup and interactive use. */
+export const AppMapLayers = () => (
+    <>
+        <MapLayer type={BASE_ENTITY}/>
+        <MapLayer type={OVERLAY_ENTITY}/>
+        <Base3DLayer/>
+        <Tiles3DLayer/>
+    </>
+)
 
 /**
  * Describes whether the current Cesium surface can accept a completed frame.
@@ -50,76 +61,65 @@ const getCesiumSurfaceState = () => {
 }
 
 /**
- * Waits for the next browser paint opportunity.
- *
- * @returns {Promise<void>} Promise resolved on the next animation frame.
+ * Listen for the first completed Cesium frame after the application surface mounts.
+ * @param {(ready: boolean) => void} onResult Completion callback.
+ * @returns {() => void} Cleanup for the render listener and timeout.
  */
-const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve))
-
-/**
- * Resolves only after Cesium completes a frame, or fails when the render never arrives.
- *
- * @returns {Promise<boolean>} Whether Cesium completed its first render before the timeout.
- */
-const waitForAppSurfaceReady = () => new Promise(resolve => {
+const watchAppSurfaceReady = onResult => {
     const scene = globalThis.lgs?.scene
     let done = false
-    const cleanup = []
-    const finish = ready => {
-        if (done) {
-            return
+
+    /** Stop observing on completion or unmount. */
+    const cleanup = () => {
+        if (!done) {
+            done = true
+            window.clearTimeout(timeout)
+            removePostRenderListener?.()
         }
-        done = true
-        cleanup.forEach(remove => remove?.())
-        resolve(ready)
+    }
+
+    /** Report readiness or timeout once for the current surface. */
+    const finish = ready => {
+        if (!done) {
+            cleanup()
+            onResult(ready)
+        }
     }
 
     const timeout = window.setTimeout(() => finish(false), APP_SURFACE_READY_TIMEOUT)
-    cleanup.push(() => window.clearTimeout(timeout))
-
     const removePostRenderListener = scene?.postRender?.addEventListener?.(() => {
         if (globalThis.lgs?.scene === scene && getCesiumSurfaceState().surfaceAvailable) {
             finish(true)
         }
     })
-    if (typeof removePostRenderListener === 'function') {
-        cleanup.push(removePostRenderListener)
-    }
 
     scene?.requestRender?.()
-})
+    return cleanup
+}
 
 /**
  * Renders the map, controls, drawers, and app-level overlays.
  *
- * @param {{onReady?: () => void, onError?: (error: Error) => void}} props - Surface readiness callbacks.
+ * @param {{initialMapTilesReady?: boolean, onReady?: () => void, onError?: (error: Error) => void}} props - Surface readiness and map callbacks.
  * @returns {JSX.Element} Mounted application surface.
  */
-export const AppSurface = ({onReady, onError}) => {
+export const AppSurface = ({initialMapTilesReady = true, onReady, onError}) => {
     useEffect(() => {
-        let cancelled = false
-        void (async () => {
-            await nextFrame()
-            await nextFrame()
-            const surfaceReady = await waitForAppSurfaceReady()
-            if (!cancelled) {
-                if (surfaceReady) {
-                    onReady?.()
-                }
-                else {
-                    const state = getCesiumSurfaceState()
-                    const error = new Error('[LGS1920][Cesium] Surface readiness timed out: Cesium did not complete its first render.')
-                    console.error('[LGS1920][Cesium] Surface readiness failed.', {
-                        ...state,
-                        error: error.message,
-                    })
-                    onError?.(error)
-                }
+        markStartup('surface-mounted')
+        return watchAppSurfaceReady(ready => {
+            if (ready) {
+                onReady?.()
+                return
             }
-        })()
-        return () => {
-            cancelled = true
-        }
+
+            const state = getCesiumSurfaceState()
+            const error = new Error('[LGS1920][Cesium] Surface readiness timed out: Cesium did not complete its first render.')
+            console.error('[LGS1920][Cesium] Surface readiness failed.', {
+                ...state,
+                error: error.message,
+            })
+            onError?.(error)
+        })
     }, [onError, onReady])
 
     useEffect(() => () => {
@@ -131,14 +131,10 @@ export const AppSurface = ({onReady, onError}) => {
         <>
             <div id="drawer-root" className="drawer-wrapper"/>
             <ToolsUI/>
-            <MainUI/>
+            <MainUI initialMapTilesReady={initialMapTilesReady}/>
             <ResponsiveDevice/>
-            <MapLayer type={BASE_ENTITY}/>
-            <MapLayer type={OVERLAY_ENTITY}/>
             <Viewer/>
-            <Base3DLayer/>
             <Base3DLoadingOverlay/>
-            <Tiles3DLayer/>
             <SelectionIndicator/>
             <Toast/>
         </>

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-22
- * Last modified: 2026-09-22
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,5 +32,19 @@ describe('startup CTA readiness', () => {
 
         expect(deferredEffect).toContain('!appReady')
         expect(deferredEffect).not.toContain('!appVisible')
+    })
+
+    it('allows entry on the fallback map before high-detail tiles finish', () => {
+        const appReadyDefinition = lgs1920Source.match(/const appReady =[\s\S]*?const revealApp/u)?.[0] ?? ''
+
+        expect(appReadyDefinition).toContain('&& initialMapAvailable')
+        expect(appReadyDefinition).not.toContain('&& initialTilesReady')
+    })
+
+    it('waits for fully loaded tiles before starting the startup orbit', () => {
+        const orbitEffect = lgs1920Source.match(/if \(!appVisible \|\| !initialTilesReady \|\| !startupOrbit\.current\)[\s\S]*?\}, \[appVisible, initialTilesReady\]\)/u)?.[0] ?? ''
+
+        expect(orbitEffect).toContain('!initialTilesReady')
+        expect(orbitEffect).not.toContain('initialMapAvailable')
     })
 })

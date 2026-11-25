@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-11-24
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -73,7 +73,7 @@ import './style.css'
 const PRIMARY_ENTRANCE = 'lgs-slide-in-from-left'
 const SECONDARY_ENTRANCE = 'lgs-slide-in-from-right'
 
-export const MainUI = memo(() => {
+export const MainUI = memo(({initialMapTilesReady = true}) => {
     const formerDevice = useRef(__.device.isMobile)
     const readyForTheShow = useProxyValue(lgs.stores.main, main => main.readyForTheShow === true, false)
     const theJourney = useProxyValue(lgs.stores.main, main => main.theJourney !== null, false)
@@ -237,7 +237,7 @@ export const MainUI = memo(() => {
         <>
             <MapPointContextMenuTrigger/>
             <JourneyReplayCameraAngleGuide/>
-            <MapPOIMonitor/>
+            <MapPOIMonitor initialMapTilesReady={initialMapTilesReady}/>
             {!isJourneyReplayUiHidden && !videoCaptureActive && !video.editing && <FixPathEditor/>}
             {!isJourneyReplayUiHidden && (
                 <>

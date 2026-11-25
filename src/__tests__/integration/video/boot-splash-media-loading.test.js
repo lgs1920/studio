@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-21
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,12 +46,16 @@ const registerBootSplashMediaLoadingTests = () => {
         const splashImage = indexDocument.querySelector('#lgs-boot-splash [data-welcome-background-fallback]')
         const splashCredit = indexDocument.querySelector('#lgs-boot-splash-media-credit')
         const startupImage = indexDocument.querySelector('#lgs-startup-background')
+        const startupPoster = '/assets/media/20260812-10548975-hd-3840x2160.webp'
 
         expect(unsupportedMediaPreloadLinks).toHaveLength(0)
         expect(splashVideo).not.toBeNull()
         expect(splashVideo?.hasAttribute('data-welcome-background-media')).toBe(true)
         expect(splashVideo?.getAttribute('preload')).toBe('auto')
         expect(splashVideo?.hasAttribute('loop')).toBe(false)
+        expect(splashImage?.getAttribute('src')).toBe(startupPoster)
+        expect(startupImage?.querySelector('[data-welcome-background-startup]')?.getAttribute('src')).toBe(startupPoster)
+        expect(indexDocument.querySelector(`link[rel="preload"][as="image"][href="${startupPoster}"]`)).not.toBeNull()
         expect(mainSource).toContain("splashVideo.addEventListener('ended', rotateSplashVideo)")
         expect(splashCredit).not.toBeNull()
         expect(splashCredit?.parentElement?.id).not.toBe('lgs-boot-splash')
@@ -133,7 +137,7 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(splashStyle).toContain('linear-gradient(90deg, rgba(0, 0, 0, 0.48)')
         expect(splashStyle).not.toContain('rgba(20, 35, 28, 0.18)')
         expect(splashStyle).not.toContain('blur(')
-        expect(lgs1920Source).toContain('                    showMedia={false}\n')
+        expect(lgs1920Source).toContain('showMedia={appReady}')
     }
 
     it('uses the video element preload mechanism supported by browsers', verifySupportedMediaPreloading)

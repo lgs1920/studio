@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-11
- * Last modified: 2026-11-11
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,6 +29,7 @@ let cameraTerrainCorrectionInProgress = false
 
 const VIEWER_BASE_COLOR = Color.fromCssColorString('hsla(125, 87%, 18%, 0.95)')
 const MAX_RENDER_RECOVERY_ATTEMPTS = 2
+const VISIBLE_VIEWER_RESOLUTION_SCALE = 2
 
 const isViewerDestroyed = viewer => {
     if (!viewer || typeof viewer.isDestroyed !== 'function') {
@@ -229,6 +230,7 @@ const getViewerContainer = () => {
     return container
 }
 
+/** Construct the main Cesium viewer at its stable display resolution. */
 const getOrCreateViewer = () => {
     const container = getViewerContainer()
 
@@ -253,6 +255,7 @@ const getOrCreateViewer = () => {
                 infoBox:              false,
                 sceneModePicker:      false,
                 showRenderLoopErrors: true,
+                requestRenderMode:    true,
                 mapProjection:        new WebMercatorProjection(), // TODO is it a problem in 3D ?
                 //selectionIndicator: false,
                 //*************************************
@@ -262,8 +265,7 @@ const getOrCreateViewer = () => {
                 baseLayer:             false,
                 baseLayerPicker:       false,
             })
-            // Render the main map at twice its display resolution for sharper output.
-            lgs.viewer.resolutionScale = 2
+            lgs.viewer.resolutionScale = VISIBLE_VIEWER_RESOLUTION_SCALE
         }
         catch (error) {
             console.error('[LGS1920][Cesium] Viewer construction failed.', {
@@ -437,6 +439,16 @@ export const ensureViewerBaseWithRetry = async ({attempts = 4, delayMs = 100} = 
     }
 
     throw lastError
+}
+
+/** Keep the visible map at its startup resolution to avoid a second tile refinement pass. */
+export const restoreVisibleViewerResolution = viewer => {
+    if (!viewer || isViewerDestroyed(viewer) || viewer.resolutionScale === VISIBLE_VIEWER_RESOLUTION_SCALE) {
+        return
+    }
+
+    viewer.resolutionScale = VISIBLE_VIEWER_RESOLUTION_SCALE
+    requestSceneRender(viewer.scene)
 }
 
 export const ensureViewer = () => {

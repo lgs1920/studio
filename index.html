@@ -8,7 +8,7 @@
   ~ email: studio@lgs1920.fr
   ~
   ~ Created on: 2026-04-27
-  ~ Last modified: 2026-11-02
+  ~ Last modified: 2026-11-25
   ~
   ~
   ~ Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@
 
     <!-- Theme color for Android and browsers -->
     <meta content="#000000" name="theme-color"/>
+    <link href="/assets/media/20260812-10548975-hd-3840x2160.webp" rel="preload" as="image" fetchpriority="high">
 
     <!-- PWA Manifest -->
     <link href="/manifest.webmanifest" rel="manifest" type="application/manifest+json">
@@ -96,13 +97,21 @@
 </head>
 <body class="lgs-app-booting">
 <div id="lgs-startup-background" aria-hidden="true">
-    <img data-welcome-background-startup alt="" decoding="async">
+    <img src="/assets/media/20260812-10548975-hd-3840x2160.webp"
+         data-welcome-background-startup
+         alt=""
+         loading="eager"
+         fetchpriority="high"
+         decoding="async">
 </div>
 <div id="cesium-viewer"></div>
 <div id="lgs-boot-splash" aria-hidden="true">
     <img class="lgs-boot-splash-background lgs-boot-splash-background-image"
+         src="/assets/media/20260812-10548975-hd-3840x2160.webp"
          data-welcome-background-fallback
          alt=""
+         loading="eager"
+         fetchpriority="high"
          decoding="async">
     <video class="lgs-boot-splash-background"
            data-welcome-background-media
