@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-09-13
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,34 @@
     min-height: 0;
     overflow: hidden;
     padding: var(--wa-space-m, 1rem);
+}
+
+.replay-drawer-pinned-controls {
+    display: grid;
+    gap: var(--lgs-gutter-xs);
+    min-width: 0;
+}
+
+.replay-drawer-pinned-row {
+    align-items: center;
+    display: grid;
+    gap: var(--lgs-gutter-s);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+}
+
+.replay-drawer-pinned-row--summary:not(.has-journey-filter) .replay-total-duration-row {
+    grid-column: 1 / -1;
+}
+
+.replay-drawer-pinned-row--selects > :is(wa-select, wa-number-input) {
+    min-width: 0;
+    width: 100%;
+}
+
+.replay-drawer-pinned-row--selects > wa-select::part(base),
+.replay-fieldset--two-column > wa-number-input::part(base) {
+    width: 100%;
 }
 
 .replay-drawer-title {
@@ -51,6 +79,15 @@
 .replay-fieldset {
     display: grid;
     gap: var(--wa-space-s, 0.75rem);
+}
+
+.replay-fieldset--two-column {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.replay-fieldset--two-column > :is(wa-number-input, wa-select) {
+    min-width: 0;
+    width: 100%;
 }
 
 .replay-advanced-camera-popup {
@@ -772,6 +809,11 @@ wa-select[label-at-start].half-width::part(base) {
 }
 
 @media (max-width: 640px) {
+    .replay-drawer-pinned-row,
+    .replay-fieldset--two-column {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
     .replay-color-control,
     .replay-style-field-grid,
     .replay-style-field-grid.is-single {

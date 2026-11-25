@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -95,7 +95,9 @@ vi.mock('@Components/PanelsActions', () => ({
 }))
 
 vi.mock('@Components/WaDrawerNonModal', () => ({
-    default: ({children, open, ...props}) => open ? <div data-testid="wa-drawer" {...props}>{children}</div> : null,
+    default: ({children, open, resize, ...props}) => open ? (
+        <div data-testid="wa-drawer" data-resize={String(Boolean(resize))} {...props}>{children}</div>
+    ) : null,
 }))
 
 vi.mock('@awesome.me/webawesome/dist/react', () => {
@@ -396,6 +398,20 @@ describe('JourneyReplayDrawer', () => {
         expect(view.queryByRole('button', {name: 'Start Journey Replay'})).toBeNull()
         expect(view.queryByRole('button', {name: 'Pause Journey Replay'})).toBeNull()
         expect(view.queryByRole('button', {name: 'Reset Expert Replay from Basic Replay'})).toBeNull()
+    })
+
+    it('groups the Expert quick settings in a pinned responsive layout', () => {
+        const view = render(<JourneyReplayDrawer/>)
+        const drawer = document.body.querySelector('.replay-drawer')
+        const pinnedControls = document.body.querySelector('.replay-drawer-pinned-controls')
+
+        expect(drawer?.getAttribute('data-resize')).toBe('true')
+        expect(pinnedControls?.querySelector('.replay-hide-other-journeys-switch')).not.toBeNull()
+        expect(pinnedControls?.querySelector('.replay-total-duration-row')).not.toBeNull()
+        expect(pinnedControls?.querySelectorAll('.replay-progression-select, .replay-marker-select')).toHaveLength(2)
+        expect(view.getByLabelText('Duration (s)').classList.contains('half-width')).toBe(false)
+        expect(view.getByLabelText('Nearby POIs (m)').classList.contains('half-width')).toBe(false)
+        expect(document.body.querySelector('.replay-fieldset--two-column')).not.toBeNull()
     })
 
     it('keeps normal Cesium rotation independent while editing the prepared pitch', async () => {

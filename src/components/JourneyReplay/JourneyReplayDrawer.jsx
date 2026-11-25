@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -1494,6 +1494,7 @@ export const JourneyReplayDrawer = memo(() => {
                     ref={drawerRef}
                     id={REPLAY_DRAWER}
                     open={true}
+                    resize={true}
                     onWaAfterHide={handleRequestClose}
                     onSlAfterHide={closeDrawer}
                     placement={drawerPlacement}
@@ -1530,46 +1531,53 @@ export const JourneyReplayDrawer = memo(() => {
                             <p className="replay-empty-state">{`Import or select a journey to use ${REPLAY_LABEL}.`}</p>
                         ) : (
                              <>
-                                 {isExpertMode && (
-                                     <WaSwitch
-                                         label-at-start
-                                         size="xs"
-                                         className="replay-hide-other-journeys-switch half-width"
-                                         checked={hideOtherJourneys}
-                                         onChange={updateHideOtherJourneys}
-                                     >
-                                         {'Hide other journeys'}
-                                     </WaSwitch>
-                                 )}
-                                 <div className="replay-total-duration-row" aria-live="polite">
-                                     <span className="replay-total-duration-label">{'Total duration (s)'}</span>
-                                     <strong className="replay-total-duration-value">{formatSeconds(totalVideoDurationSeconds)}</strong>
-                                 </div>
-                                 <WaSelect appearance="filled"
-                                     className="replay-progression-select half-width"
-                                     label="Show"
-                                     label-at-start
-                                     size="s"
-                                     value={trace.mode}
-                                     onChange={updateTraceMode}
-                                 >
-                                     <WaOption value={REPLAY_TRACE_MODE_PROGRESSIVE}>{'Progress'}</WaOption>
-                                     <WaOption value={REPLAY_TRACE_MODE_FULL}>{'Progress - Remain'}</WaOption>
-                                 </WaSelect>
-                                 <WaSelect appearance="filled"
-                                     label="Tracking"
-                                     label-at-start
-                                     size="s"
-                                     value={marker.mode}
-                                     onChange={updateMarker}
-                                     className="half-width">
-                                     <WaOption
-                                         value={REPLAY_MARKER_MODE_TRACE}>{'Passive'}</WaOption>
-                                     <WaOption
-                                         value={REPLAY_MARKER_MODE_NAVIGATION}>{'Navigation'}</WaOption>
-                                     <WaOption
-                                         value={REPLAY_MARKER_MODE_HYSTERESIS}>{'Dynamic'}</WaOption>
-                                 </WaSelect>
+                                 <section className="replay-drawer-pinned-controls" aria-label="Replay overview">
+                                     <div className={classNames('replay-drawer-pinned-row replay-drawer-pinned-row--summary', {
+                                         'has-journey-filter': isExpertMode,
+                                     })}>
+                                         {isExpertMode && (
+                                             <WaSwitch
+                                                 label-at-start
+                                                 width-auto
+                                                 size="xs"
+                                                 className="replay-hide-other-journeys-switch"
+                                                 checked={hideOtherJourneys}
+                                                 onChange={updateHideOtherJourneys}
+                                             >
+                                                 {'Hide other journeys'}
+                                             </WaSwitch>
+                                         )}
+                                         <div className="replay-total-duration-row" aria-live="polite">
+                                             <span className="replay-total-duration-label">{'Total duration (s)'}</span>
+                                             <strong className="replay-total-duration-value">{formatSeconds(totalVideoDurationSeconds)}</strong>
+                                         </div>
+                                     </div>
+                                     <div className="replay-drawer-pinned-row replay-drawer-pinned-row--selects">
+                                         <WaSelect appearance="filled"
+                                             className="replay-progression-select"
+                                             label="Show"
+                                             label-at-start
+                                             size="s"
+                                             value={trace.mode}
+                                             onChange={updateTraceMode}
+                                         >
+                                             <WaOption value={REPLAY_TRACE_MODE_PROGRESSIVE}>{'Progress'}</WaOption>
+                                             <WaOption value={REPLAY_TRACE_MODE_FULL}>{'Progress - Remain'}</WaOption>
+                                         </WaSelect>
+                                         <WaSelect appearance="filled"
+                                             label="Tracking"
+                                             label-at-start
+                                             size="s"
+                                             value={marker.mode}
+                                             onChange={updateMarker}
+                                             className="replay-marker-select">
+                                             <WaOption value={REPLAY_MARKER_MODE_TRACE}>{'Passive'}</WaOption>
+                                             <WaOption value={REPLAY_MARKER_MODE_NAVIGATION}>{'Navigation'}</WaOption>
+                                             <WaOption value={REPLAY_MARKER_MODE_HYSTERESIS}>{'Dynamic'}</WaOption>
+                                         </WaSelect>
+                                     </div>
+                                 </section>
+                                 <WaDivider/>
                                  <WaTabGroup className="replay-tabs" onWaTabShow={updateActiveTab}>
                                     <WaTab slot="nav" panel="runner" onClick={setReplayTab(REPLAY_TAB_RUNNER)}>
                                         <JourneyReplayTabLabelWithBadge icon="clock" label="Playback" count={0}/>
@@ -1598,29 +1606,31 @@ export const JourneyReplayDrawer = memo(() => {
                                      <WaTabPanel name="runner">
                                          <LGSScrollbars>
                                              <div className="replay-tab-panel">
-                                                <div className="replay-fieldset">
+                                                <div className="replay-fieldset replay-fieldset--two-column">
                                                     <WaNumberInput
-                                                        className="replay-duration-input half-width"
+                                                        className="replay-duration-input"
                                                         label="Duration (s)"
                                                         size="s"
-                                                         appearance="filled"
-                                                         min="1"
-                                                         step="1"
-                                                         value={effectiveReplaySettings.duration}
-                                                         disabled={durationLocked}
-                                                         onInput={updateDuration}
-                                                         label-at-start/>
-                                                     <WaNumberInput
-                                                         className="replay-poi-distance-input half-width"
-                                                         label="Nearby POIs (m)"
-                                                         size="s"
-                                                         appearance="filled"
-                                                         min="1"
-                                                         max="100000"
-                                                         step="100"
+                                                        appearance="filled"
+                                                        min="1"
+                                                        step="1"
+                                                        value={effectiveReplaySettings.duration}
+                                                        disabled={durationLocked}
+                                                        onInput={updateDuration}
+                                                        label-at-start
+                                                    />
+                                                    <WaNumberInput
+                                                        className="replay-poi-distance-input"
+                                                        label="Nearby POIs (m)"
+                                                        size="s"
+                                                        appearance="filled"
+                                                        min="1"
+                                                        max="100000"
+                                                        step="100"
                                                         value={replaySettings.poiDistance}
                                                         onInput={updatePOIDistance}
-                                                        label-at-start/>
+                                                        label-at-start
+                                                    />
                                                 </div>
                                                 {isExpertMode && (
                                                     <section className="replay-style-subsection">
