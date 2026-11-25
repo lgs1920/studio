@@ -8,6 +8,15 @@ Studio stores eligible map resources in browser Cache Storage under a dedicated
 tile cache. The version-aware PWA application-asset cache remains separate and
 is not included in tile-cache usage.
 
+Requests for the Studio shell and its configuration bypass tile-index recovery.
+Backend startup requests to `/ping` and `/versions` also bypass the tile index so
+cache recovery cannot delay the liveness check.
+For network-first application resources, the service worker starts the network
+request immediately and stores successful responses in the background. It reads
+the application cache for an offline fallback when the network request fails.
+Unversioned scripts and styles use HTTP revalidation. Fingerprinted Vite
+dependencies honor the browser's HTTP cache policy during development.
+
 The service worker only considers safe `GET` requests registered from the
 provider catalog. Supported resource kinds are raster imagery, terrain and
 elevation data, explicitly configured vector tiles (`.pbf` and `.mvt`), and 3D

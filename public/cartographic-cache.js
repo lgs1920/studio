@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,8 @@ import {
 export const TILE_CACHE_NAME = 'lgs-cartographic-tiles-v2'
 /** Dedicated small metadata records for byte accounting, routing, and LRU. */
 export const TILE_CACHE_METADATA_NAME = 'lgs-cartographic-metadata-v2'
+/** Maximum time a tile request may wait for persistent cache storage to open. */
+const CACHE_OPEN_WAIT_LIMIT_MS = 100
 
 /** Create a persistent cartographic cache with injectable browser boundaries. */
 export const createCartographicCache = ({
@@ -38,7 +40,9 @@ export const createCartographicCache = ({
 } = {}) => {
     let dataCache
     let metadataCache
+    let opening
     let initialization
+    let initialized = false
     let queue = Promise.resolve()
     let generation = 0
     let maxBytes = DEFAULT_TILE_CACHE_BYTES
@@ -81,6 +85,47 @@ export const createCartographicCache = ({
 
     /** Persist one small metadata record without rewriting a tile's binary payload. */
     const saveRecord = record => metadataCache.put(record.key, new Response(JSON.stringify(record)))
+
+    /** Add or replace an indexed record without double-counting a concurrent direct cache hit. */
+    const registerRecord = record => {
+        const previous = records.get(record.key)
+        const next = previous && previous.lastAccess > record.lastAccess
+            ? {...record, lastAccess: previous.lastAccess}
+            : record
+        records.set(record.key, next)
+        totalBytes += next.size - (previous?.size ?? 0)
+        accessSequence = Math.max(accessSequence, next.lastAccess)
+    }
+
+    /** Validate one metadata record before either hydration or a direct cold-start lookup. */
+    const isValidRecord = (record, key) => {
+        const resourcePrefix = `${origin}/__lgs_tile_cache__/resource/`
+        const validKey = typeof record?.key === 'string' && record.key.startsWith(resourcePrefix)
+            && /^[a-f0-9]{64}$/.test(record.key.slice(resourcePrefix.length))
+        const validPartition = record?.partition === 'public' || /^account-[a-f0-9]{64}$/.test(record?.partition ?? '')
+        return validKey && record.key === key && Number.isSafeInteger(record.size) && record.size >= 0
+            && Number.isFinite(record.lastAccess) && Number.isFinite(record.expiresAt)
+            && ['imagery', 'terrain', 'vector', 'tiles3d'].includes(record.kind)
+            && typeof record.provider === 'string' && Boolean(record.provider)
+            && validPartition && record.freshness
+            && Number.isFinite(record.freshness.deadline) && Array.isArray(record.freshness.vary)
+            && typeof record.ion === 'boolean'
+    }
+
+    /** Read an exact resource's small metadata record without hydrating the complete tile index. */
+    const readRecord = async key => {
+        const saved = await metadataCache.match(key)
+        if (!saved) return null
+        try {
+            const record = await saved.json()
+            if (!isValidRecord(record, key)) throw new Error('Invalid cache record')
+            return record
+        }
+        catch {
+            await metadataCache.delete(key)
+            return null
+        }
+    }
 
     /** Remove one resource and its accounting record together. */
     const remove = async record => {
@@ -135,10 +180,10 @@ export const createCartographicCache = ({
         await removeRecords(victims)
     }
 
-    /** Open owned caches and recover durable accounting after worker restarts. */
-    const initialize = () => {
-        if (initialization) return initialization
-        initialization = (async () => {
+    /** Open caches and read routing configuration without scanning the tile index. */
+    const openCaches = () => {
+        if (opening) return opening
+        opening = (async () => {
             dataCache = await storage.open(TILE_CACHE_NAME)
             metadataCache = await storage.open(TILE_CACHE_METADATA_NAME)
             const saved = await metadataCache.match(configurationKey)
@@ -151,6 +196,31 @@ export const createCartographicCache = ({
                 }
                 catch { /* Use defaults when a configuration record is corrupt. */ }
             }
+        })().catch(error => {
+            opening = null
+            dataCache = null
+            metadataCache = null
+            throw error
+        })
+        return opening
+    }
+
+    /** Let the network continue when a persistent cache operation stalls. */
+    const waitForTileCacheOperation = operation => {
+        let timeout
+        return Promise.race([
+            Promise.resolve(operation).then(value => ({ready: true, value}), () => ({ready: false})),
+            new Promise(resolve => {
+                timeout = setTimeout(() => resolve({ready: false}), CACHE_OPEN_WAIT_LIMIT_MS)
+            }),
+        ]).finally(() => clearTimeout(timeout))
+    }
+
+    /** Recover durable accounting and reconcile payloads after worker restarts. */
+    const initialize = () => {
+        if (initialization) return initialization
+        initialization = (async () => {
+            await openCaches()
             // Read small records in bounded batches instead of loading tile bodies.
             const keys = await metadataCache.keys()
             let offset = 0
@@ -159,22 +229,8 @@ export const createCartographicCache = ({
                     if (request.url === configurationKey) return
                     try {
                         const record = await (await metadataCache.match(request)).json()
-                        const resourcePrefix = `${origin}/__lgs_tile_cache__/resource/`
-                        const validKey = typeof record.key === 'string' && record.key.startsWith(resourcePrefix)
-                            && /^[a-f0-9]{64}$/.test(record.key.slice(resourcePrefix.length))
-                        const validPartition = record.partition === 'public' || /^account-[a-f0-9]{64}$/.test(record.partition)
-                        if (!validKey || record.key !== request.url || !Number.isSafeInteger(record.size) || record.size < 0
-                            || !Number.isFinite(record.lastAccess) || !Number.isFinite(record.expiresAt)
-                            || !['imagery', 'terrain', 'vector', 'tiles3d'].includes(record.kind)
-                            || typeof record.provider !== 'string' || !record.provider
-                            || !validPartition || !record.freshness
-                            || !Number.isFinite(record.freshness.deadline) || !Array.isArray(record.freshness.vary)
-                            || typeof record.ion !== 'boolean') {
-                            throw new Error('Invalid cache record')
-                        }
-                        records.set(record.key, record)
-                        totalBytes += record.size
-                        accessSequence = Math.max(accessSequence, record.lastAccess)
+                        if (!isValidRecord(record, request.url)) throw new Error('Invalid cache record')
+                        registerRecord(record)
                     }
                     catch { await metadataCache.delete(request) }
                 }))
@@ -195,9 +251,11 @@ export const createCartographicCache = ({
             await resolveBudget()
             await trim()
             available = true
+            initialized = true
         })().catch(error => {
             available = false
             initialization = null
+            initialized = false
             records.clear()
             totalBytes = 0
             throw error
@@ -236,9 +294,9 @@ export const createCartographicCache = ({
         return {usage: usage(), entries: records.size, maxBytes, effectiveMaxBytes, available}
     }
 
-    /** Save a new budget and routing rules, trimming immediately after a reduction. */
+    /** Persist routing immediately and trim a reduced budget when accounting is ready. */
     const configure = async configuration => {
-        await initialize()
+        await openCaches()
         return serialize(async () => {
             const value = Number(configuration.maxBytes)
             maxBytes = Number.isSafeInteger(value) && value > 0 && value <= 2 * 1024 ** 3 ? value : DEFAULT_TILE_CACHE_BYTES
@@ -246,8 +304,10 @@ export const createCartographicCache = ({
             disabled = false
             pressureLimit = Infinity
             await metadataCache.put(configurationKey, new Response(JSON.stringify({maxBytes, rules})))
-            await resolveBudget(true)
-            await trim()
+            if (initialized) {
+                await resolveBudget(true)
+                await trim()
+            }
             return {usage: usage(), entries: records.size, maxBytes, effectiveMaxBytes, available}
         })
     }
@@ -294,35 +354,36 @@ export const createCartographicCache = ({
     }
 
     /** Read or download a permitted resource without waiting for metadata writes. */
-    const load = async (request, classification, key, partition, startedGeneration, keepAlive) => {
+    const load = async (request, classification, key, partition, startedGeneration, keepAlive, knownMiss = false) => {
         let stale
-        try {
-            const hit = await serialize(async () => {
-                if (clearing || generation !== startedGeneration) return null
+        if (!knownMiss) {
+            try {
                 const record = records.get(key)
-                if (!record) return null
-                const response = await dataCache.match(key)
-                if (!response) {
-                    await remove(record)
-                    return null
+                if (record && !clearing && generation === startedGeneration) {
+                    const response = await dataCache.match(key)
+                    if (!clearing && generation === startedGeneration && records.get(key) === record) {
+                        if (!response || record.expiresAt <= now()) {
+                            void trackBackground(serialize(async () => {
+                                if (!clearing && generation === startedGeneration && records.get(key) === record) {
+                                    await remove(record)
+                                }
+                            }).catch(() => { available = false }), keepAlive)
+                        }
+                        if (response && record.expiresAt > now() && !['reload', 'no-cache'].includes(request.cache)) {
+                            record.lastAccess = nextAccess()
+                            const touch = trackBackground(serialize(async () => {
+                                if (!clearing && generation === startedGeneration && records.get(key) === record) {
+                                    await saveRecord(record)
+                                }
+                            }).catch(() => { available = false }), keepAlive)
+                            return {response, completion: touch}
+                        }
+                        stale = response
+                    }
                 }
-                if (record.expiresAt <= now() || ['reload', 'no-cache'].includes(request.cache)) {
-                    stale = response
-                    if (record.expiresAt <= now()) await remove(record)
-                    return null
-                }
-                record.lastAccess = nextAccess()
-                return {response, record: {...record}}
-            })
-            if (hit) {
-                const touch = trackBackground(
-                    serialize(() => saveRecord(hit.record)).catch(() => { available = false }),
-                    keepAlive,
-                )
-                return {response: hit.response, completion: touch}
             }
+            catch { available = false }
         }
-        catch { available = false }
 
         let networkRequest = request
         if (stale?.headers.get('etag')) {
@@ -356,6 +417,7 @@ export const createCartographicCache = ({
 
         const write = (async () => {
             const size = (await response.clone().blob()).size
+            await initialize()
             await serialize(async () => {
                 if (clearing || generation !== startedGeneration) return
                 await resolveBudget()
@@ -415,7 +477,10 @@ export const createCartographicCache = ({
         if (clearing || disabled) {
             return classifyTileRequest(request, rules, origin) ? network(request) : fallback()
         }
-        try { await initialize() }
+        try {
+            const cacheOpen = await waitForTileCacheOperation(openCaches())
+            if (!cacheOpen.ready) return fallback()
+        }
         catch { return fallback() }
         if (clearing || disabled || generation !== startedGeneration) return fallback()
         const classification = classifyTileRequest(request, rules, origin)
@@ -428,9 +493,49 @@ export const createCartographicCache = ({
             key = await resourceKey(request, partition)
         }
         catch { return fallback() }
+
+        let knownMiss = false
+        if (!initialized) {
+            const recovery = initialize()
+            keepAlive(recovery)
+            try {
+                const lookup = await waitForTileCacheOperation((async () => {
+                    const record = await readRecord(key)
+                    return {record, response: record ? await dataCache.match(key) : null}
+                })())
+                if (clearing || disabled || generation !== startedGeneration) return fallback()
+                if (!lookup.ready) {
+                    knownMiss = true
+                }
+                else {
+                    const {record, response} = lookup.value
+                    if (!record) knownMiss = true
+                    else if (!response) {
+                        await metadataCache.delete(key)
+                        knownMiss = true
+                    }
+                    else {
+                        registerRecord(record)
+                        if (record.expiresAt > now() && !['reload', 'no-cache'].includes(request.cache)) {
+                            const touched = {...record, lastAccess: nextAccess()}
+                            registerRecord(touched)
+                            void trackBackground(
+                                serialize(() => saveRecord(touched)).catch(() => { available = false }),
+                                keepAlive,
+                            )
+                            return response.clone()
+                        }
+                    }
+                }
+            }
+            catch {
+                available = false
+                knownMiss = true
+            }
+        }
         const pendingKey = `${startedGeneration}:${key}`
         if (!pending.has(pendingKey)) {
-            const task = load(request, classification, key, partition, startedGeneration, keepAlive)
+            const task = load(request, classification, key, partition, startedGeneration, keepAlive, knownMiss)
             pending.set(pendingKey, task)
             task.then(({completion}) => Promise.resolve(completion).finally(() => pending.delete(pendingKey)), () => pending.delete(pendingKey))
                 .catch(() => {})

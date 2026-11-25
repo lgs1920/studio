@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -184,6 +184,81 @@ describe('cartographic routing and freshness', () => {
 })
 
 describe('persistent cartographic payload cache', () => {
+    it('returns a cold tile miss while the complete cache index is being restored', async () => {
+        const {engine, storage} = fixture()
+        await engine.status()
+        const metadataCache = storage.caches.get(TILE_CACHE_METADATA_NAME)
+        const scan = deferred()
+        const scanStarted = deferred()
+        metadataCache.keys.mockClear()
+        metadataCache.keys.mockImplementation(() => {
+            scanStarted.resolve()
+            return scan.promise
+        })
+        const network = vi.fn(async () => tileResponse())
+        const restarted = fixture({storage, network})
+
+        const loading = restarted.engine.handle(terrain())
+        await scanStarted.promise
+        expect(await (await loading).text()).toBe('tile')
+        expect(network).toHaveBeenCalledOnce()
+
+        scan.resolve([])
+        await restarted.engine.status()
+        expect(await restarted.engine.status()).toMatchObject({usage: 4, entries: 1})
+    })
+
+    it('applies startup provider rules without waiting for the saved tile index', async () => {
+        const {engine, storage} = fixture()
+        await engine.handle(terrain('existing'))
+        await engine.status()
+
+        const metadataCache = storage.caches.get(TILE_CACHE_METADATA_NAME)
+        const scan = deferred()
+        const scanStarted = deferred()
+        metadataCache.keys.mockClear()
+        metadataCache.keys.mockImplementation(() => {
+            scanStarted.resolve()
+            return scan.promise
+        })
+        const network = vi.fn(async () => tileResponse())
+        const restarted = fixture({storage, network})
+        const rules = buildTileCacheRules([{id: 'imagery', layers: [{tile: 'slippy', url: 'https://tiles.example/'}]}])
+
+        await restarted.engine.configure({rules})
+        expect(metadataCache.keys).not.toHaveBeenCalled()
+
+        const loading = restarted.engine.handle(new Request('https://tiles.example/1/2/3.png'))
+        await scanStarted.promise
+        expect(await (await loading).text()).toBe('tile')
+        expect(network).toHaveBeenCalledOnce()
+
+        scan.resolve([...metadataCache.entries.keys()].map(url => new Request(url)))
+        await restarted.engine.status()
+    })
+
+    it('serves a fresh cached tile while the complete cache index is being restored', async () => {
+        const {engine, storage, network} = fixture()
+        await engine.handle(terrain())
+        await engine.status()
+        const metadataCache = storage.caches.get(TILE_CACHE_METADATA_NAME)
+        const scan = deferred()
+        const scanStarted = deferred()
+        metadataCache.keys.mockImplementation(() => {
+            scanStarted.resolve()
+            return scan.promise
+        })
+        const restarted = fixture({storage, network})
+
+        const loading = restarted.engine.handle(terrain())
+        await scanStarted.promise
+        expect(await (await loading).text()).toBe('tile')
+        expect(network).toHaveBeenCalledOnce()
+
+        scan.resolve([...metadataCache.entries.keys()].map(url => new Request(url)))
+        await restarted.engine.status()
+    })
+
     it('reuses a fresh response, counts bytes, and restores usage after worker restart', async () => {
         const {engine, storage, network} = fixture()
         expect(await (await engine.handle(terrain())).text()).toBe('tile')
@@ -353,6 +428,34 @@ describe('persistent cartographic payload cache', () => {
         write.resolve()
         await Promise.all(retained)
         expect((await engine.status()).usage).toBe(4)
+    })
+
+    it('serves other cached and uncached tiles while a tile write is blocked', async () => {
+        const {engine, storage, network} = fixture()
+        const cached = terrain('cached')
+        await engine.handle(cached)
+        await engine.status()
+
+        const started = deferred()
+        const write = deferred()
+        storage.caches.get(TILE_CACHE_NAME).put.mockImplementationOnce(async () => {
+            started.resolve()
+            await write.promise
+        })
+        await engine.handle(terrain('blocked-write'))
+        await started.promise
+        try {
+            const responses = await Promise.all([
+                engine.handle(cached),
+                engine.handle(terrain('uncached')),
+            ])
+            expect(await Promise.all(responses.map(response => response.text()))).toEqual(['tile', 'tile'])
+            expect(network).toHaveBeenCalledTimes(3)
+        }
+        finally {
+            write.resolve()
+            await engine.status()
+        }
     })
 
     it('revalidates an expired response and applies a 304 freshness update', async () => {

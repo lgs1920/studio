@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-13
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -215,16 +215,61 @@ self.addEventListener('fetch', event => {
 
     if (event.request.method === 'GET' && url.protocol.startsWith('http')) {
         const backgroundWrites = new Set()
-        const response = cartographicCache.handle(
-            event.request,
-            () => handleAppFetch(event),
-            promise => backgroundWrites.add(promise),
-        )
+        const sameOriginProxy = isSameOriginCartographicProxyRequest(url)
+        const response = (isSameOriginRequest(url) && !sameOriginProxy
+            || isApplicationShellRequest(event.request, url)
+            || isBackendStartupRequest(url)
+            || !sameOriginProxy && !isCartographicCacheCandidateRequest(event.request, url)
+            ? handleAppFetch(event)
+            : cartographicCache.handle(
+                event.request,
+                () => sameOriginProxy ? fetch(event.request) : handleAppFetch(event),
+                promise => backgroundWrites.add(promise),
+            ))
             .catch(() => new Response('Offline', {status: 503, statusText: 'Offline'}))
         event.respondWith(response)
         event.waitUntil(response.then(() => Promise.allSettled([...backgroundWrites].map(promise => Promise.resolve(promise)))))
     }
 })
+
+/** Keep local application assets out of the cartographic cache lifecycle. */
+const isSameOriginRequest = url => url.origin === self.location.origin
+
+/** Identify Studio's same-origin proxy so cartographic policy can classify its target. */
+const isSameOriginCartographicProxyRequest = url => isSameOriginRequest(url)
+    && url.pathname.endsWith('/proxy.php')
+    && url.searchParams.has('csurl')
+
+/** Route the Studio shell and its configuration independently of the tile index. */
+const isApplicationShellRequest = (request, url) => url.origin === self.location.origin
+    && (isNavigationRequest(request)
+        || isFreshnessCriticalRequest(request)
+        || isUnversionedScriptOrStyleRequest(request)
+        || ['script', 'style', 'worker'].includes(request.destination)
+        || url.pathname.endsWith('.yaml'))
+
+/** Let startup backend checks reach the network without waiting for the tile cache index. */
+const isBackendStartupRequest = url => ['/ping', '/versions'].includes(url.pathname)
+
+/** Limit cartographic cache startup to URLs that can represent map content. */
+const isCartographicCacheCandidateRequest = (request, url) => {
+    if (request.method !== 'GET' || request.headers.has('range') || request.cache === 'no-store'
+        || isSameOriginRequest(url)
+        || /(?:^|\.)(?:googleapis\.(?:com|cn)|google\.(?:com|cn)|googleusercontent\.com|gstatic\.(?:com|cn))$/i.test(url.hostname)) {
+        return false
+    }
+
+    if (/\.(?:terrain|bin|png|jpe?g|webp|avif|pbf|mvt|json|subtree|glb|gltf|b3dm|i3dm|pnts|cmpt|vctr|geom|ktx2)$/i.test(url.pathname)) {
+        return true
+    }
+
+    const operation = url.searchParams.get('request')?.toLowerCase()
+    if (operation === 'gettile' || operation === 'getmap') {
+        return true
+    }
+
+    return /(?:^|\/)\d+\/\d+\/\d+\/?$/.test(url.pathname)
+}
 
 /**
  * Handles standard application resource caching.
@@ -237,8 +282,15 @@ async function handleAppFetch(event) {
         return networkFirst(event, {cacheMode: 'reload'})
     }
 
-    if (isFreshnessCriticalRequest(request) || isUnversionedScriptOrStyleRequest(request)) {
+    if (isFreshnessCriticalRequest(request)) {
         return networkFirst(event, {cacheMode: 'reload'})
+    }
+
+    if (isUnversionedScriptOrStyleRequest(request)) {
+        const url = new URL(request.url)
+        // Vite fingerprints optimized dependencies, while transformed source modules require revalidation.
+        const optimizedDependency = url.pathname.startsWith('/node_modules/.vite/deps/') && url.searchParams.has('v')
+        return networkFirst(event, {cacheMode: optimizedDependency ? 'default' : 'no-cache'})
     }
 
     if (!shouldCacheRequest(request)) {
@@ -347,7 +399,6 @@ function withCacheMode(request, cacheMode) {
 
 async function networkFirst(event, options = {}) {
     const {request} = event
-    const cache = await openAppCache()
 
     try {
         const networkResp = await fetch(withCacheMode(request, options.cacheMode))
@@ -358,11 +409,13 @@ async function networkFirst(event, options = {}) {
             })
         }
         if (isCacheableResponse(request, networkResp)) {
-            event.waitUntil(cache.put(request, networkResp.clone()).catch(() => null))
+            const cachedResponse = networkResp.clone()
+            event.waitUntil(openAppCache().then(cache => cache.put(request, cachedResponse)).catch(() => null))
         }
         return networkResp
     }
     catch {
+        const cache = await openAppCache()
         const cached = await cache.match(request)
         if (cached) {
             return cached
