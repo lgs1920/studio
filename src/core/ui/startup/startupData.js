@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-11-24
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -213,20 +213,20 @@ export const streamStartupGeometry = async (content, emit, options = {}) => {
 }
 
 export const streamStartupJourney = async (value, emit, options = {}) => {
-    const journey = decodeStartupJourney(value)
+    const journey = options.alreadyDecoded === true ? value : decodeStartupJourney(value)
     const entries = trackEntries(journey, options.preferredTrackKey)
     const tracks = {...journey, tracks: undefined}
     delete tracks.tracks
 
     await emit({
         data:      tracks,
-        spatial:   journeySpatialSummary(journey),
+        spatial:   options.includeSpatial === false ? null : journeySpatialSummary(journey),
         trackKeys: entries.map(([key]) => key),
         type:      'journey',
     })
     for (let index = 0; index < entries.length; index++) {
         const [key, rawTrack] = entries[index]
-        const track = decodeStartupJourney(rawTrack)
+        const track = options.alreadyDecoded === true ? rawTrack : decodeStartupJourney(rawTrack)
         const content = track?.content
         const trackWithoutContent = {...track}
         delete trackWithoutContent.content

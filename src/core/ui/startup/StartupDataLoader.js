@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-11-24
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -345,6 +345,7 @@ export class StartupDataLoader {
             excluded:    [...(__.ui.poiManager.list?.keys?.() ?? [])],
             globalParent: GLOBAL_PARENT,
             includeStarter: false,
+            includeSpatial: Boolean(onSpatialReady || onFirstTrackReady),
             loadPOIs,
             primary:     current,
             starterType: POI_STARTER_TYPE,

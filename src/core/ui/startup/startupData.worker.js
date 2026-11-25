@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-11-24
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -169,9 +169,11 @@ self.onmessage = async event => {
                     })
                 }
 
-                const decoded = (message.primary || message.loadPOIs) ? decodeStartupJourney(value) : null
-                await streamStartupJourney(value, emitForRequest, {
+                const decoded = decodeStartupJourney(value)
+                await streamStartupJourney(decoded, emitForRequest, {
                     ...message,
+                    alreadyDecoded: true,
+                    includeSpatial: message.includeSpatial === true,
                     onTrackEnd: async ({firstTrack}) => {
                         if (firstTrack) {
                             await emitJourneyPOIs(decoded)
