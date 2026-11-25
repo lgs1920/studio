@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-01
- * Last modified: 2026-11-06
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import {POIUtils} from '@Utils/cesium/POIUtils'
 import {registerPOITerrainCapture} from '@Core/ui/POITerrainCapture'
 import {isPOIAnchorOccludedByTerrain} from '@Core/ui/replay/ReplayPOITerrainVisibility'
 import {JulianDate} from 'cesium'
+import {subscribeKey} from 'valtio/utils'
 
 /** Resolve a constant or time-varying Cesium visibility property. */
 const getVisibilityValue = (property, time) => typeof property?.getValue === 'function'
@@ -62,14 +63,18 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
     const entitySubscriptions = new Map()
     const entitiesBeingUpdated = new Set()
     let checkAllRequested = true
+    let deferredCameraCheck = false
     let disposed = false
     let visibilityRevision = 0
+
+    /** Check whether the map orbit currently owns camera movement. */
+    const isMapOrbiting = () => globalThis.lgs?.stores?.ui?.mainUI?.rotate?.running === true
 
     /** Resolve visibility from Replay's runtime entity state or the persisted map state. */
     const isPOIEffectivelyVisible = (poi, entity) => entity?.show === true
         && (isReplayActive?.() || poi?.visible !== false)
 
-    /** Request an individual focus check or a full pass after scene changes. */
+    /** Keep targeted POI checks live while deferring global checks during map orbit. */
     const requestCheck = poiId => {
         if (disposed) {
             return
@@ -78,6 +83,10 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
             if (!checkAllRequested) {
                 requestedPOIIds.add(poiId)
             }
+        }
+        else if (isMapOrbiting()) {
+            deferredCameraCheck = true
+            return
         }
         else {
             checkAllRequested = true
@@ -216,9 +225,13 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
         }
     }
 
-    /** Recompute focus visibility once after a camera, terrain, or POI update. */
-    const updateOcclusion = () => {
+    /** Recompute focus visibility, deferring complete terrain scans during map orbit. */
+    const updateOcclusion = ({force = false} = {}) => {
         if (disposed || (!checkAllRequested && requestedPOIIds.size === 0)) {
+            return
+        }
+        if (!force && isMapOrbiting() && checkAllRequested) {
+            deferredCameraCheck = true
             return
         }
         if (scene.globe?.show === false) {
@@ -232,6 +245,9 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
             : Array.from(requestedPOIIds)
         checkAllRequested = false
         requestedPOIIds.clear()
+        if (force) {
+            deferredCameraCheck = false
+        }
         const time = JulianDate.now()
         let changed = false
         for (const poiId of candidatePOIIds) {
@@ -282,15 +298,29 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
         }
     }
 
+    const rotateStore = globalThis.lgs?.stores?.ui?.mainUI?.rotate
+    const removeOrbitSubscription = rotateStore
+        ? subscribeKey(rotateStore, 'running', running => {
+            if (running || (!deferredCameraCheck && !checkAllRequested)) {
+                return
+            }
+
+            deferredCameraCheck = false
+            checkAllRequested = true
+            requestedPOIIds.clear()
+            POIUtils.requestRender(scene)
+        }, true)
+        : null
+
     // Capture must update entities before Viewer.render runs its visualizers, without camera-event throttling.
     const removeCapturePreparation = registerPOITerrainCapture(scene, () => {
         checkAllRequested = true
-        updateOcclusion()
+        updateOcclusion({force: true})
         enforceOcclusionMasks()
         return visibilityRevision
     })
     const removePreRenderListener = scene?.preRender?.addEventListener(enforceOcclusionMasks)
-    const removePostRenderListener = scene?.postRender?.addEventListener(updateOcclusion)
+    const removePostRenderListener = scene?.postRender?.addEventListener(() => updateOcclusion())
     // Cesium events provide change metadata; discard it so every event requests a full visibility pass.
     const removeCameraListener = camera?.changed?.addEventListener(() => requestCheck())
     const removeTerrainProviderListener = scene?.globe?.terrainProviderChanged?.addEventListener(() => requestCheck())
@@ -316,6 +346,7 @@ export const createPOITerrainOcclusionController = ({scene, poiList, isReplayAct
             removeCameraListener?.()
             removeTerrainProviderListener?.()
             removeTerrainListener?.()
+            removeOrbitSubscription?.()
             const changed = restoreOccludedPOIs()
             entitySubscriptions.forEach(subscriptions => {
                 subscriptions.forEach(remove => remove?.())
