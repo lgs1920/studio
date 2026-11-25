@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-16
- * Last modified: 2026-09-30
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -234,8 +234,9 @@ export const MapLayer = (props) => {
 
     const isBase = props.type === BASE_ENTITY
     const isLayerType = [BASE_ENTITY, OVERLAY_ENTITY].includes(props.type)
-    const isBase3DActive = Boolean(layers.base3d)
     const manager = __.layersAndTerrainManager
+    const base3DLayer = layers.base3d ? manager.getEntityProxy(layers.base3d) : null
+    const canShowBaseImagery = base3DLayer?.base3d?.showGlobe !== false
     const snapLayer = isBase ? layers.base : layers.overlay
     const theLayer = isLayerType && snapLayer ? manager.getEntityProxy(snapLayer) : null
     const layerId = theLayer?.id
@@ -262,7 +263,7 @@ export const MapLayer = (props) => {
     const minLevel = readLevelOption(layerMinimumLevel)
     const maxLevel = readLevelOption(layerMaximumLevel)
     const imageryProvider = useMemo(() => {
-        if (!isLayerType || !layerType || !layerTile || (isBase && isBase3DActive)) {
+        if (!isLayerType || !layerType || !layerTile || (isBase && !canShowBaseImagery)) {
             return null
         }
 
@@ -390,7 +391,7 @@ export const MapLayer = (props) => {
     }, [
         isLayerType,
         isBase,
-        isBase3DActive,
+        canShowBaseImagery,
         props.type,
         layerType,
         layerTile,
@@ -417,7 +418,7 @@ export const MapLayer = (props) => {
     ])
 
     const ionImageryProvider = useMemo(() => {
-        if (!theLayer || layerTile || !theLayer?.ionAssetId || (isBase && isBase3DActive)) {
+        if (!theLayer || layerTile || !theLayer?.ionAssetId || (isBase && !canShowBaseImagery)) {
             return null
         }
 
@@ -426,7 +427,7 @@ export const MapLayer = (props) => {
         }
 
         return IonLayerUtils.imageryProviderFromLayer(theLayer)
-    }, [ion.source, isBase, isBase3DActive, layerTile, theLayer])
+    }, [canShowBaseImagery, ion.source, isBase, layerTile, theLayer])
 
     const shouldDrapeOnBase3D = !isBase && layers.base3d && lgs.base3dTileset?.imageryLayers
     const targetCollectionKey = shouldDrapeOnBase3D ? 'base3d' : 'globe'
