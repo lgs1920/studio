@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-29
- * Last modified: 2026-11-24
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -652,6 +652,40 @@ describe('Replay camera CamBall', () => {
         expect(replay.camera.pitch).toBeGreaterThan(-40)
         expect(view.container.querySelector('.action-top')).not.toBeNull()
         pointer(pad, 'pointerup', 90, 40)
+    })
+
+    it.each([
+        {from: 'pitch', first: [50, 70], next: [60, 70], to: 'zoom'},
+        {from: 'zoom', first: [70, 50], next: [70, 60], to: 'pitch'},
+    ])('switches a held $from drag to $to without retaining the previous axis', async ({from, first, next}) => {
+        const {frame, replay} = install()
+        const view = render(<ReplayCameraCamBall/>)
+        const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
+        pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
+
+        pointer(pad, 'pointerdown', 50, 50)
+        pointer(pad, 'pointermove', ...first)
+        await frame(0)
+        await frame(40)
+        const beforeSwitch = {...replay.camera}
+
+        pointer(pad, 'pointermove', ...next)
+        await frame(80)
+
+        if (from === 'pitch') {
+            expect(replay.camera.pitch).toBe(beforeSwitch.pitch)
+            expect(replay.camera.altitude).toBeLessThan(beforeSwitch.altitude)
+            expect(pad.querySelector('.action-right')).not.toBeNull()
+            expect(pad.querySelector('.action-top, .action-bottom')).toBeNull()
+        }
+        else {
+            expect(replay.camera.altitude).toBe(beforeSwitch.altitude)
+            expect(replay.camera.pitch).toBeLessThan(beforeSwitch.pitch)
+            expect(pad.querySelector('.action-top, .action-bottom')).not.toBeNull()
+            expect(pad.querySelector('.action-left, .action-right')).toBeNull()
+        }
+
+        pointer(pad, 'pointerup', ...next)
     })
 
     it('switches from zoom to pitch at 45 degrees, consumes pointer input, and stops on release', async () => {

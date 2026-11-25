@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-29
- * Last modified: 2026-11-24
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -601,6 +601,9 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
                 gesture.originClientY = gesture.lastClientY
                 gesture.originStickX = 0
                 gesture.originStickY = 0
+                // Rebase the current sample too, so the previous axis stops contributing immediately.
+                deltaClientX = event.clientX - gesture.originClientX
+                deltaClientY = event.clientY - gesture.originClientY
             }
             if (gesture.axis) {
                 gesture.originClientX = event.clientX
