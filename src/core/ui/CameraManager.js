@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-08
- * Last modified: 2026-11-24
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -113,6 +113,7 @@ export class CameraManager {
     continuousReleases: [],
   };
   #panoramicCancel = null;
+  #orbitResolution = null
   activeOrbitRetarget = null;
 
   constructor(settings) {
@@ -349,11 +350,13 @@ export class CameraManager {
     return data;
   };
 
-  /**
-   * This is the normal mode, ie the user can drag the map as he wants to.
-   *
-   */
+  /** Resume normal camera persistence when no animation or Replay owns the camera. */
   enableMapDragging = () => {
+    const camera = lgs.camera ?? lgs.viewer?.camera
+    if (this.isRotating() || this.isFlying() || isCameraOwnedByReplay(camera)) {
+      return
+    }
+
     if (this.move.type === CameraManager.NORMAL && this.move.stopWatching) {
       return;
     }
@@ -488,6 +491,38 @@ export class CameraManager {
     }
     this.renderQuality.scene = null;
   };
+
+  /** Lower the main viewer resolution for the duration of a map orbit. */
+  lowerOrbitResolution = () => {
+    const viewer = lgs.viewer
+    const scene = lgs.scene ?? viewer?.scene
+    const resolutionScale = Number(viewer?.resolutionScale)
+    if (!viewer || !scene || !Number.isFinite(resolutionScale) || resolutionScale <= 1) {
+      return false
+    }
+
+    this.#orbitResolution = {viewer, scene, resolutionScale}
+    viewer.resolutionScale = 1
+    requestSceneRender(scene)
+    return true
+  }
+
+  /** Restore the viewer resolution captured before the active map orbit. */
+  restoreOrbitResolution = () => {
+    const orbitResolution = this.#orbitResolution
+    this.#orbitResolution = null
+    const activeScene = lgs.scene ?? orbitResolution?.viewer?.scene
+    if (!orbitResolution || orbitResolution.viewer !== lgs.viewer
+      || orbitResolution.scene !== activeScene
+      || orbitResolution.viewer.isDestroyed?.()
+      || orbitResolution.scene.isDestroyed?.()) {
+      return false
+    }
+
+    orbitResolution.viewer.resolutionScale = orbitResolution.resolutionScale
+    requestSceneRender(orbitResolution.scene)
+    return true
+  }
 
   /**
    * Get the data of the camera instance
@@ -627,11 +662,12 @@ export class CameraManager {
       this.lookAt(point);
       requestSceneRender(lgs.scene);
     }
-    // Setting spinner speed
+    // Set the initial spinner speed and keep writes out of the animation hot path.
+    let lastAppliedEffectiveRpm = $rotate.rpm * Math.abs($rotate.direction)
     __.ui.css.setCSSVariable(
       "--map-rotation-speed",
-      `${60 / Math.max($rotate.rpm * Math.abs($rotate.direction), 0.2)}s`
-    );
+      `${60 / Math.max(lastAppliedEffectiveRpm, 0.2)}s`
+    )
 
     let totalRotation = 0;
     const totalTurns = rotations * 2 * Math.PI;
@@ -727,8 +763,10 @@ export class CameraManager {
 
     let lastFrameTime = null;
 
+    /** Advance the orbit and release its temporary resolution after an external stop. */
     const rotateCamera = () => {
       if (!this.isRotating()) {
+        this.restoreOrbitResolution()
         return;
       }
 
@@ -766,10 +804,13 @@ export class CameraManager {
               applyOrbitHeightOffset();
             }
             totalRotation += Math.abs(angleRotation);
-            __.ui.css.setCSSVariable(
-              "--map-rotation-speed",
-              `${60 / Math.max(effectiveRpm, 0.2)}s`
-            );
+            if (effectiveRpm !== lastAppliedEffectiveRpm) {
+              __.ui.css.setCSSVariable(
+                "--map-rotation-speed",
+                `${60 / Math.max(effectiveRpm, 0.2)}s`
+              )
+              lastAppliedEffectiveRpm = effectiveRpm
+            }
           } else if (heightAdjusting || heightOffsetChanged) {
             applyOrbitHeightOffset();
           }
@@ -787,6 +828,7 @@ export class CameraManager {
     };
 
     try {
+      this.lowerOrbitResolution()
       this.optimizeContinuousCameraRender();
       this.move = {
         type: CameraManager.ROTATE,
@@ -798,6 +840,11 @@ export class CameraManager {
         this.restoreContinuousCameraRender();
       } catch (cleanupError) {
         console.error("[LGS1920][Camera] Failed to release an interrupted orbit.", cleanupError);
+      }
+      try {
+        this.restoreOrbitResolution()
+      } catch (cleanupError) {
+        console.error("[LGS1920][Camera] Failed to restore the map resolution after an interrupted orbit.", cleanupError)
       }
       throw error;
     }
@@ -817,7 +864,11 @@ export class CameraManager {
       this.stopWatching();
       this.unlock();
       __.ui.sceneManager.stopRotate;
-      this.restoreContinuousCameraRender();
+      try {
+        this.restoreContinuousCameraRender()
+      } finally {
+        this.restoreOrbitResolution()
+      }
       await this.updatePositionInformation(
         target
           ? {

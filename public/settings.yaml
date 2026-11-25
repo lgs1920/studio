@@ -68,7 +68,7 @@ starter:
     #    latitude: 45.34623
     #    height: 4300
     canRotate: true
-    rpm: 4  # rotation per minute
+    rpm: 3  # rotation per minute
 
 ########################################
 # Initial Camera Settings
@@ -78,14 +78,13 @@ camera:
   pitch: -30
   roll: 0.0
   range: 2000
-  fps: 30
   orbitalPercentageChanged: 0.05
   percentageChanged: 0.05
   maximumHeight: 9000
   pitchAdjustHeight: 5000
   flyingTime: 3   # seconds
   transferDistanceThresholdKm: 50  # Distance threshold for camera transfer presets
-  rpm: 4          # rotation per minute
+  rpm: 3          # rotation per minute
   rotations: 1    # total rotation
 
 ########################################
@@ -480,7 +479,7 @@ ui:
     distanceThreshold: 10000             # min distance to see POI with 100% size
     focusOnEdit: true                   # Apply focus when editing a POI
     rotate: true                        # Rotation after POI focus
-    rpm: 4
+    rpm: 3
 
   ## Geocoder
   geocoder:

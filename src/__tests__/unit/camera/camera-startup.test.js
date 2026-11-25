@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-01
- * Last modified: 2026-09-13
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,12 +50,14 @@ const journey = {
 
 const context = theJourney => ({theJourney})
 
-const sceneManager = value => ({
+const sceneManager = (value, {is2D = false} = {}) => ({
+    is2D,
     getJourneyCentroid: vi.fn(async () => value),
 })
 
-const cameraManager = ({focusMode, savedCamera = null}) => ({
+const cameraManager = ({focusMode, journeyFocus = FOCUS_CENTROID, savedCamera = null}) => ({
     isAppFocusOn:          vi.fn(mode => mode === focusMode),
+    isJourneyFocusOn:      vi.fn(mode => mode === journeyFocus),
     readCameraInformation: vi.fn(async () => savedCamera),
 })
 
@@ -116,6 +118,10 @@ describe('startup camera positioning', () => {
         it('falls back to stored range when the stored target cannot produce a range', () => {
             expect(cameraRangeFromStoredPosition(validSavedPosition, {}, fixedDistance(4321))).toBeNull()
             expect(cameraPositionWithDefaults(validSavedPosition, {}, cameraSettings).range).toBe(validSavedPosition.range)
+        })
+
+        it.each([0, -1])('rejects a non-positive saved range (%s)', range => {
+            expect(cameraPositionWithDefaults({range}, {}, cameraSettings).range).toBe(cameraSettings.range)
         })
     })
 
@@ -235,6 +241,47 @@ describe('startup camera positioning', () => {
             expect(result.cameraStore.target).toMatchObject(centroid)
         })
 
+        it.each([FOCUS_STARTER, FOCUS_CENTROID])('uses the saved journey camera when journey focus is last from app mode %s', async focusMode => {
+            const journeyCamera = {...journey, camera: {position: validSavedPosition, target: validSavedTarget}}
+            const result = await configureStartupCamera({
+                                                            context:       context(journeyCamera),
+                                                            starter,
+                                                            cameraManager: cameraManager({focusMode, journeyFocus: FOCUS_LAST}),
+                                                            sceneManager:  sceneManager(centroid),
+                                                            cameraSettings,
+                                                        })
+
+            expect(result.focusTarget).toBe(journeyCamera)
+            expect(result.cameraStore.restoreCameraPosition).toBe(true)
+            expect(result.cameraStore.target).toMatchObject(validSavedTarget)
+            expect(result.cameraStore.position).toMatchObject(validSavedPosition)
+        })
+
+        it('uses the global last camera before a journey camera when app focus is last', async () => {
+            const journeyCamera = {
+                ...journey,
+                camera: {
+                    position: {...validSavedPosition, height: 5000},
+                    target:   {longitude: 8, latitude: 47, height: 2000},
+                },
+            }
+            const globalCamera = {position: validSavedPosition, target: validSavedTarget}
+            const result = await configureStartupCamera({
+                                                            context:       context(journeyCamera),
+                                                            starter,
+                                                            cameraManager: cameraManager({
+                                                                                             focusMode:   FOCUS_LAST,
+                                                                                             journeyFocus: FOCUS_LAST,
+                                                                                             savedCamera: globalCamera,
+                                                                                         }),
+                                                            sceneManager:  sceneManager(centroid),
+                                                            cameraSettings,
+                                                        })
+
+            expect(result.cameraStore.target).toEqual(validSavedTarget)
+            expect(result.cameraStore.position.height).toBe(validSavedPosition.height)
+        })
+
         it('falls back to starter when app focus is centroid but no journey centroid exists', async () => {
             const result = await configureStartupCamera({
                                                             context:       context({slug: 'empty', tracks: new Map()}),
@@ -269,6 +316,36 @@ describe('startup camera positioning', () => {
                                                             })
         })
 
+        it('restores the saved camera when starter focus has no journey and a valid pose exists', async () => {
+            const savedCamera = {position: validSavedPosition, target: validSavedTarget}
+            const result = await configureStartupCamera({
+                                                            context:       context(null),
+                                                            starter,
+                                                            cameraManager: cameraManager({focusMode: FOCUS_STARTER, savedCamera}),
+                                                            sceneManager:  sceneManager(centroid),
+                                                            cameraSettings,
+                                                        })
+
+            expect(result.focusTarget).toEqual(validSavedTarget)
+            expect(result.cameraStore.restoreCameraPosition).toBe(true)
+            expect(result.cameraStore.position.height).toBe(validSavedPosition.height)
+        })
+
+        it('falls back safely when reading the last camera fails', async () => {
+            const manager = cameraManager({focusMode: FOCUS_LAST})
+            manager.readCameraInformation.mockRejectedValue(new Error('storage unavailable'))
+            const result = await configureStartupCamera({
+                                                            context:       context(null),
+                                                            starter,
+                                                            cameraManager: manager,
+                                                            sceneManager:  sceneManager(null),
+                                                            cameraSettings,
+                                                        })
+
+            expect(result.focusTarget).toBe(starter)
+            expect(result.cameraStore.target).toMatchObject(starter)
+        })
+
         it('uses journey centroid instead of starter when app focus is starter and a journey is loaded', async () => {
             const result = await configureStartupCamera({
                                                             context:       context(journey),
@@ -280,6 +357,143 @@ describe('startup camera positioning', () => {
 
             expect(result.focusTarget).toBe(journey)
             expect(result.cameraStore.target).toMatchObject(centroid)
+        })
+
+        it('restores the journey camera when journey focus is last camera location', async () => {
+            const journeyCamera = {...journey, camera: {position: validSavedPosition, target: validSavedTarget}}
+            const result = await configureStartupCamera({
+                                                            context:       context(journeyCamera),
+                                                            starter,
+                                                            cameraManager: cameraManager({
+                                                                                             focusMode:   FOCUS_STARTER,
+                                                                                             journeyFocus: FOCUS_LAST,
+                                                                                         }),
+                                                            sceneManager:  sceneManager(centroid),
+                                                            cameraSettings,
+                                                        })
+
+            expect(result.focusTarget).toBe(journeyCamera)
+            expect(result.cameraStore.restoreCameraPosition).toBe(true)
+            expect(result.cameraStore.target).toMatchObject(validSavedTarget)
+            expect(result.cameraStore.position).toMatchObject(validSavedPosition)
+        })
+
+        it('keeps the journey centered while using the saved 3D camera pose for its zoom', async () => {
+            const manager = cameraManager({
+                                               focusMode: FOCUS_STARTER,
+                                               savedCamera: {position: validSavedPosition, target: validSavedTarget},
+                                           })
+            const result = await configureStartupCamera({
+                                                            context:       context(journey),
+                                                            starter,
+                                                            cameraManager: manager,
+                                                            sceneManager:  sceneManager(centroid),
+                                                            cameraSettings,
+                                                            distanceCalculator: fixedDistance(7654),
+                                                        })
+
+            expect(result.focusTarget).toBe(journey)
+            expect(result.cameraStore.restoreCameraPosition).toBeUndefined()
+            expect(result.cameraStore.target).toMatchObject(centroid)
+            expect(result.cameraStore.position).toMatchObject({
+                                                                 heading: validSavedPosition.heading,
+                                                                 pitch:   validSavedPosition.pitch,
+                                                                 roll:    validSavedPosition.roll,
+                                                                 range:   7654,
+                                                             })
+        })
+
+        it('preserves the saved 2D zoom without treating map width as 3D altitude', async () => {
+            const saved2DPosition = {
+                longitude: 7,
+                latitude:  46,
+                height:    42000,
+                heading:   360,
+                pitch:     DEFAULT_2D_FOCUS_PITCH,
+                roll:      360,
+                range:     21000,
+            }
+            const result = await configureStartupCamera({
+                                                            context:       context(journey),
+                                                            starter,
+                                                            cameraManager: cameraManager({
+                                                                                             focusMode: FOCUS_STARTER,
+                                                                                             savedCamera: {
+                                                                                                 position: saved2DPosition,
+                                                                                                 target:   validSavedTarget,
+                                                                                             },
+                                                                                         }),
+                                                            sceneManager:  sceneManager(centroid, {is2D: true}),
+                                                            cameraSettings,
+                                                        })
+
+            expect(result.cameraStore.position).toMatchObject({
+                                                                 heading: 360,
+                                                                 pitch:   DEFAULT_2D_FOCUS_PITCH,
+                                                                 roll:    360,
+                                                                 range:   saved2DPosition.range,
+                                                             })
+            expect(result.cameraStore.restoreCameraPosition).toBeUndefined()
+        })
+
+        it('falls back to the journey snapshot when reading the global camera fails', async () => {
+            const journeyCamera = {...journey, camera: {position: validSavedPosition, target: validSavedTarget}}
+            const manager = cameraManager({focusMode: FOCUS_STARTER})
+            manager.readCameraInformation.mockRejectedValue(new Error('storage unavailable'))
+            const result = await configureStartupCamera({
+                                                            context:       context(journeyCamera),
+                                                            starter,
+                                                            cameraManager: manager,
+                                                            sceneManager:  sceneManager(centroid),
+                                                            cameraSettings,
+                                                        })
+
+            expect(result.cameraStore.target).toMatchObject(centroid)
+            expect(result.cameraStore.position.heading).toBe(validSavedPosition.heading)
+        })
+
+        it('falls back to starter when journey centroid resolution rejects', async () => {
+            const failingSceneManager = {
+                getJourneyCentroid: vi.fn(async () => { throw new Error('centroid unavailable') }),
+            }
+            const result = await configureStartupCamera({
+                                                            context:       context(journey),
+                                                            starter,
+                                                            cameraManager: cameraManager({focusMode: FOCUS_CENTROID}),
+                                                            sceneManager:  failingSceneManager,
+                                                            cameraSettings,
+                                                        })
+
+            expect(result.focusTarget).toBe(starter)
+            expect(result.cameraStore.target).toMatchObject(starter)
+        })
+
+        it('falls back to the configured journey range when both saved poses are invalid', async () => {
+            const journeyWithInvalidCamera = {
+                ...journey,
+                camera: {
+                    position: {longitude: 7, height: 3000},
+                    target:   validSavedTarget,
+                },
+            }
+            const result = await configureStartupCamera({
+                                                            context:       context(journeyWithInvalidCamera),
+                                                            starter,
+                                                            cameraManager: cameraManager({
+                                                                                             focusMode: FOCUS_STARTER,
+                                                                                             savedCamera: {
+                                                                                                 position: {longitude: 7, height: 3000},
+                                                                                                 target:   validSavedTarget,
+                                                                                             },
+                                                                                         }),
+                                                            sceneManager:  sceneManager(centroid),
+                                                            cameraSettings,
+                                                        })
+
+            expect(result.focusTarget).toBe(journeyWithInvalidCamera)
+            expect(result.cameraStore.restoreCameraPosition).toBeUndefined()
+            expect(result.cameraStore.target).toMatchObject(centroid)
+            expect(result.cameraStore.position.range).toBe(cameraSettings.range)
         })
 
         it('uses the normal fallback when no explicit startup focus mode matches', async () => {

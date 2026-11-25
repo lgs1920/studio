@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-01
- * Last modified: 2026-09-13
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -103,6 +103,22 @@ export const cameraPositionWithDefaults = (
     }
 }
 
+const readSavedCameraPosition = async (cameraManager, journey) => {
+    let savedCamera = null
+    try {
+        savedCamera = await cameraManager?.readCameraInformation?.({fallback: false})
+    }
+    catch {
+        // A missing global snapshot must not prevent using the journey snapshot.
+    }
+
+    if (cameraPositionIsValid(savedCamera?.position)) {
+        return savedCamera.position
+    }
+
+    return cameraPositionIsValid(journey?.camera?.position) ? journey.camera.position : null
+}
+
 export const cameraStoreForTarget = (
     target,
     position           = {},
@@ -147,6 +163,7 @@ export const getStartupOrbitSettings = ({
 export const journeyCentroidCameraStore = async ({
                                                      journey,
                                                      sceneManager,
+                                                     cameraManager,
                                                      cameraSettings = {},
                                                      distanceCalculator = cesiumDistance,
                                                  }) => {
@@ -159,12 +176,18 @@ export const journeyCentroidCameraStore = async ({
         return null
     }
 
+    // Center on the journey while deriving the range and orientation from the last saved pose.
+    const savedPosition = sceneManager?.is2D === true
+        ? null
+        : await readSavedCameraPosition(cameraManager, journey)
+    const target = new MapTarget(CURRENT_JOURNEY, {
+        ...centroid,
+        id: journey.slug,
+    })
+
     return {
         focusTarget: journey,
-        cameraStore: cameraStoreForTarget(new MapTarget(CURRENT_JOURNEY, {
-            ...centroid,
-            id: journey.slug,
-        }), {}, cameraSettings, distanceCalculator),
+        cameraStore: cameraStoreForTarget(target, savedPosition ?? {}, cameraSettings, distanceCalculator),
     }
 }
 
@@ -172,12 +195,14 @@ export const fallbackCameraConfiguration = async ({
                                                       context,
                                                       starter,
                                                       sceneManager,
+                                                      cameraManager,
                                                       cameraSettings = {},
                                                       distanceCalculator = cesiumDistance,
                                                   }) => {
     const journeyConfiguration = await journeyCentroidCameraStore({
                                                                       journey: context?.theJourney,
                                                                       sceneManager,
+                                                                      cameraManager,
                                                                       cameraSettings,
                                                                       distanceCalculator,
                                                                   })
@@ -204,6 +229,7 @@ export const lastCameraConfiguration = async ({
                                                                               context,
                                                                               starter,
                                                                               sceneManager,
+                                                                              cameraManager,
                                                                               cameraSettings,
                                                                               distanceCalculator,
                                                                           })
@@ -228,6 +254,7 @@ export const lastCameraConfiguration = async ({
                                            context,
                                            starter,
                                            sceneManager,
+                                           cameraManager,
                                            cameraSettings,
                                            distanceCalculator,
                                        })
@@ -257,12 +284,25 @@ export const configureStartupCamera = async ({
                                                context,
                                                starter,
                                                sceneManager,
+                                               cameraManager,
                                                cameraSettings,
                                                distanceCalculator,
                                            })
     }
 
     if (cameraManager?.isAppFocusOn?.(FOCUS_STARTER) && !context?.theJourney) {
+        const savedCameraConfiguration = await lastCameraConfiguration({
+                                                                          context,
+                                                                          starter,
+                                                                          cameraManager,
+                                                                          sceneManager,
+                                                                          cameraSettings,
+                                                                          distanceCalculator,
+                                                                      })
+        if (savedCameraConfiguration.cameraStore.restoreCameraPosition) {
+            return savedCameraConfiguration
+        }
+
         return {
             focusTarget: starter,
             cameraStore: starterCameraStore(starter, cameraSettings, distanceCalculator),
@@ -273,6 +313,7 @@ export const configureStartupCamera = async ({
                                            context,
                                            starter,
                                            sceneManager,
+                                           cameraManager,
                                            cameraSettings,
                                            distanceCalculator,
                                        })

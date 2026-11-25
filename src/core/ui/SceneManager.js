@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-06
- * Last modified: 2026-09-30
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -139,7 +139,7 @@ export class SceneManager {
                         })
     }
 
-
+    /** Restore normal camera persistence after a scene morph completes. */
     afterMorphing = async () => {
 
         // Remove starting animation (rotate,...)
@@ -149,6 +149,7 @@ export class SceneManager {
         await refreshJourneyVisibility({
             hideOtherJourneys: getGlobalHideOtherJourneys(),
         })
+        __.ui.cameraManager.enableMapDragging()
         this.notifyMorph()
     }
 

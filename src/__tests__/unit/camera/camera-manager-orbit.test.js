@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-13
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {acquireReplayCameraOwnership, releaseReplayCameraOwnership} from '@Core/ui/replay/ReplayCameraOwnership'
+import {CURRENT_CAMERA, CURRENT_STORE} from '@Core/constants'
 import {getOrCreateSceneRenderScheduler, getSceneRenderScheduler} from '@Utils/cesium/SceneRenderScheduler'
 
 
@@ -32,6 +33,7 @@ vi.mock('@Utils/UIToast', () => ({
 const installCameraManagerGlobals = () => {
     const animationFrames = []
     const postUpdateListeners = new Set()
+    const cameraChangedListeners = new Set()
     const scene = {
         cartesianToCanvasCoordinates: vi.fn(() => ({x: 0, y: 0})),
         postUpdate: {
@@ -57,7 +59,12 @@ const installCameraManagerGlobals = () => {
 
     vi.stubGlobal('lgs', {
         camera: {
-            changed: {addEventListener: vi.fn()},
+            changed: {
+                addEventListener: vi.fn(listener => {
+                    cameraChangedListeners.add(listener)
+                    return () => cameraChangedListeners.delete(listener)
+                }),
+            },
             heading: 0.2,
             inverseTransform: {},
             lookAtTransform: vi.fn(),
@@ -155,7 +162,7 @@ const installCameraManagerGlobals = () => {
         },
     })
 
-    return {animationFrames, rotate}
+    return {animationFrames, cameraChangedListeners, rotate}
 }
 
 const orbitTarget = {
@@ -267,6 +274,52 @@ describe('CameraManager orbit', () => {
         expect(lgs.stores.ui.mainUI.panorama.active).toBe(false)
         expect(lgs.stores.ui.mainUI.panorama.target).toBe(false)
     })
+
+    it('persists the normal camera pose after map zoom changes', async () => {
+        vi.useFakeTimers()
+        try {
+            const {cameraChangedListeners} = installCameraManagerGlobals()
+            const manager = new CameraManager()
+            await Promise.resolve()
+            manager.proxy = {
+                getTargetPositionInPixels: vi.fn(() => ({x: 0, y: 0})),
+                updatePositionInformationSync: vi.fn(() => ({
+                    position: {heading: 0.2, height: 3000, latitude: 0.8, longitude: 0.1, pitch: -0.5, range: 2500, roll: 0},
+                    target: {height: 0, latitude: 45, longitude: 5},
+                })),
+            }
+
+            manager.enableMapDragging()
+            expect(cameraChangedListeners.size).toBe(1)
+
+            await [...cameraChangedListeners][0]()
+            await Promise.resolve()
+
+            expect(lgs.db.lgs1920.put).toHaveBeenCalledWith(
+                CURRENT_CAMERA,
+                expect.objectContaining({position: expect.objectContaining({range: 2500})}),
+                CURRENT_STORE,
+            )
+            await vi.advanceTimersByTimeAsync(1000)
+            expect(lgs.db.lgs1920.put).toHaveBeenCalledTimes(2)
+        }
+        finally {
+            vi.useRealTimers()
+        }
+    })
+
+    it('waits for camera flights to finish before resuming persistence', () => {
+        const {cameraChangedListeners} = installCameraManagerGlobals()
+        const manager = new CameraManager()
+        lgs.stores.ui.mainUI.cameraFlight.running = true
+
+        manager.enableMapDragging()
+        expect(cameraChangedListeners.size).toBe(0)
+
+        lgs.stores.ui.mainUI.cameraFlight.running = false
+        manager.enableMapDragging()
+        expect(cameraChangedListeners.size).toBe(1)
+    })
 })
 
 
@@ -292,9 +345,11 @@ describe('CameraManager Replay isolation', () => {
         }
         acquireReplayCameraOwnership(owner, lgs.camera, {})
         try {
+            manager.enableMapDragging()
             await manager.updatePositionInformation()
             expect(manager.syncPositionInformation()).toBeNull()
             await manager.saveInformation(Date.now())
+            expect(lgs.camera.changed.addEventListener).not.toHaveBeenCalled()
             expect(manager.proxy.updatePositionInformation).not.toHaveBeenCalled()
             expect(manager.proxy.updatePositionInformationSync).not.toHaveBeenCalled()
             expect(lgs.db.lgs1920.put).not.toHaveBeenCalled()

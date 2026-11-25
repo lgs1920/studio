@@ -8,13 +8,17 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-06-30
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { DEFAULT_PANORAMA_HEIGHT_OFFSET, DEFAULT_PANORAMA_PITCH } from '@Core/OrbitSettings'
+import {
+    DEFAULT_ORBIT_RPM,
+    DEFAULT_PANORAMA_HEIGHT_OFFSET,
+    DEFAULT_PANORAMA_PITCH,
+} from '@Core/OrbitSettings'
 import { proxyMap } from 'valtio/utils'
 
 /**
@@ -59,7 +63,7 @@ export const ui = {
         rotate:              {
             running:   false,
             target:    false,
-            rpm:       1,
+            rpm:       DEFAULT_ORBIT_RPM,
             direction: 1,
             visible:   true,
         },

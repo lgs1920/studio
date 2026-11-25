@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-26
- * Last modified: 2026-09-13
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,7 @@ export const ORBIT_RPM_STEP = 0.1
 export const ORBIT_DIRECTION_MIN = -2
 export const ORBIT_DIRECTION_MAX = 2
 export const ORBIT_DIRECTION_STEP = 0.2
-export const DEFAULT_ORBIT_RPM = 1
+export const DEFAULT_ORBIT_RPM = 3
 export const DEFAULT_ORBIT_DIRECTION = 1
 export const PANORAMA_HEIGHT_OFFSET_MIN = 2
 export const PANORAMA_HEIGHT_OFFSET_MAX = 5000

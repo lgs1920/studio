@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-06
- * Last modified: 2026-11-24
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -142,9 +142,11 @@ const beginCameraFlight = () => {
     }
 }
 
+/** Release one camera flight and resume normal persistence when the camera is available. */
 const endCameraFlight = () => {
     if (typeof __ !== 'undefined') {
         __.ui?.cameraManager?.endFlight?.()
+        __.ui?.cameraManager?.enableMapDragging?.()
     }
 }
 
@@ -525,7 +527,6 @@ export class SceneUtils {
                     rpm:       options.rpm ?? lgs.settings.camera.rpm,
                     direction: options.direction ?? 1,
                     infinite:  options.infinite ?? true,
-                    fps:       lgs.settings.camera.fps,
                     rotations: options.rotations ?? lgs.settings.camera.rotations,
                     lookAt:    !preserveView,
                     preserveView,
@@ -544,7 +545,6 @@ export class SceneUtils {
             //     __.ui.cameraManager.panoramic(target, {
             //         rpm:       options.rpm ?? lgs.settings.camera.rpm,
             //         infinite: options.infinite ?? true,
-            //         fps:       lgs.settings.camera.fps,
             //         rotations: options.rotations ?? lgs.settings.camera.rotations,
             //         lookAt:    true,
             //     })
