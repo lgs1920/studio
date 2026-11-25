@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-12-21
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,8 +29,23 @@ import {
 } from '@Components/MainUI/widgets/editor/elements/PaddingElement'
 import {
     ensureJourneyReplaySettings,
+    getJourneyReplaySettings,
     normalizeJourneyReplayProfileInfo,
 }                                                         from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {
+    REPLAY_USER_MODE_EXPERT,
+    currentReplayJourney,
+    resolveJourneyReplayUserMode,
+}                                                         from '@Core/ui/replay/ReplayUserModeConstants'
+import {
+    getBasicReplaySettings,
+    writeBasicReplaySettings,
+}                                                         from '@Core/ui/replay/ReplayModeSettings'
+import {
+    resolveBasicReplaySettings,
+    syncJourneyBasicReplayPresentation,
+    syncJourneyExpertReplayProfileInfo,
+}                                                         from '@Core/ui/replay/ReplayUserModes'
 import { UI_ACTIONS }                                    from '@Core/ui/metadata/uiActionCatalog'
 import {
     WaButton, WaCard, WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect,
@@ -208,6 +223,8 @@ export const ProfileWidgetEditor = ({entity}) => {
     const configuration = useSnapshot($configuration)
     ensureJourneyReplaySettings()
     const replaySettings = useSnapshot(lgs.settings.ui.replay)
+    const main = useOptionalSnapshot(lgs.stores.main)
+    const replayRuntime = useOptionalSnapshot(lgs.stores.replay)
     const profileSettings = useSnapshot(lgs.settings.ui.profile)
     const sliderRefs = useRef({})
     const ratioPresets = useMemo(() => {
@@ -258,10 +275,14 @@ export const ProfileWidgetEditor = ({entity}) => {
     }, [configuration, entity])
 
     const swatches = useOptionalSnapshot(lgs.settings.swatches, {list: []}).list.join(';')
-    const replayProfileInfo = useMemo(
-        () => normalizeJourneyReplayProfileInfo(replaySettings.profileInfo),
-        [replaySettings.profileInfo],
-    )
+    const journey = main.theJourney ?? currentReplayJourney()
+    const replayMode = resolveJourneyReplayUserMode({settings: replaySettings, replay: replayRuntime})
+    const replayProfileInfo = normalizeJourneyReplayProfileInfo(replayMode === REPLAY_USER_MODE_EXPERT
+        ? getJourneyReplaySettings({journey}).profileInfo
+        : resolveBasicReplaySettings({
+            user: getBasicReplaySettings(replaySettings),
+            journey: getBasicReplaySettings(journey?.replay),
+        }).presentation.profileInfo)
     const gradientFallbackColor = useMemo(() => {
         const fallbackColor = __.ui.profiler?.prepareData()?.options?.[0]?.color ?? '#3b82f6'
         return colord(fallbackColor).alpha(1).toRgbString()
@@ -357,17 +378,43 @@ export const ProfileWidgetEditor = ({entity}) => {
         curr[keys[keys.length - 1]] = value
     }, [$configuration, element, entity])
 
+    /** Persist Replay profile styling through the active mode's Journey settings. */
     const updateJourneyReplayProfileInfo = useCallback((updates) => {
-        const nextProfileInfo = normalizeJourneyReplayProfileInfo({
-                                                                   ...lgs.settings.ui.replay.profileInfo,
-                                                                   ...updates,
-                                                               })
-        lgs.settings.ui.replay.profileInfo = nextProfileInfo
-        if (lgs.stores.replay) {
-            lgs.stores.replay.profileInfo = nextProfileInfo
+        const nextProfileInfo = normalizeJourneyReplayProfileInfo({...replayProfileInfo, ...updates})
+        const mode = resolveJourneyReplayUserMode()
+        const activeJourney = currentReplayJourney()
+        if (mode === REPLAY_USER_MODE_EXPERT) {
+            if (activeJourney) {
+                syncJourneyExpertReplayProfileInfo(nextProfileInfo, activeJourney)
+            }
+            else {
+                lgs.settings.ui.replay.profileInfo = nextProfileInfo
+                if (lgs.stores.replay) {
+                    lgs.stores.replay.profileInfo = nextProfileInfo
+                }
+            }
+        }
+        else {
+            const basicUserSettings = getBasicReplaySettings(lgs.settings.ui.replay) ?? {}
+            writeBasicReplaySettings(lgs.settings.ui.replay, Object.assign({}, basicUserSettings, {
+                presentation: Object.assign({}, basicUserSettings.presentation, {
+                    profileInfo: nextProfileInfo,
+                }),
+            }))
+            const effectiveBasicSettings = resolveBasicReplaySettings({
+                user:    basicUserSettings,
+                journey: getBasicReplaySettings(activeJourney?.replay),
+            })
+            syncJourneyBasicReplayPresentation({
+                ...effectiveBasicSettings.presentation,
+                profileInfo: nextProfileInfo,
+            }, activeJourney)
+            if (lgs.stores.replay) {
+                lgs.stores.replay.profileInfo = nextProfileInfo
+            }
         }
         __.ui.profiler?.draw?.()
-    }, [])
+    }, [replayProfileInfo])
 
     const updateProfileLiveData = useCallback((checked) => {
         lgs.settings.ui.profile.liveData = checked

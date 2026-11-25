@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-24
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,7 @@ import {
     resolveBasicReplaySettings,
     syncJourneyExpertReplayCamera,
     syncJourneyExpertReplayProgression,
+    syncJourneyExpertReplayProfileInfo,
     syncJourneyBasicReplayCamera,
     syncJourneyBasicReplayEndFocus,
     syncJourneyBasicReplaySampleCount,
@@ -550,6 +551,8 @@ describe('Replay user modes', () => {
 
     it('initializes Expert once and preserves it on mode switches', () => {
         const basicSettings = defaultBasicReplaySettings()
+        const profileInfo = {color: '#345678', useTrackStyle: true}
+        basicSettings.presentation.profileInfo = profileInfo
         const journey = {replay: {start: [], stop: []}}
         const initialized = initializeExpertReplayFromBasic(journey, basicSettings)
         const existing = {replay: {expert: {camera: {altitude: 500}}}}
@@ -558,6 +561,7 @@ describe('Replay user modes', () => {
         expect(initialized.expert.camera).not.toHaveProperty('altitude')
         expect(initialized.expert.camera).not.toHaveProperty('pitch')
         expect(initialized.expert.camera.cameraAngle).toBe(0)
+        expect(initialized.expert.profileInfo).toEqual(profileInfo)
         expect(initializeExpertReplayFromBasic({replay: {start: [], stop: []}}, {
             camera: {positionMode: 'system'},
         }).expert.camera.cameraAngle).toBe(0)
@@ -696,6 +700,68 @@ describe('Replay user modes', () => {
             if (previousLgs === undefined) {
                 delete globalThis.lgs
             } else {
+                globalThis.lgs = previousLgs
+            }
+        }
+    })
+
+    it('saves Expert profile info on the selected Journey and exposes it to Replay resolution', () => {
+        const previousLgs = globalThis.lgs
+        const persistToDatabase = vi.fn()
+        const selectedJourney = {
+            slug: 'selected-journey',
+            replay: {
+                expert: {
+                    camera: {altitude: 900, pitch: -60},
+                    progression: {fill: {color: '#112233'}},
+                },
+            },
+            persistToDatabase,
+        }
+        const otherJourney = {slug: 'other-journey', replay: {expert: {profileInfo: {color: '#000000'}}}}
+        globalThis.lgs = {
+            settings: {
+                ui: {
+                    replay: {
+                        userMode: REPLAY_USER_MODE_EXPERT,
+                        profileInfo: {color: '#ffffff', useTrackStyle: false},
+                    },
+                },
+            },
+            stores: {
+                main: {theJourney: selectedJourney},
+                replay: {
+                    userMode: REPLAY_USER_MODE_EXPERT,
+                    basicPreparationActive: false,
+                    profileInfo: {color: '#ffffff', useTrackStyle: false},
+                },
+            },
+            theJourney: otherJourney,
+        }
+        vi.useFakeTimers()
+
+        try {
+            const profileInfo = {color: '#445566', useTrackStyle: true}
+            expect(syncJourneyExpertReplayProfileInfo(profileInfo)).toEqual(profileInfo)
+            expect(selectedJourney.replay.expert).toMatchObject({
+                camera: {altitude: 900, pitch: -60},
+                progression: {fill: {color: '#112233'}},
+                profileInfo,
+            })
+            expect(otherJourney.replay.expert.profileInfo).toEqual({color: '#000000'})
+            expect(globalThis.lgs.stores.replay.profileInfo).toEqual(profileInfo)
+            expect(getJourneyReplaySettings({journey: selectedJourney}).profileInfo).toEqual(profileInfo)
+            expect(persistToDatabase).not.toHaveBeenCalled()
+
+            vi.advanceTimersByTime(250)
+            expect(persistToDatabase).toHaveBeenCalledOnce()
+        }
+        finally {
+            vi.useRealTimers()
+            if (previousLgs === undefined) {
+                delete globalThis.lgs
+            }
+            else {
                 globalThis.lgs = previousLgs
             }
         }

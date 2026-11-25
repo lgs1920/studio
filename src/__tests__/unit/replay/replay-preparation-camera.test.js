@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-26
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -73,6 +73,66 @@ describe('replay preparation camera', () => {
         expect(globalThis.lgs.stores.replay.journeySlug).toBe('selected-journey')
         expect(globalThis.lgs.stores.replay.camera.pitch).toBe(-32)
         expect(configureController).toHaveBeenCalledWith(expect.objectContaining({sampler}))
+    })
+
+    it('reconfigures the playback profile style from the active mode after switching on one Journey', () => {
+        const basicProfileInfo = {color: '#112233', useTrackStyle: true}
+        const expertProfileInfo = {color: '#445566', useTrackStyle: false}
+        const settings = defaultJourneyReplaySettings()
+        settings.userMode = 'expert'
+        settings.basic = {
+            camera: {...settings.camera},
+            presentation: {profileInfo: basicProfileInfo},
+        }
+        const journey = {
+            slug: 'mode-switch-profile-journey',
+            replay: {
+                basic: {
+                    camera: {...settings.camera},
+                    presentation: {profileInfo: basicProfileInfo},
+                },
+                expert: {
+                    camera: {altitude: 1400, pitch: -55},
+                    profileInfo: expertProfileInfo,
+                },
+            },
+        }
+        const sampler = {hasSamples: true, totalDistance: 1200}
+        const configureController = vi.fn()
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                sampler,
+                samplerConfigKey: 'same-sampler|0:0',
+                controller: {configure: configureController},
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                samplerConfigurationKey: vi.fn(() => 'same-sampler'),
+                syncRuntimeNearbyPOIs: vi.fn(),
+                resetCameraController: vi.fn(),
+                bindCesiumCameraBridge: vi.fn(),
+            },
+        }
+        globalThis.lgs = {
+            settings: {ui: {replay: settings}},
+            stores: {
+                main: {theJourney: journey},
+                replay: {userMode: 'expert', basicPreparationActive: false, trackSlug: null},
+            },
+        }
+
+        configure(mode)
+        expect(globalThis.lgs.stores.replay.profileInfo).toEqual(expertProfileInfo)
+        expect(configureController).toHaveBeenLastCalledWith(expect.objectContaining({
+            replaySettings: expect.objectContaining({profileInfo: expertProfileInfo}),
+        }))
+
+        settings.userMode = 'basic'
+        globalThis.lgs.stores.replay.userMode = 'basic'
+        configure(mode)
+        expect(globalThis.lgs.stores.replay.profileInfo).toEqual(basicProfileInfo)
+        expect(configureController).toHaveBeenLastCalledWith(expect.objectContaining({
+            replaySettings: expect.objectContaining({profileInfo: basicProfileInfo}),
+        }))
     })
 
     it('rebuilds the Replay sampler when saved Fix Path corrections change', () => {

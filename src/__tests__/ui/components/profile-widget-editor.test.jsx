@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -83,12 +83,12 @@ vi.mock('@awesome.me/webawesome/dist/react', () => ({
             />
         </label>
     ),
-    WaSwitch:      ({children, checked, onChange, ...props}) => {
+    WaSwitch:      ({children, checked, onChange, onInput, ...props}) => {
         delete props['label-at-start']
         delete props['width-auto']
         return (
             <label>
-                <input type="checkbox" checked={checked} onChange={onChange} {...props}/>
+                <input type="checkbox" checked={checked} onChange={onChange ?? onInput} {...props}/>
                 {children}
             </label>
         )
@@ -164,6 +164,7 @@ describe('ProfileWidgetEditor', () => {
                 },
                 ui:          proxy({
                                        replay: proxy({
+                                                             userMode: 'basic',
                                                              profileInfo: proxy({
                                                                                     color:         '#ffffff',
                                                                                     useTrackStyle: false,
@@ -245,11 +246,20 @@ describe('ProfileWidgetEditor', () => {
                     },
                 },
             },
+            stores: {
+                main: proxy({theJourney: null}),
+                replay: proxy({
+                    userMode: 'basic',
+                    basicPreparationActive: false,
+                    profileInfo: {color: '#ffffff', useTrackStyle: false},
+                }),
+            },
         }
     })
 
     afterEach(() => {
         cleanup()
+        vi.useRealTimers()
         globalThis.__ = undefined
         globalThis.lgs = undefined
     })
@@ -264,6 +274,70 @@ describe('ProfileWidgetEditor', () => {
 
         expect(lgs.settings.ui.profile.liveData).toBe(true)
         expect(__.ui.profiler.draw).toHaveBeenCalled()
+    })
+
+    it('saves Expert profile styling on the active Journey and updates the live Replay style', () => {
+        const persistToDatabase = vi.fn()
+        const journey = proxy({
+            slug: 'expert-profile-journey',
+            replay: {
+                expert: {
+                    camera: {altitude: 1200, pitch: -45},
+                    progression: {},
+                    profileInfo: {color: '#123456', useTrackStyle: true},
+                },
+            },
+            persistToDatabase,
+        })
+        lgs.stores.main.theJourney = journey
+        lgs.settings.ui.replay.userMode = 'expert'
+        lgs.settings.ui.replay.profileInfo.useTrackStyle = true
+        lgs.stores.replay.userMode = 'expert'
+        vi.useFakeTimers()
+
+        render(<ProfileWidgetEditor entity="default"/>)
+        const toggle = screen.getByLabelText('Use track style')
+
+        expect(toggle.checked).toBe(true)
+        fireEvent.click(toggle)
+
+        expect(journey.replay.expert.profileInfo).toEqual({color: '#123456', useTrackStyle: false})
+        expect(lgs.settings.ui.replay.profileInfo.useTrackStyle).toBe(true)
+        expect(lgs.stores.replay.profileInfo.useTrackStyle).toBe(false)
+        expect(persistToDatabase).not.toHaveBeenCalled()
+
+        vi.advanceTimersByTime(250)
+        expect(persistToDatabase).toHaveBeenCalledOnce()
+    })
+
+    it('saves Basic profile styling to the Basic Journey presentation', () => {
+        const persistToDatabase = vi.fn()
+        const journey = proxy({
+            slug: 'basic-profile-journey',
+            replay: {
+                basic: {
+                    presentation: {
+                        profileInfo: {color: '#654321', useTrackStyle: true},
+                    },
+                },
+            },
+            persistToDatabase,
+        })
+        lgs.stores.main.theJourney = journey
+        vi.useFakeTimers()
+
+        render(<ProfileWidgetEditor entity="default"/>)
+        const toggle = screen.getByLabelText('Use track style')
+
+        expect(toggle.checked).toBe(true)
+        fireEvent.click(toggle)
+
+        expect(journey.replay.basic.presentation.profileInfo).toEqual({color: '#654321', useTrackStyle: false})
+        expect(lgs.settings.ui.replay.basic.presentation.profileInfo).toEqual({color: '#654321', useTrackStyle: false})
+        expect(lgs.stores.replay.profileInfo.useTrackStyle).toBe(false)
+
+        vi.advanceTimersByTime(250)
+        expect(persistToDatabase).toHaveBeenCalledOnce()
     })
 
     it('updates the widget ratio preset and keeps custom dimensions independent', async () => {

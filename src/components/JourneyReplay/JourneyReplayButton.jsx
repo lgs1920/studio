@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-10-17
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -107,6 +107,7 @@ export const JourneyReplayButton = (props) => {
             lgs.settings.ui.replay.camera = toGlobalReplayCameraSettings(basicSettings.camera)
             lgs.stores.replay.camera = basicSettings.camera
             lgs.stores.replay.duration = basicSettings.duration
+            lgs.stores.replay.profileInfo = basicSettings.presentation.profileInfo
             lgs.stores.replay.basicPreparationActive = true
             lgs.settings.ui.replay.recordingSync = false
             lgs.stores.replay.recordingSync = false

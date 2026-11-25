@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-02
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -49,6 +49,7 @@ import { v4 as uuid } from 'uuid'
 import { WaIcon } from '@awesome.me/webawesome/dist/react'
 import {scheduleProfileChartResize} from '@Core/ui/ProfileChartResize'
 import {createProfileCurveGradient} from './profileCurveGradient'
+import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 
 const scaleValue = (value, correction = 1) => {
     const numericValue = Number(value)
@@ -312,9 +313,13 @@ export const ProfileChart = ({
     const unitStore = useSnapshot($unitStore)
     const unitSystem = unitStore.current
     const replaySettings = useSnapshot(lgs.settings.ui.replay)
+    const replayState = useOptionalSnapshot(lgs.stores.replay)
+    const replayProfileInfoSettings = replayState.journeySlug
+        ? replayState.profileInfo
+        : replaySettings.profileInfo
     const replayProfileInfo = useMemo(
-        () => normalizeJourneyReplayProfileInfo(replaySettings.profileInfo),
-        [replaySettings.profileInfo],
+        () => normalizeJourneyReplayProfileInfo(replayProfileInfoSettings),
+        [replayProfileInfoSettings],
     )
     const replayProgression = useMemo(
         () => normalizeJourneyReplayProgressionStyle(replaySettings.progression),
@@ -1432,7 +1437,7 @@ export const ProfileChart = ({
         const replayProgressionStyle = normalizeJourneyReplayProgressionStyle(
             replayState?.progression ?? lgs.stores.replay?.progression ?? replayProgression,
         )
-        const profileProgressionStyle = basicReplayProfile ? replayProgressionStyle : replayProgression
+        const profileProgressionStyle = replayProgressionStyle
         // Preserve route colors independently of the moving marker and clip camera samples.
         const beforeReplay = replayPhase?.kind === REPLAY_CLIP_SLOT_PRE_REPLAY || replayPhase?.slot === REPLAY_CLIP_SLOT_PRE_REPLAY
         const afterReplay = replayPhase?.kind === REPLAY_CLIP_SLOT_POST_REPLAY || replayPhase?.slot === REPLAY_CLIP_SLOT_POST_REPLAY

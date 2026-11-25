@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -517,11 +517,11 @@ export const normalizeJourneyReplayProgressionStyle = (progression = {}) => {
 }
 
 /**
- * Resolve explicit Basic appearance choices against immutable product dimensions.
- * Legacy progression payloads remain product-owned; only the compact controls override them.
- * @param {Object} presentation - Persisted color and scale choices.
+ * Resolve Basic presentation controls while preserving its Replay profile style.
+ *
+ * @param {Object} presentation - User or Journey presentation values.
  * @param {Object} defaults - Product presentation defaults.
- * @returns {Object} Appearance shared by previews, playback, and export.
+ * @returns {Object} Normalized Basic presentation settings.
  */
 export const resolveBasicReplayPresentation = (presentation = {}, defaults = defaultJourneyReplayBasicSettings().presentation) => {
     const baseline = normalizeJourneyReplayProgressionStyle(defaults?.progression)
@@ -542,6 +542,11 @@ export const resolveBasicReplayPresentation = (presentation = {}, defaults = def
         colorMode,
         fillColor,
         borderColor,
+        profileInfo: normalizeJourneyReplayProfileInfo({
+            ...defaultJourneyReplayProfileInfoStyle(),
+            ...(defaults?.profileInfo ?? {}),
+            ...(presentation?.profileInfo ?? {}),
+        }),
         progression: normalizeJourneyReplayProgressionStyle({
             ...baseline,
             sizeScale,
@@ -553,7 +558,6 @@ export const resolveBasicReplayPresentation = (presentation = {}, defaults = def
                 opacity: borderEnabled ? baseline.border.opacity : 0,
             },
         }),
-        profileInfo: normalizeJourneyReplayProfileInfo(defaults?.profileInfo),
     }
 }
 

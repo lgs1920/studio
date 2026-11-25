@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -58,6 +58,7 @@ const journeyReplayCameraAngle = camera => {
 }
 const expertCameraPersistTimers = new WeakMap()
 const expertProgressionPersistTimers = new WeakMap()
+const expertProfileInfoPersistTimers = new WeakMap()
 const basicCameraPersistTimers = new WeakMap()
 const basicTracePersistTimers = new WeakMap()
 const basicDurationPersistTimers = new WeakMap()
@@ -289,6 +290,48 @@ export const syncJourneyExpertReplayProgression = progression => {
     }
 
     return nextProgression
+}
+
+/**
+ * Synchronize Expert profile-info edits with the selected Journey and runtime.
+ *
+ * @param {Object} profileInfo - Complete profile-info settings.
+ * @param {Object|null} [journeyOverride=null] - Journey receiving the settings.
+ * @returns {Object|null} The synchronized settings, or null outside Expert mode.
+ */
+export const syncJourneyExpertReplayProfileInfo = (profileInfo, journeyOverride = null) => {
+    const lgs = globalThis.lgs
+    const journey = journeyOverride ?? currentReplayJourney()
+    if (resolveJourneyReplayUserMode() !== REPLAY_USER_MODE_EXPERT || !journey) {
+        return null
+    }
+
+    const replay = journey.replay ?? {}
+    const expert = replay.expert ?? {}
+    const nextProfileInfo = normalizeJourneyReplayProfileInfo(profileInfo)
+    journey.replay = {
+        ...replay,
+        expert: {
+            ...expert,
+            profileInfo: nextProfileInfo,
+        },
+    }
+    if (lgs?.stores?.replay) {
+        lgs.stores.replay.profileInfo = nextProfileInfo
+    }
+
+    if (typeof journey.persistToDatabase === 'function') {
+        const pendingTimer = expertProfileInfoPersistTimers.get(journey)
+        if (pendingTimer !== undefined) {
+            clearTimeout(pendingTimer)
+        }
+        expertProfileInfoPersistTimers.set(journey, setTimeout(() => {
+            expertProfileInfoPersistTimers.delete(journey)
+            void journey.persistToDatabase()
+        }, EXPERT_CAMERA_PERSIST_DELAY_MS))
+    }
+
+    return nextProfileInfo
 }
 
 /**
@@ -576,10 +619,11 @@ export const syncJourneyBasicReplayPOIBehavior = (behavior, journey = currentRep
 /**
  * Persist compact Basic appearance edits on the active journey after input settles.
  * @param {Object} presentation - Complete normalized Basic presentation.
+ * @param {Object|null} [journeyOverride=null] - Journey receiving the settings.
  * @returns {Object|null} Saved presentation, or null without an active journey.
  */
-export const syncJourneyBasicReplayPresentation = presentation => {
-    const journey = currentReplayJourney()
+export const syncJourneyBasicReplayPresentation = (presentation, journeyOverride = null) => {
+    const journey = journeyOverride ?? currentReplayJourney()
     if (!journey) {
         return null
     }

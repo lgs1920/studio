@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-11-05
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -116,6 +116,31 @@ describe('Profile chart Replay colors', () => {
             },
         })
         vi.stubGlobal('__', {ui: {profiler: {charts: new Map()}, replay: {}}})
+    })
+
+    it('uses the active Journey profile and progression styles from Replay runtime state', async () => {
+        lgs.settings.ui.replay.profileInfo = {useTrackStyle: false}
+        lgs.settings.ui.replay.progression = {fill: {color: '#f97316'}}
+        Object.assign(lgs.stores.replay, {
+            journeySlug: 'expert-profile-journey',
+            profileInfo: {useTrackStyle: true, color: '#ffffff'},
+            progression: {fill: {color: '#00ff00'}},
+        })
+        const data = profileData()
+        data.options[0].renderStyle = {
+            dash: {enabled: true, dashLength: 12, gapLength: 6},
+        }
+
+        render(<ProfileChart data={data} id={widgetId} width={100} height={100}/>)
+
+        const chartOptions = chartState.chart.setOption.mock.calls.map(([option]) => option)
+        const profileOption = chartOptions.find(option => option.series?.length > 0)
+        expect(profileOption.series[0].lineStyle.type).toEqual([12, 6])
+
+        publishFrame('replay', 0.5)
+        const graphics = await captureGraphics()
+        const completed = graphics.find(graphic => graphic.id === completedId)
+        expect(completed.children.find(child => child.type === 'polyline').style.stroke).toBe('rgb(0, 255, 0)')
     })
 
     afterEach(() => {

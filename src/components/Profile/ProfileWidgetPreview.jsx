@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-09
- * Last modified: 2026-06-09
+ * Created on: 2026-02-18
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,7 @@ import { ProfileChart }                               from './ProfileChart'
 import { getPreviewChartSize }                        from '@Components/MainUI/widgets/editor/previewUtils'
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                from 'valtio'
+import {useOptionalSnapshot}                          from '@Utils/ValtioUtils'
 
 /**
  * Renders a visual preview for the Profile Widget.
@@ -36,6 +37,10 @@ export const ProfileWidgetPreview = ({entity}) => {
     const currentUnit = useSnapshot($unitSystem).current
     const profile = useSnapshot(lgs.stores.main.components.profile)
     const replaySettings = useSnapshot(lgs.settings.ui.replay)
+    const replayState = useOptionalSnapshot(lgs.stores.replay)
+    const replayProfileInfo = replayState.journeySlug
+        ? replayState.profileInfo
+        : replaySettings.profileInfo
     const widgetListSnapshot = useSnapshot(lgs.stores.ui.widget.list)
     const widgetConfig = __.ui.widgetManager.getWidgetConfig?.(entity)
     const widgetDimensions = widgetListSnapshot.get(entity)?.dimensions ?? widgetConfig?.dimensions ?? null
@@ -49,8 +54,8 @@ export const ProfileWidgetPreview = ({entity}) => {
         entity,
         currentUnit,
         profile.key,
-        replaySettings.profileInfo?.useTrackStyle === true ? 'track-style' : 'track-color',
-        replaySettings.profileInfo?.color ?? '',
+        replayProfileInfo?.useTrackStyle === true ? 'track-style' : 'track-color',
+        replayProfileInfo?.color ?? '',
     ].join(':')
 
     const previewRatio = useMemo(() => {
