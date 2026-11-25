@@ -179,6 +179,8 @@ They are provided for convenience and to avoid confusion with the `addEventListe
 ### App Shortcuts
 
 Application shortcuts are declared in `public/shortcuts.yaml`.
+The startup request for this catalog has a five-second deadline. If it fails,
+Studio continues with the catalog-based bindings unavailable for that session.
 For example, `Alt+W` opens the widget management drawer for the active board, and `F` opens Fix Path when the current Journey has tracks.
 
 ## Contributing

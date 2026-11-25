@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-11-24
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -872,6 +872,9 @@ const installWidgetKeyboardShortcuts = () => {
     return () => target.removeEventListener('keydown', listener, {capture: true})
 }
 
+const SHORTCUT_CATALOG_TIMEOUT_MS = 5000
+
+/** Load optional shortcut bindings with a deadline for both headers and body. */
 const loadShortcutCatalog = async () => {
     let catalogUrl = null
     let response = null
@@ -881,7 +884,10 @@ const loadShortcutCatalog = async () => {
             `/${SHORTCUTS_CATALOG}`,
             globalThis.location?.origin ?? globalThis.document?.baseURI ?? 'http://localhost',
         )
-        response = await fetch(catalogUrl, {cache: 'no-store'})
+        response = await fetch(catalogUrl, {
+            cache:  'no-store',
+            signal: AbortSignal.timeout(SHORTCUT_CATALOG_TIMEOUT_MS),
+        })
         if (response.ok === false) {
             throw new Error(`Shortcut catalog request failed with HTTP ${response.status}.`)
         }
@@ -918,6 +924,7 @@ const loadShortcutCatalog = async () => {
     }
 }
 
+/** Validated shortcut definitions shared by registration and the information panel. */
 export const SHORTCUTS = await loadShortcutCatalog()
 
 const SHORTCUT_ACTIONS = {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-10-02
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,6 +57,60 @@ const parseJsonResource = async (response, resource) => {
         throw error
     }
 }
+
+const STARTUP_RESOURCE_TIMEOUT_MS = 10_000
+
+/**
+ * Fetch and parse one required startup resource with a finite network deadline.
+ *
+ * @param {string} resource - Relative resource path used during application startup.
+ * @param {(response: Response) => Promise<unknown>} parseResponse - Resource parser.
+ * @returns {Promise<unknown>} Parsed startup resource.
+ * @throws {Error} When the request stalls, fails, or contains invalid YAML.
+ */
+const fetchStartupResource = async (resource, parseResponse) => {
+    try {
+        const response = await fetch(resource, {
+            cache:  'no-store',
+            signal: AbortSignal.timeout(STARTUP_RESOURCE_TIMEOUT_MS),
+        })
+        return await parseResponse(response)
+    }
+    catch (cause) {
+        if (typeof cause?.code === 'string') {
+            throw cause
+        }
+
+        const timedOut = cause?.name === 'TimeoutError' || cause?.name === 'AbortError'
+        const error = new Error(timedOut
+            ? `Timed out while loading ${resource} after ${STARTUP_RESOURCE_TIMEOUT_MS / 1000} seconds`
+            : `Unable to load ${resource}: ${cause?.message ?? String(cause)}`)
+        error.code = timedOut ? 'STARTUP_RESOURCE_TIMEOUT' : 'STARTUP_RESOURCE_UNAVAILABLE'
+        error.cause = cause
+        throw error
+    }
+}
+
+/** Parse a required YAML file and retain its resource name in startup errors. */
+const fetchYamlStartupResource = resource => fetchStartupResource(resource, async response => {
+    if (response?.ok === false) {
+        const status = [response.status, response.statusText].filter(Boolean).join(' ')
+        const error = new Error(`Unable to load ${resource}${status ? ` (${status})` : ''}`)
+        error.code = 'STARTUP_RESOURCE_UNAVAILABLE'
+        throw error
+    }
+
+    const content = await response.text()
+    try {
+        return YAML.parse(content)
+    }
+    catch (cause) {
+        const error = new Error(`Invalid YAML response from ${resource}`)
+        error.code = 'INVALID_YAML_RESOURCE'
+        error.cause = cause
+        throw error
+    }
+})
 
 export class AppUtils {
     static THEME_STORAGE_KEY = 'theme'
@@ -283,16 +337,10 @@ export class AppUtils {
      * @return {Promise<{status: boolean, error?: Error}>} The initialization result.
      */
     static init = async ({onBackendReady} = {}) => {
-        // Read App configuration
-        const appConfig = await fetch(CONFIGURATION, {cache: 'no-store'})
-            .then(res => res.text())
-            .then(text => YAML.parse(text),
-            )
+        const appConfig = await fetchYamlStartupResource(CONFIGURATION)
 
         // Resolve the backend endpoint before loading the remaining application services.
-        lgs.servers = await fetch(SERVERS, {cache: 'no-store'}).then(
-            response => parseJsonResource(response, SERVERS),
-        )
+        lgs.servers = await fetchStartupResource(SERVERS, response => parseJsonResource(response, SERVERS))
         lgs.platform = lgs.servers.platform
         lgs.BACKEND_API = `${lgs.servers.studio.proxy}${lgs.servers.backend.protocol}://${lgs.servers.backend.domain}:${lgs.servers.backend.port}`
         lgs.axios = axios.create()
@@ -309,29 +357,16 @@ export class AppUtils {
 
         onBackendReady?.()
 
-        // Read Settings
-        let settings
-        settings = await fetch(SETTINGS, {cache: 'no-store'})
-            .then(res => res.text())
-            .then(text => YAML.parse(text),
-            )
-
-        // Read Layers
-        settings.layers = await fetch(LAYERS_TERRAINS_SETTINGS, {cache: 'no-store'})
-            .then(res => res.text())
-            .then(text => YAML.parse(text),
-            )
-
-        // Read Widgets
-        const raw = await fetch(WIDGETS, {cache: 'no-store'})
-            .then(res => res.text())
-            .then(text => YAML.parse(text),
-            )
-
-        const replay = await fetch(REPLAY_SETTINGS, {cache: 'no-store'})
-            .then(res => res.text())
-            .then(text => YAML.parse(text),
-            )
+        // Fetch independent configuration files together before applying any settings.
+        const [settings, layers, raw, replay, countries, build] = await Promise.all([
+            fetchYamlStartupResource(SETTINGS),
+            fetchYamlStartupResource(LAYERS_TERRAINS_SETTINGS),
+            fetchYamlStartupResource(WIDGETS),
+            fetchYamlStartupResource(REPLAY_SETTINGS),
+            fetchYamlStartupResource(COUNTRIES),
+            fetchStartupResource(BUILD, response => parseJsonResource(response, BUILD)),
+        ])
+        settings.layers = layers
 
         const replayYamlSettings = replay?.replay ?? replay ?? {}
 
@@ -369,21 +404,8 @@ export class AppUtils {
         lgs.configuration = {...appConfig, ...settings}
         lgs.savedConfiguration = {...appConfig, ...settings}
 
-        // Read countries
-        __.countries = await fetch(COUNTRIES, {cache: 'no-store'})
-            .then(res => res.text())
-            .then(text => {
-                      const countries = new Map()
-                      YAML.parse(text).map(country => {
-                          countries.set(country.code, country)
-                      })
-                      return countries
-                  },
-            )
-
-        lgs.build = await fetch(BUILD, {cache: 'no-store'}).then(
-            response => parseJsonResource(response, BUILD),
-        )
+        __.countries = new Map(countries.map(country => [country.code, country]))
+        lgs.build = build
 
         lgs.createDB()
 
@@ -490,7 +512,7 @@ export class AppUtils {
         try {
             // Versions
             try {
-                const response = await lgs.axios.get([lgs.BACKEND_API, 'versions'].join('/'))
+                const response = await lgs.axios.get([lgs.BACKEND_API, 'versions'].join('/'), {timeout: 3 * MILLIS})
                 lgs.versions = response.data
             }
             catch (error) {
@@ -556,39 +578,32 @@ export class AppUtils {
     }
 
     /**
-     * Ping Backend server
+     * Ping the backend and return its liveness response.
      *
-     * Timeouts for connections and response are the same, 2 seconds
+     * The backend liveness request has a three-second deadline.
      *
-     *
-     * @return {alive:boolean}
+     * @returns {Promise<{alive: boolean}>} Backend liveness response.
      */
     static pingBackend = async () => {
-
+        const url = [lgs.BACKEND_API, 'ping'].join('/')
         try {
-            return lgs.axios({
-                                 method:  'get',
-                                 url:     [lgs.BACKEND_API, 'ping'].join('/'),
-                                 headers: {
-                                     'content-type': 'application/json',
-                                     'Accept':       'application/json',
-                                 },
-                                 timeout: 3 * MILLIS,
-                                 signal:  AbortSignal.timeout(3 * MILLIS),
-                             })
-                .then(async function (response) {
-                    if (response.data !== '') {
-                        return response.data
-                    }
-                    return await __.app.startBackend()
-                })
-                .catch(async function () {
-                    return await __.app.startBackend()
-                })
+            const response = await lgs.axios({
+                method:  'get',
+                url,
+                headers: {
+                    'Accept': 'application/json',
+                },
+                timeout: 3 * MILLIS,
+                signal:  AbortSignal.timeout(3 * MILLIS),
+            })
+            if (response.data !== '') {
+                return response.data
+            }
+            return await __.app.startBackend()
         }
         catch (error) {
             console.error(error)
-            return {alive: false}
+            return __.app.startBackend()
         }
     }
 

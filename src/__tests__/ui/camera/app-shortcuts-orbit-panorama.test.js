@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -173,6 +173,33 @@ describe('app orbit and panorama shortcuts', () => {
         globalThis.lgs = undefined
         globalThis.__ = undefined
         vi.unstubAllGlobals()
+    })
+
+    it('allows application modules to load when the shortcut response body stalls', async () => {
+        const bodyRead = Promise.withResolvers()
+        const controller = new AbortController()
+        const timeout = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal)
+        const text = vi.fn(() => new Promise((resolve, reject) => {
+            controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {once: true})
+            bodyRead.resolve()
+        }))
+        globalThis.fetch.mockResolvedValue({text})
+
+        try {
+            const applicationModule = import('@Core/events/appShortcuts')
+            await bodyRead.promise
+            controller.abort()
+
+            expect(timeout).toHaveBeenCalledWith(5000)
+            expect(globalThis.fetch).toHaveBeenCalledWith(
+                expect.objectContaining({pathname: '/shortcuts.yaml'}),
+                {cache: 'no-store', signal: controller.signal},
+            )
+            await expect(applicationModule).resolves.toMatchObject({SHORTCUTS: []})
+        }
+        finally {
+            timeout.mockRestore()
+        }
     })
 
     it('registers the updated launch shortcuts', async () => {

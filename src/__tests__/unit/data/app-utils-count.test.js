@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-30
- * Last modified: 2026-09-21
+ * Last modified: 2026-11-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -176,6 +176,55 @@ describe('AppUtils bootstrap count instrumentation', () => {
 
         expect(mocks.sendVisit).not.toHaveBeenCalled()
         expect(onBackendReady).not.toHaveBeenCalled()
+    })
+
+    it('requests all independent configuration files while the settings body is pending', async () => {
+        const backendReady = Promise.withResolvers()
+        const settingsBody = Promise.withResolvers()
+        mocks.fetchResponseOverrides.set('settings.yaml', {text: () => settingsBody.promise})
+
+        const initialization = AppUtils.init({onBackendReady: backendReady.resolve})
+        try {
+            await backendReady.promise
+            for (const resource of ['settings.yaml', 'layers-terrains.yaml', 'widgets.yaml', 'replay.yaml', 'countries.yaml', 'build.json']) {
+                expect(globalThis.fetch).toHaveBeenCalledWith(resource, expect.anything())
+            }
+            expect(lgs.createDB).not.toHaveBeenCalled()
+        }
+        finally {
+            settingsBody.resolve('app: {}\nui: {}\nswatches:\n  list: []\n')
+            await initialization
+        }
+        await expect(initialization).resolves.toEqual({status: true})
+    })
+
+    it('reports a stalled YAML response body as a resource timeout', async () => {
+        mocks.fetchResponseOverrides.set('settings.yaml', {
+            text: async () => {
+                throw new DOMException('The operation timed out', 'TimeoutError')
+            },
+        })
+
+        await expect(AppUtils.init()).rejects.toMatchObject({
+            code:    'STARTUP_RESOURCE_TIMEOUT',
+            message: 'Timed out while loading settings.yaml after 10 seconds',
+        })
+    })
+
+    it('identifies a startup resource that times out instead of leaving the splash pending', async () => {
+        const fetchMock = vi.fn(async () => {
+            throw new DOMException('The operation timed out', 'TimeoutError')
+        })
+        vi.stubGlobal('fetch', fetchMock)
+
+        await expect(AppUtils.init()).rejects.toMatchObject({
+            code:    'STARTUP_RESOURCE_TIMEOUT',
+            message: 'Timed out while loading config.yaml after 10 seconds',
+        })
+        expect(fetchMock).toHaveBeenCalledWith('config.yaml', expect.objectContaining({
+            cache: 'no-store',
+            signal: expect.any(AbortSignal),
+        }))
     })
 
     it('reports an unavailable JSON resource instead of exposing a JSON parse error', async () => {
