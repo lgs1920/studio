@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-11-24
- * Last modified: 2026-11-24
+ * Created on: 2026-10-29
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import {
     AdditiveBlending, AmbientLight, BufferAttribute, BufferGeometry, CanvasTexture, Color, DirectionalLight,
     EquirectangularReflectionMapping, ExtrudeGeometry, HemisphereLight, Mesh, MeshBasicMaterial, MeshPhysicalMaterial,
-    MeshStandardMaterial, NoToneMapping, PCFSoftShadowMap, Path, PerspectiveCamera, RingGeometry, Scene, Shape, ShapeGeometry,
+    MeshStandardMaterial, NoToneMapping, PCFShadowMap, Path, PerspectiveCamera, RingGeometry, Scene, Shape, ShapeGeometry,
     SRGBColorSpace, WebGLRenderer,
 } from 'three'
 
@@ -386,7 +386,7 @@ const createOnMapReflectionTexture = element => {
     const mapSample = element.ownerDocument.createElement('canvas')
     mapSample.width = 256
     mapSample.height = 256
-    const sampleContext = mapSample.getContext('2d')
+    const sampleContext = mapSample.getContext('2d', {willReadFrequently: true})
     const mapTexture = new CanvasTexture(mapSample)
     mapTexture.colorSpace = SRGBColorSpace
 
@@ -467,7 +467,7 @@ export const createReplayCameraCamBallScene = ({canvas, padElement, mapScene, on
     renderer.outputColorSpace = SRGBColorSpace
     renderer.toneMapping = NoToneMapping
     renderer.shadowMap.enabled = true
-    renderer.shadowMap.type = PCFSoftShadowMap
+    renderer.shadowMap.type = PCFShadowMap
 
     const scene = new Scene()
     const camera = new PerspectiveCamera(32, 1, 0.1, 10)
