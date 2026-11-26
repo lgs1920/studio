@@ -70,6 +70,7 @@ export const LGS1920 = () => {
     const [initError, setInitError] = useState(null)
     const [initializationStep, setInitializationStep] = useState('application')
     const [appVisible, setAppVisible] = useState(false)
+    const [deferredJourneyDataReady, setDeferredJourneyDataReady] = useState(false)
     const [initialFocusReady, setInitialFocusReady] = useState(false)
     const [currentJourneyReady, setCurrentJourneyReady] = useState(false)
     const [appSurfaceReady, setAppSurfaceReady] = useState(false)
@@ -88,6 +89,7 @@ export const LGS1920 = () => {
         && currentJourneyReady
         && appSurfaceReady
         && initialMapAvailable
+        && deferredJourneyDataReady
         && !appUpdate.isAutomaticUpdateInProgress
 
     const revealApp = useCallback(() => {
@@ -504,7 +506,13 @@ export const LGS1920 = () => {
     }, [appReady])
 
     useEffect(() => {
-        if (deferredJourneyDataStarted.current || !appReady) {
+        // Complete deferred POI hydration and captures before the Enter action becomes available.
+        if (deferredJourneyDataStarted.current
+            || initStatus !== true
+            || !initialFocusReady
+            || !currentJourneyReady
+            || !appSurfaceReady
+            || !initialMapAvailable) {
             return
         }
 
@@ -512,8 +520,15 @@ export const LGS1920 = () => {
         void initializeDeferredJourneyData().catch(error => {
             console.error('[LGS1920] Deferred journey loading failed:', error)
             UIToast.error({caption: 'Journey loading failed!', text: error.message})
-        })
-    }, [appReady, initializeDeferredJourneyData])
+        }).finally(() => setDeferredJourneyDataReady(true))
+    }, [
+        appSurfaceReady,
+        currentJourneyReady,
+        initialFocusReady,
+        initialMapAvailable,
+        initStatus,
+        initializeDeferredJourneyData,
+    ])
 
     return (
         <>

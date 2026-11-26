@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,7 +28,8 @@ import {BASE_ENTITY, OVERLAY_ENTITY} from '@Core/constants'
 import {markStartup} from '@Core/ui/startup/startupTelemetry'
 import {useEffect} from 'react'
 
-const APP_SURFACE_READY_TIMEOUT = 1500
+const APP_SURFACE_READY_WARNING_TIMEOUT = 1500
+const APP_SURFACE_READY_TIMEOUT = 10000
 
 /** Keep the selected map layers mounted throughout startup and interactive use. */
 export const AppMapLayers = () => (
@@ -73,6 +74,7 @@ const watchAppSurfaceReady = onResult => {
     const cleanup = () => {
         if (!done) {
             done = true
+            window.clearTimeout(warningTimeout)
             window.clearTimeout(timeout)
             removePostRenderListener?.()
         }
@@ -86,6 +88,15 @@ const watchAppSurfaceReady = onResult => {
         }
     }
 
+    const warningTimeout = window.setTimeout(() => {
+        const state = getCesiumSurfaceState()
+        console.warn('[LGS1920][Cesium] Surface readiness is taking longer than expected.', {
+            ...state,
+            timeoutMs: APP_SURFACE_READY_WARNING_TIMEOUT,
+        })
+        globalThis.lgs?.viewer?.forceResize?.()
+        scene?.requestRender?.()
+    }, APP_SURFACE_READY_WARNING_TIMEOUT)
     const timeout = window.setTimeout(() => finish(false), APP_SURFACE_READY_TIMEOUT)
     const removePostRenderListener = scene?.postRender?.addEventListener?.(() => {
         if (globalThis.lgs?.scene === scene && getCesiumSurfaceState().surfaceAvailable) {
