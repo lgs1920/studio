@@ -5325,3 +5325,7 @@
 ## 2026-11-26 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/372bd277ce16f78b7a8a23f3ce2999075f360f18)
 
 - Recorded automatically from Git history.
+
+## 2026-11-26 — [`fix(replay-camera): lock CamBall rotation gesture`](https://github.com/lgs1920/studio/commit/47c85e85a333dbd99a390f7d23f8eaa33ce7b9d3)
+
+- Recorded automatically from Git history.
