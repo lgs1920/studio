@@ -5191,3 +5191,137 @@
 ## 2026-11-23 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/2df4fcabce163b6754e9d608974a81c7a16d1942)
 
 - Recorded automatically from Git history.
+
+## 2026-11-23 — [`style(joystick): refine crown and ball finish`](https://github.com/lgs1920/studio/commit/ff168a4c454bc73147bb527e8fd2b8221867d0e7)
+
+- Add a shaded opaque channel between the crowns, soften the outer crown edge, align the inner grooves with compass ticks, and reduce transparency and gloss.
+- Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+## 2026-11-24 — [`refactor(camBall): rename joystick camera control`](https://github.com/lgs1920/studio/commit/57c628460fb2fc1e06338450584464272eebc5c7)
+
+- Rename the camera control, migrate saved UI preferences, and preserve the map pivot interaction and focused tests.
+- Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+## 2026-11-24 — [`feat(camera): apply selected map pivot to camera actions`](https://github.com/lgs1920/studio/commit/c17cd6df7cf5a5a242e034f20c9086ced0f06789)
+
+- Recorded automatically from Git history.
+
+## 2026-11-24 — [`feat(startup): load journeys and POIs progressively`](https://github.com/lgs1920/studio/commit/a97638865ea2cc139d95d021d6545e5766aa3458)
+
+- Recorded automatically from Git history.
+
+## 2026-11-24 — [`fix(camBall): stop drag outside the ball`](https://github.com/lgs1920/studio/commit/4b62097cb1b114cea133ca5e559f1246f32e5a86)
+
+- Recorded automatically from Git history.
+
+## 2026-11-24 — [`feat(camera): retarget orbit and animate POI moves`](https://github.com/lgs1920/studio/commit/ccf4747468f47a6a15554e88e02265707efea74c)
+
+- Recorded automatically from Git history.
+
+## 2026-11-24 — [`chore(deps): update dependencies`](https://github.com/lgs1920/studio/commit/56e7d798f56e18bc1fb11bace44eabb1468d40bc)
+
+- Recorded automatically from Git history.
+
+## 2026-11-25 — [`fix(cache): avoid blocking startup on tile cache recovery`](https://github.com/lgs1920/studio/commit/2e22403f8668d12d90a7d576690b827f772dc440)
+
+- Recorded automatically from Git history.
+
+## 2026-11-25 — [`feat(startup): gate app reveal on initial map readiness`](https://github.com/lgs1920/studio/commit/86982b0f25ad17d3c7bd71ce73697eb7c5ee290a)
+
+- Recorded automatically from Git history.
+
+## 2026-11-25 — [`perf(startup): avoid redundant journey decoding`](https://github.com/lgs1920/studio/commit/b2eebe9bff4ad383b12c032bc0d9c9776757d1c8)
+
+- Recorded automatically from Git history.
+
+## 2026-11-25 — [`fix(startup): bound bootstrap resource requests`](https://github.com/lgs1920/studio/commit/ee32c0fc7a38153bc199d03988759ba769ce526e)
+
+- Recorded automatically from Git history.
+
+## 2026-11-25 — [`fix(camera): restore saved pose and camera persistence`](https://github.com/lgs1920/studio/commit/fce4497e0e2a3dd6f9e634e09e07d02ec06c0892)
+
+- Recorded automatically from Git history.
+
+## 2026-11-25 — [`perf(poi): defer terrain checks during map orbit`](https://github.com/lgs1920/studio/commit/638c5db417ea22bfa5273086e81ef516c9501a31)
+
+- Recorded automatically from Git history.
+
+## 2026-11-25 — [`fix(replay): persist profile styles per mode`](https://github.com/lgs1920/studio/commit/767b01a6729640b7c10b13f4eb6b35bd938b0ea7)
+
+- Recorded automatically from Git history.
+
+## 2026-11-25 — [`style(replay): organize pinned drawer controls`](https://github.com/lgs1920/studio/commit/f8bd5de9c58f329c0b410f890d92ecf46b94ba7e)
+
+- Recorded automatically from Git history.
+
+## 2026-11-25 — [`fix(replay-camera): reset axis after drag changes`](https://github.com/lgs1920/studio/commit/610e3ed8e5b8828941e88233e639417833ce3f55)
+
+- Recorded automatically from Git history.
+
+## 2026-11-25 — [`fix(map): preserve imagery when 3D globe is hidden`](https://github.com/lgs1920/studio/commit/a1833a6a14ece9a0c31898f275704f83cf0f8798)
+
+- Recorded automatically from Git history.
+
+## 2026-11-25 — [`test(startup): cover stable viewer readiness`](https://github.com/lgs1920/studio/commit/38f568222f157f17513619240c051f4338b050f4)
+
+- Recorded automatically from Git history.
+
+## 2026-11-25 — [`docs(replay): track expert completion plan`](https://github.com/lgs1920/studio/commit/e9fce645daf904939c9905b45a215ee4b727cac2)
+
+- Recorded automatically from Git history.
+
+## 2026-11-25 — [`chore(deps): update React type definitions`](https://github.com/lgs1920/studio/commit/0680fa80377487cabd02788c0102fc9dd99902b2)
+
+- Recorded automatically from Git history.
+
+## 2026-11-26 — [`refactor(scene): retire 2D globe mode`](https://github.com/lgs1920/studio/commit/b4cac5dbff77812752490f994ee51ee85bdb8341)
+
+- Recorded automatically from Git history.
+
+## 2026-11-26 — [`fix(poi): wait for data source entities before capture`](https://github.com/lgs1920/studio/commit/befe2c61e86d1ac60f5fbbb402b7b15a8d812200)
+
+- Recorded automatically from Git history.
+
+## 2026-11-26 — [`perf(replay-camera): reduce CamBall render cost`](https://github.com/lgs1920/studio/commit/513e37b537a103bf45262d245bd95a9816781f35)
+
+- Recorded automatically from Git history.
+
+## 2026-11-26 — [`fix(startup): defer service worker reload until ready`](https://github.com/lgs1920/studio/commit/0a595d09ae10e7d612de6707294ca745d33f26a3)
+
+- Recorded automatically from Git history.
+
+## 2026-11-26 — [`refactor(scene): clean up retired mode handling`](https://github.com/lgs1920/studio/commit/a0c1b88b810a9c3e0c663980edfd0c76a5cf0dcc)
+
+- Recorded automatically from Git history.
+
+## 2026-11-26 — [`fix(camera): lower default orbit speed`](https://github.com/lgs1920/studio/commit/a472d4eb7801cac52c8e0128b580e0923d637baf)
+
+- Recorded automatically from Git history.
+
+## 2026-11-26 — [`fix(startup): unlock welcome audio after interaction`](https://github.com/lgs1920/studio/commit/e492496e1561e9d923e85245acf0eff4ce4a7660)
+
+- Recorded automatically from Git history.
+
+## 2026-11-26 — [`fix(startup): prevent duplicate service status`](https://github.com/lgs1920/studio/commit/c31acb4ea5148886fcb249c8e0b6ccfa0ae35c11)
+
+- Recorded automatically from Git history.
+
+## 2026-11-26 — [`fix(replay-camera): make CamBall drag direction immediate`](https://github.com/lgs1920/studio/commit/2b195f02694b7910c5fb613f6d10485f12881af5)
+
+- Recorded automatically from Git history.
+
+## 2026-11-26 — [`fix(camera): await orbit cleanup before focus`](https://github.com/lgs1920/studio/commit/22c80ac94cc0ca177b8a96bbebedcfa9eeeffdf3)
+
+- Recorded automatically from Git history.
+
+## 2026-11-26 — [`fix(startup): wait for deferred journey data`](https://github.com/lgs1920/studio/commit/8da69a0d6950ace5004e669a38f52825ff6c9aac)
+
+- Recorded automatically from Git history.
+
+## 2026-11-26 — [`perf(poi): defer captures during camera orbit`](https://github.com/lgs1920/studio/commit/808ffbe4e7356663fecdfc2bb8a328c57513e9da)
+
+- Recorded automatically from Git history.
+
+## 2026-11-26 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/372bd277ce16f78b7a8a23f3ce2999075f360f18)
+
+- Recorded automatically from Git history.
