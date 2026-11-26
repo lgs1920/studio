@@ -72,6 +72,8 @@ const CAM_BALL_LAYOUT_SIZE = 144
 const CROWN_SENSITIVITY = 1
 const DOUBLE_TAP_INTERVAL = 320
 const TAP_TRAVEL_LIMIT = 8
+/** Require a one-pixel reverse movement before changing a held camera adjustment. */
+const CAM_BALL_DIRECTION_REVERSAL_DISTANCE = 1
 const CAM_BALL_ROTATION_SURFACE = '.replay-camera-cam-ball-grip-hit'
 const CAM_BALL_CAMERA_SURFACE = `.replay-camera-cam-ball-dome-hit, ${CAM_BALL_ROTATION_SURFACE}`
 
@@ -289,8 +291,8 @@ const rotateReplayCamera = delta => {
     return Boolean(globalThis.__.ui.replay.updatePreparationCamera({cameraAngle}, {preserveCameraRange: true}))
 }
 
-/** Undo the CSS perspective before measuring the pointer angle on the grip ring. */
-const crownPointerAngle = (event, rect, projection) => {
+/** Undo the CSS perspective and return normalized coordinates on the CamBall plane. */
+const pointerPositionOnCamBall = (event, rect, projection) => {
     if (!(rect.width > 0 && rect.height > 0)) return null
     let localX = event.clientX - rect.left - rect.width / 2
     let localY = event.clientY - rect.top - rect.height / 2
@@ -302,9 +304,36 @@ const crownPointerAngle = (event, rect, projection) => {
         localY /= denominator
         localX *= 1 - localY * depthSlope
     }
-    const x = localX / rect.width
-    const y = (localY / rect.height - 0.04) * (41 / 39)
+    return {x: localX / rect.width, y: localY / rect.height}
+}
+
+/** Measure the grip ring angle after undoing the CamBall perspective. */
+const crownPointerAngle = (event, rect, projection) => {
+    const point = pointerPositionOnCamBall(event, rect, projection)
+    if (!point) return null
+    const {x} = point
+    const y = (point.y - 0.04) * (41 / 39)
     return Number.isFinite(x + y) && Math.hypot(x, y) > 0.1 ? Math.atan2(y, x) : null
+}
+
+/** Return whether the pointer has entered the projected pitch and zoom dome. */
+const isPointerInsideCamBallDome = (event, rect, projection) => {
+    const point = pointerPositionOnCamBall(event, rect, projection)
+    if (!point) return false
+    const x = point.x / 0.25
+    const y = (point.y - 0.03) / 0.235
+    return x * x + y * y <= 1
+}
+
+/** Detect a clear inward movement before the pointer reaches the center dome. */
+const isPointerMovingTowardCamBallCenter = (event, previousX, previousY, rect, projection) => {
+    const point = pointerPositionOnCamBall(event, rect, projection)
+    const previous = pointerPositionOnCamBall({clientX: previousX, clientY: previousY}, rect, projection)
+    if (!point || !previous) return false
+    const currentRadius = Math.hypot(point.x, point.y - 0.04)
+    const previousRadius = Math.hypot(previous.x, previous.y - 0.04)
+    const movement = Math.hypot(point.x - previous.x, point.y - previous.y)
+    return previousRadius - currentRadius > movement * 0.25
 }
 
 /** Return whether a captured pointer is still inside the circular CamBall surface. */
@@ -473,12 +502,18 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
         }
         const angle = crownPointerAngle(event, rect, projection)
         if (angle === null || !beginInteraction()) return
-            const rotate = mainScene ? resolveMainCameraOrbit()?.rotate : rotateReplayCamera
+        const mainOrbit = mainScene ? resolveMainCameraOrbit() : null
+        const rotate = mainScene ? mainOrbit?.rotate : rotateReplayCamera
         if (!rotate) return
         const target = event.currentTarget
         _gesture.current = {
-            target, pointerId: event.pointerId, rect, projection, angle, rotate,
+            target, pointerId: event.pointerId, rect, projection, angle, rotate, mainOrbit,
             pressX: event.clientX, pressY: event.clientY, pressTime: event.timeStamp,
+            x: 0, y: 0, lastFrameTime: null,
+            reversalAxis: null, reversalDistance: 0,
+            lastClientX: event.clientX, lastClientY: event.clientY, activeAxis: null,
+            originClientX: event.clientX, originClientY: event.clientY,
+            originStickX: 0, originStickY: 0, axis: null,
         }
         target.setPointerCapture?.(event.pointerId)
     }, [beginInteraction, mainScene])
@@ -552,6 +587,29 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
             return
         }
         if (Math.hypot(event.clientX - gesture.pressX, event.clientY - gesture.pressY) > TAP_TRAVEL_LIMIT) gesture.dragged = true
+        if (gesture.rotate && (isPointerInsideCamBallDome(event, gesture.rect, gesture.projection)
+            || isPointerMovingTowardCamBallCenter(
+                event, gesture.lastClientX, gesture.lastClientY, gesture.rect, gesture.projection,
+            ))) {
+            const originX = gesture.hasRotated ? gesture.lastClientX : gesture.pressX
+            const originY = gesture.hasRotated ? gesture.lastClientY : gesture.pressY
+            // Anchor inward drags at their initial pointer position, before they reach the center dome.
+            gesture.rotate = null
+            gesture.originClientX = originX
+            gesture.originClientY = originY
+            gesture.lastClientX = originX
+            gesture.lastClientY = originY
+            gesture.originStickX = 0
+            gesture.originStickY = 0
+            gesture.activeAxis = null
+            gesture.axis = null
+            gesture.x = 0
+            gesture.y = 0
+            gesture.lastFrameTime = null
+            gesture.reversalAxis = null
+            gesture.reversalDistance = 0
+            gesture.applyHeld = applyHeld
+        }
         if (gesture.rotate) {
             if (!canInteract()) {
                 stop()
@@ -560,15 +618,53 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
             const angle = crownPointerAngle(event, gesture.rect, gesture.projection)
             if (angle !== null && gesture.angle !== null) {
                 const delta = angle - gesture.angle
+                gesture.hasRotated ||= Math.abs(delta) > 1e-6
                 turnCrown(Math.atan2(Math.sin(delta), Math.cos(delta)) * CROWN_SENSITIVITY, gesture.rotate)
             }
             gesture.angle = angle
+            gesture.lastClientX = event.clientX
+            gesture.lastClientY = event.clientY
             return
         }
         gesture.precision = event.ctrlKey
         const radius = Math.max(1, Math.min(gesture.rect.width, gesture.rect.height) * 0.2)
         let deltaClientX = event.clientX - gesture.originClientX
         let deltaClientY = event.clientY - gesture.originClientY
+        const movementX = event.clientX - gesture.lastClientX
+        const movementY = event.clientY - gesture.lastClientY
+        const movementMagnitude = Math.max(Math.abs(movementX), Math.abs(movementY))
+        const movementAxis = Math.abs(movementX) >= Math.abs(movementY) ? 'horizontal' : 'vertical'
+        const directionAxis = event.ctrlKey ? gesture.axis : gesture.axis ? null : gesture.activeAxis
+        const directionMovement = directionAxis === 'horizontal' ? movementX : movementY
+        const directionDeflection = directionAxis === 'horizontal' ? gesture.x : gesture.y
+        const projectedX = gesture.originStickX + deltaClientX / radius
+        const projectedY = gesture.originStickY + deltaClientY / radius
+        const projectedAxis = Math.abs(projectedX) >= Math.abs(projectedY) ? 'horizontal' : 'vertical'
+        const pointerSelectsAnotherAxis = !event.ctrlKey && directionAxis && projectedAxis !== directionAxis
+        const returnedToOrigin = Math.hypot(deltaClientX, deltaClientY) < 0.5
+        const directionReversed = directionAxis && !pointerSelectsAnotherAxis && !returnedToOrigin && directionDeflection !== 0
+            && Math.sign(directionMovement) !== Math.sign(directionDeflection)
+        if (directionReversed) {
+            gesture.reversalDistance = gesture.reversalAxis === directionAxis
+                ? gesture.reversalDistance + Math.abs(directionMovement)
+                : Math.abs(directionMovement)
+            gesture.reversalAxis = directionAxis
+        }
+        else {
+            gesture.reversalAxis = null
+            gesture.reversalDistance = 0
+        }
+        if (directionReversed && gesture.reversalDistance >= CAM_BALL_DIRECTION_REVERSAL_DISTANCE) {
+            // Rebase at the latest pointer sample when the drag reverses, so it responds immediately.
+            gesture.originClientX = gesture.lastClientX
+            gesture.originClientY = gesture.lastClientY
+            gesture.originStickX = 0
+            gesture.originStickY = 0
+            deltaClientX = movementX
+            deltaClientY = movementY
+            gesture.reversalAxis = null
+            gesture.reversalDistance = 0
+        }
         let nextX
         let nextY
         if (event.ctrlKey) {
@@ -592,10 +688,6 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
             }
         }
         else {
-            const movementX = event.clientX - gesture.lastClientX
-            const movementY = event.clientY - gesture.lastClientY
-            const movementMagnitude = Math.max(Math.abs(movementX), Math.abs(movementY))
-            const movementAxis = Math.abs(movementX) >= Math.abs(movementY) ? 'horizontal' : 'vertical'
             if (movementMagnitude >= 3 && gesture.activeAxis && movementAxis !== gesture.activeAxis) {
                 gesture.originClientX = gesture.lastClientX
                 gesture.originClientY = gesture.lastClientY
@@ -645,7 +737,7 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
             _frame.current = null
             gesture.lastFrameTime = null
         }
-    }, [canInteract, stop, turnCrown])
+    }, [applyHeld, canInteract, stop, turnCrown])
 
     /** Capture input on the full dome surface. */
     const start = useCallback(event => {
@@ -659,17 +751,16 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
         _gesture.current = {
             target, precision: event.ctrlKey, pointerId: event.pointerId, rect: event.currentTarget.getBoundingClientRect(),
             pressX: event.clientX, pressY: event.clientY, pressTime: event.timeStamp,
-            x: stick.x, y: stick.y, lastFrameTime: null, applyHeld,
+            x: 0, y: 0, lastFrameTime: null, applyHeld,
+            reversalAxis: null, reversalDistance: 0,
             mainOrbit,
             lastClientX: event.clientX, lastClientY: event.clientY,
-            activeAxis: stick.x !== 0 || stick.y !== 0
-                ? Math.abs(stick.x) >= Math.abs(stick.y) ? 'horizontal' : 'vertical'
-                : null,
+            activeAxis: null,
             originClientX: event.clientX, originClientY: event.clientY,
-            originStickX: stick.x, originStickY: stick.y, axis: null,
+            originStickX: 0, originStickY: 0, axis: null,
         }
         target.setPointerCapture?.(event.pointerId)
-    }, [applyHeld, beginInteraction, mainScene, stick.x, stick.y])
+    }, [applyHeld, beginInteraction, mainScene])
 
     /** End only the pointer gesture owned by this CamBall. */
     const end = useCallback(event => {

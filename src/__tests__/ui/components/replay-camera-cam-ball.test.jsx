@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-29
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -235,6 +235,44 @@ describe('Replay camera CamBall', () => {
         pointer(rim, 'pointerup', 50, 79, 1, false, 'touch')
         expect(updatePreparationCamera).toHaveBeenCalledOnce()
         expect(updatePreparationCamera.mock.calls[0][0]).toEqual({cameraAngle: -25})
+    })
+
+    it.each([
+        {axis: 'pitch', startX: 54, startY: 83, inwardX: 54, inwardY: 81, direction: 'raise'},
+        {axis: 'pitch', startX: 54, startY: 25, inwardX: 54, inwardY: 27, direction: 'lower'},
+        {axis: 'zoom', startX: 21, startY: 54, inwardX: 23, inwardY: 54, direction: 'in'},
+        {axis: 'zoom', startX: 79, startY: 54, inwardX: 77, inwardY: 54, direction: 'out'},
+    ])('starts an inward grip-ring adjustment at the drag origin for $axis ($direction)', async ({
+        axis, startX, startY, inwardX, inwardY, direction,
+    }) => {
+        const {frame, replay, updatePreparationCamera} = install()
+        const view = render(<ReplayCameraCamBall/>)
+        const pad = view.getByRole('group', {name: /adjust pitch/})
+        const rim = view.getByRole('group', {name: 'Rotate camera with the grip ring'})
+        pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
+        const startingPose = {...replay.camera}
+
+        pointer(rim, 'pointerdown', startX, startY)
+        pointer(pad, 'pointermove', inwardX, inwardY)
+        await frame(0)
+
+        const value = axis === 'pitch' ? replay.camera.pitch : replay.camera.altitude
+        const startingValue = axis === 'pitch' ? startingPose.pitch : startingPose.altitude
+        if (direction === 'lower' || direction === 'in') expect(value).toBeLessThan(startingValue)
+        else expect(value).toBeGreaterThan(startingValue)
+        expect(updatePreparationCamera).toHaveBeenCalled()
+
+        pointer(pad, 'pointermove', 50, 50)
+        pointer(pad, 'pointerup', 50, 50)
+
+        expect(updatePreparationCamera).toHaveBeenCalled()
+        if (axis === 'pitch') {
+            expect(replay.camera.altitude).toBe(startingPose.altitude)
+        }
+        else {
+            expect(replay.camera.pitch).toBe(startingPose.pitch)
+        }
+        expect(replay.camera.cameraAngle).toBe(65)
     })
 
     it('leaves the outer crown display-only when clicked or dragged', () => {
@@ -606,7 +644,7 @@ describe('Replay camera CamBall', () => {
         expect(horizontal ? replay.camera.pitch : replay.camera.altitude).not.toBe(horizontal ? pose.pitch : pose.altitude)
     })
 
-    it('keeps the dome where it was rolled after release and uses that position for the next drag', async () => {
+    it('keeps the dome display while starting each new drag from its own origin', async () => {
         const {frame, replay} = install()
         const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
@@ -628,11 +666,11 @@ describe('Replay camera CamBall', () => {
         pointer(pad, 'pointerdown', 90, 50)
         pointer(pad, 'pointermove', 80, 50)
         await frame(40)
-        expect(replay.camera.altitude).toBeLessThan(releasedAltitude)
+        expect(replay.camera.altitude).toBeGreaterThan(releasedAltitude)
         pointer(pad, 'pointerup', 80, 50)
     })
 
-    it('switches from a retained full zoom deflection to pitch when the next drag moves vertically', async () => {
+    it('starts a fresh pitch drag after a zoom drag', async () => {
         const {frame, replay} = install()
         const view = render(<ReplayCameraCamBall/>)
         const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
@@ -652,6 +690,29 @@ describe('Replay camera CamBall', () => {
         expect(replay.camera.pitch).toBeGreaterThan(-40)
         expect(view.container.querySelector('.action-top')).not.toBeNull()
         pointer(pad, 'pointerup', 90, 40)
+    })
+
+    it.each([
+        {axis: 'pitch', first: [50, 30], reverse: [[50, 31]]},
+        {axis: 'zoom', first: [70, 50], reverse: [[69, 50]]},
+    ])('reverses a held $axis drag on the next movement', async ({axis, first, reverse}) => {
+        const {frame, replay} = install()
+        const view = render(<ReplayCameraCamBall/>)
+        const pad = view.getByLabelText('Drag up or down to adjust pitch, and left or right to zoom')
+        pad.getBoundingClientRect = () => ({left: 0, top: 0, width: 100, height: 100})
+        const readValue = () => axis === 'pitch' ? replay.camera.pitch : replay.camera.altitude
+
+        pointer(pad, 'pointerdown', 50, 50)
+        pointer(pad, 'pointermove', ...first)
+        await frame(0)
+        await frame(100)
+        const valueBeforeReverse = readValue()
+        for (const position of reverse) pointer(pad, 'pointermove', ...position)
+        await frame(200)
+
+        if (axis === 'pitch') expect(readValue()).toBeLessThan(valueBeforeReverse)
+        else expect(readValue()).toBeGreaterThan(valueBeforeReverse)
+        pointer(pad, 'pointerup', ...reverse[reverse.length - 1])
     })
 
     it.each([
@@ -810,6 +871,9 @@ describe('Replay camera CamBall', () => {
         await act(async () => fireEvent.keyDown(pad, {key: 'ArrowDown'}))
         expect(replay.camera.altitude).toBe(1200)
         expect(replay.camera.pitch).toBeLessThan(-40)
+        const loweredPitch = replay.camera.pitch
+        await act(async () => fireEvent.keyDown(pad, {key: 'ArrowUp'}))
+        expect(replay.camera.pitch).toBeGreaterThan(loweredPitch)
         const pitch = replay.camera.pitch
         await act(async () => fireEvent.keyDown(pad, {key: 'ArrowLeft'}))
         expect(replay.camera.altitude).toBeGreaterThan(1200)
