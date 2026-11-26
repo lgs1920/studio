@@ -5182,3 +5182,12 @@
 ## 2026-11-11 — [`Merge pull request #566 from lgs1920/feat/photon-geocoder`](https://github.com/lgs1920/studio/commit/8a615149aa66988d9553bd448b46d1b8ba46cfff)
 
 - Route Photon geocoding through proxies on 1.0.0
+
+## 2026-11-23 — [`feat(joystick): redesign and expand camera controls`](https://github.com/lgs1920/studio/commit/990d6a44396a34b1ce1f61ed6f91696a9d0958b1)
+
+- Redesign the on-map joystick with a reflected spherical dome, grip ring, compass marks, and camera-aware perspective. Add map and Replay camera controls, pan and rotate gestures, persistent deflection, settings, and shortcut documentation.
+- Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+## 2026-11-23 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/2df4fcabce163b6754e9d608974a81c7a16d1942)
+
+- Recorded automatically from Git history.
