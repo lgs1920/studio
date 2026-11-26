@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-29
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -410,6 +410,15 @@ body:not(.lgs-app-booting) {
     & #lgs-boot-splash {
         visibility: hidden;
         opacity: 0;
+    }
+}
+
+body.lgs-app-booting {
+    /* Keep the animated React copy hidden while the splash roller owns startup status. */
+    & #lgs-boot-splash:not(.lgs-boot-splash-cta-ready) ~ #lgs1920-container #welcome-hero {
+        & .welcome-initialization-callout.welcome-initialization-roller {
+            visibility: hidden
+        }
     }
 }
 
