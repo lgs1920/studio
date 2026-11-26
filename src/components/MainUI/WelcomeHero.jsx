@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-11-05
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -283,12 +283,22 @@ export const WelcomeHero = ({
         let clapperObserver = null
         let hasPlayedCue = false
         let audioContext = null
-        if (AudioContextConstructor) {
+
+        /** Create and resume audio only inside a browser user activation. */
+        const unlockAudio = () => {
+            if (!active || hasPlayedCue || !AudioContextConstructor || audioContext) {
+                return
+            }
+
             try {
                 audioContext = new AudioContextConstructor()
             }
             catch {
                 audioContext = null
+            }
+
+            if (audioContext && audioContext.state !== 'running') {
+                void audioContext.resume().catch(() => {})
             }
         }
 
@@ -298,6 +308,10 @@ export const WelcomeHero = ({
                 window.clearTimeout(cueTimer)
                 cueTimer = null
             }
+        }
+        const removeAudioActivationListeners = () => {
+            window.removeEventListener('pointerdown', unlockAudio)
+            window.removeEventListener('keydown', unlockAudio)
         }
         /** Resumes the one-shot animation after the impact finishes or audio is unavailable. */
         const finishClapperCue = () => {
@@ -334,6 +348,7 @@ export const WelcomeHero = ({
 
                 holdingClosed = true
                 hasPlayedCue = true
+                removeAudioActivationListeners()
                 heldAnimations = [...new Set([animation, ...synchronizedAnimations])]
                 heldAnimations.forEach(candidate => {
                     candidate.currentTime = duration * WELCOME_LOGO_CLOSE_PROGRESS
@@ -349,18 +364,17 @@ export const WelcomeHero = ({
             }, delay)
         }
 
+        window.addEventListener('pointerdown', unlockAudio, {once: true})
+        window.addEventListener('keydown', unlockAudio, {once: true})
         scheduleClapperCue()
         if (!hasPlayedCue) {
             clapperObserver = new MutationObserver(scheduleClapperCue)
             clapperObserver.observe(animatedLogo ?? document.body, {childList: true, subtree: true})
         }
-        if (audioContext && audioContext.state !== 'running') {
-            void audioContext.resume().catch(() => {})
-        }
-
         return () => {
             active = false
             clearCueTimer()
+            removeAudioActivationListeners()
             finishClapperCue()
             clapperObserver?.disconnect()
             animatedLogo?.classList.remove('welcome-branding-logo-animated')

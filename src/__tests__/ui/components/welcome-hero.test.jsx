@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -233,10 +233,14 @@ describe('WelcomeHero', () => {
         vi.useFakeTimers({now: 0})
         const sources = []
         const audioContext = {
-            state: 'running',
+            state: 'suspended',
             sampleRate: 1000,
             currentTime: 0,
             destination: {},
+            resume: vi.fn(function () {
+                this.state = 'running'
+                return Promise.resolve()
+            }),
             createBuffer: () => ({getChannelData: () => new Float32Array(160)}),
             createBufferSource: () => {
                 const source = {connect: vi.fn(), disconnect: vi.fn(), start: vi.fn(), stop: vi.fn()}
@@ -307,8 +311,13 @@ describe('WelcomeHero', () => {
 
         expect(animations.length).toBeGreaterThan(1)
         expect(logoElement.classList.contains('welcome-branding-logo-animated')).toBe(true)
-        expect(MockAudioContext.instances).toBe(1)
+        expect(MockAudioContext.instances).toBe(0)
         expect(sources).toHaveLength(0)
+
+        await act(async () => window.dispatchEvent(new Event('pointerdown')))
+
+        expect(MockAudioContext.instances).toBe(1)
+        expect(audioContext.resume).toHaveBeenCalledTimes(1)
 
         act(() => vi.advanceTimersByTime(456))
         expect(sources).toHaveLength(4)
