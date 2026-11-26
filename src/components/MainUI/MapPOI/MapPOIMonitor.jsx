@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-05-09
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -170,6 +170,11 @@ export const MapPOIMonitor = ({initialMapTilesReady = true} = {}) => {
         }
 
         const poi = $pois.list.get(poiId)
+        if (!poi || !POIUtils.getEntityContainer(poi)) {
+            poiCaptureSurfaceStore.cancel(poiId)
+            return
+        }
+
         const presentation = resolveReplayPOIPresentation(poi, {
             animatedPOI: getReplayPOISelectorSnapshot('animated', poiId),
         })
@@ -185,8 +190,12 @@ export const MapPOIMonitor = ({initialMapTilesReady = true} = {}) => {
             priority: capturePriority,
             allowOverflow: capturePriority,
             getPriority: () => getPOICanvasRenderPriority(poiId),
-            isEligible: () => !isReplayPOIPresentationActive(lgs.stores.replay)
-                && POIUtils.isPOIVisibleOnMap($pois.list.get(poiId)),
+            isEligible: () => {
+                const currentPOI = $pois.list.get(poiId)
+                return !isReplayPOIPresentationActive(lgs.stores.replay)
+                    && Boolean(POIUtils.getEntityContainer(currentPOI))
+                    && POIUtils.isPOIVisibleOnMap(currentPOI)
+            },
         })
     }, [$pois, initialMapTilesReady])
 
@@ -411,6 +420,21 @@ export const MapPOIMonitor = ({initialMapTilesReady = true} = {}) => {
         const removeSubscription = subscribeKey($pois.list, 'epoch', synchronizePOIListeners, true)
         window.addEventListener(ADD_POI_EVENT, synchronizePOIListeners)
 
+        /** Queue captures for POIs whose owner DataSource has just become available. */
+        const requestPOIsForDataSource = dataSource => {
+            if (!dataSource?.name) {
+                return
+            }
+
+            for (const [poiId, poi] of $pois.list) {
+                if (POIUtils.getDataSourceName(poi) === dataSource.name) {
+                    requestPOICapture(poiId)
+                }
+            }
+        }
+        const removeDataSourceAdded = lgs.viewer?.dataSources?.dataSourceAdded
+            ?.addEventListener?.(requestPOIsForDataSource)
+
         // Resolve double-clicks against the current POI store so global POIs remain editable across list updates.
         __.canvasEvents.onDoubleClick(handleEditor, {
             entity: [],
@@ -542,6 +566,7 @@ export const MapPOIMonitor = ({initialMapTilesReady = true} = {}) => {
         return () => {
             poiTerrainOcclusionController.dispose()
             removeSubscription()
+            removeDataSourceAdded?.()
             window.removeEventListener(ADD_POI_EVENT, synchronizePOIListeners)
             __.canvasEvents.offDoubleClick?.(handleEditor)
             replaySubscriptions.forEach(remove => remove())

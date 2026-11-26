@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-16
- * Last modified: 2026-11-11
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -883,6 +883,11 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
 
         const currentPoint = $pois.list.get(pointId)
         if (!currentPoint?.id) {
+            return
+        }
+
+        const entities = POIUtils.getEntityContainer(currentPoint)
+        if (globalThis.lgs?.viewer && !entities?.getById?.(currentPoint.id)) {
             return
         }
 

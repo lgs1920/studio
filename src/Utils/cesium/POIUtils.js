@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-03-01
- * Last modified: 2026-11-11
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -390,7 +390,6 @@ export class POIUtils {
 
         const entities = POIUtils.getEntityContainer(poi)
         if (!entities) {
-            console.warn(`No entity container found for POI: ${poi.id}`)
             return false
         }
 
