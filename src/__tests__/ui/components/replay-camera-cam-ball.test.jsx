@@ -242,8 +242,8 @@ describe('Replay camera CamBall', () => {
         {axis: 'pitch', startX: 54, startY: 25, inwardX: 54, inwardY: 27, direction: 'lower'},
         {axis: 'zoom', startX: 21, startY: 54, inwardX: 23, inwardY: 54, direction: 'in'},
         {axis: 'zoom', startX: 79, startY: 54, inwardX: 77, inwardY: 54, direction: 'out'},
-    ])('starts an inward grip-ring adjustment at the drag origin for $axis ($direction)', async ({
-        axis, startX, startY, inwardX, inwardY, direction,
+    ])('keeps a grip-ring rotation locked through inward movement for $axis ($direction)', async ({
+        startX, startY, inwardX, inwardY,
     }) => {
         const {frame, replay, updatePreparationCamera} = install()
         const view = render(<ReplayCameraCamBall/>)
@@ -255,24 +255,16 @@ describe('Replay camera CamBall', () => {
         pointer(rim, 'pointerdown', startX, startY)
         pointer(pad, 'pointermove', inwardX, inwardY)
         await frame(0)
-
-        const value = axis === 'pitch' ? replay.camera.pitch : replay.camera.altitude
-        const startingValue = axis === 'pitch' ? startingPose.pitch : startingPose.altitude
-        if (direction === 'lower' || direction === 'in') expect(value).toBeLessThan(startingValue)
-        else expect(value).toBeGreaterThan(startingValue)
-        expect(updatePreparationCamera).toHaveBeenCalled()
-
         pointer(pad, 'pointermove', 50, 50)
+        await frame(100)
         pointer(pad, 'pointerup', 50, 50)
 
-        expect(updatePreparationCamera).toHaveBeenCalled()
-        if (axis === 'pitch') {
-            expect(replay.camera.altitude).toBe(startingPose.altitude)
-        }
-        else {
-            expect(replay.camera.pitch).toBe(startingPose.pitch)
-        }
-        expect(replay.camera.cameraAngle).toBe(65)
+        expect(replay.camera.altitude).toBe(startingPose.altitude)
+        expect(replay.camera.pitch).toBe(startingPose.pitch)
+        const rotationOnlyUpdates = updatePreparationCamera.mock.calls.every(
+            ([updates]) => Object.keys(updates).every(key => key === 'cameraAngle'),
+        )
+        expect(rotationOnlyUpdates).toBe(true)
     })
 
     it('leaves the outer crown display-only when clicked or dragged', () => {

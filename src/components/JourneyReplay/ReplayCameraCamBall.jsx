@@ -316,26 +316,6 @@ const crownPointerAngle = (event, rect, projection) => {
     return Number.isFinite(x + y) && Math.hypot(x, y) > 0.1 ? Math.atan2(y, x) : null
 }
 
-/** Return whether the pointer has entered the projected pitch and zoom dome. */
-const isPointerInsideCamBallDome = (event, rect, projection) => {
-    const point = pointerPositionOnCamBall(event, rect, projection)
-    if (!point) return false
-    const x = point.x / 0.25
-    const y = (point.y - 0.03) / 0.235
-    return x * x + y * y <= 1
-}
-
-/** Detect a clear inward movement before the pointer reaches the center dome. */
-const isPointerMovingTowardCamBallCenter = (event, previousX, previousY, rect, projection) => {
-    const point = pointerPositionOnCamBall(event, rect, projection)
-    const previous = pointerPositionOnCamBall({clientX: previousX, clientY: previousY}, rect, projection)
-    if (!point || !previous) return false
-    const currentRadius = Math.hypot(point.x, point.y - 0.04)
-    const previousRadius = Math.hypot(previous.x, previous.y - 0.04)
-    const movement = Math.hypot(point.x - previous.x, point.y - previous.y)
-    return previousRadius - currentRadius > movement * 0.25
-}
-
 /** Return whether a captured pointer is still inside the circular CamBall surface. */
 const isPointerInsideCamBall = (event, rect) => {
     if (!rect || !(rect.width > 0) || !(rect.height > 0)
@@ -488,7 +468,7 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
         if (event.timeStamp - _touchResetTime.current > DOUBLE_TAP_INTERVAL) resetNorth()
     }, [resetNorth])
 
-    /** Capture the grip ring and keep its angle as the gesture origin. */
+    /** Capture a rotation-only gesture from the grip ring until its pointer is released. */
     const startGrip = useCallback(event => {
         if (event.button !== 0 || _gesture.current) return
         if (event.shiftKey || (mainScene && event.ctrlKey)) {
@@ -507,7 +487,7 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
         if (!rotate) return
         const target = event.currentTarget
         _gesture.current = {
-            target, pointerId: event.pointerId, rect, projection, angle, rotate, mainOrbit,
+            mode: 'rotate', target, pointerId: event.pointerId, rect, projection, angle, rotate, mainOrbit,
             pressX: event.clientX, pressY: event.clientY, pressTime: event.timeStamp,
             x: 0, y: 0, lastFrameTime: null,
             reversalAxis: null, reversalDistance: 0,
@@ -582,35 +562,12 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
         const gesture = _gesture.current
         if (!gesture || gesture.pointerId !== event.pointerId) return
         consumeInput(event)
-        if (!isPointerInsideCamBall(event, gesture.rect)) {
+        if (gesture.mode !== 'rotate' && !isPointerInsideCamBall(event, gesture.rect)) {
             stop()
             return
         }
         if (Math.hypot(event.clientX - gesture.pressX, event.clientY - gesture.pressY) > TAP_TRAVEL_LIMIT) gesture.dragged = true
-        if (gesture.rotate && (isPointerInsideCamBallDome(event, gesture.rect, gesture.projection)
-            || isPointerMovingTowardCamBallCenter(
-                event, gesture.lastClientX, gesture.lastClientY, gesture.rect, gesture.projection,
-            ))) {
-            const originX = gesture.hasRotated ? gesture.lastClientX : gesture.pressX
-            const originY = gesture.hasRotated ? gesture.lastClientY : gesture.pressY
-            // Anchor inward drags at their initial pointer position, before they reach the center dome.
-            gesture.rotate = null
-            gesture.originClientX = originX
-            gesture.originClientY = originY
-            gesture.lastClientX = originX
-            gesture.lastClientY = originY
-            gesture.originStickX = 0
-            gesture.originStickY = 0
-            gesture.activeAxis = null
-            gesture.axis = null
-            gesture.x = 0
-            gesture.y = 0
-            gesture.lastFrameTime = null
-            gesture.reversalAxis = null
-            gesture.reversalDistance = 0
-            gesture.applyHeld = applyHeld
-        }
-        if (gesture.rotate) {
+        if (gesture.mode === 'rotate') {
             if (!canInteract()) {
                 stop()
                 return
@@ -618,12 +575,9 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
             const angle = crownPointerAngle(event, gesture.rect, gesture.projection)
             if (angle !== null && gesture.angle !== null) {
                 const delta = angle - gesture.angle
-                gesture.hasRotated ||= Math.abs(delta) > 1e-6
                 turnCrown(Math.atan2(Math.sin(delta), Math.cos(delta)) * CROWN_SENSITIVITY, gesture.rotate)
             }
             gesture.angle = angle
-            gesture.lastClientX = event.clientX
-            gesture.lastClientY = event.clientY
             return
         }
         gesture.precision = event.ctrlKey
@@ -749,7 +703,7 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
         // Capture the selected map pivot before any held camera frame can run.
         const mainOrbit = mainScene ? resolveMainCameraOrbit() : null
         _gesture.current = {
-            target, precision: event.ctrlKey, pointerId: event.pointerId, rect: event.currentTarget.getBoundingClientRect(),
+            mode: 'adjust', target, precision: event.ctrlKey, pointerId: event.pointerId, rect: event.currentTarget.getBoundingClientRect(),
             pressX: event.clientX, pressY: event.clientY, pressTime: event.timeStamp,
             x: 0, y: 0, lastFrameTime: null, applyHeld,
             reversalAxis: null, reversalDistance: 0,
@@ -828,7 +782,7 @@ export const ReplayCameraCamBall = ({mainScene = false} = {}) => {
         /** Update held speed even when the pointer stays in the same displaced position. */
         const updatePrecision = event => {
             const gesture = _gesture.current
-            if (event.key === 'Control' && gesture && !gesture.rotate) {
+            if (event.key === 'Control' && gesture?.mode === 'adjust') {
                 gesture.precision = event.type === 'keydown'
             }
         }
