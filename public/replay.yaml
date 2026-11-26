@@ -195,7 +195,7 @@ replay:
         description: Focus on the journey centroid and keep the replay trace visible.
         defaults:
           duration: 3
-          rpm: 3
+          rpm: 1.5
           focusTarget: centroid
           altitude: 1200
           pitch: -45

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-06
- * Last modified: 2026-10-17
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,8 @@
 
 import { CURRENT_JOURNEY, CURRENT_POI } from '@Core/constants'
 import { Journey }                         from '@Core/Journey'
-import { getOrbitSettings, persistOrbitSettings } from '@Core/OrbitSettings'
+import { DEFAULT_ORBIT_RPM, getOrbitSettings, normalizeOrbitRPM, persistOrbitSettings } from '@Core/OrbitSettings'
+import { ui }                               from '@Core/stores/ui'
 import { afterEach, describe, expect, it, vi }  from 'vitest'
 import { proxy }                            from 'valtio'
 
@@ -36,6 +37,15 @@ const clone = value => {
 describe('target rotation settings', () => {
     afterEach(() => {
         vi.unstubAllGlobals()
+    })
+
+    it('uses 1.5 RPM when no orbit speed has been saved', () => {
+        expect(DEFAULT_ORBIT_RPM).toBe(1.5)
+        expect(normalizeOrbitRPM()).toBe(1.5)
+        expect(ui.mainUI.rotate.rpm).toBe(1.5)
+        expect(ui.mainUI.panorama.rpm).toBe(1.5)
+        expect(getOrbitSettings({}, 'rotation').rpm).toBe(1.5)
+        expect(getOrbitSettings({}, 'panorama').rpm).toBe(1.5)
     })
 
     it('uses target settings before the standard fallback', () => {

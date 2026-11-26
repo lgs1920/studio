@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -48,6 +48,10 @@ import {parse as parseYaml} from 'yaml'
 const replayYamlDefaults = parseYaml(readFileSync(new URL('../../../../public/replay.yaml', import.meta.url), 'utf8')).replay
 
 describe('Replay user modes', () => {
+    it('uses 1.5 RPM as the default focus clip speed', () => {
+        expect(replayYamlDefaults.clips.catalog.focus.defaults.rpm).toBe(1.5)
+    })
+
     it('persists the departure screen position separately on each Journey and Replay mode', async () => {
         const persistSimple = vi.fn()
         const persistExpert = vi.fn()

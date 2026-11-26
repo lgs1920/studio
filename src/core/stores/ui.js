@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-06-30
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -76,7 +76,7 @@ export const ui = {
             heightOffset: DEFAULT_PANORAMA_HEIGHT_OFFSET,
             pitch:        DEFAULT_PANORAMA_PITCH,
             heading:      0,
-            rpm:          1,
+            rpm:          DEFAULT_ORBIT_RPM,
             direction:    1,
             visible:      true,
         },
