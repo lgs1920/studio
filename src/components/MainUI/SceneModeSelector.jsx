@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { RETIRED_SCENE_MODE_2D_VALUE, SCENE_MODE_3D, SCENE_MODES }   from '@Core/constants'
+import { SCENE_MODE_3D, SCENE_MODES }                              from '@Core/constants'
 import { LGSPopup }                                           from '@Components/LGSPopup'
 import { WaButton, WaIcon, WaTooltip }                        from '@awesome.me/webawesome/dist/react'
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
@@ -64,7 +64,7 @@ export const SceneModeSelector = (props) => {
 
     const currentModeInfo = SCENE_MODES.get(scene.mode.value) ?? SCENE_MODE_3D
     const alternateModes = scene.mode.available.filter(mode => Number(mode) !== Number(scene.mode.value)
-        && Number(mode) !== RETIRED_SCENE_MODE_2D_VALUE)
+        && SCENE_MODES.has(Number(mode)))
 
     if (alternateModes.length === 0) {
         return null

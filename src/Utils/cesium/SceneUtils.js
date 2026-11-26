@@ -925,8 +925,7 @@ export class SceneUtils {
                                     : SceneUtils.getBboxBoundingSphere(theBbox, point.height ?? 0)
         const fallbackRange = 10000
 
-        // Depending on what we are doing, we need to convert the destination
-        // from world coordinates to scene coordinates
+        // Keep Journey focus coordinates in the same world-space representation as the 3D map.
         if (options.action !== UPDATE_JOURNEY_SILENTLY) {
             SceneUtils.focus(point, {
                 pitch:          focusPitchValue(savedCameraPosition, defaultFocusPitch()),

@@ -60,7 +60,7 @@ export class SceneManager {
         // update settings
         const nextMode = SCENE_MODES.has(Number(mode)) ? Number(mode) : SCENE_MODE_3D.value
         lgs.settings.scene.mode.value = nextMode
-        SceneUtils.morph(nextMode, callback)
+        void SceneUtils.morph(nextMode, callback)
     }
 
     /**

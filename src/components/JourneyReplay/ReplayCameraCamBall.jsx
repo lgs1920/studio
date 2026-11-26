@@ -24,7 +24,7 @@ import {isCameraOwnedByReplay} from '@Core/ui/replay/ReplayCameraOwnership'
 import {useOptionalSnapshot, useProxyValue} from '@Utils/ValtioUtils'
 import {WaIcon} from '@awesome.me/webawesome/dist/react'
 import {
-    Cartesian2, Cartesian3, Math as CesiumMath, Matrix3, Matrix4, Quaternion, Ray, SceneMode, SceneTransforms,
+    Cartesian2, Cartesian3, Math as CesiumMath, Matrix3, Matrix4, Quaternion, Ray, SceneMode,
 } from 'cesium'
 import {useCallback, useEffect, useRef, useState} from 'react'
 import './replayCameraCamBall.css'
