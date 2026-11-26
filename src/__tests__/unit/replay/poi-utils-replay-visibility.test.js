@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-12
- * Last modified: 2026-11-11
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -73,7 +73,6 @@ describe('POIUtils replay visibility', () => {
         globalThis.__ = {
             ui: {
                 sceneManager: {
-                    is2D:     false,
                     noRelief: () => true,
                 },
             },

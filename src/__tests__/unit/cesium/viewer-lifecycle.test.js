@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -194,6 +194,14 @@ describe('Cesium viewer lifecycle', () => {
         expect(FakeViewer.instances).toHaveLength(1)
         expect(fakeCanvasEventManager).toHaveBeenCalledOnce()
         expect(viewer.scene.renderError.addEventListener).toHaveBeenCalledOnce()
+    })
+
+    it('replaces a retired saved 2D scene mode with 3D at viewer startup', () => {
+        globalThis.lgs.settings.scene.mode = {value: 2}
+
+        ensureViewer()
+
+        expect(globalThis.lgs.settings.scene.mode.value).toBe(3)
     })
 
     it('can mount before application settings and managers are ready', () => {

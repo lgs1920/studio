@@ -8,15 +8,15 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    ADD_JOURNEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DEFAULT_2D_FOCUS_PITCH, DRAWING_FROM_DB,
-    DRAWING_FROM_UI, FOCUS_ON_FEATURE, JOURNEY_EDITOR_DRAWER, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D,
+    ADD_JOURNEY, CURRENT_JOURNEY, CURRENT_POI, CURRENT_STORE, CURRENT_TRACK, DEFAULT_FLAT_SCENE_FOCUS_PITCH,
+    DRAWING_FROM_DB, DRAWING_FROM_UI, FOCUS_ON_FEATURE, JOURNEY_EDITOR_DRAWER, NO_FOCUS, REFRESH_DRAWING,
 }                                                      from '@Core/constants'
 import { Journey }                                     from '@Core/Journey'
 import {
@@ -1598,21 +1598,11 @@ export class TrackUtils {
             const cartographic = Cartographic.fromCartesian(destination)
             const center = centroid(content.geometry.coordinates)
 
-            let position
-            switch (lgs.settings.scene.mode.value) {
-                case SCENE_MODE_2D.value:
-                    position = {
-                        longitude: center.geometry.coordinates[0],
-                        latitude:  center.geometry.coordinates[1],
-                    }
-                    break
-                default:
-                    position = {
-                        longitude: M.toDegrees(cartographic.longitude),
-                        latitude:  M.toDegrees(cartographic.latitude),
-                    }
+            const position = {
+                longitude: M.toDegrees(cartographic.longitude),
+                latitude:  M.toDegrees(cartographic.latitude),
+                pitch:     DEFAULT_FLAT_SCENE_FOCUS_PITCH,
             }
-            position.pitch = DEFAULT_2D_FOCUS_PITCH
             position.height = M.toDegrees(cartographic.height)
 
             __.ui.cameraManager.settings = {

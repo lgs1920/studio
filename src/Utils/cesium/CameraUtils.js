@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2024-02-02
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import * as Cesium from 'cesium'
-import { DEFAULT_2D_FOCUS_PITCH } from '@Core/constants'
+import { DEFAULT_FLAT_SCENE_FOCUS_PITCH } from '@Core/constants'
 import {
     Cartesian2, Cartesian3, Cartographic, Ellipsoid, HeadingPitchRange, Math as M, Matrix4, SceneMode, Transforms,
 }                  from 'cesium'
@@ -67,7 +67,7 @@ export class CameraUtils {
                 roll: M.toDegrees(camera.roll),
             }
         } else {
-            return {heading: 360, pitch: DEFAULT_2D_FOCUS_PITCH, roll: 360}
+            return {heading: 360, pitch: DEFAULT_FLAT_SCENE_FOCUS_PITCH, roll: 360}
         }
     }
 

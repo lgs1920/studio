@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-22
- * Last modified: 2026-11-03
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,7 @@
  ******************************************************************************/
 
 import {
-    CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE, SCENE_MODE_2D,
+    CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE,
 }                                                      from '@Core/constants'
 import { UI_ACTIONS }                                  from '@Core/ui/metadata/uiActionCatalog'
 import {
@@ -39,8 +39,6 @@ const EMPTY_POI_PROXY = proxy({})
 export const MapPOIEditMenu = memo(({poiId}) => {
     const $pois = lgs.stores.main.components.pois
     const rotateState = useSnapshot(lgs.stores.ui.mainUI.rotate)
-    const sceneMode = useSnapshot(lgs.settings.scene.mode)
-    const panoramaAllowed = Number(sceneMode.value) !== Number(SCENE_MODE_2D.value)
 
     /**
      * Subscribe to POI proxy directly so property changes (visible/animated/etc.)
@@ -88,10 +86,6 @@ export const MapPOIEditMenu = memo(({poiId}) => {
 
     const startPanoramic = useCallback(async (e) => {
         e?.stopPropagation()
-        if (!panoramaAllowed) {
-            return
-        }
-
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.poiManager.stopRotationAndSync()
         }
@@ -111,7 +105,7 @@ export const MapPOIEditMenu = memo(({poiId}) => {
         panorama.heightOffset = storedPanorama.heightOffset ?? DEFAULT_PANORAMA_HEIGHT_OFFSET
         setOrbitStoreSettings(panorama, storedPanorama)
         panorama.active = true
-    }, [panoramaAllowed, panoramaState, pointSnap])
+    }, [panoramaState, pointSnap])
 
     const stopPanoramic = useCallback((e) => {
         e?.stopPropagation()
@@ -194,18 +188,16 @@ export const MapPOIEditMenu = memo(({poiId}) => {
                 </WaDropdownItem>,
             )
 
-            if (panoramaAllowed) {
-                items.push(
-                    <WaDropdownItem key="rot-panorama" onClick={startPanoramic}>
-                        <WaIcon slot="icon" {...UI_ACTIONS.panoramic.icon}/>
-                        <span>{UI_ACTIONS.panoramic.label}</span>
-                    </WaDropdownItem>,
-                )
-            }
+            items.push(
+                <WaDropdownItem key="rot-panorama" onClick={startPanoramic}>
+                    <WaIcon slot="icon" {...UI_ACTIONS.panoramic.icon}/>
+                    <span>{UI_ACTIONS.panoramic.label}</span>
+                </WaDropdownItem>,
+            )
         }
 
         return items
-    }, [pointAvailable, pointSnap, isPOIRotating, isPOIPanoramic, isVisible, focus, remove, orbitAround, stopOrbit, stopPanoramic, copyCoordinates, toggleVisibility, startPanoramic, panoramaAllowed])
+    }, [pointAvailable, pointSnap, isPOIRotating, isPOIPanoramic, isVisible, focus, remove, orbitAround, stopOrbit, stopPanoramic, copyCoordinates, toggleVisibility, startPanoramic])
 
     /**
      * UI BRANCHING:

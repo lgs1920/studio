@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-02
- * Last modified: 2026-11-02
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -148,7 +148,6 @@ export const CameraAndTargetPanel = () => {
     useSnapshot(lgs.settings.coordinateSystem)
     const rotate = useSnapshot(lgs.stores.ui.mainUI.rotate)
     const panorama = useSnapshot(lgs.stores.ui.mainUI.panorama)
-    const is2D = __.ui.sceneManager.is2D
     const liveRefs = useRef({})
     const updateTimer = useRef(null)
     const updateInProgress = useRef(false)
@@ -354,8 +353,8 @@ export const CameraAndTargetPanel = () => {
     const hasCameraHPR = heading !== null || pitch !== null || roll !== null
 
     const showTargetPosition = ui.camera.showTargetPosition && hasTargetPosition && !__.ui.cameraManager.lookingAtTheSky(camera.target)
-    const showCameraPosition = !is2D && ui.camera.showPosition && hasCameraPosition
-    const showCameraHPR = !is2D && ui.camera.showHPR && hasCameraHPR
+    const showCameraPosition = ui.camera.showPosition && hasCameraPosition
+    const showCameraHPR = ui.camera.showHPR && hasCameraHPR
     const hasRenderableInformation = showTargetPosition || showCameraPosition || showCameraHPR
 
     if (!hasSelectedInformation || !hasRenderableInformation) {
@@ -381,19 +380,6 @@ export const CameraAndTargetPanel = () => {
                                         bindLiveRef={bindLiveRef}
                                         metricKey="targetHeight"
                                         value={targetHeight}
-                                        className="camera-altitude"
-                                        units={[meter, foot]}
-                                        precision={0}
-                                    />
-                                </>
-                            )}
-                            {is2D && positionHeight !== null && (
-                                <>
-                                    <WaIcon name="video" variant="regular"/>
-                                    <CameraMetric
-                                        bindLiveRef={bindLiveRef}
-                                        metricKey="targetPositionHeight"
-                                        value={positionHeight}
                                         className="camera-altitude"
                                         units={[meter, foot]}
                                         precision={0}

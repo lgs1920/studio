@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,7 +40,7 @@ import { REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT } from '@Core/ui/replay
 import { JourneyReplayDrawer }         from '@Components/JourneyReplay/JourneyReplayDrawer'
 import {
     BOTTOM, END, EVENTS, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
-    MENU_START_START, SCENE_MODE_2D, SECOND, START, TOP,
+    MENU_START_START, SECOND, START, TOP,
 }                            from '@Core/constants'
 import { memo, useCallback, useEffect, useRef } from 'react'
 import { sprintf }        from 'sprintf-js'
@@ -189,10 +189,6 @@ export const MainUI = memo(({initialMapTilesReady = true}) => {
     }, [drawers.fromBottom, drawers.fromStart, toolBar.fromStart])
 
     useEffect(() => {
-        if (lgs.settings.scene.mode.value === SCENE_MODE_2D.value) {
-            lgs.scene.morphTo2D(0)
-        }
-
         subscribe(lgs.stores.ui.drawers, arrangeDrawers)
         subscribe(lgs.settings.ui.menu, arrangeDrawers)
         window.addEventListener('resize', windowResized)

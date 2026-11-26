@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-11-24
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -239,9 +239,7 @@ describe('MainUI replay mask', () => {
                     drawer: 'right',
                 }),
             },
-            scene: {
-                morphTo2D: vi.fn(),
-            },
+            scene: {},
             settings: {
                 getSwatches: {
                     list: [],

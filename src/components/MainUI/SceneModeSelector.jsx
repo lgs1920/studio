@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-04
- * Last modified: 2026-10-11
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SCENE_MODES }                                             from '@Core/constants'
+import { RETIRED_SCENE_MODE_2D_VALUE, SCENE_MODE_3D, SCENE_MODES }   from '@Core/constants'
 import { LGSPopup }                                           from '@Components/LGSPopup'
 import { WaButton, WaIcon, WaTooltip }                        from '@awesome.me/webawesome/dist/react'
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
@@ -62,8 +62,13 @@ export const SceneModeSelector = (props) => {
         return () => window.cancelAnimationFrame(animationFrame)
     }, [disabled, open])
 
-    const currentModeInfo = SCENE_MODES.get(scene.mode.value)
-    const alternateModes = scene.mode.available.filter(mode => Number(mode) !== Number(scene.mode.value))
+    const currentModeInfo = SCENE_MODES.get(scene.mode.value) ?? SCENE_MODE_3D
+    const alternateModes = scene.mode.available.filter(mode => Number(mode) !== Number(scene.mode.value)
+        && Number(mode) !== RETIRED_SCENE_MODE_2D_VALUE)
+
+    if (alternateModes.length === 0) {
+        return null
+    }
 
     return (
         <div className={'scene-mode-selector toolbar-action-popup-host'} ref={_selector}>

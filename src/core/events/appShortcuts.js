@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    CURRENT_MAP_POINT, CURRENT_POI, REPLAY_DRAWER, SCENE_MODE_2D, SETTINGS_EDITOR_DRAWER, SHORTCUTS_CATALOG,
+    CURRENT_MAP_POINT, CURRENT_POI, REPLAY_DRAWER, SETTINGS_EDITOR_DRAWER, SHORTCUTS_CATALOG,
 }                                                       from '@Core/constants'
 import { hasActiveAppShortcutBlocker }                  from '@Core/events/shortcutBlockers'
 import { MapTarget }                                    from '@Core/MapTarget'
@@ -309,8 +309,6 @@ const currentCameraOrbitOptions = () => {
     }
 }
 
-const isScene2D = () => Number(lgs.settings.scene.mode.value) === Number(SCENE_MODE_2D.value)
-
 const toggleJourneyToolbar = () => {
     if (lgs.stores?.replay?.active || lgs.stores?.replay?.playing || lgs.stores?.replay?.paused) {
         return false
@@ -466,11 +464,6 @@ const togglePanorama = () => {
 
     if (panorama.active) {
         return __.ui.poiManager.stopRotationAndSync().then(() => true)
-    }
-
-    if (isScene2D()) {
-        console.warn('Panorama mode is not available in 2D')
-        return false
     }
 
     return (async () => {

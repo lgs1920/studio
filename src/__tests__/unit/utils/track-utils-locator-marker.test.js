@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-09-09
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,7 +44,6 @@ describe('TrackUtils locator marker', () => {
         globalThis.__ = {
             ui: {
                 sceneManager: {
-                    is2D:     false,
                     noRelief: () => false,
                 },
             },

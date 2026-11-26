@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-05-02
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { DEFAULT_2D_FOCUS_PITCH, SCENE_MODE_2D } from '@Core/constants'
+import { DEFAULT_FLAT_SCENE_FOCUS_PITCH, SCENE_MODE_COLUMBUS } from '@Core/constants'
 import { CameraUtils }                           from '@Utils/cesium/CameraUtils'
 import { SceneUtils }                            from '@Utils/cesium/SceneUtils'
 import * as CameraPath                           from '@Core/ui/replay/JourneyReplayCameraPath'
@@ -53,7 +53,7 @@ const installFocusGlobals = journey => {
             poiDefaultBackground: '#000',
         },
         settings:   {
-            scene:  {mode: SCENE_MODE_2D},
+            scene:  {mode: SCENE_MODE_COLUMBUS},
             camera: {
                 heading:           0,
                 pitch:             -30,
@@ -67,7 +67,7 @@ const installFocusGlobals = journey => {
                 rotations:         1,
             },
         },
-        scene:      {mode: SceneMode.SCENE2D},
+        scene:      {mode: SceneMode.COLUMBUS_VIEW},
         camera:     {
             flyToBoundingSphere: vi.fn(),
             flyTo:               vi.fn(),
@@ -81,11 +81,10 @@ const installFocusGlobals = journey => {
     vi.stubGlobal('__', {
         ui: {
             sceneManager:  {
-                is2D:       true,
                 stopRotate: false,
             },
             cameraManager: {
-                position:         {heading: 0, pitch: DEFAULT_2D_FOCUS_PITCH, roll: 0, range: 2000},
+                position:         {heading: 0, pitch: DEFAULT_FLAT_SCENE_FOCUS_PITCH, roll: 0, range: 2000},
                 isJourneyFocusOn: vi.fn(() => false),
                 raiseUpdateEvent: vi.fn(),
                 saveInformation:  vi.fn(),
@@ -125,17 +124,17 @@ describe('camera focus defaults', () => {
     })
 
     it('uses a 45 degree pitch fallback when Cesium cannot expose HPR outside 3D', () => {
-        expect(CameraUtils.getHeadingPitchRoll(null).pitch).toBe(DEFAULT_2D_FOCUS_PITCH)
+        expect(CameraUtils.getHeadingPitchRoll(null).pitch).toBe(DEFAULT_FLAT_SCENE_FOCUS_PITCH)
     })
 
-    it('uses the 2D pitch fallback when focusing without an explicit pitch', async () => {
+    it('uses the configured camera pitch when focusing without an explicit pitch', async () => {
         const journey = makeJourney()
         installFocusGlobals(journey)
 
         await SceneUtils.focus({longitude: 0, latitude: 0, height: 0}, {range: 1000})
 
         const flyOptions = lgs.camera.flyToBoundingSphere.mock.calls[0][1]
-        expect(Math.round(M.toDegrees(flyOptions.offset.pitch))).toBe(DEFAULT_2D_FOCUS_PITCH)
+        expect(Math.round(M.toDegrees(flyOptions.offset.pitch))).toBe(-30)
     })
 
     it('starts same-target rotation immediately without a zero-duration flyTo', async () => {

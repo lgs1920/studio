@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-01
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    CURRENT_JOURNEY, DEFAULT_2D_FOCUS_PITCH, FOCUS_CENTROID, FOCUS_LAST, FOCUS_STARTER,
+    CURRENT_JOURNEY, DEFAULT_FLAT_SCENE_FOCUS_PITCH, FOCUS_CENTROID, FOCUS_LAST, FOCUS_STARTER,
 }                                                                     from '@Core/constants'
 import { MapTarget }                                                  from '@Core/MapTarget'
 import { getOrbitSettings }                                           from '@Core/OrbitSettings'
@@ -30,6 +30,12 @@ export const finiteCameraNumber = value => {
     return Number.isFinite(number) ? number : null
 }
 
+/** Return a finite positive number suitable for a camera distance or range. */
+const positiveCameraNumber = value => {
+    const number = finiteCameraNumber(value)
+    return number !== null && number > 0 ? number : null
+}
+
 const MIN_CAMERA_POSITION_HEIGHT = -1000
 const MIN_MAP_TARGET_HEIGHT = -12000
 
@@ -38,25 +44,31 @@ const finiteHeightAtLeast = (value, minimum) => {
     return height !== null && height >= minimum ? height : null
 }
 
+/** Return a latitude only when it falls within the valid WGS84 range. */
+const cameraLatitude = value => {
+    const latitude = finiteCameraNumber(value)
+    return latitude !== null && latitude >= -90 && latitude <= 90 ? latitude : null
+}
+
 const cameraPositionHeight = value => finiteHeightAtLeast(value, MIN_CAMERA_POSITION_HEIGHT)
 const mapTargetHeight = value => finiteHeightAtLeast(value, MIN_MAP_TARGET_HEIGHT)
 
 export const cameraTargetIsValid = cameraStore => {
     const target = cameraStore?.target
     return finiteCameraNumber(target?.longitude) !== null
-        && finiteCameraNumber(target?.latitude) !== null
+        && cameraLatitude(target?.latitude) !== null
         && mapTargetHeight(target?.height) !== null
 }
 
 export const cameraPositionIsValid = position => finiteCameraNumber(position?.longitude) !== null
-    && finiteCameraNumber(position?.latitude) !== null
+    && cameraLatitude(position?.latitude) !== null
     && cameraPositionHeight(position?.height) !== null
 
 const defaultCameraSettings = cameraSettings => ({
     heading: finiteCameraNumber(cameraSettings?.heading) ?? 0,
     pitch:   finiteCameraNumber(cameraSettings?.pitch) ?? -30,
     roll:    finiteCameraNumber(cameraSettings?.roll) ?? 0,
-    range:   finiteCameraNumber(cameraSettings?.range) ?? 2000,
+    range:   positiveCameraNumber(cameraSettings?.range) ?? 2000,
 })
 
 const cesiumDistance = ({longitude, latitude, height}, target) => Cartesian3.distance(
@@ -66,20 +78,25 @@ const cesiumDistance = ({longitude, latitude, height}, target) => Cartesian3.dis
 
 export const cameraRangeFromStoredPosition = (position = {}, target = {}, distanceCalculator = cesiumDistance) => {
     const longitude = finiteCameraNumber(position.longitude)
-    const latitude = finiteCameraNumber(position.latitude)
+    const latitude = cameraLatitude(position.latitude)
     const height = cameraPositionHeight(position.height)
     const targetLongitude = finiteCameraNumber(target.longitude)
-    const targetLatitude = finiteCameraNumber(target.latitude)
+    const targetLatitude = cameraLatitude(target.latitude)
     const targetHeight = mapTargetHeight(target.height)
 
     if ([longitude, latitude, height, targetLongitude, targetLatitude, targetHeight].some(value => value === null)) {
         return null
     }
 
-    return distanceCalculator(
-        {longitude, latitude, height},
-        {longitude: targetLongitude, latitude: targetLatitude, height: targetHeight},
-    )
+    try {
+        return positiveCameraNumber(distanceCalculator(
+            {longitude, latitude, height},
+            {longitude: targetLongitude, latitude: targetLatitude, height: targetHeight},
+        ))
+    }
+    catch {
+        return null
+    }
 }
 
 export const cameraPositionWithDefaults = (
@@ -89,7 +106,7 @@ export const cameraPositionWithDefaults = (
     distanceCalculator = cesiumDistance,
 ) => {
     const settings = defaultCameraSettings(cameraSettings)
-    const storedRange = finiteCameraNumber(position.range)
+    const storedRange = positiveCameraNumber(position.range)
     const computedRange = cameraRangeFromStoredPosition(position, target, distanceCalculator) ?? storedRange
 
     return {
@@ -103,14 +120,19 @@ export const cameraPositionWithDefaults = (
     }
 }
 
-const readSavedCameraPosition = async (cameraManager, journey) => {
-    let savedCamera = null
+/** Read the persisted global camera without allowing storage failures to stop startup. */
+const readSavedCameraInformation = async cameraManager => {
     try {
-        savedCamera = await cameraManager?.readCameraInformation?.({fallback: false})
+        return await cameraManager?.readCameraInformation?.({fallback: false}) ?? null
     }
     catch {
-        // A missing global snapshot must not prevent using the journey snapshot.
+        return null
     }
+}
+
+/** Prefer the global pose for centering and use the Journey pose when it is unavailable. */
+const readSavedCameraPosition = async (cameraManager, journey) => {
+    const savedCamera = await readSavedCameraInformation(cameraManager)
 
     if (cameraPositionIsValid(savedCamera?.position)) {
         return savedCamera.position
@@ -140,6 +162,42 @@ export const starterCameraStore = (
     distanceCalculator = cesiumDistance,
 ) => cameraStoreForTarget(starter, {}, cameraSettings, distanceCalculator)
 
+/** Restore a Journey-specific saved camera when the Journey focus preference requests it. */
+const journeyCameraConfiguration = ({
+                                         journey,
+                                         cameraManager,
+                                         cameraSettings = {},
+                                         distanceCalculator = cesiumDistance,
+                                     }) => {
+    if (!journey || !cameraManager?.isJourneyFocusOn?.(FOCUS_LAST)) {
+        return null
+    }
+
+    const savedCamera = journey.camera
+    if (!cameraPositionIsValid(savedCamera?.position) || !cameraTargetIsValid(savedCamera)) {
+        return null
+    }
+
+    const target = new MapTarget(CURRENT_JOURNEY, {
+        ...savedCamera.target,
+        id: journey.slug,
+    })
+    const position = cameraPositionWithDefaults(
+        savedCamera.position,
+        savedCamera.target,
+        cameraSettings,
+        distanceCalculator,
+    )
+
+    return {
+        focusTarget: journey,
+        cameraStore: {
+            ...cameraStoreForTarget(target, position, cameraSettings, distanceCalculator),
+            restoreCameraPosition: true,
+        },
+    }
+}
+
 /**
  * Resolve the rotation settings used by the initial camera focus.
  *
@@ -167,19 +225,37 @@ export const journeyCentroidCameraStore = async ({
                                                      cameraSettings = {},
                                                      distanceCalculator = cesiumDistance,
                                                  }) => {
-    if (!journey?.tracks?.size || !sceneManager?.getJourneyCentroid) {
+    if (!journey) {
         return null
     }
 
-    const centroid = await sceneManager.getJourneyCentroid(journey)
-    if (!centroid) {
+    const savedJourneyConfiguration = journeyCameraConfiguration({
+                                                                     journey,
+                                                                     cameraManager,
+                                                                     cameraSettings,
+                                                                     distanceCalculator,
+                                                                 })
+    if (savedJourneyConfiguration) {
+        return savedJourneyConfiguration
+    }
+
+    if (!sceneManager?.getJourneyCentroid) {
+        return null
+    }
+
+    let centroid = null
+    try {
+        centroid = await sceneManager.getJourneyCentroid(journey)
+    }
+    catch {
+        return null
+    }
+    if (!centroid || !cameraTargetIsValid({target: centroid})) {
         return null
     }
 
     // Center on the journey while deriving the range and orientation from the last saved pose.
-    const savedPosition = sceneManager?.is2D === true
-        ? null
-        : await readSavedCameraPosition(cameraManager, journey)
+    const savedPosition = await readSavedCameraPosition(cameraManager, journey)
     const target = new MapTarget(CURRENT_JOURNEY, {
         ...centroid,
         id: journey.slug,
@@ -220,7 +296,7 @@ export const lastCameraConfiguration = async ({
                                                   cameraSettings = {},
                                                   distanceCalculator = cesiumDistance,
                                               }) => {
-    const savedCamera = await cameraManager?.readCameraInformation?.({fallback: false})
+    const savedCamera = await readSavedCameraInformation(cameraManager)
     if (cameraPositionIsValid(savedCamera?.position)) {
         const savedTargetIsValid = cameraTargetIsValid(savedCamera)
         const fallbackConfiguration = savedTargetIsValid
@@ -328,7 +404,7 @@ export const buildStartupCameraFocusOptions = ({
                                                    callback,
                                                }) => {
     const restoreCameraPosition = cameraStore.restoreCameraPosition === true
-    const pitch = finiteCameraNumber(cameraStore.position?.pitch) ?? (noRelief ? DEFAULT_2D_FOCUS_PITCH : -30)
+    const pitch = finiteCameraNumber(cameraStore.position?.pitch) ?? (noRelief ? DEFAULT_FLAT_SCENE_FOCUS_PITCH : -30)
 
     return {
         target:         focusTarget,

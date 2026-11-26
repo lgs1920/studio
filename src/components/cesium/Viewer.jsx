@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-11
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import '@shoelace-style/shoelace/dist/themes/light.css'
 /* oxlint-disable react/only-export-components */
+import { RETIRED_SCENE_MODE_2D_VALUE, SCENE_MODE_3D } from '@Core/constants'
 import { CanvasEventManager } from '@Core/events/CanvasEventManager'
 import {constrainReplayCesiumCameraAboveTerrain} from '@Core/ui/replay/ReplayCesiumCameraAdapter'
 import {getOrCreateSceneRenderScheduler, requestSceneRender} from '@Utils/cesium/SceneRenderScheduler'
@@ -479,6 +480,11 @@ export const ensureViewer = () => {
         }
 
         await flushCameraUpdate()
+    }
+
+    // Older saved preferences may still request the retired 2D view.
+    if (Number(lgs.settings.scene.mode.value) === RETIRED_SCENE_MODE_2D_VALUE) {
+        lgs.settings.scene.mode.value = SCENE_MODE_3D.value
     }
 
     // Change scene mode

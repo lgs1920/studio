@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-14
- * Last modified: 2026-11-07
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,6 @@
 
 import {
     CURRENT_POI, POI_FLAG_START, POI_FLAG_STOP, POI_STARTER_TYPE, POI_TMP_TYPE,
-    SCENE_MODE_2D,
 }                        from '@Core/constants'
 import { openPOIEditor } from '@Components/MainUI/MapPOI/openPOIEditor'
 import { addPOIToLibrary } from '@Components/MainUI/MapPOI/addPOIToLibrary'
@@ -52,11 +51,9 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
     const thePOI = targetId?.id
     const $pois = lgs.stores.main.components.pois
     const rotateState = useSnapshot(lgs.stores.ui.mainUI.rotate)
-    const sceneMode = useSnapshot(lgs.settings.scene.mode)
     const toolbars = useSnapshot(lgs.settings.ui.toolbars)
     const coordinateSystem = lgs.settings.coordinateSystem.current
     const unitSystem = lgs.settings.unitSystem.current
-    const panoramaAllowed = Number(sceneMode.value) !== Number(SCENE_MODE_2D.value)
 
     // POI Data Access
     const $targetPoi = thePOI ? $pois.list.get(thePOI) : null
@@ -158,10 +155,6 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
 
     /** Starts a panoramic rotation of the camera. */
     const startPanoramic = useCallback(async () => {
-        if (!panoramaAllowed) {
-            return
-        }
-
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.poiManager.stopRotationAndSync()
         }
@@ -182,7 +175,7 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
         setOrbitStoreSettings(panorama, storedPanorama)
         panorama.active = true
         hideMenu()
-    }, [currentPoi, hideMenu, panoramaAllowed])
+    }, [currentPoi, hideMenu])
 
     const stopPanoramic = useCallback(async () => {
         await __.ui.poiManager.stopRotationAndSync()
@@ -356,11 +349,9 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
                          <li onClick={toggleOrbit}>
                              <WaIcon {...UI_ACTIONS.orbit.icon}/>{UI_ACTIONS.orbit.label}
                          </li>
-                         {panoramaAllowed && (
-                             <li onClick={startPanoramic}>
-                                 <WaIcon {...UI_ACTIONS.panoramic.icon}/>{UI_ACTIONS.panoramic.label}
-                             </li>
-                         )}
+                         <li onClick={startPanoramic}>
+                             <WaIcon {...UI_ACTIONS.panoramic.icon}/>{UI_ACTIONS.panoramic.label}
+                         </li>
                      </>
                  )}
             </ul>

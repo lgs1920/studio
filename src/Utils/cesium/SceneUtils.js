@@ -8,22 +8,22 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-06
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    ADD_JOURNEY, CURRENT_JOURNEY, DEFAULT_2D_FOCUS_PITCH, DRAWING, DRAWING_FROM_DB, FOCUS_LAST,
-    HIGH_TERRAIN_PRECISION, LOW_TERRAIN_PRECISION, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D,
+    ADD_JOURNEY, CURRENT_JOURNEY, FOCUS_LAST,
+    HIGH_TERRAIN_PRECISION, LOW_TERRAIN_PRECISION, REFRESH_DRAWING, SCENE_MODE_3D,
     SCENE_MODE_COLUMBUS, UPDATE_JOURNEY_SILENTLY,
 }                    from '@Core/constants'
 import { MapTarget } from '@Core/MapTarget'
 import bbox          from '@turf/bbox'
 import centroid      from '@turf/centroid'
 import {
-    BoundingSphere, Cartesian2, Cartesian3, Cartographic, Color, EasingFunction, HeadingPitchRange, Math as M, Matrix4,
+    BoundingSphere, Cartesian2, Cartesian3, Cartographic, Color, EasingFunction, HeadingPitchRange, Math as M,
     Rectangle, sampleTerrain, SceneMode,
 }                    from 'cesium'
 import { CameraUtils } from '@Utils/cesium/CameraUtils'
@@ -110,13 +110,7 @@ const cameraRangeFromStoredPosition = (position = {}, target = {}) => {
 const cameraRangeValue = (position, target, fallback) =>
     cameraRangeFromStoredPosition(position, target) ?? cameraPositionValue(position, 'range', fallback)
 
-const sceneIs2D = () => typeof lgs !== 'undefined'
-    && (lgs?.settings?.scene?.mode?.value * 1 === SCENE_MODE_2D.value
-        || lgs?.scene?.mode === SceneMode.SCENE2D)
-
-const defaultFocusPitch = () => sceneIs2D()
-                                 ? DEFAULT_2D_FOCUS_PITCH
-                                 : (typeof lgs !== 'undefined' ? lgs.settings.camera.pitch : -30)
+const defaultFocusPitch = () => typeof lgs !== 'undefined' ? lgs.settings.camera.pitch : -30
 
 const focusPitchValue = (position, fallback = defaultFocusPitch()) =>
     cameraPositionValue(position, 'pitch', fallback)
@@ -181,7 +175,7 @@ export class SceneUtils {
     /**
      * Do Morphing and trigger event if there is a callback
      *
-     * @param sceneMode {integer} SCENE_MODE_2D.value or SCENE_MODE_3D.value
+     * @param sceneMode {integer} A supported value in SCENE_MODES
      * @param callback
      */
 
@@ -196,35 +190,6 @@ export class SceneUtils {
                 if (remove) {
                     remove()
                 }
-                if (sceneMode === SCENE_MODE_2D.value) {
-
-                    __.ui.cameraManager.position.longitude = __.ui.cameraManager.target.longitude
-                    __.ui.cameraManager.position.latitude = __.ui.cameraManager.target.latitude
-
-                    beginCameraFlight()
-                    try {
-                        lgs.camera.flyTo({
-                                             destination:    Cartesian3.fromDegrees(
-                                                 __.ui.cameraManager.position.longitude,
-                                                 __.ui.cameraManager.position.latitude,
-                                                 __.ui.cameraManager.position.height,
-                                             ),
-                                             maximumHeight:     lgs.settings.camera.maximumHeight,
-                                             pitchAdjustHeight: lgs.settings.camera.pitchAdjustHeight,
-                                             duration:       0, // always.
-                                             convert:        true,
-                                             endTransform:   Matrix4.IDENTITY,
-                                             easingFunction: EasingFunction.LINEAR_NONE,
-                                             complete:       endCameraFlight,
-                                             cancel:         endCameraFlight,
-                                         })
-                    }
-                    catch (error) {
-                        endCameraFlight()
-                        throw error
-                    }
-                }
-
             }
         }
         if (typeof callback === 'function' && !SceneUtils.morphCompeteEvent) {
@@ -232,10 +197,6 @@ export class SceneUtils {
         }
 
         switch (sceneMode) {
-            case SCENE_MODE_2D.value:
-                await lgs.scene.morphTo2D(lgs.settings.scene.morphDelay)
-                break
-
             case SCENE_MODE_COLUMBUS.value:
                 await lgs.scene.morphToColumbusView(lgs.settings.scene.morphDelay)
                 break
@@ -254,8 +215,6 @@ export class SceneUtils {
      */
     static modeFromGIStoLGS = () => {
         switch (lgs.scene.mode) {
-            case SceneMode.SCENE2D:
-                return SCENE_MODE_2D
             case SceneMode.SCENE3D:
                 return SCENE_MODE_3D
             case SceneMode.COLUMBUS_VIEW:
@@ -267,8 +226,6 @@ export class SceneUtils {
 
     static modeFromLGSToGIS = (mode = lgs.settings.scene.mode.value) => {
         switch (mode.value) {
-            case SCENE_MODE_2D.value:
-                return SceneMode.SCENE2D
             case SCENE_MODE_3D.value:
                 return SceneMode.SCENE3D
             case SCENE_MODE_COLUMBUS.value:
@@ -970,13 +927,9 @@ export class SceneUtils {
 
         // Depending on what we are doing, we need to convert the destination
         // from world coordinates to scene coordinates
-        let convert = false
-        if (__.ui.sceneManager.is2D && (options.action === DRAWING || options.action === DRAWING_FROM_DB)) {
-            convert = true
-        }
         if (options.action !== UPDATE_JOURNEY_SILENTLY) {
             SceneUtils.focus(point, {
-                pitch:          focusPitchValue(savedCameraPosition, DEFAULT_2D_FOCUS_PITCH),
+                pitch:          focusPitchValue(savedCameraPosition, defaultFocusPitch()),
                 heading:        cameraPositionValue(savedCameraPosition, 'heading', 0),
                 roll:           cameraPositionValue(savedCameraPosition, 'roll', 0),
                 range:          cameraRangeValue(savedCameraPosition, point, fallbackRange),
@@ -986,7 +939,7 @@ export class SceneUtils {
                 rotation:    1,
                 infinite:    false,
                 bbox:        {data: theBbox, id: focusId, show: false},
-                convert:     convert,
+                convert:     false,
                 rotate:      options.rotate,
                 action:      options.action,
                 resetCamera: options.resetCamera,

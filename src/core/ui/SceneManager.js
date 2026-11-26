@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-06
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    HIGH_TERRAIN_PRECISION, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES, TERRAIN_ENTITY,
+    HIGH_TERRAIN_PRECISION, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES, TERRAIN_ENTITY,
 }                                  from '@Core/constants'
 import { MapTarget }               from '@Core/MapTarget'
 import { SceneUtils }              from '@Utils/cesium/SceneUtils'
@@ -53,26 +53,14 @@ export class SceneManager {
     /**
      * Do morphing
      *
-     * @param mode {integer}       SCENE_MODE_2D.value or SCENE_MODE_3D.value
+     * @param mode {integer}       A supported value in SCENE_MODES
      * @param callback {function}   called  at the end of morphing
      */
     morph = (mode, callback = null) => {
-        if (Number(mode) === Number(SCENE_MODE_2D.value) && lgs.stores.ui.mainUI.panorama.active) {
-            void __.ui.poiManager?.stopRotationAndSync?.()
-        }
-
         // update settings
-        lgs.settings.scene.mode.value = mode
-        SceneUtils.morph(mode, callback)
-    }
-
-    /**
-     * Morph to 2D
-     *
-     * @param callback {function}   called  at the end of morphing
-     */
-    morphTo2D = (callback) => {
-        this.morph(SCENE_MODE_2D.value, callback)
+        const nextMode = SCENE_MODES.has(Number(mode)) ? Number(mode) : SCENE_MODE_3D.value
+        lgs.settings.scene.mode.value = nextMode
+        SceneUtils.morph(nextMode, callback)
     }
 
     /**
@@ -82,15 +70,6 @@ export class SceneManager {
      */
     morphTo3D = (callback) => {
         this.morph(SCENE_MODE_3D.value, callback)
-    }
-
-    /**
-     * IS it 2D ?
-     *
-     * return {boolean}
-     */
-    get is2D() {
-        return lgs.settings.scene.mode.value * 1 === SCENE_MODE_2D.value
     }
 
     /**
@@ -111,25 +90,10 @@ export class SceneManager {
         return lgs.settings.scene.mode.value * 1 === SCENE_MODE_COLUMBUS.value
     }
 
-    /**
-     * switch between 2D and 3D
-     *
-     * @param callback {function}   called  at the end of morphing
-     */
-    toggleMode = (callback) => {
-        if (this.is2D) {
-            this.morphTo3D(callback)
-        }
-        else {
-            this.morphTo2D(callback)
-        }
-    }
-
     noRelief = () => {
         const manager = new LayersAndTerrainManager()
         const terrain = manager.getEntityProxyByType(lgs.settings.layers.terrain, TERRAIN_ENTITY)
-        return lgs.settings.scene.mode.value * 1 === SCENE_MODE_2D.value
-            || (terrain?.noRelief ?? false)
+        return terrain?.noRelief ?? false
     }
 
     notifyMorph = () => {

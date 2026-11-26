@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-18
- * Last modified: 2026-11-09
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -239,19 +239,17 @@ export const APP_EVENT = {
 
 /** Scene Mode **/
 
-export const SCENE_MODE_2D = {
-    value: 2, label: '2D', title: 'Map View', icon: 'map',
-}
+/** Value stored by older versions for the retired 2D globe mode. */
+export const RETIRED_SCENE_MODE_2D_VALUE = 2
 export const SCENE_MODE_3D = {
     value: 3, label: '3D', title: 'Globe View', icon: 'earth-europe',
 }
 export const SCENE_MODE_COLUMBUS = {
     value: 2.5, label: '2.5D', title: 'Columbus View', icon: 'road',
 }
-export const DEFAULT_2D_FOCUS_PITCH = -45
+export const DEFAULT_FLAT_SCENE_FOCUS_PITCH = -45
 
 export const SCENE_MODES = new Map([
-                                       [SCENE_MODE_2D.value, SCENE_MODE_2D],
                                        [SCENE_MODE_3D.value, SCENE_MODE_3D],
                                        [SCENE_MODE_COLUMBUS.value, SCENE_MODE_COLUMBUS],
                                    ])

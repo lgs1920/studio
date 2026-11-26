@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-29
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -128,7 +128,7 @@ const adjustMainCamera = (x, y, scale, gesture) => {
     if (x && controller.enableZoom) {
         const position = camera.positionCartographic
         const terrainHeight = scene.mode === SceneMode.SCENE3D ? scene.globe?.getHeight(position) ?? 0 : 0
-        const distance = scene.mode === SceneMode.SCENE2D ? camera.getMagnitude() : position.height - terrainHeight
+        const distance = position.height - terrainHeight
         if (Number.isFinite(distance) && distance > 0) {
             const minimum = controller.minimumZoomDistance
             const maximum = controller.maximumZoomDistance
