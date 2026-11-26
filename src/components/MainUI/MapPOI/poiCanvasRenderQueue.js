@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-11
- * Last modified: 2026-11-01
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -62,19 +62,20 @@ export const createPOICanvasRenderQueue = (maxConcurrent = 2, dependencies = {})
         }
     }
 
-    /** Check camera motion from the scene events and the application's continuous orbit. */
-    const isCameraMoving = () => {
-        if (dependencies.isCameraMoving) {
-            return dependencies.isCameraMoving()
-        }
+    /** Check whether the application is running its continuous camera orbit. */
+    const isCameraOrbiting = () => {
         try {
             return globalThis.__?.ui?.cameraManager?.isRotating?.() === true
-                || Date.now() < cameraMovingUntil
         }
         catch {
-            return Date.now() < cameraMovingUntil
+            return false
         }
     }
+
+    /** Check camera motion from the scene events and the application's continuous orbit. */
+    const isCameraMoving = () => dependencies.isCameraMoving
+        ? dependencies.isCameraMoving()
+        : isCameraOrbiting() || Date.now() < cameraMovingUntil
 
     /** Cancel the currently scheduled idle or timer drain. */
     const cancelScheduledDrain = () => {
@@ -304,7 +305,7 @@ export const createPOICanvasRenderQueue = (maxConcurrent = 2, dependencies = {})
         }
     }
 
-    /** Schedule one background task after idle time or at a bounded cadence during camera motion. */
+    /** Keep interactive work responsive and defer background captures through a continuous orbit. */
     const schedulePendingRenders = () => {
         const replayActive = isReplayPOIPresentationActive(getReplayStore())
         const backgroundLimit = replayActive ? concurrencyLimit : 1
@@ -324,6 +325,15 @@ export const createPOICanvasRenderQueue = (maxConcurrent = 2, dependencies = {})
         attachObservers()
         const drain = allowDuringMotion => {
             scheduledDrain = null
+            if (isCameraOrbiting()) {
+                // Background SnapDOM captures can occupy the main thread for hundreds of
+                // milliseconds. Keep only explicit interaction work moving during an orbit.
+                runPendingRenders(false)
+                if (pendingRenders.size > 0 || priorityRenders.size > 0) {
+                    scheduleTimer(CAMERA_SETTLE_GRACE, () => drain(false))
+                }
+                return
+            }
             if (isCameraMoving() && !allowDuringMotion) {
                 scheduleTimer(CAMERA_BACKGROUND_INTERVAL, () => drain(true))
                 return

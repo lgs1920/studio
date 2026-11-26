@@ -64,6 +64,8 @@ import './style.css'
 
 const EMPTY_REPLAY_PROXY = proxy({nearbyPois: []})
 const queuePOICanvasRender = createPOICanvasRenderQueue(2)
+const loadedManagedPOIIconSignatures = new Map()
+const CAMERA_ORBIT_CAPTURE_RETRY_DELAY = 140
 const MAX_POI_CANVAS_SIDE = 4096
 const MAX_POI_CANVAS_PIXELS = 8_388_608
 const POI_BORDER_RADIUS_CSS_VALUES = Object.freeze({
@@ -198,6 +200,7 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
     const _renderRequestId = useRef(0)
     const _previousExpanded = useRef(null)
     const _iconLoadRenderTimer = useRef(null)
+    const _orbitCaptureTimer = useRef(null)
 
     const $pois = lgs.stores.main.components.pois
     const $point = $pois.list.get(poi) ?? EMPTY_REPLAY_PROXY
@@ -502,6 +505,18 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
         }
 
         const priorityCapture = capturePriority
+        if (!priorityCapture && globalThis.__?.ui?.cameraManager?.isRotating?.() === true) {
+            // Keep the lightweight placeholder visible, then defer the expensive DOM rasterization.
+            _activeCapture.current = null
+            if (_orbitCaptureTimer.current === null) {
+                _orbitCaptureTimer.current = window.setTimeout(() => {
+                    _orbitCaptureTimer.current = null
+                    renderToCanvas()
+                }, CAMERA_ORBIT_CAPTURE_RETRY_DELAY)
+            }
+            return
+        }
+
         queuePOICanvasRender(_poiContent, async () => {
             if (!isCurrentRender()) {
                 return
@@ -709,7 +724,32 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
     }, [isEmbedded, pointId, pointParent, pointLongitude, pointLatitude, point?.height, point?.simulatedHeight, $pois.list])
 
     const handlePOIIconLoad = useCallback((event) => {
-        stylePOIDuotoneIcon(event?.target)
+        const icon = event?.target
+        const iconSignature = JSON.stringify([
+            icon?.name ?? icon?.getAttribute?.('name') ?? '',
+            icon?.src ?? icon?.getAttribute?.('src') ?? '',
+            icon?.family ?? icon?.getAttribute?.('family') ?? '',
+            icon?.variant ?? icon?.getAttribute?.('variant') ?? '',
+            typeof icon?.className === 'string' ? icon.className : icon?.getAttribute?.('class') ?? '',
+        ])
+        if (managedCaptureSurface) {
+            // Capture components unmount between scheduler grants, so keep icon-load deduplication outside React.
+            for (const cachedPOIId of loadedManagedPOIIconSignatures.keys()) {
+                if (!$pois.list.has(cachedPOIId)) {
+                    loadedManagedPOIIconSignatures.delete(cachedPOIId)
+                }
+            }
+            const loadedIcons = loadedManagedPOIIconSignatures.get(pointId) ?? new Set()
+            if (loadedIcons.has(iconSignature)) {
+                return
+            }
+            loadedIcons.add(iconSignature)
+            loadedManagedPOIIconSignatures.set(pointId, loadedIcons)
+        }
+
+        // Capture surfaces unmount after each rasterization, so identical Web Awesome icons emit wa-load again.
+        // Only their first load needs to invalidate the POI canvas; later captures style the mounted SVG directly.
+        stylePOIDuotoneIcon(icon)
             .catch(error => console.error('Error styling POI icon:', error))
             .finally(() => {
                 if (_iconLoadRenderTimer.current) {
@@ -722,11 +762,15 @@ export const MapPOIContent = memo(({poi, useInMenu = false, domPreview = false, 
                     renderToCanvas()
                 }, 32)
             })
-    }, [renderToCanvas])
+    }, [managedCaptureSurface, renderToCanvas])
 
     useEffect(() => () => {
         if (_iconLoadRenderTimer.current) {
             clearTimeout(_iconLoadRenderTimer.current)
+        }
+        if (_orbitCaptureTimer.current !== null) {
+            clearTimeout(_orbitCaptureTimer.current)
+            _orbitCaptureTimer.current = null
         }
         queuePOICanvasRender.cancel(_poiContent)
         _poiCanvasCache.current = null
