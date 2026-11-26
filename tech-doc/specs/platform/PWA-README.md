@@ -4,7 +4,7 @@
 
 LGS1920 Studio has two runtime surfaces:
 
-- **Webapp**: Studio runs in a normal browser tab. The service worker is checked before the Studio entry action becomes available. A detected release is installed automatically and the page reloads after the new worker takes control.
+- **Webapp**: Studio runs in a normal browser tab. The service worker is checked during startup. A detected release is installed automatically after Studio reports startup readiness, and the page reloads after the new worker takes control. A startup failure keeps its error visible and leaves the update queued.
 - **Installed PWA**: Studio runs in standalone display mode. A detected release is presented in an update dialog so the user can start the update explicitly.
 
 The boot splash belongs to the installed PWA only. The normal webapp keeps the WelcomeHero and does not display the PWA boot splash.
@@ -47,15 +47,16 @@ Checks are throttled to one request per minute unless an initial check is forced
 
 ## Webapp update flow
 
-For a normal browser tab, the update is automatic:
+For a normal browser tab, the update is automatic after successful startup:
 
 1. Studio displays a persistent information callout while the initial check is pending.
-2. If a new worker is found, the callout reports that the new version is being installed.
-3. The waiting worker receives `SKIP_WAITING`.
-4. Studio waits for `controllerchange` and reloads the page once the new worker controls the page.
-5. If activation cannot be completed, the callout shows the error and provides a **Relaunch Studio** action.
+2. If a new worker is found before startup is ready, Studio queues its activation. A failed startup keeps the error visible and leaves the worker waiting.
+3. Once startup is ready, the callout reports that the new version is being installed.
+4. The waiting worker receives `SKIP_WAITING`.
+5. Studio waits for `controllerchange` and reloads the page once the new worker controls the page.
+6. If activation cannot be completed, the callout shows the error and provides a **Relaunch Studio** action.
 
-The check and installation happen before the Studio entry action is enabled, so the user does not have to wait once Studio is ready to use.
+The update check runs during startup. Activation waits for Studio to report that initialization succeeded, so an initialization error remains available for diagnosis.
 
 ## Installed PWA update flow
 
@@ -75,7 +76,7 @@ Before validating a PWA release:
 1. Update the intended release version and deploy a new Git tag.
 2. Run the Studio deployment for the target platform.
 3. Verify that `/service-worker-pwa.js` returns HTTP 200 and contains the new release fingerprint.
-4. Open the webapp in a normal browser tab and confirm the initial update callout completes before Studio can be entered.
+4. Open the webapp in a normal browser tab and confirm a waiting worker activates after startup readiness. Confirm a failed startup keeps its error visible and leaves the worker queued.
 5. Open the installed PWA and confirm the update dialog, progress state, restart message, and final reload.
 6. Validate both a successful activation and a failed activation with the **Relaunch Studio** fallback.
 

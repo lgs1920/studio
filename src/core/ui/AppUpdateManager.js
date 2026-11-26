@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-27
- * Last modified: 2026-10-07
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,6 +34,8 @@ export class AppUpdateManager {
     #reloadAfterControllerChange = false
     #hasReloadedForUpdate = false
     #automaticUpdateInProgress = false
+    #automaticUpdatePending = false
+    #startupReady = false
     #automaticUpdateTimeoutId = null
     #lastUpdateCheck = 0
 
@@ -112,6 +114,27 @@ export class AppUpdateManager {
             return
         }
 
+        if (!this.#startupReady) {
+            this.#automaticUpdatePending = true
+            return
+        }
+
+        this.#startAutomaticUpdate()
+    }
+
+    /** Start a queued webapp update after successful application startup. */
+    #handleStartupReady = () => {
+        this.#startupReady = true
+        if (!this.#automaticUpdatePending) {
+            return
+        }
+
+        this.#automaticUpdatePending = false
+        this.#startAutomaticUpdate()
+    }
+
+    /** Mark the update state before asking the waiting worker to activate. */
+    #startAutomaticUpdate = () => {
         if (this.#store) {
             this.#store.isAutomaticUpdateInProgress = true
             this.#store.automaticUpdateError = null
@@ -258,6 +281,9 @@ export class AppUpdateManager {
     }
 
     #setupSWUpdateListener = () => {
+        this.#startupReady = !document.body?.classList?.contains('lgs-app-booting')
+        window.addEventListener('lgs-app-startup-ready', this.#handleStartupReady, {once: true, passive: true})
+
         if (!('serviceWorker' in navigator) || !navigator.serviceWorker.addEventListener) {
             this.#completeInitialUpdateCheck()
             return

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -78,6 +78,7 @@ export const LGS1920 = () => {
     const [initialMapAvailable, setInitialMapAvailable] = useState(false)
     const startupOrbit = useRef(null)
     const deferredJourneyDataStarted = useRef(false)
+    const startupReadyNotified = useRef(false)
     const startupDataLoader = useRef(null)
     const appUpdateStore = globalThis.__?.updater?.store
         ?? globalThis.lgs?.stores?.ui?.appUpdate
@@ -493,9 +494,13 @@ export const LGS1920 = () => {
     }, [appVisible, initialTilesReady])
 
     useEffect(() => {
-        if (appReady) {
-            markStartup('enter-available')
+        if (!appReady || startupReadyNotified.current) {
+            return
         }
+
+        startupReadyNotified.current = true
+        markStartup('enter-available')
+        window.dispatchEvent(new Event('lgs-app-startup-ready'))
     }, [appReady])
 
     useEffect(() => {
