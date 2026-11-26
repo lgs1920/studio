@@ -364,11 +364,14 @@ export class SceneUtils {
 
 
     static focus = async (point, options = {}) => {
-
         const coordinates = focusPointCoordinates(point)
         if (!coordinates) {
             console.warn('SceneUtils.focus skipped invalid target', {point})
             return false
+        }
+
+        if (options.rotate !== true && __.ui.cameraManager?.isRotating?.()) {
+            await __.ui.cameraManager.stopRotate()
         }
 
         const {
@@ -490,7 +493,6 @@ export class SceneUtils {
                 })
             }
             else {
-                __.ui.sceneManager.stopRotate
                 if (!shouldSyncFocusedCamera) {
                     await __.ui.cameraManager.raiseUpdateEvent()
                 }

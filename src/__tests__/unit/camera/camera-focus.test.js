@@ -80,9 +80,6 @@ const installFocusGlobals = journey => {
 
     vi.stubGlobal('__', {
         ui: {
-            sceneManager:  {
-                stopRotate: false,
-            },
             cameraManager: {
                 position:         {heading: 0, pitch: DEFAULT_FLAT_SCENE_FOCUS_PITCH, roll: 0, range: 2000},
                 isJourneyFocusOn: vi.fn(() => false),
@@ -178,12 +175,23 @@ describe('camera focus defaults', () => {
     it('stops an active rotation before focusing the journey', async () => {
         const journey = makeJourney()
         installFocusGlobals(journey)
-        __.ui.cameraManager.isRotating = vi.fn(() => true)
-        __.ui.cameraManager.stopRotate = vi.fn(async () => undefined)
+        let rotating = true
+        let finishStoppingRotation
+        __.ui.cameraManager.isRotating = vi.fn(() => rotating)
+        __.ui.cameraManager.stopRotate = vi.fn(() => new Promise(resolve => {
+            finishStoppingRotation = () => {
+                rotating = false
+                resolve()
+            }
+        }))
 
-        await SceneUtils.focusOnJourney({journey, resetCamera: true})
+        const focusPromise = SceneUtils.focusOnJourney({journey, resetCamera: true})
 
         expect(__.ui.cameraManager.stopRotate).toHaveBeenCalledTimes(1)
+        expect(lgs.camera.flyToBoundingSphere).not.toHaveBeenCalled()
+        finishStoppingRotation()
+        await focusPromise
+
         expect(lgs.camera.flyToBoundingSphere).toHaveBeenCalledTimes(1)
     })
 

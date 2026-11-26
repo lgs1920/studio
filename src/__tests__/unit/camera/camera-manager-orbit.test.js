@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-13
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -154,10 +154,6 @@ const installCameraManagerGlobals = () => {
                     rotate.running = true
                     return true
                 },
-                get stopRotate() {
-                    rotate.running = false
-                    return false
-                },
             },
         },
     })
@@ -258,6 +254,52 @@ describe('CameraManager orbit', () => {
         await vi.advanceTimersByTimeAsync(200)
         expect(lgs.scene.postUpdate.listenerCount).toBe(0)
         scheduler.destroy()
+    })
+
+    it('lowers resolution for an orbit and restores the original scale afterward', () => {
+        installCameraManagerGlobals()
+        const manager = new CameraManager()
+        lgs.viewer = {resolutionScale: 2}
+
+        expect(manager.lowerOrbitResolution()).toBe(true)
+        expect(lgs.viewer.resolutionScale).toBe(1)
+        expect(manager.restoreOrbitResolution()).toBe(true)
+        expect(lgs.viewer.resolutionScale).toBe(2)
+    })
+
+    it('releases orbit rendering resources when rotation was stopped through the store', async () => {
+        const {animationFrames} = installCameraManagerGlobals()
+        const manager = new CameraManager()
+        lgs.viewer = {resolutionScale: 2}
+        lgs.scene.msaaSamples = 4
+        lgs.scene.shadows = true
+        manager.proxy = {
+            getTargetPositionInPixels: vi.fn(() => null),
+            setOrbitTransform: vi.fn(),
+            unlock: vi.fn(),
+            updatePositionInformation: vi.fn(async () => ({
+                target: {longitude: 1, latitude: 2, height: 3},
+                position: {longitude: 4, latitude: 5, height: 6},
+            })),
+        }
+
+        await manager.rotateAround(orbitTarget, {
+            direction: 1,
+            infinite:  true,
+            preserveView: true,
+            rpm:       1,
+        })
+        expect(manager.renderQuality.locks).toBe(1)
+        expect(lgs.viewer.resolutionScale).toBe(1)
+
+        lgs.stores.ui.mainUI.rotate.running = false
+        animationFrames[0]()
+        await Promise.resolve()
+
+        expect(manager.renderQuality.locks).toBe(0)
+        expect(lgs.viewer.resolutionScale).toBe(2)
+        expect(lgs.scene.msaaSamples).toBe(4)
+        expect(lgs.scene.shadows).toBe(true)
     })
 
     it('cancels the active panorama motion before clearing its state', () => {

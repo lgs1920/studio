@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-10-08
- * Last modified: 2026-11-25
+ * Last modified: 2026-11-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -62,6 +62,8 @@ const hasCameraCoordinates = (position) =>
   finiteNumber(position?.height) !== null;
 
 const CAMERA_LOCAL_STORAGE_KEY = 'lgs1920.camera.snapshot';
+const ORBIT_RESOLUTION_SCALE = 1
+const ORBIT_MAXIMUM_TERRAIN_SCREEN_SPACE_ERROR = 8
 
 const readLocalCamera = () => {
   try {
@@ -110,6 +112,8 @@ export class CameraManager {
     msaaSamples: null,
     shadows: null,
     scene: null,
+    globe: null,
+    maximumScreenSpaceError: null,
     continuousReleases: [],
   };
   #panoramicCancel = null;
@@ -452,6 +456,18 @@ export class CameraManager {
     if (scene?.shadows) {
       scene.shadows = false;
     }
+
+    const globe = scene?.globe
+    const maximumScreenSpaceError = Number(globe?.maximumScreenSpaceError)
+    this.renderQuality.globe = globe ?? null
+    this.renderQuality.maximumScreenSpaceError = Number.isFinite(maximumScreenSpaceError)
+      ? maximumScreenSpaceError
+      : null
+    if (Number.isFinite(maximumScreenSpaceError)
+      && maximumScreenSpaceError < ORBIT_MAXIMUM_TERRAIN_SCREEN_SPACE_ERROR) {
+      // Coarser terrain reduces tile refinement work while the camera continuously changes its view.
+      globe.maximumScreenSpaceError = ORBIT_MAXIMUM_TERRAIN_SCREEN_SPACE_ERROR
+    }
   };
 
   /** Release one continuous-render consumer and restore quality after the final release. */
@@ -472,6 +488,8 @@ export class CameraManager {
       this.renderQuality.msaaSamples = null;
       this.renderQuality.shadows = null;
       this.renderQuality.scene = null;
+      this.renderQuality.globe = null;
+      this.renderQuality.maximumScreenSpaceError = null;
       return;
     }
 
@@ -486,6 +504,15 @@ export class CameraManager {
       this.renderQuality.shadows = null;
       shouldRequestRender = true;
     }
+    const globe = this.renderQuality.globe
+    if (globe && scene.globe === globe && this.renderQuality.maximumScreenSpaceError !== null) {
+      if (globe.maximumScreenSpaceError !== this.renderQuality.maximumScreenSpaceError) {
+        globe.maximumScreenSpaceError = this.renderQuality.maximumScreenSpaceError
+        shouldRequestRender = true
+      }
+    }
+    this.renderQuality.maximumScreenSpaceError = null
+    this.renderQuality.globe = null
     if (shouldRequestRender) {
       requestSceneRender(scene);
     }
@@ -497,12 +524,12 @@ export class CameraManager {
     const viewer = lgs.viewer
     const scene = lgs.scene ?? viewer?.scene
     const resolutionScale = Number(viewer?.resolutionScale)
-    if (!viewer || !scene || !Number.isFinite(resolutionScale) || resolutionScale <= 1) {
+    if (!viewer || !scene || !Number.isFinite(resolutionScale) || resolutionScale <= ORBIT_RESOLUTION_SCALE) {
       return false
     }
 
     this.#orbitResolution = {viewer, scene, resolutionScale}
-    viewer.resolutionScale = 1
+    viewer.resolutionScale = ORBIT_RESOLUTION_SCALE
     requestSceneRender(scene)
     return true
   }
@@ -766,7 +793,9 @@ export class CameraManager {
     /** Advance the orbit and release its temporary resolution after an external stop. */
     const rotateCamera = () => {
       if (!this.isRotating()) {
-        this.restoreOrbitResolution()
+        void this.stopRotate().catch(error => {
+          console.error("[LGS1920][Camera] Failed to clean up an externally stopped orbit.", error)
+        })
         return;
       }
 
@@ -816,7 +845,9 @@ export class CameraManager {
           }
           this.move.animation = __.requestAnimationFrame(rotateCamera);
         } else {
-          this.stopRotate();
+          void this.stopRotate().catch(cleanupError => {
+            console.error("[LGS1920][Camera] Failed to release a completed orbit.", cleanupError)
+          })
           totalRotation = totalTurns;
         }
       } catch (error) {
@@ -857,17 +888,22 @@ export class CameraManager {
    */
   stopRotate = async () => {
     this.activeOrbitRetarget = null;
-    if (this.isRotating()) {
+    const orbitIsActive = this.isRotating() || this.move.type === CameraManager.ROTATE
+    if (orbitIsActive) {
       const target = lgs.stores.ui.mainUI.rotate.target;
+      lgs.stores.ui.mainUI.rotate.running = false
       __.cancelAnimationFrame(this.move.animation);
       this.move.animation = null;
+      this.move.type = null
       this.stopWatching();
-      this.unlock();
-      __.ui.sceneManager.stopRotate;
       try {
         this.restoreContinuousCameraRender()
       } finally {
-        this.restoreOrbitResolution()
+        try {
+          this.restoreOrbitResolution()
+        } finally {
+          this.unlock()
+        }
       }
       await this.updatePositionInformation(
         target

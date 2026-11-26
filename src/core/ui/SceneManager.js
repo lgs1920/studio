@@ -123,11 +123,6 @@ export class SceneManager {
         return lgs.stores.ui.mainUI.rotate.running
     }
 
-    get stopRotate() {
-        lgs.stores.ui.mainUI.rotate.running = false
-        return lgs.stores.ui.mainUI.rotate.running
-    }
-
     focusPostProcessing = () => {
         // console.log(point, options)
     }
